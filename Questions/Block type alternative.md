@@ -1,6 +1,7 @@
 What if the block type could use `::` and `;`
 
 eg
+
 ```javascript
 // current
 walkie_talkie: {
