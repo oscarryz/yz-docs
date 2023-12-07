@@ -1,0 +1,78 @@
+```javascript
+
+arr: [1 2 3 3 4 5 6 7 8 9 10]
+print arr.select { x Int; x % 2 == 0 } .to_str()
+
+
+// Apply function to value
+arr: [1 2 3 4 5]
+print arr.map 2.* .to_str() // [2 4 6 8 10]
+
+ ```
+
+Explaination: 
+2 type is `Int`
+`Int`'s `*` method is defined as: 
+```javascript
+Int: {
+  value // 2
+  *: {
+    other Int
+    value * other
+  }
+}
+```
+Thus `2*` is the same as writing
+```javascript
+arr.map {other Int; 2 * other}
+```
+
+Array concatenation
+```javascript
+a = [1 2 3] ++ [4 5 6] // [1 2 3 4 5 6]
+```
+
+```javascript
+// Arturo 
+print select 1..10 => even?
+// Yz
+print 1 .to 10 .to_array().select even? .to_str()
+// print(1.to(10).to_array().select(even?).to_str())
+even?: { n Int
+    n % 2 == 0
+}
+Array: {
+   select: {
+       predicate {Int Bool}
+       r: []Int
+
+       n Int
+       i: 0
+       while { i < len() } {
+          n: at(i)
+          _: predicate n ? {
+             r << n
+          }
+          i = i + 1
+       }
+       r
+     }
+   }
+}
+
+```
+
+Ackerman 
+```javascript
+ackermann: { m Int; n Int
+  m == 0 ? { 
+    n + 1
+  } {
+    n == 0 ? {
+      ackermann m - 1  1
+    } {
+      ackermann m - 1 ackermann m n - 1
+    }
+  }
+}
+```
