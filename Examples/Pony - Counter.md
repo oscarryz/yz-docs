@@ -1,0 +1,28 @@
+[counter/main.pony](https://github.com/ponylang/ponyc/blob/54225e41bd141b8b7a64f0e65d3dbe46bc5317d4/examples/counter/main.pony)
+
+```javascript
+Counter {
+    count Int = 0 // count: 0
+    increment: {
+        count = count + 1
+    }
+    get_and_reset: { 
+        display {Int}
+        display(count)
+        count = 0
+    }
+}
+display: {
+        result Int
+        print "$(result)"
+}
+main:{
+    n: int.parse(os.args[1]).or {10}
+    counter: Counter()
+    
+    _: n.times(counter.increment)
+    
+    counter.get_and_reset(display)
+}
+
+```
