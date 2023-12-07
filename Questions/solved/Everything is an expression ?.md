@@ -9,4 +9,4 @@ What happens with things that don't return anything?
     }
     b: foo() //? 
 
-Well excepet that one
+Well except that one

@@ -81,7 +81,7 @@ execute b
 ```
 
 
-How to tag a method where the there's no parameter and yet is generic? See example in [Generics](../../Features/Generics.md)
+How to tag a method where the there's no parameter and yet is generic? See example in [Generics](Questions/solved/Generics.md)
 
 Probably do receive a parameter of type "type" by name it uppercase but it doesn't have a type and doesn't collide with a any single letter identifier: 
 ```javascript
