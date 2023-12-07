@@ -1,3 +1,9 @@
+This repository contains design notes for the Yz programming language, like examples, features and design questions. 
+
+
+> [!WARNING]
+> There's no compiler for the Yz programming language yet, making all the content here vaporware. 
+
 # Quick overview
 
 ```javascript
