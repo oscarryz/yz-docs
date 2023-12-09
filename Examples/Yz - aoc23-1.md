@@ -2,35 +2,47 @@
 input String
 digits:'01234567890'.split() 
 
-n:0
-a String
-b String
-/*
- `state` is a block that has a
- `check` variable of type block that takes a `String`
+// result
+n : 0
 
+// first and last characters
+f String
+l String
+
+/*
+  state machine signature.
+
+ `state` is a block that has a
+ `check` variable of type
+  block that takes a `String`
 */
 state {check{s String}}
 
+/* 
+  implements `state` structurally
+*/
 first : {
   check: {
      s String
      if digits.contains(s) {
-        a = s
+        f = s
         state = second
      }
   }
 }
 
+/* 
+  implements `state` structurally
+*/
 second: {
    check: {
      s String 
      when[
       {digits.contains(s):{ ​
-         b = s
+         l = s
       }
       {s == '\n'}:{
-        n = n + int.parse(a ++ b)
+        n = n + int.parse(f ++ l)
         state = first 
       }]
    }
