@@ -3,9 +3,9 @@ input String
 digits:'01234567890'.split() 
 
 n:0
-
+a String
+b String
 first : {
-  a String 
   check: {
      s String
      if digits.contains(s) {
@@ -16,17 +16,14 @@ first : {
 }
 
 second: {
-   a String 
    check: {
      s String 
      when[
       {digits.contains(s):{ ​
-         a = s
+         b = s
       }
       {s == '\n'}:{
-        n = n + int.parse(
-         first.a ++ a
-        )
+        n = n + int.parse(a ++ b)
         state = first 
       }]
    }
