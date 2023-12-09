@@ -5,6 +5,7 @@ digits:'01234567890'.split()
 n:0
 a String
 b String
+state {check{s String}}
 first : {
   check: {
      s String
@@ -28,7 +29,8 @@ second: {
       }]
    }
 }
-state {check{s String}} = first
+
+state = first
 
 input.each(state.check)
 print("Solution: $(n)")
