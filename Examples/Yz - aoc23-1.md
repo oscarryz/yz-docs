@@ -8,7 +8,7 @@ b String
 /*
  `state` is a block that has a
  `check` variable of type block that takes a `String`
-state :: 
+
 */
 state {check{s String}}
 
