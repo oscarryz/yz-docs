@@ -1,7 +1,7 @@
 Using [Neptune impl](https://www.reddit.com/r/ProgrammingLanguages/s/ZJ4D36oZ2J)
 
 ```js
-is_digit { String ; Bool }
+is_digit? { String ; Bool }
 input
   .lines()
   .map {
