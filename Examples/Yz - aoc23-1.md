@@ -15,13 +15,13 @@ l String
   A block that has a
  `check` block that takes a `String`
 */
-state {check{s String}}
+state {{String}}
 
 /* 
   implements `state` structurally
 */
 first : {
-  check: {
+  {
      s String
      if digits.contains(s) {
         f = s
@@ -34,12 +34,13 @@ first : {
   implements `state` structurally
 */
 second: {
-   check: {
+   {
      s String 
      when[
       { digits.contains(s) }:{ ​l = s }
       {s == '\n'}:{
-        n = n + int.parse(f ++ l).or{0}
+        n = n + int.parse(f ++ l)
+                .or{ 0 }
         state = first 
       }]
    }
@@ -48,7 +49,7 @@ second: {
 // initial state
 state = first
 
-input.each(state.check)
+input.each(state())
 print("Solution: $(n)")
 ```
     
