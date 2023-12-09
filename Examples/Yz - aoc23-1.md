@@ -1,0 +1,39 @@
+```JavaScript
+input String 
+digits:'01234567890'.split() 
+
+n:0
+
+first : {
+  a String 
+  check: {
+     s String
+     if digits.contains(s) {
+        a = s
+        state = second
+     }
+  }
+}
+
+second: {
+   a String 
+   check: {
+     s String 
+     when[
+      {digits.contains(s):{ ​
+         a = s
+      }
+      {s == '\n'}:{
+        n = n + int.parse(
+         first.a ++ a
+        )
+        state = first 
+      }]
+   }
+}
+state {check{s String}} = first
+
+input.each(state.check)
+print("Solution: $(n)")
+```
+    
