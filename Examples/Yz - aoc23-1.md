@@ -12,8 +12,8 @@ l String
 /*
   state machine "signature":
 
-  A block that has a
- `check` block that takes a `String`
+  A block that has a block 
+  that takes a `String`
 */
 state {{String}}
 
@@ -22,11 +22,11 @@ state {{String}}
 */
 first : {
   {
-     s String
-     if digits.contains(s) {
+    s String
+    digits.contains(s) ? {
         f = s
         state = second
-     }
+    }
   }
 }
 
@@ -34,16 +34,20 @@ first : {
   implements `state` structurally
 */
 second: {
-   {
-     s String 
-     when[
-      { digits.contains(s) }:{ ​l = s }
+  {
+    s String 
+    when [
+      { digits.contains(s) }:{
+        l = s 
+      }
       {s == '\n'}:{
-        n = n + int.parse(f ++ l)
-                .or{ 0 }
+        v : int.parse(f ++ l)
+            .or{ 0 }
+        n = n + v
         state = first 
-      }]
-   }
+      }
+    ]
+  }
 }
 
 // initial state
