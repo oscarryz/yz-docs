@@ -10,11 +10,10 @@ f String
 l String
 
 /*
-  state machine signature.
+  state machine "signature":
 
- `state` is a block that has a
- `check` variable of type
-  block that takes a `String`
+  A block that has a
+ `check` block that takes a `String`
 */
 state {check{s String}}
 
@@ -38,16 +37,15 @@ second: {
    check: {
      s String 
      when[
-      {digits.contains(s):{ ​
-         l = s
-      }
+      { digits.contains(s) }:{ ​l = s }
       {s == '\n'}:{
-        n = n + int.parse(f ++ l)
+        n = n + int.parse(f ++ l).or{0}
         state = first 
       }]
    }
 }
 
+// initial state
 state = first
 
 input.each(state.check)
