@@ -1,6 +1,12 @@
+
+
 ```JavaScript
 input String
-digits:'01234567890'.split() 
+digits:'0123456789'.split()
+digit?: {
+  s String
+  digits.contains(s)
+}
 
 // result
 n : 0
@@ -12,32 +18,28 @@ l String
 /*
   state machine "signature":
 
-  A block that has a block 
+  A block that returns a block 
   that takes a `String`
 */
 state {{String}}
 
-/* 
-  implements `state` structurally
-*/
+// "Implements" `state`
 first : {
   {
     s String
-    digits.contains(s) ? {
-        f = s
-        state = second
+    if digit?(s) {
+      f = s
+      state = second
     }
   }
 }
 
-/* 
-  implements `state` structurally
-*/
+// "Implements" `state`
 second: {
   {
     s String 
     when [
-      { digits.contains(s) }:{
+      {digit?(s)}:{ 
         l = s 
       }
       {s == '\n'}:{
@@ -53,7 +55,8 @@ second: {
 // initial state
 state = first
 
+// For each character in input
+// execute the state machine 
 _ : input.each(state())
 print("Solution: $(n)")
 ```
-    
