@@ -53,7 +53,7 @@ second: {
 // initial state
 state = first
 
-input.each(state())
+_ : input.each(state())
 print("Solution: $(n)")
 ```
     
