@@ -3,7 +3,7 @@
 ```JavaScript
 input String
 digits:'0123456789'.split()
-digit?: {
+is_digit?: {
   s String
   digits.contains(s)
 }
@@ -16,10 +16,9 @@ f String
 l String
 
 /*
-  state machine "signature":
-
-  A block that returns a block 
-  that takes a `String`
+  A block that returns 
+  a block that takes 
+  a `String`
 */
 state {{String}}
 
@@ -27,7 +26,7 @@ state {{String}}
 first : {
   {
     s String
-    if digit?(s) {
+    if is_digit?(s) {
       f = s
       state = second
     }
@@ -38,25 +37,24 @@ first : {
 second: {
   {
     s String 
-    when [
-      {digit?(s)}:{ 
-        l = s 
-      }
-      {s == '\n'}:{
+    if is_digit?(s) { 
+        l = s
+    }
+    if s == '\n' {
         v : int.parse(f ++ l)
             .or{ 0 }
         n = n + v
-        state = first 
-      }
-    ]
+        state = first
+    }
   }
 }
 
-// initial state
+// Initialize state
 state = first
 
-// For each character in input
-// execute the state machine 
+// For each character in 
+// Input, execute the 
+// state machine 
 _ : input.each(state())
 print("Solution: $(n)")
 ```
