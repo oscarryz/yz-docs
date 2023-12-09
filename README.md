@@ -2,7 +2,7 @@ This repository contains design notes for the Yz programming language, like exam
 
 
 > [!WARNING]
-> There's no compiler for the Yz programming language yet, making all the content here vaporware. 
+> There's no [compiler for the Yz programming language yet](https://github.com/oscarryz/yzc), making all the content here vaporware. 
 
 # Quick overview
 
