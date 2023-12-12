@@ -32,14 +32,12 @@ Inside the information is structured as Yz block:
 File: `./restaurant.yz`
 
 ```javascript
-restaurant:{
-    version: '0.1.0'
-    entry: 'main.yz'
-    src_path: ['./src/' './vendor/' './lib/']
-    dependencies: [
-        printer: {version: "1.0.0"   git: 'https://example.org/print.git'} 
-    ]
-}
+ version: '0.1.0'
+ entry: 'main.yz'
+ src_path: ['./src/' './vendor/' './lib/']
+ dependencies: [
+     printer: {version: "1.0.0"   git: 'https://example.org/print.git'} 
+ ]
 ```
 
 ### Example: a restaurant app
