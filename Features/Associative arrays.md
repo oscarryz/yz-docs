@@ -1,4 +1,78 @@
+## Associative Array: 
 
+Proposal 1: `[key]value`
+
+Declaration: 
+```js
+dict [String] Int
+```
+Empty literal is also generic 
+```js
+empty: [:]
+```
+Declaration and initialization
+```js
+dict [String] Int = [ "Hello": 5 "world!": 6 ]
+```
+
+Definition (literal, and type inference) 
+```js
+dict: [ "Hello":5  "world!" : 6 ] /// [String]Int inferred
+```
+Access: 
+
+```js
+n: dict["hello"] // read 
+dict["hello"] = 6 // write
+```
+
+When using empty `[:]` the types are generic and bound on first usage: 
+
+
+```js
+map: [:]
+map["name"] = {} // `map` is a dictionary with `String` key and empty block ( `{}` ) value
+map["data"] = 1 // compilation error, dictionary value must be block `{}` 
+```
+
+Proposal 2 `[key:value]`
+
+Declaration: 
+```js
+dict [StringInt]
+```
+Empty literal is also generic 
+```js
+empty: [:]
+```
+Declaration and initialization
+```js
+dict [String:Int]  = [ "Hello": 5 "world!": 6 ]
+```
+
+Definition (literal, and type inference) 
+```js
+dict: [ "Hello":5  "world!" : 6 ] /// [String]Int inferred
+```
+Access: 
+
+```js
+n: dict["hello"] // read 
+dict["hello":6] // write
+```
+
+When using empty `[:]` the types are generic and bound on first usage: 
+
+
+```js
+map: [:]
+map["name"] = {} // `map` is a dictionary with `String` key and empty block ( `{}` ) value
+```
+
+Proposal 3 `{key=value}` 
+
+
+ 
 
 ```js
 dict [String] Int // array String index int as value
