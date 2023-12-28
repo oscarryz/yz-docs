@@ -3,7 +3,6 @@ In project structure I basically equated files to blocks, let's make sure that's
 e.g. in a `/main.yz` file
 ```js
 // main.yz
-// main.yz
 print foo.name
 print foo.bar.name
 ```
