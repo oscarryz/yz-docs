@@ -1,48 +1,29 @@
-In project structurenI basically equated files to blocks, let's make sure that's what I want
+In project structure I basically equated files to blocks, let's make sure that's what we want
+
+This:
 
 ```
-// foo.yz
-bar: {
-  baz:{
-      hi String
-  }
-}
-```
-
-Will be the same as
-
-```
-foo: {
-   bar: {
-      baz:{
-         hi String
-      }
-   }
-}
-```
-(Although now there wont be a way to define that block)
-
-Also will be this
-```
-foo/bar.yz
-baz:{
-      hi String
-}
-```
-and
-```
-// foo/bar/baz.yz
-
-hi String
-```
-Furthermore, it would allow to add members in different ways
-
-```
+./main.yz
 ./foo.yz
 ./foo/bar.yz
-./foo/bar/baz.yz
+```
+```js
+// main.yz
+print foo.name
+print foo.bar.name
+// foo.yz
+name String
+//./foo/bar.yz
+name String
+```
+Would be the same as this:
+```js
+//./foo.yz
+name String
+bar : {
+   name String
+}
 ```
 
-Wich should either not compile or allow to redefine blocks
-
-#answered It won't compile and you'll be only allowed to define things in one place. Using folders however would be as if the curly braces hand close
+Notes, you cannot add the file `foo/bar.yz` anymore as the `bar` block is already defined, you can add a sibling `./foo/baz.yz` though
+#answered
