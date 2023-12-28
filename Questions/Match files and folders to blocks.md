@@ -1,16 +1,20 @@
 In project structure I basically equated files to blocks, let's make sure that's what we want
 
+e.g. in a `/main.yz` file
+```js
+// main.yz
+// main.yz
+print foo.name
+print foo.bar.name
+```
+
 This:
 
 ```
-./main.yz
 ./foo.yz
 ./foo/bar.yz
 ```
 ```js
-// main.yz
-print foo.name
-print foo.bar.name
 // foo.yz
 name String
 //./foo/bar.yz
