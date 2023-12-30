@@ -44,12 +44,12 @@ Here's an example:
 // This is concurrent by default
 retrieve_order: {
   // "parameters"
-  customer_id Int
-  product_id Int
+  cid Int
+  pid Int
   // The following three blocks invocation run concurrently
   print('Retrieving information')
-  fetch_customer(customer_id)
-  fetch_product(product_id)
+  fetch_customer(cid)
+  fetch_product(pid)
   // The blocks finish excecution when all the blocks above had finished.
 }
 
