@@ -1,4 +1,5 @@
 ```haskell
+-- Haskell 
 import Control.Monad (replicateM)
 import Data.Foldable (foldl')
 import qualified System.Random.Stateful as Rand
@@ -33,30 +34,31 @@ moveDrone drone move =
 ```   
 
 ```javascript
-Drone:{
+// Yz attempt
+Drone {
     x_pos Int
     y_pos Int
     z_pos Int
     move: {
-        d movement.Direction
+        d Int
         when_eq d [
-            {movement.forward}  : {z_pos = z_pos + 1}
-            {movement.back}     : {z_pos = z_pos - 1}
-            {movement.to_left}  : {x_pos = x_pos - 1}
-            {movement.to_right} : {x_pos = x_pos + 1}
-            {movement.up}       : {y_pos = y_pos + 1}
-            {movement.down}     : {y_pos = y_pos - 1}
+            { movement.forward }  : { z_pos = z_pos + 1 }
+            { movement.back }     : { z_pos = z_pos - 1 }
+            { movement.to_left }  : { x_pos = x_pos - 1 }
+            { movement.to_right } : { x_pos = x_pos + 1 }
+            { movement.up }       : { y_pos = y_pos + 1 }
+            { movement.down }     : { y_pos = y_pos - 1 }
         ]
     }
 }
 movement: {
-    Direction:Int
     forward  : 0 
     back     : 1
     to_left  : 2
     to_right : 3
     up       : 4
-    down     : 5
+    down     : 5 
+
     values: [forward back to_left to_right up down]
     random: {
         index: int.random(values.len())
@@ -64,10 +66,10 @@ movement: {
     }
 }
 main: {
-    drone: Drone {0 10 0}
-    15.times { 
-        drone.move movement.random()
+    drone: Drone(0 10 0)
+    _ : 15.times { 
+        drone.move(movement.random())
     }
-    print '{drone}'
+    print '$(drone)'
 }
 ```
