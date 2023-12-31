@@ -40,8 +40,8 @@ Drone {
     y_pos Int
     z_pos Int
     move: {
-        d Int
-        when_eq d [
+        direction Int
+        when_eq direction [
             { movement.forward }  : { z_pos = z_pos + 1 }
             { movement.back }     : { z_pos = z_pos - 1 }
             { movement.to_left }  : { x_pos = x_pos - 1 }
