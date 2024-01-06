@@ -1,4 +1,4 @@
-Information Strings. You can add a string before any element and will be available by calling  `core.info(element)` 
+Information Strings. You can add a string before any element and will be available by calling  `std.info(element)` 
 
 This text will be available as the `text` property of the returned block: 
 ```javascript
@@ -45,17 +45,25 @@ say_hello: {
    json_field: 'xyz'
   `
   who:  'World' 
+  // COuld be also used as running examples
+  // that will be validated with yzc test  
+  `
+  Example: print 'Hello' 'world'
+  Output: Hello, world!
+  `
   print '{what}, {who}!'
 }
 ```
 
-To retrieve it use the `core.info` block and pass the element
+To retrieve it use the `std.info` block and pass the element
 
 ```javascript
-info: core.info say_hello
+info: std.info say_hello
 print info.text  // Prints the classics "Hello, World!"... etc.etc
 info.tests()     // Runs the tests
 info.version     // 1.0
+info.examples()  // run the examples 
+
 ```
 To have this information available the info string is compiled along with the element
 

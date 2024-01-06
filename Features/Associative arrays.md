@@ -1,4 +1,32 @@
-## Associative Array: 
+
+Type
+```javascript
+// Dictionary type:  
+[Type : Type]
+// literal 
+[ key1: value1 key2: value2]
+
+// Empty
+// generic
+[:]
+// typed (same as type)
+[Type:Type]
+
+// Access
+// Read
+[key]
+// Write
+[key: new_value]
+
+// Examples: 
+dict1: [String: Int] // empty and ready to use 
+dict2: ['name': 4 'last_name': 9]
+dict3: [:] // empty and genric 
+l: dict2["name"] // `l` is 4
+dict2["last_name": 80] // dict2["last_name"] now returns 80
+```
+
+You can ignore everything below here... 
 
 Proposal 1: `[key]value`
 
@@ -39,7 +67,7 @@ Proposal 2 `[key:value]`
 
 Declaration: 
 ```js
-dict [StringInt]
+dict [String:Int]
 ```
 Empty literal is also generic 
 ```js
