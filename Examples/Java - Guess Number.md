@@ -7,12 +7,12 @@ https://github.com/contextfreecode/procfun/blob/main/Guess.java
 // update answer and counter
 high: 100
 answer: pick_answer high
-game = Game{ answer high}
+game = Game(answer high)
 game.play()
-print 'Finished in {game.guesses}'
-print 'Total input errors {game.error_count}'
-pick_answer: { high Int; random.next_int high}
-Game: {
+print 'Finished in $(game.guesses)'
+print 'Total input errors $(game.error_count)'
+pick_answer: { high Int random.next_int high}
+Game {
     answer      Int
     high        Int
     done        Bool
@@ -39,7 +39,7 @@ Game: {
     }
     
     ask_guess: {
-        text = input 'Guess a number between 1 and {high}'
+        text = input 'Guess a number between 1 and $(high)'
         numbers.parse_int text
     }
     
@@ -49,7 +49,7 @@ Game: {
            { guess > answer}: {'too high'}
            { when.else     }: {'the answer!'}
        ]
-       print '{guess} is {description}'
+       print '$(guess) is $(description)'
         
     }
     
