@@ -72,8 +72,8 @@ https://github.com/contextfreecode/procfun/blob/main/guess.hs
 high: 100
 answer: pick_answer high
 guesses, errors: play answer, high
-print 'Finished in {guesses}'
-print 'Total input errors {error_count}'
+print 'Finished in $(guesses)'
+print 'Total input errors $(error_count)'
 pick_answer: {high Int; random.next_int high }
 play: { 
     answer  Int
@@ -104,7 +104,7 @@ ask_multi: {
 }
 
 ask_guess: {
-    numbers.parse_int  input 'Guess a number between 1 and {high}'
+    numbers.parse_int  input 'Guess a number between 1 and $(high)'
 }
 
 report: { guess Int
