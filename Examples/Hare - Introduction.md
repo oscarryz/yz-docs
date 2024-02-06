@@ -22,12 +22,20 @@ https://harelang.org/tutorials/introduction/
 // fs.create(path, perms) can return an error 
 path: '/tmp/xyz.txt'
 file: fs.create(path, fs.ErrorHandler {[
-    {f File; f == fs.noaccess}: {"Error opening: {path}. Access denied"},
+    {f File; f == fs.noaccess}: {"Error opening: {path}. Access denied"}
     {f File; f == fs.error   }: {"Error opening: {path}. {info(file)}"}
-]});
+]})
+// Updated
+path: '/tmp/xyz.txt'
+file: fs.create(path).or {
+   e FileError
+   panic("Error opening: $(path). $(e))
+}
 ```
 
+
 Blocks that return errors can provide a handling error block that will be invoked if an error is generated
+
 ```js
 fs: {
     create: { 
@@ -47,6 +55,17 @@ fs: {
            })
        }
     }
+}
+// Updated
+fs: {
+   create {path String; Result}
+   create = {
+		path String
+		file File = ... 
+		ok(file)
+		// if error
+		error("cannot open file")
+	}
 }
 ```
 

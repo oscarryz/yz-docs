@@ -11,3 +11,4 @@ f: { v }
 Do we need that? Can we get away without it?
 
 #answered yes that's how it will work
+#challenged Makes it hard to know [[How to enforce data types in generics]]  , we will use type as a parameter without name

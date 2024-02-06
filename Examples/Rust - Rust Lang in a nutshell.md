@@ -11,7 +11,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     
     // Functions
     test: { x Int }
-    add: { x Float; y Float; r  Float}
+    add: { x Float; y Float; r Float}
 
     own_and_forget: { v List<String> }
     print: { v List<String>}
@@ -24,7 +24,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
         x > 0 ? x : x + 1
     }
     */
-    foo: {x Int; x > 0 ? { x }, {x + 1}}
+    foo: {x Int x > 0 ? { x } {x + 1}}
     
     foo: { x Int
         x.greaterThan(0).ifTrue({

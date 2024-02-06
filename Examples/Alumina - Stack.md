@@ -1,28 +1,30 @@
 https://github.com/tibordp/alumina
+
 ```javascript
 stack: {
     new: {
-        with_capacity 0
+        with_capacity(0)
     }
-    with_capacity: <T>{ capacity Int
+    with_capacity: { 
+        capacity Int
         Stack {
-            data:[]T
+            data:[]
             len: 0
         }
     }
-    Stack: <T> {
-        
-        data []T
+    Stack {
+        data []
         len Int
         reserve: {
             additional Int
-            len + additional > data.len() ? {
+            len = additional > data.len() ? {
                 max: core.cmp.max
                 data = data.realloc max  data.len * 2 len + additional  
             }
         }
-        push: { value T 
-            reserve 1
+        push: { 
+	        value  
+            reserve(1)
             data[len] = value
             len = len + 1
         }
@@ -50,7 +52,6 @@ main: {
     while {v.is_empty() == false} {
         print '$(v.pop())'
     }
-
 }
 
 ```
