@@ -1,6 +1,6 @@
 # Code organization
 
-## Simple proyects
+## Simple projects
 
 For simple project usually placing all the files in a single folder is enough, `yzc` will look for a top level block called `main` and will use it as a entry point. If there's more than one you can to specify the filename as parameter.
 
@@ -14,7 +14,7 @@ yzc main.yz // implicit main block
 
 ## Larger projects
 
-For larger project `yzc` can create a project with the following structure after executing `yzc init project_name`
+For larger project `yzc` can create a project with the following structure after executing `yz init project_name`
 ```
 project_name/
    project_name.yz
@@ -36,7 +36,7 @@ File: `./restaurant.yz`
  entry: 'main.yz'
  src_path: ['./src/' './vendor/' './lib/']
  dependencies: [
-     printer: {version: "1.0.0"   git: 'https://example.org/print.git'} 
+     printer: {version: "1.0.0"   url: 'https://example.org/print.git'} 
  ]
 ```
 

@@ -1,18 +1,19 @@
 https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 
-	board: repeat(3, repeat(3, " "))
+```js
+	board: repeat(3  repeat(3 " "))
 	
 	display_board: {
 		board.split('\n').for_each({
 			row
-			print(join(" | ", row))
+			print(join(" | " row))
 		})
 	}
 	won_game: { player Player
-		win: repeat(3, player)
-		[board, transpose(board)].for_each {
+		win: repeat(3 player)
+		[board  transpose(board)].for_each {
 			board.for_each { row String
-				row == win ? { <- true }
+				row == win ? { return true }
 			}
 		}
 		diag: { board Board
@@ -20,16 +21,16 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 				board[i][i]
 			})
 		}
-		diag(board) == wing || 
+		diag(board) == win || { diag(board.map(reverse)) == win}
 	}
 
-	 arr: [1,2,3]
+	 arr: [1 2 3]
 	 arr.for_each ({ i Int
 		 println(i)
 	 })
 
 	 i: arr.lenght - 1
-	 while({ i >= 0 },{
+	 while({ i >= 0 }{
 		 print(arr[i])
 		 i = i - 1
 	 })
@@ -38,10 +39,10 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 
 	 false ? {
 		 print('false')
-	 }, {
+	 } {
 		 meaning_of_life == 42 ? {
 			 print('the meaning of life is 42')
-		 } ,  {
+		 }   {
 			 print('mmmm')
 		 }
 	 }
@@ -60,40 +61,63 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 	printer()
 
 
-	Button: {
+	Button {
 		make: { count Int 
-			times: match(count, 
-				{1}, {"once"},
-				{2}, {"twice"},
-				{count}, { "{count} times"}
-			)
-			msg: 'Click me {times}'
-		}![[desk.yz]]
+			times: when_eq count [
+				{1}: {"once"},
+				{2}: {"twice"},
+				{when.else}: { "{count} times"}
+			]
+			msg: 'Click me $(times)'
+		}
 	}
+```
 
-https://twitter.com/preslavrachev/status/1467555292242186241/photo/1
 
+```js
+//https://twitter.com/preslavrachev/status/1467555292242186241/photo/1
+main: {
+	vd: 0
+	hd: 0
+	lines: os.read_lines('input.txt').or {
+		e Error
+		panic ('$(e)')
+	}
+	lines.each { 
+		line String
+		p : line.split(' ')
+		d : p[0]
+		m : int.parse(p[1]).or { e Error panic('$(e)}) }
+		vd = vd + when_eq d [
+			{'up'}: { m.neg() }
+			{'down'}: { m }
+			{when.else}: {0}
+		]
+		hd = hd + d == 'forward' ? { m } { 0 }
+	}
+	print("$(vd * hd)")
+}
 
 	main: {
 		vertical_direction: 0
 		horizontal_direction: 0
-		lines, err: os.read_lines('input.txt')
-		err != null ? { panic('{err}') }
+		lines: os.read_lines('input.txt').or {
+			err Error
+			panic('{err}') 
+		}
 
-		lines.for_each({ line String
+		lines.for_each({ 
+			line String
 			parts: line.split(' ')
 			direction: parts[0]
-			magnitude: numbers.parse_int(parts[1])
-			direction == 'up' ? {
-				vertical_direction = vertical_direction - magnitude
-			}
-			direction == 'down' ? {
-				horizontal+direction = horizontal_direction + magnitude
-			}
-			direction == 'forward' ? {
-				horizontal_direction = horizontal_direction + magnitude
-			}
-		})
-		print('{vertical_direction * horizontal_direction*}')
-	}
+			magnitude: numbers.parse_int(parts[1]).or {panic()}
+			when_eq direction [
+				{'up'}: {vertical_direction = vertical_direction - magnitude}
+				{'down'}: {vertical_direction = vertical_direction + magnitude}
+				{'forward'}: {horizontal_direction = horizontal_direction + magnitude}
+			]
 
+		})
+		print('$(vertical_direction * horizontal_direction*)')
+	}
+```

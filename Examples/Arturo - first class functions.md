@@ -7,19 +7,19 @@ cos/acos => 0.4999999999999999
 cube/croot => 0.5
 `
 fcf: {
-    cube: { x Int ; x ^ 3}
-    croot: { x Int; x ^ ( 1 / 3)}
+    cube:  { x Int  x ^ 3}
+    croot: { x Int x ^ ( 1 / 3)}
     
-    names: ["sin/asin", 'cos/acos', 'cube/croot']
+    names: ["sin/asin" 'cos/acos' 'cube/croot']
     
-    func_list: [math.sin, math.cos, cube]
-    inv_list: [math.asin, math.acos, croot]
+    func_list: [math.sin math.cos cube]
+    inv_list: [math.asin math.acos croot]
     
     num: 0.5
     
-    0.to 2, {  i Int
+    0.to 2 {  i Int
         result: func_list[i](num)
-        print '{name[f]} => {inv_list[i](result)}'
+        print '$(name[f]) => $(inv_list[i](result))'
     }
 }
 ```

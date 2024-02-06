@@ -34,7 +34,7 @@ Factorial of 19 = 121645100408832000`
 
 ```javascript
 arr: [1 2 3 4 5 6 7 8 9 10]
-print arr.filter { x Int; x % 2 == 0 }
+print arr.filter { x Int x % 2 == 0 }
 ```
 
 Other formatting
