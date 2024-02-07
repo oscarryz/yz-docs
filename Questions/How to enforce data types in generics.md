@@ -1,3 +1,72 @@
+
+TLDR: 
+I wanted to use [qdbp](https://www.qdbplang.org/docs/examples#:~:text=as%20a%20function.-,Generics,-Methods%20are%20generic) generic style: 
+```js
+Foo { 
+	data 
+}
+f1 : Foo('hola')
+f2 : Foo(2)
+```
+
+But there's no way to enforce a child element to use the same generic: 
+```js
+Foo { 
+	data 
+	bar: { 
+		param 
+		// cannot assert data and param have the same type
+	}
+}
+f1: Foo('Hi')
+f1.bar(1) // sure... 
+
+```
+
+That's why we need to have a way to enforce it, in Java this would be like
+
+```java
+class Foo<T> { 
+	T data
+	void bar(T param) {
+	}
+}
+var f1 = new Foo<String>()
+f1.data = "hi"
+f1.bar(2) // compilatin errror 
+```
+
+The goal is to add a syntax like this without using too much angle brackets (or not using them at all) as much of the Yz code is generic, e.g. 
+
+`if`
+```js
+if : { 
+	cond Bool
+	action  { T } // action is a generic block 
+	else    { T } // else is a generic block, should be the same type
+}
+r: if isTime() { 
+	1 
+  } {
+	2
+  }
+```
+
+Options: 
+
+1 Use `<>` as Java
+```js
+if<T>: {
+	... 
+}
+r: if<Int> isTime() {
+	1
+  } {
+	2
+  }
+```
+
+
 We can define a data is generic by not specifying the data type and bind it on first usage, however we cannot enforce instances of the same type to be the same generic data
 
 ```javascript
@@ -27,6 +96,18 @@ b('hola')
 ```
 
 Could have the reserved word "type" and use it in similar to [Zig](https://ziglang.org/documentation/master/#toc-comptime)
+
+The problem is, it's hard to tell between a new type declaration and the declaration of a type 
+```js
+// New type Foo with a generic type T
+Foo { 
+	T 
+	data T // data is of type T
+}
+//
+foo Foo{T} // foo is of type Foo<T> 
+
+```
 
 ```js
 b: { 
@@ -249,3 +330,118 @@ filter: <T> { s []T; f {T Bool}
     r
 }
 ```
+
+
+```js
+option { 
+	T
+	None{}
+	Some{T}
+}
+Some[]
+
+```
+
+### Lisp Style
+
+```js
+Foo { 
+	T
+	data T
+}
+param: {
+	foo Foo T
+}
+param(Foo(String))
+
+```
+
+```js
+// Java:
+// New type Declaration 
+class Foo<T> { 
+	T data
+	Foo<T> child
+	// Function Declaration
+	void <T> foo (T param) {
+	}
+}
+// Generic variabla declaration
+Foo<String> a
+// Usage
+a = new Foo<String>()
+a.data = "hi"
+a.child = new Foo<String>()
+a.<String>foo("hi"); // although it's inferred
+
+
+// Yz
+Foo { 
+	T
+	data T
+	child Foo T 
+	foo: { 
+		T 
+		parm T
+	}
+}
+a Foo String
+a.data = 'hi'
+a.child = Foo(String)
+a.foo(String 'hi')
+
+// Yz
+Foo { 
+	<T>
+	data T
+	child Foo T 
+	foo: { 
+		T 
+		parm T
+	}
+}
+a Foo String
+a.data = 'hi'
+a.child = Foo(String)
+a.foo(String 'hi')
+
+
+```
+
+
+
+```js
+// Reduce reduces a []T1 to a single value using a reduction function.
+reduce: {
+	<T1>
+	<T2>
+    s []T1
+    initializer T2 
+    f {T2 T1 T2}
+	
+    r: initializer
+    s.for_each {
+        index Int
+        v T1
+        r = f r v 
+    } 
+    r
+}
+
+// Filter filters values from a slice using a filter function.
+// It returns a new slice with only the elements of s
+// for which f returned true.
+filter: {<T> s []T; f {T Bool}
+    r []T
+    r.for_each {_ Int; v T1
+        f v ? { r << v }
+    } 
+    r
+}
+
+```
+
+## Resources
+- [What are some syntax options for describing generic ("templated") types?](https://langdev.stackexchange.com/questions/122/what-are-some-syntax-options-for-describing-generic-templated-types)
+
+
