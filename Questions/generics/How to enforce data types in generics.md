@@ -1,6 +1,9 @@
 
 TLDR: 
 I wanted to use [qdbp](https://www.qdbplang.org/docs/examples#:~:text=as%20a%20function.-,Generics,-Methods%20are%20generic) generic style: 
+But there's no way to enforce a child element to use the same generic: 
+
+qdbp:
 ```js
 Foo { 
 	data 
@@ -9,7 +12,8 @@ f1 : Foo('hola')
 f2 : Foo(2)
 ```
 
-But there's no way to enforce a child element to use the same generic: 
+Problem:
+
 ```js
 Foo { 
 	data 
@@ -36,9 +40,26 @@ f1.data = "hi"
 f1.bar(2) // compilatin errror 
 ```
 
+Also is hard to add a second  param
+
+```js
+
+// qdbp style: doesn't work
+Foo { 
+	data
+	moredata
+	
+}
+Foo(1 'text')
+// java aprox
+class Foo<S,T> {
+	S data
+	T moredata
+}
+```
+
 The goal is to add a syntax like this without using too much angle brackets (or not using them at all) as much of the Yz code is generic, e.g. 
 
-`if`
 ```js
 if : { 
 	cond Bool
@@ -52,9 +73,9 @@ r: if isTime() {
   }
 ```
 
-Options: 
+### Options: 
 
-1 Use `<>` as Java
+### 1 Use `<>` as Java
 ```js
 if<T>: {
 	... 
@@ -72,7 +93,7 @@ We can define a data is generic by not specifying the data type and bind it on f
 ```javascript
 Node {
 	 data // generic
-	 left Node //
+	 left Node // want to make left and right same type as `data`
 	 right Node 
 }
 a = Node(1)
@@ -93,6 +114,12 @@ b(String 'hola')
 // can be inferred? 
 b('hola')
 
+if(Int isTime() {
+  1
+}{
+  2
+})
+
 ```
 
 Could have the reserved word "type" and use it in similar to [Zig](https://ziglang.org/documentation/master/#toc-comptime)
@@ -101,11 +128,23 @@ The problem is, it's hard to tell between a new type declaration and the declara
 ```js
 // New type Foo with a generic type T
 Foo { 
-	T 
+	T type
 	data T // data is of type T
 }
 //
 foo Foo{T} // foo is of type Foo<T> 
+
+if:  {
+	T type
+	condition Bool
+	then { T }
+	else { T }
+}
+if Int isTime() {
+	1
+} {
+	2
+}
 
 ```
 
@@ -441,6 +480,141 @@ filter: {<T> s []T; f {T Bool}
 
 ```
 
+
+## Type parameters
+
+```js
+min: { 
+	x Decimal
+	y Decimal 
+	x < y ? { x } { y }
+}
+Ordered : x.exp.constraints.Ordered
+gmin: {
+    <T>
+	x Ordered
+	y Ordered
+	x < y
+}
+gmin(Int 2 3)
+
+
+Tree { 
+	<T>
+	value Tree{T}
+	left Tree T
+	right Tree T 
+	lookup: {
+		 x T
+		 // returns Tree{T} 
+	}
+	
+}
+Ordered { 
+	Int
+	String
+	Float
+}
+```
+
+
+
+```js
+List list = new LinkedList();
+list.add(1);
+i = lit.iterator().next();
+
+
+list : LinkedList{Int}
+list << 1 
+i Int = list.get(0)
+
+
+from_array_to_list: {
+	<T>
+	a []T
+	arrays.stream(a).collect(collectors.to_list)
+}
+int_array = [1 2 3 3 4 5]
+string_list List{String} = from_array_to_list(int_array)
+
+```
+
+```js
+// differnet ways to type
+// Map<Thing<String, Int>, Option<Box<Char>>>
+
+map Map(Thing(String Int) Option(Box(Char)))
+
+Option {
+	<T> 
+	None
+	Some(T)
+}
+Some {
+	data <T>
+}
+None {
+	<T>
+}
+user? : find_user(123)
+find_user: {
+	...
+	user User
+	result Option {User}
+	...
+	if user.is_valid() { 
+		result = Some(user)
+	} {
+		result = None(User)
+	}
+}
+some Option{User} = Some(user)
+
+
+
+```
+
+#### Closer
+
+```js
+// different ways to type
+// Map<Thing<String, Int>, Option<Box<Char>>>
+
+map Map(Thing(String Int) Option(Box(Char)))
+
+Box {
+	<T>
+}
+Option {
+	<T> 
+}
+Some {
+	data <T>
+}
+None {}
+user? : find_user(123)
+find_user: {
+	...
+	user User
+	result Option(User)
+	...
+	if user.is_valid() { 
+		result = Some(user)
+	} {
+		result = None()
+	}
+}
+some Option(User) = Some(user)
+
+```
+
+
+```js
+Box {
+ data <T>
+}
+```
 ## Resources
 - [What are some syntax options for describing generic ("templated") types?](https://langdev.stackexchange.com/questions/122/what-are-some-syntax-options-for-describing-generic-templated-types)
 

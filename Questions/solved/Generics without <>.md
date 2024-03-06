@@ -85,7 +85,7 @@ How to tag a method where the there's no parameter and yet is generic? See examp
 
 Probably do receive a parameter of type "type" by name it uppercase but it doesn't have a type and doesn't collide with a any single letter identifier: 
 ```javascript
-Repo: {
+Repo {
     T
     db DB
     find_by_id: { id Number
@@ -205,7 +205,7 @@ Here are some example calls of these functions. Type inference is used to determ
 #challenged using the generic inside the block would make it required which might be noisy, e.g. 
 
 ```javascript
-List: {
+List {
     T
     << { t T }
 }
@@ -223,7 +223,7 @@ l2: new_list Int [1 2 3]
 
 The ideal would be
 ```js
-List: {
+List {
     << { t }
 }
 new_list: {
@@ -234,6 +234,8 @@ new_list: {
     }
 }
 ```
+
+
 ### Summary: 
 
 It could work:
