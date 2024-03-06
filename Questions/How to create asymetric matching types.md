@@ -18,7 +18,7 @@ status Status = either_ok_or_error()
 ```
 
 #### Possible solution
-Don't rely on different types, use methods instead
+Don't rely on different types, use methods instead to tell the difference
 ```js
 
 optional: {
@@ -38,10 +38,31 @@ optional: {
 }
 User{}
 ...
-x Optional(User)
-x = select(User()).where { u User ; u.name == "Alice"}
+x Optional(User) // x Optional<User>
+x = select(User).where { u User ; u.name == "Alice"}
 // could be Some(user)
 // or None()
+
+// Not instantiated generic type
+y Optional<T>
+
+// by the way, `select` here is generic
+select: { 
+    <T> 
+    // returns an instance of `Where` which is generic 
+    // on T
+	Where(T) 
+}
+// `Where` has a generic method `where`
+Where : {
+	<E>
+	// it take a `clause` which is a block with a 
+	// generic element `e` and returns a boolean
+	where: {
+		clause { e E ; Bool }
+		clause(e) 
+	}
+}
 ```
 
 So for status:
