@@ -89,6 +89,8 @@ squarer: {
 	is_open: { 
 	    value open = producer()
 	}
+	// while calls a block `is_open`.. similar to
+	// while { is_open() } but better because it doesn't need to create an extra block
 	while is_open { 
 		consumer (v * v)
 	}
