@@ -18,7 +18,7 @@ status Status = either_ok_or_error()
 ```
 
 #### Possible solution
-Don'tnuse different types, use methods instead
+Don't rely on different types, use methods instead
 ```js
 
 optional: {
@@ -44,3 +44,26 @@ x = select(User()).where { u User ; u.name == "Alice"}
 // or None()
 ```
 
+So for status:
+```js
+http:{
+   Status{
+       is_ok {Bool}
+   }
+   Ok {
+       is_ok : {true}
+   }
+   ClienError {
+      msg String
+      is_ok: { false }
+    }
+}
+...
+status http.Status = ok_err()
+if status.is_ok {
+   print("all good")
+} {
+   print("problems")
+}
+
+```
