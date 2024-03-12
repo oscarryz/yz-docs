@@ -1,5 +1,10 @@
 
-This was #answered  in [Yz#Generics](../../Overview%20Attempts/Yz.md#Generics)
+This was #answered 
+Update: 03/12/2024: No, there's no easy way to [How to enforce data types in generics](How%20to%20enforce%20data%20types%20in%20generics.md)  so a type will be used. Single upper case letter, no <> and will use () for instantiation. 
+
+
+Everything below is historic:
+
 TLDR; Yes, variables without type are generic. They'll bind to the first usage. If a "tag" is needed maybe pass it as arg, but in general just don't pass it.
 
 In qdbp, [generics](https://www.qdbplang.org/docs/examples#:~:text=as%20a%20function.-,Generics,-Methods%20are%20generic) don't specify the type and also infer them from the usage e.g. 

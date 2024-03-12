@@ -7,7 +7,7 @@ let predicate = {
     f String
     f != apple 
 }
-predicate('appple') // false 
+predicate('apple') // false 
 
 r: []String
 fruits.each { f String 

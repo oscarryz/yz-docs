@@ -7,30 +7,33 @@ https://doc.rust-lang.org/rust-by-example/generics.html
 ```js
 foo { arg <T> }
 foo = { arg <T> }
+
+foo ( arg T )
+foo = { arg T }
 ```
 
 ```js
 // A concreate type `A`
-A {}
+Aa {}
 
 // Single using A for the first time
 Single {
-	data A
+	data Aa
 }
 // Similar to SingleGeneric<A> {
 //
 //}
 SingleGeneric {  
-	<A>
+	A
 }
 main: {
     // Instantiation
-	s: Single(A())
+	s: Single(Aa())
 	// Here, `SingleGeneric` has a type parameter explicity specified
-	char SingleGeneric{String} = SingleGeneric('a')
+	char SingleGeneric(String) = SingleGeneric('a')
 
 	// Implicitly specified
-	t: SingleGneric(A())
+	t: SingleGneric(Aa())
 	int: SingleGneric(6)
 	str: SingleGneric('a')
 }
@@ -39,29 +42,30 @@ main: {
 ## Functions
 
 ```js
-A {}
-S {data A}
-SGen{ <T> data T }
+Aa {}
+Sa {data Aa}
+SGen{ T; data T }
 //SGen{ data <T> }
 
 // takes a concrete type S
 // explicit
-reg_fn { s S } = {s S}
+reg_fn { s Sa } = {s Sa}
 // implicit
-reg_fn : { s S }
+reg_fn : { s Sa }
 
 // Explicitly given the type `A`
-gen_spec_t { s SGen(A)}  
+gen_spec_t: { s SGen(Aa)}  
 // Explicitely given the type `Int`
-gen_spec_int { s SGen(Int)}
+gen_spec_int: { s SGen(Int)}
 //Nothing specified, so still generic
 generic { s SGen<T> } // better 
 generic { s SGen{<T>} } // ugly but correct
 generic { s SGen{T} }   // ugly and confusing... :(
+generic { s SGen(T) }   // Winner
 
 main: {
-	reg_fn(S(A))
-	gen_spec_t(SGen(A()))
+	reg_fn(Sa(Aa))
+	gen_spec_t(SGen(Aa()))
 	gen_spec_int(SGen(6))
 	generic(SGen('str'))
 }
@@ -71,15 +75,15 @@ main: {
 ## Implementation
 
 ```js
-S {}
+Sa {}
 GenericVal { 
-	data <T>
+	data T
 }
 GenericValIntImpl { 
 	data Int
 }
 GenericValSImpl {
-	data S
+	data Sa
 }
 
 Val { 
@@ -89,7 +93,7 @@ Val {
 	}
 }
 GenVal {
-	gen_val <T>
+	gen_val T
 	value: {
 		gen_val
 	}
@@ -108,7 +112,7 @@ main: {
 (there are not traits in Yz btw, that's just the name of the doc I was copying)
 ```js
 Empty{
-	<T>
+	T
 	double_drop: {
 		_ T
 	}
@@ -116,7 +120,7 @@ Empty{
 Null{}
 
 DoubleDrop { 
-	<T>
+	T
 	double_drop { _ T}
 }
 main: {
@@ -133,10 +137,10 @@ printer : {
 	t Display
 	t.fmt(/*...*/)
 }
-S {
+Sa {
 	data Display
 }
-s: S(vec(1)) // error etc. 
+s: Sa(vec(1)) // error etc. 
 
 ```
 
