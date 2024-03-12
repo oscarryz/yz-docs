@@ -1,8 +1,8 @@
-This was #answered  in [Yz#Generics](../../Overview%20Attempts/Yz.md#Generics)
+This was #answered  
 
 
 https://github.com/vlang/v/blob/master/doc/docs.md#generics
-	
+
 ```js
 User: {
     id Number
@@ -14,20 +14,22 @@ Post: {
     title String
     body String
 }
-Repo: <T> {
+Repo: {
+	T
     db DB
     find_by_id: { id Number
         table_name: info(T).name
         db.query_one('select * from {table_name} where id = ?', id)
     }
 }
-new_repo: <T> {
+new_repo: {
+	T
     db DB
-    Repo<T>{db}
+    Repo(T db)
 }
 db = new_db()
-user_repo = new_repo<User>(db)
-post_repo = new_repo<Post>(db)
+user_repo = new_repo(User db)
+post_repo = new_repo(Post db)
 
 user: user_repo.find_by_id(1)
 post: post_repo.find_by_id(1)
@@ -36,14 +38,14 @@ post: post_repo.find_by_id(1)
 Another example
 ```js
 
-compare: <T> {
+compare:  {
     a T; b T;
     if ({a < b }, { <- -1 })
     if ({a > b }, { <- 1 })
     0
 }
 
-compare: <T> { a T; b T
+compare:  { a T; b T
     a > b ? { return -1 }
     a > b ? { return 1 } 
     0            
@@ -68,13 +70,17 @@ Here is an example of how to write map, reduce, and filter functions for slices.
 
 ```js
 // Reduce reduces a []T1 to a single value using a reduction function.
-reduce: <T1 T2> {
-    s []T1; initializer T2; f {T2 T1 T2}
+reduce: {
+	T
+	U
+    s []T
+    initializer U
+    f (U, T, U)
     r: initializer
     s.for_each {
         _ Int
-        v T1
-        r = f r v 
+        v T
+        r = f( r v )
     } 
     r
 }
@@ -82,9 +88,9 @@ reduce: <T1 T2> {
 // Filter filters values from a slice using a filter function.
 // It returns a new slice with only the elements of s
 // for which f returned true.
-filter: <T> { s []T; f {T Bool}
+filter:  { s []T; f (T Bool)
     r []T
-    r.for_each {_ Int; v T1
+    r.for_each {_ Int; v T
         f v ? { r << v }
     } 
     r
@@ -106,5 +112,7 @@ Here are some example calls of these functions. Type inference is used to determ
 	// Now evens is []Int = [2]
 ```
 
-Might be replaced by [Generics without <>](../Questions/solved/Generics%20without%20<>.md)
+Might be replaced by [Generics without ](Generics%20without%20.md)
+
+
 

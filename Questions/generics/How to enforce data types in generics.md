@@ -615,6 +615,55 @@ Box {
  data <T>
 }
 ```
+
+
+## Proposal
+
+Single letter, upper case, means generic. 
+
+```js
+Node : {
+	data T
+	left Node(T)
+	right Node(T)
+}
+root : Node('text') // bound to `String`
+root.left = Node('left text') // ok
+// root.right = Node(1) // compiltion error
+```
+
+```js
+// different ways to type
+// Map<Thing<String, Int>, Option<Box<Char>>>
+
+map Map(Thing(String Int) Option(Box(Char)))
+Box : {
+	data T
+}
+Option : {
+	T
+}
+Some :  { 
+	data T
+}
+None {}
+user? : find_user(123)
+find_user: {
+	...
+	user User
+	result Option(User)
+	...
+	if user.is_valid() { 
+		result = option.some(user)
+	} {
+		result = option.none()
+	}
+}
+some Option(User) = Some(user)
+
+```
+
+
 ## Resources
 - [What are some syntax options for describing generic ("templated") types?](https://langdev.stackexchange.com/questions/122/what-are-some-syntax-options-for-describing-generic-templated-types)
 

@@ -78,3 +78,39 @@ twice: {
 g: twice(3.+)
 ```
 
+
+
+
+```js
+inc (Int, Int, Int )
+inc { Int Int Int }
+inc :: Int , Int, Int 
+
+inc Int -> Int -> Int 
+
+describable_function ( description String, (some_arg Number, Boolean))
+
+
+first_element :: ( <Type>, arr []Type, Optional<T> ) 
+first_element: {
+	<Type>
+	arr []Type
+	arr.len() == 0 ? {
+		optional.none()
+	} {
+		optional.some(arr[0])
+	}
+}
+first_element( [1 2 3 4] )
+
+
+combine:: (<TypeA>, <TypeB>, a []TypeA, b []TypeB, []TypeA)
+combine: {
+	<TypeA>
+	<TypeB>
+	a []TypeA
+	b []TypeB
+	a.concat(b)
+}
+
+```

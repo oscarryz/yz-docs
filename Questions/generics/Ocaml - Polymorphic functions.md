@@ -20,6 +20,11 @@ upgrade: {
 	x  Option(Int)
     x >>= op
 }
+upgrade: {
+	op (Int, Option(Int))
+	x  Option(Int)
+	x >>= op
+}
 
 
 fs: std.fs
