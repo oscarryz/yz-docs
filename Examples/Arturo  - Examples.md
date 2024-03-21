@@ -15,7 +15,7 @@ Explaination:
 `Int`'s `*` method is defined as: 
 ```javascript
 Int: {
-  value // 2
+  value T // 2
   *: {
     other Int
     value * other

@@ -8,12 +8,12 @@ stack: {
     with_capacity: { 
         capacity Int
         Stack {
-            data:[]
+            data:[]T
             len: 0
         }
     }
     Stack {
-        data []
+        data []T
         len Int
         reserve: {
             additional Int
@@ -23,7 +23,7 @@ stack: {
             }
         }
         push: { 
-	        value  
+	        value T
             reserve(1)
             data[len] = value
             len = len + 1

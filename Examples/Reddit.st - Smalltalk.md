@@ -2,7 +2,7 @@
 
 
 ```javascript
-RedditLink {
+RedditLink:  {
     id Int
     url String
     title String

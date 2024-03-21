@@ -7,8 +7,8 @@ cos/acos => 0.4999999999999999
 cube/croot => 0.5
 `
 fcf: {
-    cube:  { x Int  x ^ 3}
-    croot: { x Int x ^ ( 1 / 3)}
+    cube:  { x Int; x ^ 3}
+    croot: { x Int; x ^ ( 1 / 3)}
     
     names: ["sin/asin" 'cos/acos' 'cube/croot']
     
