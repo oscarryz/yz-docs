@@ -3,7 +3,7 @@
 ```javascript
 NOBLE_GAS = [ 'Heliom' 'Neon' 'Argon' 'Krypton' 'Xenon']
 
-group_by_name_length : enum.group_by {s String s.len() }
+group_by_name_length : enum.group_by {s String ; s.len() }
 groups:  group_by_name_length(NOBLE_GAS)
 print("$(groups)")
 
@@ -42,7 +42,7 @@ obj_counters.map  {itm NameCounter
 
 ```js
 task: {
-	id 
+	id T 
 	{
 		print("Hello from task $(id)")
 	}()

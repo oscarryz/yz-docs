@@ -2,19 +2,19 @@ https://github.com/carbon-language/carbon-lang#readme
 
 ```javascript
 sorting: {
-    partition: <T> {
+    partition: {
         s []T
         i: -1 
         s.for_each {
             it T
             it <= s[s.len()-1] ? {
                 i = i  + 1 
-                swap(s[i], e)
+                swap(s[i] e)
             }
         }
         i
     }
-    quick_sort: <T> { 
+    quick_sort: { 
         s []T
         s.len() <= 1 {
             return
@@ -41,7 +41,7 @@ geometry: {
         print "Total area: {area}"
     }
     main: {
-        circles: [Circle{1.0}, Circle{2.0}]
+        circles: [Circle(1.0) Circle(2.0)]
         print_total_area circles
     }
 }

@@ -1,3 +1,4 @@
+
 ```javascript
 com: {
     learninxminutes:{
@@ -9,28 +10,41 @@ com: {
                 foo_var = 20
 
                 foo Int = 7
-                foo_string_interpolation: "{foo_val}"
+                foo_string_interpolation: "$(foo_val)"
                 foo_nullable String // there's no nulls, each block has to delclare their empty value
-                hello: {name String ='world'; result String
-                   result= "hello {name}" 
+				// hello (name String; result String)
+                hello: {
+                   name String ='world'
+		           result String
+                   result= "hello $(name)" 
                    result
                 }
                 print(hello("foo")) // Hello, foo
                 print(hello(name='bar')) // Hello, bar
                 print(hello()) // Hello, world
-                print(hello("foo", "nada")) //  second param is "nada"
-                varargg_example: { names ...Int; 
-                    print('Argment has {len(names)} elements')
-                }
-                vararg_example()
-                vararg_example(1)
-                vararg_example(1,2,3)
-
-                odd: { x Int; x % 2 == 1}
+                print(hello("foo" "nada")) //  second param is "nada"
+				// no var args, use a list 
+                //varargg_example: { names ...Int; 
+                //    print('Argment has {len(names)} elements')
+                //}
+                //vararg_example()
+                //vararg_example(1)
+                //vararg_example(1,2,3)
+				vararg_ish: {
+					name []String
+					print('Argument has $(names.len())) elements')
+				}
+				vararg_ish([])
+				vararg_ish([1])
+				vararg_ish([1 2])
+				vararg_ish([1 2 3])
+ 
+                odd: { x Int; x % 2 == 1 }
                 print(odd(6))// false
                 print(odd(7))// true
-                even:{ x Int; x % 2 == 0}
-                not: { f {Int; Boolean;
+                even:{ x Int; x % 2 == 0 }
+                not: { 
+	                f (Int; Boolean)
                     {n Int; f(n) == false}
                 }
                 notOdd: not(odd)
@@ -38,36 +52,47 @@ com: {
                 notZero: not({n Int; n == 0})
                 notPositive: not({n Int; n > 0})
 
-                0.to(4).do({ i Int; 
-                    print("{notOdd(i)} {notEven(i)} {notZero(i)} {notPositive(i)}")
-                })
+                0.to(4).each {
+	                i Int; 
+                    print("$(notOdd(i)) $(notEven(i)) $(notZero(i)) $(notPositive(i))")
+                }
 
-                ExampleClass: {x Int
-                    member_function: { y Int
+                ExampleClass: {
+	                x Int
+                    member_function: { 
+	                    y Int
                         x + y
                     }
                     // There's not infix, but `.` and parens `()` can be ommited
-                    infix_member: { y Int
+					// if name is "non-word"
+                    infix_member: { 
+	                    y Int
                         x * y
                     }
+					* : infix_member
+		
                 }
-                example_class: ExampleClass {7}
-                //example_class: ExampleClass {x=7}
-                //example_class: ExampleClass {x:7}
+                example_class: ExampleClass(7)
+                //example_class: ExampleClass(x=7)
+                //example_class: ExampleClass(x:7)
                 print(example_class.member_function(4)) // 11
-                print(example_class infix_member 4 ) // 28
+                print(example_class * 4 ) // 28
+                // same as:
+                // print(example_class.infix_member(4) )
 
                 DataClassExample: { x Int; y Int; z Int}
-                foo_data: DataClassExample{1,2,4}
+                foo_data: DataClassExample(1,2,4)
                 print(foo_data)
-                foo_copy: core.copy(foo_data)
+                foo_copy: std.copy(foo_data)
 
-                a, b, c: foo_data()
-                print("{a} {b {c}") // 1,2,4
+                a b c: foo_data()
+                print("$(a) $(b) $(c)") // 1,2,4
 
-                map_data: ["a":1, "b":2]
-                entries(map_data).for_each({key String; value Int
-                    print("{key} -> {value}")
+                map_data: ["a":1 "b":2]
+                entries(map_data).for_each({
+	                key String; 
+	                value Int
+                    print("$(key) -> $(value)")
                 })
                 
                 
@@ -93,25 +118,26 @@ myCompany: { // a singleton? a function
 }
 
 main: {
-  employee: Employee { 'Alice' 'alice@mycompany.com' myCompany.name }
-  print '{employee}'
+  employee: Employee ( 'Alice' 'alice@mycompany.com' myCompany.name )
+  print '$(employee)'
 }
 
 // Safe
-reply: { condition Boolean 
-  condition ? { "I'm fine" } { boolean.null }
+reply: { 
+  condition Boolean 
+  condition ? { "I'm fine" }
 }
 error: {
-  IllegalStateException{"Shouldn't be here"}
+  IllegalStateException("Shouldn't be here")
 }
 main: {
   condition: true
-  message: reply condition
-  print message.replace 'fine' 'ok'
+  message: reply(condition)
+  print message.replace('fine' 'ok')
   message != null ? {
     println message.upperCase()
   }
-  nonNull String = reply(condition: true) ? error()
+  nonNull String = reply(condition: true) ? error
   println nonNull
 }
 

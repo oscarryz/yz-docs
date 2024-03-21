@@ -4,7 +4,7 @@ https://arturo-lang.io/documentation/in-a-nutshell/
 // variables
 a1: 2
 a2: 3.14
-a4: Complex{ 1, 2.0 } // 1.0 + 2.0i
+a4: Complex( 1, 2.0 ) // 1.0 + 2.0i
 
 // strings
 c1: 'this is a string'
@@ -19,9 +19,9 @@ ch: 'c' // still a string
 d: [1, 2, 3]
 
 // dictionaries
-e: ['name'   : 'John',
-    'surname': 'Doe',
-    'age'    : '34', // can't mix value types 
+e: ['name'   : 'John'
+    'surname': 'Doe'
+    'age'    : '34' // can't mix value types 
     'likes'  : `['pizza', 'spaguetti']`]
 
 // blocks (behave like closures/functions)

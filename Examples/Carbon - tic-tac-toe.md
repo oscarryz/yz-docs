@@ -5,13 +5,13 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 	
 	display_board: {
 		board.split('\n').for_each({
-			row
+			row Int
 			print(join(" | " row))
 		})
 	}
 	won_game: { player Player
 		win: repeat(3 player)
-		[board  transpose(board)].for_each {
+		[board transpose(board)].for_each {
 			board.for_each { row String
 				row == win ? { return true }
 			}
