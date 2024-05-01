@@ -3,8 +3,7 @@ How a block interface is defined
 
 The block signature is a list of variables / types / generics separated by `;`  enclosed in parenthesis: 
 
-```js
-
+```javascript
 // Add is a block that takes two `Int` and returns an `Int`
 add ( Int ; Int ; Int ) 
 add = { 
@@ -13,8 +12,10 @@ add = {
 	a + b
 }
 // Can also have names and initialize right away.
-// When the initalization follows the signature no variable redefinition is needed.
+// When the initalization follows the signature variable redefinition is needed.
 add ( a Int ; b Int ; Int) = {
+	a Int
+	b Int
 	a + b 
 }
 // Can also be inferred
@@ -36,9 +37,6 @@ root : Node( Some(0) Some(Node(-1)) Some(Node(1)))
 node  ( data T ; left T; right T )  = {
 
 }
-
-
-
 ```
 
 

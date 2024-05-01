@@ -6,7 +6,7 @@ BinTree: {
   left: leaf
   right: leaf
 }
-leaf = BinTree{}
+leaf = BinTree()
 
 `'
 Calculate the sum of node values
@@ -17,10 +17,11 @@ Examples:
   >> tree_sum(BinTree{5, node4})
   9
 '`
+welse: when.else
 tree_sum: { t BinTree
   when_eq t [
     { leaf } : { 0 }
-    {when.else}: { t.value + tree_sum(t.left) + tree_sum(t.right) }
+    {welse}: { t.value + tree_sum(t.left) + tree_sum(t.right) }
   ]
 }
 // also 
