@@ -1,4 +1,20 @@
 
+#answered Answer: Use single upper case letter and specify in parameters using parenthesis. e.g. 
+
+```javascript
+Node: {
+	data T
+	left Node(T)
+	right Node(T)
+}
+// if need to specity the type, a single type can be used
+Box: {
+   T 
+   data T
+}
+b Box(Int)
+b.data = 1
+```
 TLDR: 
 I wanted to use [qdbp](https://www.qdbplang.org/docs/examples#:~:text=as%20a%20function.-,Generics,-Methods%20are%20generic) generic style: 
 But there's no way to enforce a child element to use the same generic: 

@@ -73,7 +73,7 @@ main:{
 
 
 ```javascript
-ph: ['Mark', 'Russel', 'Rocky', 'Haris', 'Root']
+ph: ['Mark' 'Russel' 'Rocky' 'Haris' 'Root']
 hunger: 3
 thing = 100
 eat: 100
