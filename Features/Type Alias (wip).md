@@ -6,11 +6,11 @@ The most common case is to define a block instance (see: [Instances](Instances.m
 
 ```javascript
 // full syntax
-Person:: {name String last_name String full_name {String}} = {
+Person (name String; last_name String; full_name (String)) = {
     full_name: {name ++ last_name}
 }
 // shortcut
-Person :: {
+Person : {
     name String
     last_name String
     full_name: {name ++ last_name}
@@ -148,4 +148,6 @@ So, `Person::{}` defines a new type and `Person{}`  instantiates it (`Person:{}`
 
 
 How can we add methods to `Suit :: Int` ?  You can't. Maybe a possible feature would be [[../Questions/solved/Extension methods]], but that something we should consider for a future release.
+
+#rejected (again) No `::` will be used, and thus no type alias. 
 

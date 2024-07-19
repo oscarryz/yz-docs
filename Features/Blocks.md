@@ -11,7 +11,7 @@ To create a block put the code between `{` and `}`
 }
 ```
 
-Assing a block to a variable and execute it
+Assign a block to a variable and execute it
 
 ```javascript
 hi: {
@@ -45,7 +45,7 @@ hi: {
 hi() // Hello, World! // calls action() which prints the message
 ```
 
-We can acesss the variables inside a block by using the `.`  notation. 
+We can access the variables inside a block by using the `.`  notation. 
 For instance we could've call the `action` variable directly like this:
 
 ```javascript

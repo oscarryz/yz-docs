@@ -2,15 +2,17 @@
 stack: {
 
 	new: {
-		Stack() 
+		V
+		Stack(V) 
 	}
 	Stack { 
-		values [] // generic array
+		V
+		values []V // generic array
 		push: {
-			v  // generic value
+			v  V // generic value
 			values << v
 		}
-		<< : { v push v }
+		<< : { v V push v }
 		pop: {
 			values.len() == 0 ? {
 			   option.None()
@@ -21,22 +23,22 @@ stack: {
 	}
 }
 main: {
-	s: stack.new()
+	s: stack.new(Int)
 	s.push 42
 	s << 43 
 	// This is an error, as the stack inner `values` is now bound to `Int` types
 	stack.push 'Oh no!'
 
     // Trying to use a generic type before is bound would return an error
-    t: stack.new()
-    x: t.pop() // not known yet, probably compile error
-	10 + x.get() // yeah... probably not... or maybe, there's no way to know
+    t: stack.new(Int)
+    x: t.pop() // xruntime error, stack unferflow.
+	// x in an Option(Int)
+	10 + x.get() // ok
 
 
     as_param: {
-	    t stack.Stack 
+	    t stack.Stack(T) 
 		10 + t.pop().get() // would require t.value to be bound to Int // :? maybe
     }
-
 }
 ```

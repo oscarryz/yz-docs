@@ -5,10 +5,10 @@ A new type can be created by creating an alias of a type signature.
 First let's see what a type signature is and how to use it
 ```javascript
 // Type signature: Is a block with a variable count of type Int
-{count Int} 
+(count Int)
 
 // Can declare a var with that type signature
-b1 {count Int}
+b1 (count Int)
 // Can initialize a block matching that signature
 b1 = {
     x: 1
@@ -33,7 +33,7 @@ To create copies from a block create a ~~type signature alias using the `::` ope
 
 ```javascript
 b1: {count: 10}
-Counter { count Int }
+Counter ( count Int __
 Counter = b1 // assign the body of b1 `{count:10}` to the type alias `Counter`
 // To create a copy use the instantiation construct
 c1: Counter() // creates an instance
@@ -79,10 +79,11 @@ b // Pon
 // This is fine because we're executing the block and then taking the value
 // `thing.name` changes reference but `a` still refers to the origina.
 
+// This whole copy thing is invalid
 // With copy
-a: thing{'Ping'} // creates a copy of `thing` so `a` now has a `name` variable with the value "Ping"
-a.name // Ping
-b: thing{'Pong'} // creates a copy of 'thing' so `b` now has a `name` variable with the value "Pong"
+//a: thing{'Ping'} // creates a copy of `thing` so `a` now has a `name` variable with the value "Ping" // invalid
+//a.name // Ping
+//b: thing{'Pong'} // creates a copy of 'thing' so `b` now has a `name` variable with the value "Pong"
 b.name // Pong
 thing.name // compiler error, is not defined, only the copies were affected
 
@@ -92,7 +93,7 @@ However, we cannot use a block name as type:
 ```javascript
 a thing // a type thing is not valid
 // we have to use the full block type
-a {name String} // a is a block that has a name variable of type String
+a (name String) // a is a block that has a name variable of type String
 // Or we can define an uppercase named block `Thing` and then use that
 Thing: {
     name String
@@ -100,11 +101,11 @@ Thing: {
 a Thing // now we can declare a of type Thing
 
 // What's the type of `Thing` though? 
-// The following is not valid because that's a Declaration and Instantiation
-Thing { name String } = { 
+// The following is valid; that's a Declaration and Instantiation
+Thing (name String ) = { 
     name String
 }
-thing {name String String} = {
+thing (name String String) = {
     name String
     name
 }
@@ -115,7 +116,7 @@ thing {name String String} = {
 ```javascript
 
     // Definition 
-	Person {
+	Person: {
 		name String
 		email String
 		dob Date
@@ -162,7 +163,9 @@ This is another way, by creating anonymous blocks that capture the environment o
 point: {
    x Int
    y Int
-   {x:x;y:y}
+   // returns a block that has variable `x` with the value of x
+   // and a variable `y` with the value of y 
+   {x:x y:y}
 }
 p: point(10 20) // returns the last executed
 p.x  // 10
@@ -180,11 +183,11 @@ duck.name //
 ```
 
 #open-question How using closures fits with the whole language? 
-Answer, it doesn't 
+Answer, it doesn't... (hm I think the whole lang was closures?)
 
 
 ```javascript
-// Not valid nor wanted
+// Not valid nor wanted, create a block that returns a type.
 person: {
     Person {
         _name String
@@ -207,24 +210,35 @@ p: person()(
 ```
 Correct
 ```javascript
-// Alias
+// Create the type and then use it
 Person {
         _name String
-        name {String}
-        greet {Person String}
-        builder {String {String}}
-        call_me {{}}
-        ok      {{{}}}
+        name (String)
+        greet (Person; String)
+        builder (String; (String))
+        call_me (())
+        ok      ((()))
 } 
-p: Person {
+p: Person (
     _name: 'Oscar'
     name: {s String}
-    greet: {p Person; "Hola {p.name()}"}
+    greet: {p Person; "Hola $(p.name())"}
     builder: {s String; {s}}
     call_me: {{print 'OK'}}
-    ok     : { do {} { print 'Ok'; do()}}
-}
-{name String}{'Oscar'}
+	// Not sure what was I trying here???
+    ok     : { 
+	    do :{} 
+	    {print 'Ok' do()}
+	}
+	// this satisfies the ((()))
+	ok: {
+			{
+				{
+				}
+			}
+		}
+)
+(name String) = {'Oscar'}
 ```
 
 So, if creating block instances is conveyed by placing {} after the block, are types still needed? 

@@ -1,4 +1,6 @@
 
+Also, how to create sum types (I don't think that's the same).
+
 See for example: [Pomar - http request](Pomar%20-%20http%20request.md)
 
 It needs a type with two possible states (similar to `Option { Some, None }`) 
@@ -24,11 +26,11 @@ Don't rely on different types, use methods instead to tell the difference
 optional: {
     
     Optional {
-      <T>
+      T
       is_some {Bool}
     }
     Some {
-        <T>
+        T
         data T
         is_some: { true }
     }
@@ -44,18 +46,18 @@ x = select(User).where { u User ; u.name == "Alice"}
 // or None()
 
 // Not instantiated generic type
-y Optional<T>
+y Optional(T)
 
 // by the way, `select` here is generic
 select: { 
-    <T> 
+    T 
     // returns an instance of `Where` which is generic 
     // on T
 	Where(T) 
 }
 // `Where` has a generic method `where`
 Where : {
-	<E>
+	e E
 	// it take a `clause` which is a block with a 
 	// generic element `e` and returns a boolean
 	where: {
@@ -67,14 +69,14 @@ Where : {
 
 So for status:
 ```js
-http:{
+http: {
    Status{
-       is_ok {Bool}
+       is_ok (Bool)
    }
-   Ok {
+   Ok: {
        is_ok : {true}
    }
-   ClienError {
+   ClienError: {
       msg String
       is_ok: { false }
     }

@@ -40,7 +40,7 @@ main: {
 	debug(get_first_larger(numbers 3))
 	debug(get_first_larger(numbers 5))
 }
-get_first_larger (list []Int; limit Int; Int) = {
+get_first_larger (list []Int, limit Int, Int) = {
 	when [
 		{list.len() == 0} : {0}
 		{list[0]>limit}: {list[0]}

@@ -50,3 +50,29 @@ p2.3 // '78,89'
 
 
 #answered Define block with `Name {}` , it doesn't have a type by itself, but is structural compatible with other structures with the same members.
+
+#updated New types do use `:`  the block type (signature) used `()`
+So updated and final version would be:
+
+```js
+Point:{ x Int y Int}
+print_point: {
+	p Point
+}
+print_xy: {
+	xy (Int Int) // something with two Int's
+	xy.0 // first element
+	xy.1 // second element
+}
+
+print_xy_ish : {
+	xy (x Int ; y Int ) // named variables
+	xy.x
+	yx.y
+}
+p : Point(1 1)
+print_point(p) // valid
+print_xy(p) // valid
+print_xy_ish(p) // still valid
+
+```

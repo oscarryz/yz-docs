@@ -1,10 +1,13 @@
 
 Interesting links: 
 
-https://github.com/tomprimozic/type-systems
-https://github.com/tomprimozic/type-systems/blob/master/extensible_rows/infer.ml For type inference
-https://www.microsoft.com/en-us/research/publication/extensible-records-with-scoped-labels/
-https://pages.cpsc.ucalgary.ca/~robin/FMCS/FMCS2014/An%20introduction%20to%20OOC.pdf
+[tomprimozic/type-systems](https://github.com/tomprimozic/type-systems)
+[tomprimozic/type-systems - extensible_rows/infer.ml ](https://github.com/tomprimozic/type-systems/blob/master/extensible_rows/infer.ml)
+
+For type inference
+[Extensible records with scoped labels](https://www.microsoft.com/en-us/research/publication/extensible-records-with-scoped-labels/)
+[An introduction to Object-Oriented Calculus](https://pages.cpsc.ucalgary.ca/~robin/FMCS/FMCS2014/An%20introduction%20to%20OOC.pdf)
+
 
 
 ```javascript

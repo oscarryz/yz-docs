@@ -8,6 +8,49 @@ In a loop:
 -
 The producer knows when to stop 
 
+```js
+
+// WORKS
+// To make it work as close as possible, the squarer needs to invoke the counter // until it closes. The counter needs to know when to stop
+`
+Creates a block that returns an Int and a Bool every times it's invoked.
+It will continue to be invoked while n < 100
+This counter is the "producer"
+`
+counter: { 
+	n: -1
+	{ 
+	    n < 100 ? {n = n + 1 } 
+	    n < 100 
+	    n 
+	}
+
+}
+squarer: {
+	producer (Int ; Boolean)  //e.g. the counter
+	consumer (Int)
+
+	value Int
+	open  Bool
+	is_open: { 
+	    value open = producer()
+	}
+	// while calls a block `is_open`.. similar to
+	// while { is_open() } but better because it 
+	// doesn't need to create an extra block
+	while is_open { 
+		consumer (value * value)
+	}
+}
+printer: {
+	n Int 
+	print '$(n)'
+}
+main: {
+   squarer( counter() printer )
+}
+```
+
 
 ```javascript
 
@@ -68,43 +111,6 @@ main: {
 }
 
 // The reson it doesn't work is because the block `(Int)` by itself cannot stop for the value to be overriden before is read (channels do), it can block until the value is avaiable which is righ away.
+// It would work if a buffer is used to store the values so it is not overriden
 
-// WORKS
-// To make it work as close as possible, the squarer needs to invoke the counter // until it closes. The counter needs to know when to stop
-`
-Creates a block that returns an Int and a Bool every times it's invoked.
-It will continue to be invoked while n < 100
-`
-counter: { 
-	n: -1
-	{ 
-	    n < 100 ? {n = n + 1 } 
-	    n < 100 
-	    n 
-	}
-
-}
-squarer: {
-	producer (Int ; Boolean) 
-	consumer (Int)
-
-	value Int
-	open  Bool
-	is_open: { 
-	    value open = producer()
-	}
-	// while calls a block `is_open`.. similar to
-	// while { is_open() } but better because it 
-	// doesn't need to create an extra block
-	while is_open { 
-		consumer (value * value)
-	}
-}
-printer: {
-	n Int 
-	print '$(n)'
-}
-main: {
-   squarer( counter() printer )
-}
 ```

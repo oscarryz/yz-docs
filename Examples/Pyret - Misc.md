@@ -40,7 +40,7 @@ tree_sum: {
         node_5: BinTree{5 node_4}
         assert tree_sum node_5  == 9
     }
-    leaf: BinTree{}
+    leaf: BinTree()
     BinTree: {
         value Int
         left: leaf

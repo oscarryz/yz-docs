@@ -8,7 +8,7 @@ model: HelloWorldModel (
 
 
 win: Frame (
-    title: '$model.saying JavaFX'
+    title: '$(model.saying) JavaFX'
     width: 200
     content: TextField(
         value: model.saying

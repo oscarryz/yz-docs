@@ -1,11 +1,11 @@
 ```js
 Lion: {
-  food_consumed : Set{}
+  food_consumed : Set()
 
   roar: {
     'roar'
   }
-  eat: { food String; 
+  eat: { food String
     validate(food)
     food_consumed.add(food)
   }
@@ -33,7 +33,7 @@ No braces ( `{}` )
 
 ```js
 Lion:
-   consumed: Set{}
+   consumed: Set()
    
    roar:
      'roar'

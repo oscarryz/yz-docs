@@ -1,5 +1,5 @@
-No import keyword, just assing to a new variable: 
-#answered  No `import` keyword, to "import" all assing the top level block e.g. `math: core.math; math.max(1 2)`
+No import keyword, just assign to a new variable: 
+#answered  No `import` keyword, to "import" all assign the top level block e.g. `math: core.math; math.max(1 2)`
 
 ```js
 util: org.apache.something.util

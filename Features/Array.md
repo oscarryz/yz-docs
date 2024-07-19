@@ -1,5 +1,33 @@
 Array
 
+```js
+// Jul 19 2024
+// Type
+[Element_Type]
+// e.g.
+// declaration
+a [Int]
+// initialization
+a = [1 2 3]
+
+// decl + init
+a [Int] = [1 2 3]
+
+// short declr + init
+a : [1 2 3]
+
+// emtpy
+a [Int] = [] // 
+// short declr + init
+a : []Int // empty array of ints 
+
+// Generic
+a [T] = [1 2 3]
+a : []T
+a : [] (String,String)
+a [(String,String)]
+```
+
 ```javascript
 // Type
 array []Int
@@ -42,8 +70,9 @@ Array block declaration
 ```javascript
 
 	'special'
-	Array: <T>{
-		elements ...T
+	Array: {
+		T
+		elements T
 		push: { e T 
 			elements << e
 		}
