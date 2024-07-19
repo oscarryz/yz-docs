@@ -33,7 +33,7 @@ On the current design (11/02/2023) we can pass a callback (similar to a channel)
 ```js
 
 long_function: {
-	callback {String} // callback is a block that receives/returns a String
+	callback (String) // callback is a block that receives/returns a String
 	r: random.int(100) // a random number between 1 - 100 
 	s: 'Complex compuation: $(r)'
 	callback(s) // sends the value `s` to the callback 
@@ -70,7 +70,7 @@ Another source of inspiration is [Awaitability](https://github.com/awaitility/aw
 
 ```java
 while (!timeout) {
-    executor.submit(callback()
+    executor.submit(callback())
     if success -> break
 }
 return value
@@ -131,12 +131,12 @@ The example above could be as follows:
 
 ```javascript
 long_function: {
-	callback {String} // callback is a block that receives/returns a String
+	callback (String) // callback is a block that receives/returns a String
 	r: random.int(100) // a random number between 1 - 100 
 	s: 'Complex compuation: $(r)'
 	callback(s) // sends the value `s` to the callback 
 }
-callback: {message String}
+callback: (message String)
 somewhere_else: {
 	wait: long_function( callback )
 	msg: callback.message
@@ -148,7 +148,7 @@ main:{
 }
 
 ```
-
+So, `a` calls `b` and waits for it to be completed. 
 
 Another example is the producer consumer in Synchronous Concurrencyn
 
@@ -161,24 +161,22 @@ printer: {
    {
 	   line String
 	   print(line)
+	   count = count + 1
    }
 }
 main: {
-   f: io.file.open('input.txt').or { e Error
-        printerr('Cannot read input: $(e)')
-        exit
-   }
    p: printer()
-   wait: f.each_line { line String
-        p(line)
+   f: file.open('input.txt').or_panic()
+   _: f.each_line { 
+	   line String
+       p(line)
    }
    print 'Number of lines read: $(p.count)'    
 }
 ```
 
-Yz has asynchronous calls, so the key is to force something to wait to be done by assigning it to a value 
+Yz has asynchronous calls, so the key is to force something to wait to be done by assigning it to a value, in the example above `_`   
 
-Another producer consumer example: 
 
 
 #answered 

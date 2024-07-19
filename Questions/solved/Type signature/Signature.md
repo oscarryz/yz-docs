@@ -195,7 +195,7 @@ main (Result) = {
 
 
 ```javascript
-import core.collections.map
+import std.collections.map
 
 'derive: [Show]'
 Group: {

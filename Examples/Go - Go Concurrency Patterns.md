@@ -2,12 +2,14 @@
 [A boring function](https://go.dev/talks/2012/concurrency.slide#12)
 ```js
 boring: {
+	i:0
 	msg String
 	loop: {
 		print '$(msg), $(i)'
 		time.sleep(time.second)
 		// less boring
 		time.sleep(time.duration(random.int(1) * time.millisecond))
+		i = i + 1
 	} 
 }
 main: {
@@ -30,7 +32,9 @@ value: not_a_channel.c // "receiving"
 ```js
 not_a_channel
 main:{
-	nac {String }
+	nac (String) = {
+		s String
+	}
 	boring("boring" nac)
 	5.times {
 		wait_for: nac.value_set()
@@ -40,7 +44,7 @@ main:{
 }
 boring: {
 	msg String
-	nac {String}
+	nac (String)
 	loop: {
 		i Int
 		nac('$(msg) $(i)') // callback, and continues

@@ -11,7 +11,7 @@ producer: {
 	s: 'Random number $(random.int(100))' 
 }
 consume: {
-   thing {String} // a thing that retuns a string
+   thing (String) // a thing that retuns a string
    value: thing() // invoke and wait for a value
    print 'The value is: $(value)'
 }

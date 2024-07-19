@@ -1,26 +1,25 @@
 
 ```js
-ToString {
-	to_string {String}
+ToString : {
+	to_string (String)
 }
-Person  {
+Person:{
 	name String
 	to_string: {
 		name 
 	}
 }
-List {
-  data []
+List:{
+  data []T
   ... 
 }
-//# Here `ToString` is only available for instances
+// # Here `ToString` is only available for instances
 // # of `List` if `T` also implements `ToString`.
-ListOfToStrings {
+ListOfToStrings: {
 	data [] ToString
-	to_string: {
-	   ... 
+	add ( ts ToString ) = {
+		data.add(ts)
 	}
 }
-// hmmm 
   
 ```

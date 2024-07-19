@@ -5,7 +5,8 @@
 // Functions
 // With generics
 add : { 
-	a b 
+	a P 
+	b P
 	a + b // a must support the `+ {n}` method 
 }
 add 1 2 
@@ -15,8 +16,7 @@ add: {
 	a + b
 }
 // With type
-add { a Int b Int } = {
-	a Int b Int // have to repeat the variables to match the type signature
+add ( a Int, b Int ) = {
 	a + b
 }
 // idea... when adding a type we can define inplace using | or ->
@@ -31,8 +31,8 @@ print 'Hello' // same for `String`
 // If/Then/Else
 if: {
 	cond Bool
-	then {v}// generic
-	else {v}// generic
+	then (v V) // generic
+	else (v V) // generic
 	cond.ifTrueIfFalse(then else)
 	// or 
 	cond ? then else 
@@ -68,16 +68,17 @@ true.if{
 }
 // switch 
 switch: {
-	v
+	v T
 	this : {
 		val : {
-			v	
+			v T	
 		}
 		result: {
 			None()
 		}
 		case: { 
-			v then
+			v (T)
+			then (T)
 			val() == v ? {
 				result = then()
 				this.result = { Some(result) }
@@ -87,7 +88,7 @@ switch: {
 		}
 		default: {
 			then
-			this.result().some?{ v v }
+			this.result().some?{ v T v }
 			this.result().none(then())
 		} 
 	}
@@ -108,7 +109,7 @@ str: switch 5
 // with a mapn in Yz
 switch: {
     value 
-	conds [{Bool}]{v}
+	conds [(Bool)](v V)
 	default {v}
 
 	conds.for_each {
