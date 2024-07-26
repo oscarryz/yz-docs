@@ -7,10 +7,11 @@ The following is a basic setup. Will still need some time to do a test run and s
 // In lieu of imports, declare three typs to be the same as those returned 
 // by executing the anonymous block with those three types full qualified name
 Option Some None : ({
-	std.option.Option
+    std.option.Option
     std.option.Some
     std.option.None
 }())
+
 /*
 If that's not possible the following should be
 
@@ -18,11 +19,16 @@ Option : std.option.Option
 Some : std.option.Some
 None : std.option.None
 */
+
 // A fork has two operations: 
 // `try_take` by a Philosopher and returns true or false if it was possible
-// `trye_drop` if the fork is currenly holded by the given Philosopher
-Fork (try_take (by Philosopher, Bool) try_drop(by Phisolopher))  = {
-	current_user Option(Philosopher)
+// `try_drop` if the fork is currenly holded by the given Philosopher
+Fork (
+	try_take (by Philosopher, Bool),
+    try_drop(by Phisolopher)
+)  = {
+
+    current_user Option(Philosopher)
     taken   : false
     is_free : { taken == false } 
     take    : { taken = true   }
@@ -52,7 +58,7 @@ Philosopher : {
     name String
     left  Fork
     right Fork
-	self Philosopher
+    self Philosopher
 
     think () = {
            print("$(name) is eating...")
@@ -82,7 +88,7 @@ main: {
 }
 init: {
     names [String]
-	philosophers : []Philosophers
+    philosophers : []Philosophers
     w: names.for_each { 
         i Int
         name String
