@@ -34,7 +34,7 @@ Fork (
     take    : { taken = true   }
     drop    : { taken = false} 
 
-	try_take : { 
+    try_take : { 
 		by Philosopher
 		is_free() ? { 
 			take() 
@@ -45,7 +45,7 @@ Fork (
 		}
 		
 	}
-	try_drop : {
+    try_drop : {
 		by Philosopher
 		current_user.value_is(by)  {
 			drop()
