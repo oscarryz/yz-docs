@@ -24,7 +24,7 @@ None : std.option.None
 // `try_take` by a Philosopher and returns true or false if it was possible
 // `try_drop` if the fork is currenly holded by the given Philosopher
 Fork (
-	try_take (by Philosopher, Bool),
+    try_take (by Philosopher, Bool),
     try_drop(by Phisolopher)
 )  = {
 
