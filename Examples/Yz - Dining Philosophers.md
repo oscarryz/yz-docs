@@ -34,22 +34,22 @@ Fork (
     take    : { taken = true   }
     drop    : { taken = false} 
 
-    try_take : { 
-		by Philosopher
-		is_free() ? { 
-			take() 
-			current_user = Some(by)
-			true 
-		} { 
-			false
+    try_take : {
+        by Philosopher
+        is_free() ? { 
+        take() 
+            current_user = Some(by)
+            true 
+        } { 
+            false
 		}
 		
 	}
     try_drop : {
-		by Philosopher
-		current_user.value_is(by)  {
-			drop()
-			current_user = None()
+        by Philosopher
+        current_user.value_is(by)  {
+            drop()
+            current_user = None()
 		}
 	}
 } 
@@ -66,13 +66,13 @@ Philosopher : {
            eat()
     }
     eat   () = {
-		left.try_take(self) && { right.try_take(self) } {
+        left.try_take(self) && { right.try_take(self) } {
            print("$(name) is eating...")
            wait: time.sleep(random(1 5), time.SECONDS)
 		} 
-		left.try_drop(self)
-		right.try_drop(self)
-		think()
+        left.try_drop(self)
+        right.try_drop(self)
+        think()
 	}
 }
 
@@ -93,8 +93,8 @@ init: {
         i Int
         name String
 		
-		p : Philosopher(name)
-		p.self = p
+        p : Philosopher(name)
+        p.self = p
         p.right = Fork()
         is_last :  i == names.len() - 1
         next : is_last ? { 0 } { i + 1 } 
