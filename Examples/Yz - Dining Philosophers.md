@@ -42,18 +42,17 @@ Fork (
             true 
         } { 
             false
-		}
-		
-	}
+        }
+    }
     try_drop : {
         by Philosopher
         current_user.value_is(by)  {
             drop()
             current_user = None()
-		}
-	}
-} 
-		
+        }
+    }
+}
+
 Philosopher : { 
     name String
     left  Fork
@@ -69,7 +68,7 @@ Philosopher : {
         left.try_take(self) && { right.try_take(self) } {
            print("$(name) is eating...")
            wait: time.sleep(random(1 5), time.SECONDS)
-        } 
+        }
         left.try_drop(self)
         right.try_drop(self)
         think()
@@ -92,7 +91,7 @@ init: {
     w: names.for_each { 
         i Int
         name String
-		
+
         p : Philosopher(name)
         p.self = p
         p.right = Fork()
