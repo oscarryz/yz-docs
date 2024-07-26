@@ -53,14 +53,10 @@ setup: {
     w: philosophers.for_each { 
         i Int
         p Philosopher
+
         p.right = Fork()
-        
-    
-        next : i == philosophers.len() - 1  {
-            0 
-        } { 
-            i + 1
-        } 
+        is_last :  i == philosophers.len() - 1
+        next : is_last ? { 0 } { i + 1 } 
         philosophers[next].left = p.right 
     }
     philosophers
