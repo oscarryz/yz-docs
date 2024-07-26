@@ -2,17 +2,57 @@
 
 The following is a basic setup. Will still need some time to do a test run and see what happens with the resources.
 
+
 ```javascript
-Fork : {
+// In lieu of imports, declare three typs to be the same as those returned 
+// by executing the anonymous block with those three types full qualified name
+Option Some None : ({
+	std.option.Option
+    std.option.Some
+    std.option.None
+}())
+/*
+If that's not possible the following should be
+
+Option : std.option.Option
+Some : std.option.Some
+None : std.option.None
+*/
+// A fork has two operations: 
+// `try_take` by a Philosopher and returns true or false if it was possible
+// `trye_drop` if the fork is currenly holded by the given Philosopher
+Fork (try_take (by Philosopher, Bool) try_drop(by Phisolopher))  = {
+	current_user Option(Philosopher)
     taken   : false
     is_free : { taken == false } 
-    take    : { taken = true   } 
-    drop    : { taken = false  } 
+    take    : { taken = true   }
+    drop    : { taken = false} 
+
+	try_take : { 
+		by Philosopher
+		is_free() ? { 
+			take() 
+			current_user = Some(by)
+			true 
+		} { 
+			false
+		}
+		
+	}
+	try_drop : {
+		by Philosopher
+		current_user.value_is(by)  {
+			drop()
+			current_user = None()
+		}
+	}
 } 
+		
 Philosopher : { 
     name String
     left  Fork
     right Fork
+	self Philosopher
 
     think () = {
            print("$(name) is eating...")
@@ -20,26 +60,18 @@ Philosopher : {
            eat()
     }
     eat   () = {
-        left.is_free() && { right.is_free() } { 
-           left.take()
-           take.take()
+		left.try_take(self) && { right.try_take(self) } {
            print("$(name) is eating...")
            wait: time.sleep(random(1 5), time.SECONDS)
-           left.drop()
-           right.drop()
-        } {
-            think()
-        }
-    }
+		} 
+		left.try_drop(self)
+		right.try_drop(self)
+		think()
+	}
 }
 
-dine: { 
-    philosophers : [ 
-       Philosopher("Plato")
-       Philosopher("Socrates")
-       Philosopher("Kant")
-    }
-    philosophers = setup(philosophers)
+main: { 
+    philosophers = init(["Plato" "Socrates" "Kant"])
     while { true } { 
         philosophers.each { 
             p Philosopher
@@ -48,14 +80,17 @@ dine: {
     }
 
 }
-setup: {
-    philosophers [] Philosopher
-    w: philosophers.for_each { 
+init: {
+    names [String]
+	philosophers : []Philosophers
+    w: names.for_each { 
         i Int
-        p Philosopher
-
+        name String
+		
+		p : Philosopher(name)
+		p.self = p
         p.right = Fork()
-        is_last :  i == philosophers.len() - 1
+        is_last :  i == names.len() - 1
         next : is_last ? { 0 } { i + 1 } 
         philosophers[next].left = p.right 
     }
