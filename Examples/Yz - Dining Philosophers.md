@@ -58,7 +58,7 @@ Philosopher : {
     self Philosopher
 
     think () = {
-           print("$(name) is eating...")
+           print("$(name) is thinking...")
            time.sleep(random(1 5), time.SECONDS)
            eat()
     }
