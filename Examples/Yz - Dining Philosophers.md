@@ -69,11 +69,11 @@ Philosopher : {
         left.try_take(self) && { right.try_take(self) } {
            print("$(name) is eating...")
            wait: time.sleep(random(1 5), time.SECONDS)
-		} 
+        } 
         left.try_drop(self)
         right.try_drop(self)
         think()
-	}
+    }
 }
 
 main: { 
