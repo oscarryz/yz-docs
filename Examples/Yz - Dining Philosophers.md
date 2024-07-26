@@ -25,19 +25,17 @@ None : std.option.None
 // `try_drop` if the fork is currenly holded by the given Philosopher
 Fork (
     try_take (by Philosopher, Bool),
-    try_drop(by Phisolopher)
+    try_drop (by Phisolopher)
 )  = {
 
     current_user Option(Philosopher)
     taken   : false
     is_free : { taken == false } 
-    take    : { taken = true   }
-    drop    : { taken = false} 
 
     try_take : {
         by Philosopher
         is_free() ? { 
-        take() 
+            taken = true
             current_user = Some(by)
             true 
         } { 
@@ -46,8 +44,8 @@ Fork (
     }
     try_drop : {
         by Philosopher
-        current_user.value_is(by)  {
-            drop()
+        current_user.value_is(by) ? {
+            taken = false
             current_user = None()
         }
     }
