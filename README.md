@@ -66,7 +66,7 @@ Example:
 
 ```javascript
 // Defines a new type `Point` with integer variables `x` and `y` 
-Point {
+Point : {
     x Int
     y Int
 }
@@ -83,7 +83,7 @@ Variables can be accessed from outside the block and blocks can be variables too
 E.g. The following defines the `to_string` block (method) that access the variables `x`  and `y` from the outer scope
 
 ```javascript
-Point {
+Point : {
     x Int
     y Int
     to_string: {
@@ -97,7 +97,7 @@ print(p.to_string()) //prints `0,0`
 If a "method" is a non-word name ( e.g. `+`, `>`, `<`  etc., it can be executed without the `.` notation, this is a convenience to make the code look more traditional.
 
 ```javascript
-Point {
+Point : {
    x Int
    y Int
 
@@ -118,7 +118,7 @@ Point(1 2).+(Point(3 4))
 There's no `this` or `self` variable but if needed it can be defined just like any other variable but it has to be assigned elsewhere (most likely in a factory method)
 
 ```javascript
-Person {
+Person : {
     name String
     self Person
     introduce_yourself: {
@@ -158,12 +158,12 @@ b = one_two.1 // 2 is the second computed value
 
 ## The block type
 
-If we want to use a block as a parameter we have to declare its type. The syntax for a block type is `{}`  and can contain other types which can be optionally be named as variables. If not named they are expected to be expressions.
+If we want to use a block as a parameter we have to declare its type. The syntax for a block type is `()`  and can contain other types which can be optionally be named as variables. If not named they are expected to be expressions.
 
 The following declares a variable `a_two` of type block, that contains a variable `a` of type `Int` and a expression of type `Int` 
 
 ```javascript
-a_two {a Int; Int } = {
+a_two (a Int, Int ) = {
   a: 1
   2
 }
@@ -171,7 +171,7 @@ a_two {a Int; Int } = {
 
 `swap` is a block with two variables of type int
 ```javascript
-swap {a Int; b Int} = {
+swap (a Int, b Int) = {
     a Int
     b Int 
     b
@@ -185,7 +185,7 @@ Most of the times you don't need to specify the block type as it can be inferred
 For instance if the block type defines a string `{name String}`  only that variable can be seen, all the variables inside are not accessible: 
 
 ```javascript
-person {name String} = {
+person (name String) = {
     name: 'Bob'
     age Int // not accessible from outside as the block only declared `name String`
 }
@@ -200,9 +200,9 @@ Yz uses structural typing to know if a block can be used as a parameter and/or w
 
 ```js
 print_it: {
-    thing { Int Int } // a `thing` is a block that returns two integers
+    thing (Int, Int ) // a `thing` is a block that returns two integers
     a b :thing() // execute it
-    print("$(a) and $(b))
+    print("$(a) and $(b)")
 }
 // All of the following will structurally match because they're things that return two ints
 
@@ -210,7 +210,7 @@ time: {
    hour: 12
    minute: 24
 }  
-Point {
+Point : {
    x Int
    y Int
 }
