@@ -6,7 +6,7 @@ A single uppercase letter will mean the data type is generic:
 Box: {
 	data T // T is generic
 }
-word : Box('hello') // `T` is bound to String
+word : Box('hello') // `T` is ~~bound~~ instantiated to String
 s String = word.data  // ok
 // i Int = word.data // compilation error
 
@@ -37,7 +37,8 @@ a_generic_box = Box(Bool) //
 ````
 
 
-The generic data for a variable can be used in other elements of the block:
+The generic data for a variable can be used in other elements of the block like internal variables. 
+The actual type of the generic is preserved
 ```js
 
 Node : {
@@ -55,5 +56,15 @@ s_root.left = Node('left')
 // compilation error
 // s_root.right = Node(1) 
 ```
+
+```js
+create_array: { 
+	T
+	[]T
+}
+a [Int] = create_array(Int) 
+```
+
+
 
 #answered  

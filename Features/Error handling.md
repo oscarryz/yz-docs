@@ -106,14 +106,24 @@ main: {
        return // will exit the current block
     }
     file.write_all 'all your codebase are belong to us\n'
+    // option 7: Using Result with an API similar to Rust's
+    fs.cwd()
+	.open_file("does_not_exists/foo.txt")
+	.and_then({ f File; f.write_all("all your codebase are belong to us") })
+        .or_else({ e Error; print("We found an error `e`)})
+   
+   
 
 }
 ```
-I like the last approach better. 
+I like the last approach better with result chaining to `and_the` so we 
+act only if the result was Ok.
 Definition of `Option`
 
 ```javascript
-option: <T E> {
+option: {
+    T 
+    E
     Option: {
         element T
         error   E
