@@ -1,4 +1,4 @@
-In the examples I interchange between parenthesis and no parenthesis,betwee comma and no comma. 
+In the examples I interchange between parenthesis and no parenthesis, between comma and no comma. 
 
 Could it be that parenthesis, comma (and semicolon while at that) are optional? Would it be too much? 
 
@@ -7,9 +7,9 @@ Could it be that parenthesis, comma (and semicolon while at that) are optional? 
 factorial : {
    n Int
    if n == 0 { 
-      1 
+     1 
    } { 
-      n * factorial n -1 
+     n * factorial n -1 
    }
 }
 //

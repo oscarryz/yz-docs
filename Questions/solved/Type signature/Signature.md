@@ -203,16 +203,18 @@ Group: {
   greoup_name String
 }
 
-double_group ( Group; Group )
-double_group = { g Group;  Group ( 2 * g.size g.name ) }
+double_group #( Group; Group ) = { 
+    g Group
+    Group ( 2 * g.size, g.name )
+ }
 
-names []String
+names [String]
 name = ['Sheldon' 'Leonard' 'Penny' 'Rajesh' 'Howard']
 
-groups ([]String)
+groups #([]String)
 groups = {map new_group names ++ map double_group groups}
 
-nth (Int; []Group; String)
+nth #(Int, []Group, String)
 nth = {
   n Int
   gs []Groups

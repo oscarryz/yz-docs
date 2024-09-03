@@ -59,13 +59,13 @@ Philosopher : {
 
     think () = {
            print("$(name) is thinking...")
-           time.sleep(random(1 5), time.SECONDS)
+           time.sleep(random(1 5)  time.SECONDS)
            eat()
     }
     eat   () = {
         left.try_take(self) && { right.try_take(self) } {
            print("$(name) is eating...")
-           wait: time.sleep(random(1 5), time.SECONDS)
+           wait: time.sleep(random(1 5)  time.SECONDS)
         }
         left.try_drop(self)
         right.try_drop(self)
@@ -99,4 +99,8 @@ init: {
     }
     philosophers
 }
+
+
+```
+
 
