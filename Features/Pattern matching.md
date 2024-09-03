@@ -16,15 +16,15 @@ Display generic message otherwise
         last_name String
     }
     
-    o: User {
+    o: User (
         name: 'Oscar'
         last_name: 'Reyes'
-    }
+    )
     
-    o2: User {
+    o2: User (
         username: 'oscarryz'
-    }
-    o3: User{}
+    )
+    o3: User()
 
     // using when
     `

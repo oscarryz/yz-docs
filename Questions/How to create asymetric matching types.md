@@ -38,7 +38,7 @@ optional: {
         is_some: { false }
     }
 }
-User{}
+User:{}
 ...
 x Optional(User) // x Optional<User>
 x = select(User).where { u User ; u.name == "Alice"}

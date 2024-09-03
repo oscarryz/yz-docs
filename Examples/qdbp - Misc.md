@@ -23,7 +23,7 @@ hello_world: "Hello, world!"
 block: {
     method1: {3} // a method named `method1` returns 3
     // method2 takes and argument and returns it
-    method2: [T]{
+    method2: {
        arg T;
        arg
     }
