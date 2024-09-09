@@ -18,14 +18,20 @@ If that's not possible the following should be
 Option : std.option.Option
 Some : std.option.Some
 None : std.option.None
+
+
+actually this: 
+
+Option, Some, None : std.option.Option, std.option.Some, std.option.None
+
 */
 
 // A fork has two operations: 
 // `try_take` by a Philosopher and returns true or false if it was possible
 // `try_drop` if the fork is currenly holded by the given Philosopher
 Fork (
-    try_take (by Philosopher, Bool),
-    try_drop (by Phisolopher)
+    try_take #(by Philosopher, Bool),
+    try_drop #(by Phisolopher)
 )  = {
 
     current_user Option(Philosopher)
@@ -57,12 +63,12 @@ Philosopher : {
     right Fork
     self Philosopher
 
-    think () = {
+    think #() = {
            print("$(name) is thinking...")
            time.sleep(random(1 5)  time.SECONDS)
            eat()
     }
-    eat   () = {
+    eat  #() = {
         left.try_take(self) && { right.try_take(self) } {
            print("$(name) is eating...")
            wait: time.sleep(random(1 5)  time.SECONDS)
