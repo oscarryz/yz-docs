@@ -1,6 +1,6 @@
-In the examples I interchange between parenthesis and no parenthesis, between comma and no comma. 
+In the examples I interchange between using and not using parenthesis, commas, semicolons. 
 
-Could it be that parenthesis, comma (and semicolon while at that) are optional? Would it be too much? 
+Could it be that these punctuations symbols be optional? Could it be too much?
 
 
 ```js
