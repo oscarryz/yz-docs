@@ -25,6 +25,7 @@ main: {
             column String
             int.parse_int(column).or(0)
           }
+       }
        .reduce(int.+)
        .filter(0.>)
        .join(",")
@@ -86,6 +87,7 @@ std: {
          data [Int]
          split #(String, [String])
         }
+       
      ...
   }
   array: {
