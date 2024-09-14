@@ -93,7 +93,7 @@ std: {
     // This is the "magic" implementation type 
     // under the `[]` syntax
     Array: {
-      map: #(#(T,E), [E])
+      map: #(#(T,U), [U])
       reduce #( #(T, T, T), [T])
       filter #( #(T, Bool), [T])
     }
