@@ -30,7 +30,7 @@ main: {
        .filter(0.>)
        .join(",")
           
-      }     
+       
       os.open("output.csv").and_then {
          file File
          file.write_all(output.to_array())
