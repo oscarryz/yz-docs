@@ -10,11 +10,11 @@ The whole language
 multi line 
 comment */
 // variable declaration long format -> id type (=) expr
-message String = 'Hello'
+message String = "Hello"
 // variable declaration short format ->  id : expr
-to_who: 'World'
-// String literal "", '', `` multiline and interpolated
-print('$(message), $(to_who)!') // Hello, World!
+to_whom: "World"
+// String literal "", "", `` multiline and interpolated
+print("`message`, `to_whom`!") // Hello, World!
 n Int = 1
 d : 3.14
 ```
@@ -23,38 +23,38 @@ d : 3.14
 ```js
 // put some variable sourroundded by `{` `}` and you have a block
 { 
-	message String = 'Hello'
-	to_who: 'World'
-	print('$(message), $(to_who)')
+	message String = "Hello"
+	to_whom: "World"
+  	print("`message`, `to_whom`")
 }
-// no output, because it's not executed
+// no output, because it"s not executed
 
 // Blocks can be assigned to variabless
 greet: { 
-	message String = 'Hello'
-	to_who: 'World'
+	message String = "Hello"
+	to_who: "World"
 	print("`message`, `to_who`")
 }
 // execute with `(` `)`
-greet() // prints 'Hello, World!'
+greet() // prints "Hello, World!"
 
 // blocks variables can be accessed using `.` notation
-greet.to_whom = 'Everybody'
-greet() // prints 'Hello, Everybody!'
+greet.to_whom = "Everybody"
+greet() // prints "Hello, Everybody!"
 // even after execution
-greet.message // returns 'Hello'
+greet.message // returns "Hello"
 
 // The invocation call can also use the variables as parameters
-greet('Hola', 'Mundo') // prints 'Hola, Mundo!' 
+greet("Hola", "Mundo") // prints "Hola, Mundo!" 
 
 // And the result of the invocation assigned to variables
-what_was_printed: greet('Hallo', 'Wereld') // prints 'Hallo, Wereld!' and assings it to the variable `what_was_printed` because the last execution statement was the print which returns that value.
+what_was_printed: greet("Hallo", "Wereld") // prints "Hallo, Wereld!" and assings it to the variable `what_was_printed` because the last execution statement was the print which returns that value.
 
 // Some values can be ommited if they have a default and they can also be named
 
-greet(to_whom: 'world', message: 'Nice to meet you') // prints 'Nice to meet you, world!'
+greet(to_whom: "world", message: "Nice to meet you") // prints "Nice to meet you, world!"
 
-greet(to_whom: 'mundo') // prints 'Nice to meet you, mundo!'
+greet(to_whom: "mundo") // prints "Nice to meet you, mundo!"
 
 // So blocks are like objects + functions / closures / methods
 ```
@@ -66,16 +66,16 @@ greet(to_whom: 'mundo') // prints 'Nice to meet you, mundo!'
 
 // So a variable declaration long format -> id type (=) expr
 greet #(message String, to_whom String, String) = {
-	print('`message` `to_who`') // no need to redleclare vars if in the same go
+	print("`message` `to_whom`") // no need to redleclare vars if in the same go
 }
 
-greet #(message String, to_who String, String)
+greet #(message String, to_whom String, String)
 // something else 
-print('blah')
+print("blah")
 greet = {
 // vars need to be declared here to make sure the block is assignable to the type `greet`
 	message String
-	to_who String
+	to_whom String
 	message // just returns the variable message
 }
 
@@ -89,11 +89,8 @@ greet = {
 	c String
 }
 greet() // compialation error, a, b, c need a default value or one assigned
-greet('uno' 'dos' 'tres' )
+greet("uno", "dos", "tres" )
 
-// empty block has the special type 
-empty #() = {}
-empty() // noop
 
 ```
 
@@ -107,10 +104,8 @@ create_block: {
 	}
 }
 x: create_block() 
-x.name = 'X'
-x() // just resturns `X`
-
-
+x.name = "X"
+x() // just returns `X`
 
 ```
 
@@ -122,18 +117,18 @@ Named: {
 	name String
 }
 // when invoked it creates a copy 
-x: Named('X')
-x.name // x.name is 'X'
+x: Named("X")
+x.name // x.name is "X"
 
 // obviously it can have other blocks
 Person: {
 	name String
 	introduce_yourself: {
 		// and blocks can access the outer scope
-		print('My name is `name`')
+		print("My name is `name`")
 	}
 }
-a: Person('Alice') 
+a: Person("Alice") 
 a.introduce_yourself() // My name is Alice
 
 // acting like objects / clases with methods. 
@@ -163,12 +158,12 @@ x = Person() // works too
 // But the later is more natural to create custom types
 // e.g Using a type `Person`
 greet #(p Person) = {
-	print('Hello $(p.name)') 
+	print("Hello `p.name`") 
 }
 // vs 
 // using the block signature `(name String)`
 greet #(p #(name String)) = {
-	print('Hello $(p.name)')
+	print("Hello `p.name`")
 }
 
 // To create an instance of the type invoke it as if it was a function and pass the parameters you need 
@@ -177,7 +172,7 @@ Person : {
 	name String
 	last_name String
 }
-alice: Person('Alice' 'Adams') 
+alice: Person("Alice" "Adams") 
 
 // The same rules of named args and default values apply. 
 
@@ -196,7 +191,7 @@ a: Box(1)
 n Int = a.data // a.data is bound to an int
 s String = a.data // compilation error
 
-b: Box('Hola')
+b: Box("Hola")
 s String = b.data
 
 // Then the generic type is unknow and a type needs to be declared, using () works as well as long is in the declaration part and the parameter is a type
@@ -222,7 +217,7 @@ produce: {
 	buffer [String]
 	count: 0
 	while {true} {
-		buffer.push('msg : `count`')
+		buffer.push("msg : `count`")
 		count = count + 1
 	}
 }
@@ -234,7 +229,7 @@ consume: {
 		if buffer.len() == 0 { 
 			continue
 		} {
-			println('You said: `buffer[0]`')
+			println("You said: `buffer[0]`")
 			buffer.shift()
 		}
 	}
@@ -270,7 +265,7 @@ two()
 // counter.set_n_value( some_value )
 ```
 
-Is important to keep in mind this could make harder for a block to be garbage collected if other block have references to their values. To ensure this doesn't happen make sure to copy the values instead of just referencing them 
+Is important to keep in mind this could make harder for a block to be garbage collected if other block have references to their values. To ensure this doesn"t happen make sure to copy the values instead of just referencing them 
 ```js
 counter: {
 	n Int = 0
@@ -289,7 +284,7 @@ For instance the `Bool` type has a `?` method (full signature: `? (when_true (T)
 
 ```javascript
 Bool : {
-	? #(when_true #(T) when_false #(T))
+	? #(when_true #(T), when_false #(T))
 	// more methods ommited
 }
 true : Bool(
@@ -308,9 +303,9 @@ false : Bool(
 )
 is_it_monday : true 
 is_it_monday.?({
-	print('Time to go to work')
+	print("Time to go to work")
 }, {
-	print('At least is not monday')
+	print("At least is not monday")
 })
 
 
@@ -323,9 +318,9 @@ if (cond Bool, then #(T), else #(T)) = {
 }
 is_it_monday: true
 if (is_it_monday {
-	print('Time to go to work')
+	print("Time to go to work")
 },{
-	print('At least is not monday')
+	print("At least is not monday")
 })
 ```
 
@@ -339,16 +334,16 @@ when ( conditions [#(Bool)]#(T) ) = std.when
 dow : day_of_the_week // the block/module/function day_of_the_week
 day_of_week = dow.today() // some function returning the day of the week
 when ([
-	{ day_of_week == dow.MONDAY } : { print('Time to go to work') },
-	{ day_of_week == dow.TUESDAY } : { print('Time to go to work') },
-	{ day_of_week == dow.SATURDAY } : { print('Not going to work') }
+	{ day_of_week == dow.MONDAY } : { print("Time to go to work") },
+	{ day_of_week == dow.TUESDAY } : { print("Time to go to work") },
+	{ day_of_week == dow.SATURDAY } : { print("Not going to work") }
 ])
 day_of_the_week : {
 	Day: {
 		name String
 	}
-	MONDAY: Day('Monday')
-	TUESDAY: Day('Tuesday')
-	FRIDAY: Day('Friday')
+	MONDAY: Day("Monday")
+	TUESDAY: Day("Tuesday")
+	FRIDAY: Day("Friday")
 }
 ```
