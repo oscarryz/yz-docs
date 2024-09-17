@@ -12,7 +12,7 @@ factorial: { n Int
   n > 0 ? { n * factorial n - 1 }
           { 1 }
 }
-print '$(factorial 5)'  // prints 120
+print "`factorial 5`"  // prints 120
 ```
 Yz is a programming language that explores the possibility to simplify concurrency, data, objects, methods, functions, closures, classes under a single artifact: a code of block.
 
@@ -70,11 +70,11 @@ Point : {
     x Int
     y Int
 }
-p1 Point =  Point(x:10 y:20) // p1 variable declared and initialized
-p2: Point(40 40) // p2 type `Point` inferred.
+p1 Point =  Point(x:10, y:20) // p1 variable declared and initialized
+p2: Point(40, 40) // p2 type `Point` inferred.
 
 // An anonymous block can still structurally match the new type
-p3 = {x: 10 y: 100} 
+p3 = {x: 10, y: 100} 
 p1 = p3 // Can be assigned because it is a block with a `x` and a `y` of type Int
 ```
 
@@ -87,7 +87,7 @@ Point : {
     x Int
     y Int
     to_string: {
-      "$(x),$(y)" // $(expr) for string interpolation
+      "`x`,`y`" // $(expr) for string interpolation
    }
 }
 p: Point(0 0)
@@ -108,7 +108,7 @@ Point : {
               y + other.y)
     }
 }
-p1: Point(1 2) +  Point(3 4) // invoking `+` without `.` results in a new Point{x: 4 y:6} 
+p1: Point(1 2) + Point(3 4) // invoking `+` without `.` results in a new Point{x: 4 y:6} 
 // same as 
 Point(1 2).+(Point(3 4))
 ```
@@ -122,7 +122,7 @@ Person : {
     name String
     self Person
     introduce_yourself: {
-        'My name is $(self.name)'
+        'My name is `self.name`'
     }
 }
 alice:{
@@ -139,16 +139,16 @@ print alice().introduce_yourself() // My name is Alice
 It is also possible to have blocks with no variables and only expressions.
 
 ```javascript
-one_two: { 1 2 }
+one_two: { 1 ; 2 }
 ```
-They bahave the same, except they don't take parameters when executed, and naturally their values cannot be accesed by name, only by index.
+They behave the same, except they don't take parameters when executed, and naturally their values cannot be accessed by name, only by index.
 
 ```javascript
-one_two: { 1 2 }
+one_two: { 1; 2 }
 a b: one_two() // a:1 b:2
 
 // Desugared version
-one_two { Int Int } = { 1 2 } // `one_two` is a block of product types `Int` `Int` initialized withbthe block `{1 2}`
+one_two #(Int, Int) = { 1; 2 } // `one_two` is a block of product types `Int` `Int` initialized withbthe block `{1 2}`
 a Int 
 b Int
 one_two()
@@ -158,12 +158,12 @@ b = one_two.1 // 2 is the second computed value
 
 ## The block type
 
-If we want to use a block as a parameter we have to declare its type. The syntax for a block type is `()`  and can contain other types which can be optionally be named as variables. If not named they are expected to be expressions.
+If we want to use a block as a parameter we have to declare its type. The syntax for a block type is `#()`  and can contain other types which can be optionally be named as variables. If not named they are expected to be expressions.
 
 The following declares a variable `a_two` of type block, that contains a variable `a` of type `Int` and a expression of type `Int` 
 
 ```javascript
-a_two (a Int, Int ) = {
+a_two #(a Int, Int ) = {
   a: 1
   2
 }
@@ -171,13 +171,13 @@ a_two (a Int, Int ) = {
 
 `swap` is a block with two variables of type int
 ```javascript
-swap (a Int, b Int) = {
+swap #(a Int, b Int) = {
     a Int
     b Int 
     b
     a
 }
-one two: swap(2 1)
+one two: swap(2, 1)
 ```
 
 Most of the times you don't need to specify the block type as it can be inferred and/or a uppercase type can be used instead. It could be beneficial for instance to keep variables "private"(ish)
@@ -185,7 +185,7 @@ Most of the times you don't need to specify the block type as it can be inferred
 For instance if the block type defines a string `{name String}`  only that variable can be seen, all the variables inside are not accessible: 
 
 ```javascript
-person (name String) = {
+person #(name String) = {
     name: 'Bob'
     age Int // not accessible from outside as the block only declared `name String`
 }
@@ -200,9 +200,9 @@ Yz uses structural typing to know if a block can be used as a parameter and/or w
 
 ```js
 print_it: {
-    thing (Int, Int ) // a `thing` is a block that returns two integers
+    thing #(Int, Int ) // a `thing` is a block that returns two integers
     a b :thing() // execute it
-    print("$(a) and $(b)")
+    print("`a` and `b`")
 }
 // All of the following will structurally match because they're things that return two ints
 
@@ -217,37 +217,20 @@ Point : {
 print_it(time) // a regular named block
 print_it(Point(1 2)) // an instance of a `Point` type
 print_it({ 4 2 }) // and expression block
-
-
 ```
-## Things that are not blocks
 
-#### String interpolation
-
-`"$( some + expression )"`
-#### Literals
-
-- Array: `[1 2 3 4]`  
-- Associative Array (Dictionary or HashMap) `[key_1: value_1 key_2: value_2]`  
-- Numbers: `1 2 3 -1 1.0 3.141516`  
-- Strings: `"Double quoted"` or `'Single quoted'` or ``back ticked``  and always multiline.   
-
-#### Reserved words
-
-- `break`  
-- `continue`  
-- `return`  
-
-#### Special characters
+### Special characters
 
 The following cannot be used as identifiers or  part of identifier
 - `{`,`}` used to create blocks.  
+- `#` Used for block signature
 - `(`,`)` used to execute blocks.  
 - `[`,`]` used to declare/access arrays/dictionaries.   
 -  ``"``, ``'`` and \` used to declare strings.  
 - `:` used for type inference.  
 - `;` used to separate expressions in the same line. 
 - `,` not used, but reserved for clarity.  
+
 
 # Other things
 There are many other things not covered in this overview which is already too big, these topics are memory management, control structures (or the lack thereof), reusing code, generics, error handling, among others.
