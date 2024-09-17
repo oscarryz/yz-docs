@@ -4,13 +4,13 @@
 
 ```js
 stack (
-	empty    (T, Stack(T))
+	empty    #(T, Stack(T))
 	Stack (
 		T
-		push     (a T)
-		pop      (Opt(T))
-		is_empty (Bool)
-		size     (Int)
+		push     #(a T)
+		pop      #(Opt(T))
+		is_empty #(Bool)
+		size     #(Int)
 	)
 )
 // usage 

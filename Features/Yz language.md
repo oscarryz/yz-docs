@@ -19,7 +19,7 @@ n Int = 1
 d : 3.14
 ```
 
-## Blocks
+## Blocks of code (boc)
 ```js
 // put some variable sourroundded by `{` `}` and you have a block
 { 
@@ -33,29 +33,28 @@ d : 3.14
 greet: { 
 	message String = 'Hello'
 	to_who: 'World'
-	print('$(message), $(to_who)')
+	print("`message`, `to_who`")
 }
 // execute with `(` `)`
 greet() // prints 'Hello, World!'
 
 // blocks variables can be accessed using `.` notation
-greet.to_who = 'Everybody'
+greet.to_whom = 'Everybody'
 greet() // prints 'Hello, Everybody!'
 // even after execution
 greet.message // returns 'Hello'
 
 // The invocation call can also use the variables as parameters
-greet('Hola' 'Mundo') // prints 'Hola, Mundo!' (notice, no  comma`,`)
+greet('Hola', 'Mundo') // prints 'Hola, Mundo!' 
 
 // And the result of the invocation assigned to variables
-
 what_was_printed: greet('Hallo', 'Wereld') // prints 'Hallo, Wereld!' and assings it to the variable `what_was_printed` because the last execution statement was the print which returns that value.
 
 // Some values can be ommited if they have a default and they can also be named
 
-greet(to_who: 'world' message: 'Nice to meet you') // prints 'Nice to meet you, world!'
+greet(to_whom: 'world', message: 'Nice to meet you') // prints 'Nice to meet you, world!'
 
-greet(to_who: 'mundo') // prints 'Nice to meet you, mundo!'
+greet(to_whom: 'mundo') // prints 'Nice to meet you, mundo!'
 
 // So blocks are like objects + functions / closures / methods
 ```
@@ -63,14 +62,14 @@ greet(to_who: 'mundo') // prints 'Nice to meet you, mundo!'
 ### Block type / signature
 
 ```js
-// Blocks have type too, this is specified betwee `()` and the internal variable separated by `,`, if no variable is needed (e.g. returning a value) just add the type.
+// Blocks have type too, this is specified between `#()` and the internal variables separated by `,`, if no variable is needed (e.g. returning a value) just add the type e.g #(s String, Bool).
 
 // So a variable declaration long format -> id type (=) expr
-greet (message String, to_who String, String) = {
-	print('$(message) $(to_who)') // no need to redleclare vars if in the same go
+greet #(message String, to_whom String, String) = {
+	print('`message` `to_who`') // no need to redleclare vars if in the same go
 }
 
-greet (message String, to_who String, String)
+greet #(message String, to_who String, String)
 // something else 
 print('blah')
 greet = {
@@ -82,7 +81,7 @@ greet = {
 
 // The type signature can also ommit the variable names
 // Here `greet` is a varialble of type block that takes (or returns) three Strings
-greet (String, String, String) 
+greet #(String, String, String) 
 greet() // compilation error, needs to be assigned a value.
 greet = {
 	a String 
@@ -92,8 +91,8 @@ greet = {
 greet() // compialation error, a, b, c need a default value or one assigned
 greet('uno' 'dos' 'tres' )
 
-// empty block has the special type `(_)`
-empty (_) = {}
+// empty block has the special type 
+empty #() = {}
 empty() // noop
 
 ```
@@ -131,7 +130,7 @@ Person: {
 	name String
 	introduce_yourself: {
 		// and blocks can access the outer scope
-		print('My name is $(name)')
+		print('My name is `name`')
 	}
 }
 a: Person('Alice') 
@@ -154,7 +153,7 @@ create_named: {
 }
 //both create a copy of a block with a String
 // x is a block that has a variable name of type String
-x (name String)
+x #(name String)
 // can be assigned the value of `create_named()`
 x = create_named() // Yes
 // or the block created with the type Person
@@ -163,12 +162,12 @@ x = Person() // works too
 
 // But the later is more natural to create custom types
 // e.g Using a type `Person`
-greet (p Person) = {
+greet #(p Person) = {
 	print('Hello $(p.name)') 
 }
 // vs 
 // using the block signature `(name String)`
-greet (p (name String)) = {
+greet #(p #(name String)) = {
 	print('Hello $(p.name)')
 }
 
@@ -220,10 +219,10 @@ A block will finish its execution when all the inner blocks are completed, so al
 // 
 // Writes repeatedly to a buffer. 
 produce: {
-	buffer []String
+	buffer [String]
 	count: 0
 	while {true} {
-		buffer.push('msg :$(count)')
+		buffer.push('msg : `count`')
 		count = count + 1
 	}
 }
@@ -235,7 +234,7 @@ consume: {
 		if buffer.len() == 0 { 
 			continue
 		} {
-			println('You said: $(buffer[0])')
+			println('You said: `buffer[0]`')
 			buffer.shift()
 		}
 	}
@@ -290,27 +289,27 @@ For instance the `Bool` type has a `?` method (full signature: `? (when_true (T)
 
 ```javascript
 Bool : {
-	? (when_true (T) when_false (T))
+	? #(when_true #(T) when_false #(T))
 	// more methods ommited
 }
 true : Bool(
 	? = {
-		when_true (T)
-		when_false (T)
+		when_true #(T)
+		when_false #(T)
 		when_true() // executes the when true block
 	}
 )
 false : Bool(
 	? = {
-		when_true (T)
-		when_false (T)
+		when_true #(T)
+		when_false #(T)
 		when_false() // executes the when true block
 	}
 )
 is_it_monday : true 
 is_it_monday.?({
 	print('Time to go to work')
-} {
+}, {
 	print('At least is not monday')
 })
 
@@ -319,32 +318,31 @@ is_it_monday.?({
 
 We can create an `if` method  (`if (cond Bool, then (T), else (T)))`)  building on this `Bool` type
 ```js
-if (cond Bool, then (T), else (T)) = {
+if (cond Bool, then #(T), else #(T)) = {
 	cond.?(then, else)	
 }
 is_it_monday: true
 if (is_it_monday {
 	print('Time to go to work')
-}{
+},{
 	print('At least is not monday')
 })
 ```
 
-Similarly a "case/switch/match" like flow can be achieved using a dictionary (hashmap) where the key is a block of code to be tested, and the value is the action to be executed
+Similarly a "case/switch/match" like flow can be achieved using a dictionary (hash map) where the key is a block of code to be tested, and the value is the action to be executed
 
 ```js
 // When is a block/function that take a dictionary "conditions" whose keys 
 // are blocks that return booleans and values are blocks that return a generic type t
-when ( conditions [(Bool)](T) ) = std.when 
+when ( conditions [#(Bool)]#(T) ) = std.when 
 // dictionary syntax: [ key_1 : value_1  key_2: value_2]
 dow : day_of_the_week // the block/module/function day_of_the_week
 day_of_week = dow.today() // some function returning the day of the week
 when ([
-	{ day_of_week == dow.MONDAY } : { print('Time to go to work') }
-	{ day_of_week == dow.TUESDAY } : { print('Time to go to work') }
+	{ day_of_week == dow.MONDAY } : { print('Time to go to work') },
+	{ day_of_week == dow.TUESDAY } : { print('Time to go to work') },
 	{ day_of_week == dow.SATURDAY } : { print('Not going to work') }
 ])
-// 
 day_of_the_week : {
 	Day: {
 		name String
