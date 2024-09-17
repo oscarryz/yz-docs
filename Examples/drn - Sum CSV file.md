@@ -9,7 +9,7 @@ This was supposed to be a "simple" example of
 
 _(There's a short syntax reference at the bottom)_ 
 
-```javascript
+```Go
 // Opens a file and reads it into a String
 read_file: {
   file_name String
@@ -26,7 +26,7 @@ sum_rows: {
     .split("\n")
     .map {
       line String
-      line.split(",").map {
+      line.split(',').map {
         column String
         int.parse_int(column).or(0)
       }
