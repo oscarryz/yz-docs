@@ -150,4 +150,32 @@ So, `Person::{}` defines a new type and `Person{}`  instantiates it (`Person:{}`
 How can we add methods to `Suit :: Int` ?  You can't. Maybe a possible feature would be [[../Questions/solved/Extension methods]], but that something we should consider for a future release.
 
 #rejected (again) No `::` will be used, and thus no type alias. 
+#challenged  Well I'm not even sure at this point, but `#` will be used for block types e.g. `#()`
+
+Probably and if needed simply use `:`
+```js
+Suit : Int 
+
+```
+For that "naturally" defines a new type `Suit` assigned to the block represented by `Int`
+
+For instance if
+```js
+Message: {
+    s String
+}
+```
+
+Is a type with a signature `#(s String)`
+Then 
+```js
+Name : Message
+```
+Would have the same signature, thus would be a type alias.
+```js
+m Message = {s: "hello"}
+name Name = {s: "world"}
+
+somethign #(String)
+```
 
