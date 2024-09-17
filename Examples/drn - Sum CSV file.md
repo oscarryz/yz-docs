@@ -4,49 +4,68 @@
 
 This was supposed to be a "simple" example of 
 
-> Read a CSV file, sum the rows, filter those greater than zero
-> create a new CSV and write it
+> *Read a CSV file, sum the rows, filter those greater than zero*
+> *create a new CSV and write it*
 
 _(There's a short syntax reference at the bottom)_ 
 
 ```javascript
-main: {
-   os.open("input.csv").and_then {
-     file File 
-     file.read_all()
-   } .and_then { 
-     content [Int]
-     
-     output: String(content)
-       .split("\n")
-       .map {
-          line String
-          line.split(",").map {
-            column String
-            int.parse_int(column).or(0)
-          }
-       }
-       .reduce(int.+)
-       .filter(0.>)
-       .join(",")
-          
-       
-      os.open("output.csv").and_then {
-         file File
-         file.write_all(output.to_array())
-      }
-  }.or { 
-     e Error
-     println("Coulnd't process file. Error: `e`")
+// Opens a file and reads it into a String
+read_file: {
+  file_name String
+  os.open( file_name ).and_then {
+    file File 
+    string.from_array(file.read_all(), "UTF-8")
   }
 }
+
+// Reads a String, and sums each row and format it back to a string
+sum_rows: { 
+  content String
+  Ok(content
+    .split("\n")
+    .map {
+      line String
+      line.split(",").map {
+        column String
+        int.parse_int(column).or(0)
+      }
+    }
+    .reduce(int.+)
+    .filter(0.>)
+    .join(",")
+  )
+}
+// Creates a block bounded to a file name.
+// This block  receives a string
+// and writes it to a file and returns a Result of nothign
+write_result: {
+  output_file String 
+  { 
+    output String
+    os.open(output_file) .and_then {
+      file File
+      file.write_all(output.to_array())
+    }
+  }
+}
+
+main: {
+  read_file("input.csv")
+    .and_then(sum_rows)
+    .and_then(write_result("output.csv"))
+    .or_else { 
+      e Error
+      println("Coulnd't process file. Error: `e`")
+    }
+}
+
 ```
 
 
- 
-    
+Now, as it can be seen, a lot of the code relies on standard library functions. 
 
-Now, as it can be seen, a lot of the code relies on standar library functions. Error handling is done similar to Rust, where theres a type with two possible outcomes: Ok or Error
+Error handling is done similar to Rust, where there is a type with two possible outcomes: `Ok` or `Error`
 
 ## std functions signatures
 
@@ -129,7 +148,7 @@ Some syntax short explaination:
   - e.g.: `n : 1` `n` has type `Int`
 - `identifier TypeName` declares a variable of type `TypeName`
   - e.g. `s String` declares `s` of type `String`.
-- `[TypeName]` array of that tyep
+- `[TypeName]` array of that type
   - e.g. `a [String]` is an array of strings
 - `expr.identifier(params)` invoked the method `identifier` on the resulting type of `expr`
   - e.g. `"hi".len()` (can ommit parenthesis if more than one argument)
