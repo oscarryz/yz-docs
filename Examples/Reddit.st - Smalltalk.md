@@ -12,7 +12,7 @@ RedditLink:  {
         points: 0
     }
     print_on: {
-        "($(url)),$(title))"
+        "(`url`),`title`)"
     }
     posted: {
         date.now() - created
@@ -35,9 +35,9 @@ with_url_and_title: {
 }
 render_content_on: {
     html Html
-    html.anchor.callback {count = count + 1} '++'
+    html.anchor.callback({ count = count + 1}, '++')
     html.space()
-    html.anchor.callback { count + count -1 } '--'
+    html.anchor.callback({ count + count -1 }, '--')
 }
 
 ```

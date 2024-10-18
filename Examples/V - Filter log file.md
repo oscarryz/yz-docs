@@ -7,11 +7,11 @@ DEBUG: write text to log file
 ERROR: file not writeable
 `).or {
     err Error
-    eprintln 'failed to write the file {err}'
+    eprintln 'failed to write the file `err`'
 }
 
 text: os.read_file 'app.log' .or { e Error
-	eprintln('failed to read the file: {e}')
+	eprintln('failed to read the file: `e`')
 }
 
 list: text.split_into_lines()

@@ -12,16 +12,18 @@ add : {
 add 1 2 
 // without generics
 add: {
-	a Int b Int
+	a Int; b Int
 	a + b
 }
 // With type
-add ( a Int, b Int ) = {
+add #( a Int, b Int ) = {
 	a + b
 }
 // idea... when adding a type we can define inplace using | or ->
-add {a Int b Int |  a + b }
-add {a Int b Int ->  a + b }
+//add {a Int b Int |  a + b }
+//add {a Int b Int ->  a + b }
+// not needed
+add {a Int; b Int; a + b }
 
 // Generics
 print: {that that.print()}
@@ -31,11 +33,11 @@ print 'Hello' // same for `String`
 // If/Then/Else
 if: {
 	cond Bool
-	then (v V) // generic
-	else (v V) // generic
-	cond.ifTrueIfFalse(then else)
+	then #(v V) // generic
+	else #(v V) // generic
+	cond.if_true_if_false(then, else)
 	// or 
-	cond ? then else 
+	cond ? then, else 
 }
 // named args require use parenthesis
 if (cond: 1 > 2 

@@ -1,5 +1,3 @@
-#wip
-
 A single uppercase letter will mean the data type is generic:
 
 ```js
@@ -64,6 +62,22 @@ create_array: {
 }
 a [Int] = create_array(Int) 
 ```
+
+The generics are flexible and allow to use any method from the given type, the compiler will verify the argument / assignment matches the methods used 
+
+```js
+say_hi: {
+  data T
+  print("Hello `data.name()`)
+}
+thing: {
+  name : {"thing"}
+}
+blah: {}
+say_hi(thing) // works, prints "Hello thing"
+say_hi(blah) // doesn't compile: blah #() doesn't have a name #(String) method
+```
+
 
 
 

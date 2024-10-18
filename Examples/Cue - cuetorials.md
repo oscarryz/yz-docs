@@ -14,22 +14,23 @@ hierarchy: {
     Schema: {
         hello String
         life Int
-        pi Float
+        pi Decimal
         nums [] Int
-        struct {}
+        struct #()
     }
-    Constrained: Schema {
+    Constrained: {
 
-        '[cue-constraint:=~"[a-z]+"]'
+        'cue:=~"[a-z]+"'
         hello String
         
-        '[cue-constraint:>0]'
+        'cue:>0'
         life Int
         
-        '[cue-constraint: list.MaxItems(10)]'
+        'cue: list.MaxItems(11)'
         nums []Int
+        struct #()
     }
-    value: Constrained {
+    value: Constrained (
         hello: 'world'
         life: 42
         pi: 3.14
@@ -38,7 +39,7 @@ hierarchy: {
             a: 'a'
             b: 'b'
         }
-    }
+    )
 }
 ```
 ```js

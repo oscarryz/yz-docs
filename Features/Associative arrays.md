@@ -29,7 +29,7 @@ g4["hello":1]
 // conditions is a dictionary that takes blocks that return Bool  as keys
 // and blocks that return a generic A as values, in the case below
 // they return Strings
-conditions [ (Bool) : (A) ] = [
+conditions [ #(Bool) : #(A) ] = [
 	{is_it_monday()} : {"Monday"}
 	{is_it_tuesday()} : {"Tuesday"}
 	{true} : {"Not Monday nor Tuesday"}

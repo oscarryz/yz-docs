@@ -9,10 +9,10 @@ This repository contains design notes for the Yz programming language, like exam
 ```javascript
 // Factorial in Yz
 factorial: { n Int
-  n > 0 ? { n * factorial n - 1 }
+  n > 0 ? { n * factorial(n - 1) }
           { 1 }
 }
-print "`factorial 5`"  // prints 120
+print("`factorial(5)`")  // prints 120
 ```
 Yz is a programming language that explores the possibility to simplify concurrency, data, objects, methods, functions, closures, classes under a single artifact: a code of block.
 
@@ -55,7 +55,7 @@ retrieve_order: {
 
 // Executing the block
 // Defines two variables: `customer` and `product` using the last 2 computed values in the block
-customer product: retrieve_order(89 012)
+customer product: retrieve_order(89,012)
 ```
 
 ## Creating instances of a block
@@ -90,7 +90,7 @@ Point : {
       "`x`,`y`" // $(expr) for string interpolation
    }
 }
-p: Point(0 0)
+p: Point(0, 0)
 print(p.to_string()) //prints `0,0`
 ```
 
@@ -108,9 +108,9 @@ Point : {
               y + other.y)
     }
 }
-p1: Point(1 2) + Point(3 4) // invoking `+` without `.` results in a new Point{x: 4 y:6} 
+p1: Point(1, 2) + Point(3, 4) // invoking `+` without `.` results in a new Point{x: 4 y:6} 
 // same as 
-Point(1 2).+(Point(3 4))
+Point(1, 2).+(Point(3, 4))
 ```
 
 ### What about `this` or `self`?
@@ -125,6 +125,7 @@ Person : {
         'My name is `self.name`'
     }
 }
+
 alice:{
     p: Person('Alice')
     p.self = p
@@ -169,16 +170,6 @@ a_two #(a Int, Int ) = {
 }
 ```
 
-`swap` is a block with two variables of type int
-```javascript
-swap #(a Int, b Int) = {
-    a Int
-    b Int 
-    b
-    a
-}
-one two: swap(2, 1)
-```
 
 Most of the times you don't need to specify the block type as it can be inferred and/or a uppercase type can be used instead. It could be beneficial for instance to keep variables "private"(ish)
 
@@ -190,7 +181,7 @@ person #(name String) = {
     age Int // not accessible from outside as the block only declared `name String`
 }
 person.name // Bob
-person.age  // compilation error: no variable named age
+person.age  // compilation error: no variable named `age`
 ```
 
 
@@ -215,8 +206,8 @@ Point : {
    y Int
 }
 print_it(time) // a regular named block
-print_it(Point(1 2)) // an instance of a `Point` type
-print_it({ 4 2 }) // and expression block
+print_it(Point(1, 2)) // an instance of a `Point` type
+print_it({ 4, 2 }) // and expression block
 ```
 
 ### Special characters

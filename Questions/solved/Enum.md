@@ -37,7 +37,3 @@ dow: {
      { dow.FRIDAY } : { dow.FRIDAY }
   ]
 ```
-  
-     
-
-```

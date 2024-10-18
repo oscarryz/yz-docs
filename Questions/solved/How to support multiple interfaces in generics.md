@@ -34,8 +34,8 @@ add(1, 0)
 add(1, 0.0) // nope, they are different types
 ```
 
-But a better solution would be to support fully parametric polimorphism 
-so we can enumarate what kind of thing is T
+But a better solution would be to support ~~fully parametric polymorphism~~ type constraints
+so we can enumerate what kind of thing is T
 
 ```js
 add : { 
@@ -46,7 +46,7 @@ add : {
 }
 add(1, 0.0)
 ```
-This might open the posibilities to add union types 
+This might open the possibilities to add union types 
 ```js
 Adder {
   Int
@@ -63,7 +63,6 @@ add(1, 1.0) // both are adders, and they keep their internal type
 ```
 
 We might push even further and access type-specific methods
-
 
 ```js
 Twice : {
@@ -103,4 +102,52 @@ do_something: {
 	Half : { println("Halved: `e.half()`) } 
   }
 }
+```
 
+Another example is haskell type classes 
+
+```haskell
+sort :: Ord a => [a] -> [a]
+```
+
+Where `Ord` ([link](https://hackage.haskell.org/package/base-4.20.0.1/docs/Data-Ord.html))defines the operations `a` can do
+
+We need a way to say: _This T can respond to the method "compare"_
+
+```js
+sort #(arr [T], arr[T])
+```
+
+Currently we would have to declare a type first, and then use it
+```js
+Ord #(
+  T
+  compare #(T, Int)
+  < #(T, Bool)
+  <= #(T, Bool)
+  > #(T, Bool)
+  >= #(T, Bool)
+)
+sort #(arr [Ord], [Ord])
+
+sort([1 2 4 2 6 7]) // Ok, Int implements Ord
+
+```
+
+But we wouldn't be able to use something like `Ord | Debug`  or something like that... 
+
+```js
+"#[Derive: Ord, Debug]"
+OrdOrDebug:{  }
+```
+But I guess that's fine.
+
+Solution: Generic types can have any number of methods, but the compiler will verify if the arguments have the needed methods. 
+
+```js
+sort #(a [T], [T]) 
+sort([4 2 3 1]) // ok
+sort([{},{},{}]) // compile error, [#()] doesn't have a '>=' method.
+```
+
+#answered 

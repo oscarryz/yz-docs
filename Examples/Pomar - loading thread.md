@@ -22,14 +22,14 @@ main: {
 	asset_loading_thread(buffer)
 	// Righ away will start checkint for window.close and consuming images from
 	// the buffer
-	while { raylib.window_should_close() == false } {
+	while { raylib.window_should_close() == false }, {
 		// Gotta check if there's something in buffer first
 		if buffer.is_empty() == false  {
 			t: raylib.load_texture_from_image(buffer.shift())
 			textures.push(t)
 		} {
 			// busy wait ... :/ keep trying. 
-			// not good 
+			// not good  :/ :/
 		}
 	}
 }

@@ -1,6 +1,6 @@
 https://mobile.twitter.com/v_language/status/1546061255013711875
+
 ```javascript
-import  core.lang // String, Int etc
 
 Book: {
   author: {
@@ -12,26 +12,26 @@ Book: {
 
 test_anonymous_structs: { 
 
-    empty_book: Book{}
+    empty_book: Book()
     assert empty_book.author.age == 0
     assert empty_book.author.name == ''
 
-    book: Book {
+    book: Book (
       author: { name: 'Peter Brown'; age: 23 }
       title: 'Programming in Yz'
-    }
-    assert empty_book.author.age == 23
-    assert empty_book.author.name == 'Peter Brown'
+    )
+    assert book.author.age == 23
+    assert book.author.name == 'Peter Brown'
 
-    book: Book {
+    book2: Book {
       author: { 
         name: 'Samantha Black'
         age: 24 
       }
       title: 'Anonymous blocks are cool'
     }
-    assert empty_book.author.age == 24
-    assert empty_book.author.name == 'Samantha Black'
+    assert book2.author.age == 24
+    assert book2.author.name == 'Samantha Black'
 }
 
 ```
@@ -41,9 +41,11 @@ https://vsql.readthedocs.io/en/latest/custom-functions.html
 
 ```javascript
 // no_pennies will round to 0.05 denominations.
-db.register_function 'no_pennies(float) float', { a []vsql.Value; returns vsql.Value 
+db.register_function 'no_pennies(float) float', { 
+  a []vsql.Value; 
+  returns vsql.Value 
   amount : math.round(a[0].f64_value / 0.05) * 0.05
-  returns = vsql.new_double_precision_value amount
+  returns = vsql.new_double_precision_value(amount)
 } 
 
 db.query 'CREATE TABLE products (product_name VARCHAR(100), price FLOAT)'

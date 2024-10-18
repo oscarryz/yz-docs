@@ -6,8 +6,8 @@ Customer: {
 
 	run: {
 		prince Int
-		_ : bank.credit(me price)
-		store.buy(me price)
+		_ : bank.credit(me, price)
+		store.buy(me, price)
 	}
 	me Customer
 }
@@ -16,26 +16,26 @@ Store : {
 	buy: {
 		cust Customer
 		price Int
-		bank.debit(cust price)
+		bank.debit(customer, price)
 	}
 }
 Bank : {
-	balances [Customer]Int = [Customer]Int()
+	balances [Customer:Int]= [Customer]Int
 
 	credit: { 
-		cust Customer
+		customer Customer
 		amount Int
-		b : balances[cust]
-		balances[customer] b + acount 
+		b : balances[customer]
+		balances[customer]= b + acount 
 	}
 	debit :{
-		cust Customer
+		customer Customer
 		price Int
-		b : balances[cust]
+		b : balances[customer]
 		balance < price  ? {
-			Error('Not enough balance')
+			Err('Not enough balance')
 		} {
-			balances[cust] b - price
+			balances[customer]= b - price
 			Ok()
 		}
 	}

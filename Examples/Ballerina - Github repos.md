@@ -21,10 +21,10 @@ PR: {
 github http.Client = http.new('http/api.github.com/repos')
 headers: [
   'Accept'       :'application/vnd.github.v2+json'
-  'Authorization':'token {githubPAT}'
+  'Authorization':'token `githubPAT`'
  ] 
- prs: github.get('/{repository}/pulls' headers)
- gsheets sheets.Client = sheets.new(Auth{auth: Token{token: sheets_access_token } })
+ prs: github.get('/`repository`/pulls' headers)
+ gsheets sheets.Client = sheets.new(Auth(auth: Token(token: sheets_access_token )))
  gsheets.append_row_to_sheet(
    spres_sheet_id
    sheet_name

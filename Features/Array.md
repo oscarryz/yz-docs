@@ -17,36 +17,33 @@ a [Int] = [1 2 3]
 a : [1 2 3]
 
 // emtpy
-a [Int] = [] // 
+a [Int] = []Int // 
 // short declr + init
 a : []Int // empty array of ints 
 
 // Generic
 a [T] = [1 2 3]
 a : []T
-a : [] (String,String)
-a [(String,String)]
 ```
 
 ```javascript
 // Type
-array []Int
+array [Int]
 // init
-array = []
+array = []Int
 
 //short decl + init 
-array: [] Int // identical to the type
+array: []Int // identical to the init 
 // or 
-array: [] // no type specified yet until first usage
+array: []T // no type specified yet until first usage
 array << 1 // now type is []Int
 ```
 
 Example
 
 ```javascript
-a [] String // a is an array of string
-// ~how to initilize it is tbd~ answer: [] or []String for short decl
-a = []
+a [String]// a is an array of string
+a = []String
 a << 'Hello' // or a.add 'Hello'
 print(a[0]) // prints Hello
 
@@ -56,10 +53,11 @@ Also to consider
 ```javascript
 a [String] // array of strings
 // 28 agosto 2022. Maybe not
+// Sometime in 2024. Yes!
 ```
 	
 
-Literal
+Literal, elements separated by space
 
 ```javascript
 a: ['Hello' 'World']

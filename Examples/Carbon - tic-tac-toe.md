@@ -1,17 +1,18 @@
 https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 
 ```js
-	board: repeat(3  repeat(3 " "))
+	board: "".repeat(3).repeat(3)
 	
 	display_board: {
-		board.split('\n').for_each({
-			row Int
-			print(join(" | " row))
+    	board.split('\n').for_each({
+          \row String
+      	print(row.join("|"))
 		})
 	}
-	won_game: { player Player
-		win: repeat(3 player)
-		[board transpose(board)].for_each {
+	won_game: { 
+    player String 
+		win: player.repeat(3) 
+		[board, transpose(board)].for_each {
 			board.for_each { row String
 				row == win ? { return true }
 			}
@@ -36,7 +37,6 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 	 })
 
 	 meaning_of_life: 42
-
 	 false ? {
 		 print('false')
 	 } {
@@ -61,14 +61,14 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 	printer()
 
 
-	Button {
+	Button: {
 		make: { count Int 
 			times: when_eq count [
-				{1}: {"once"},
-				{2}: {"twice"},
+				{1}: {"once"}
+				{2}: {"twice"}
 				{when.else}: { "{count} times"}
 			]
-			msg: 'Click me $(times)'
+			msg: 'Click me `times`'
 		}
 	}
 ```
@@ -118,6 +118,6 @@ main: {
 			]
 
 		})
-		print('$(vertical_direction * horizontal_direction*)')
+		print('`vertical_direction * horizontal_direction*`')
 	}
 ```

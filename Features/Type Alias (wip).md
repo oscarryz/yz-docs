@@ -6,7 +6,7 @@ The most common case is to define a block instance (see: [Instances](Instances.m
 
 ```javascript
 // full syntax
-Person (name String; last_name String; full_name (String)) = {
+Person #(name String, last_name String, full_name #(String)) = {
     full_name: {name ++ last_name}
 }
 // shortcut
@@ -22,7 +22,7 @@ Another use is to narrow the possible values of a type, e.g. think of a card dec
 A possible implementation could be: 
 ```javascript
 deck: {
-    Suit :: {}
+    Suit : {}
     club Suit{}
     diamond Suit{}
     heart Suit{}
