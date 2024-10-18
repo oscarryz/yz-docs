@@ -104,7 +104,7 @@ Point : {
    // `+` is a non-word name block/method
    +: { 
        other Point
-       Point( x + other.x 
+       Point( x + other.x, 
               y + other.y)
     }
 }
@@ -112,28 +112,6 @@ p1: Point(1, 2) + Point(3, 4) // invoking `+` without `.` results in a new Point
 // same as 
 Point(1, 2).+(Point(3, 4))
 ```
-
-### What about `this` or `self`?
-
-There's no `this` or `self` variable but if needed it can be defined just like any other variable but it has to be assigned elsewhere (most likely in a factory method)
-
-```javascript
-Person : {
-    name String
-    self Person
-    introduce_yourself: {
-        'My name is `self.name`'
-    }
-}
-
-alice:{
-    p: Person('Alice')
-    p.self = p
-    p
-}
-print alice().introduce_yourself() // My name is Alice
-```
-
 
 ## Expression blocks
 
@@ -146,10 +124,10 @@ They behave the same, except they don't take parameters when executed, and natur
 
 ```javascript
 one_two: { 1; 2 }
-a b: one_two() // a:1 b:2
+a, b: one_two() // a:1 b:2
 
 // Desugared version
-one_two #(Int, Int) = { 1; 2 } // `one_two` is a block of product types `Int` `Int` initialized withbthe block `{1 2}`
+one_two #(Int, Int) = { 1; 2 } // `one_two` is a block of product types `Int` `Int` initialized withbthe block `{1; 2}`
 a Int 
 b Int
 one_two()
