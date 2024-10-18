@@ -55,7 +55,7 @@ retrieve_order: {
 
 // Executing the block
 // Defines two variables: `customer` and `product` using the last 2 computed values in the block
-customer product: retrieve_order(89,012)
+customer, product: retrieve_order(89,12)
 ```
 
 ## Creating instances of a block
@@ -74,7 +74,7 @@ p1 Point =  Point(x:10, y:20) // p1 variable declared and initialized
 p2: Point(40, 40) // p2 type `Point` inferred.
 
 // An anonymous block can still structurally match the new type
-p3 = {x: 10, y: 100} 
+p3 = {x: 10; y: 100} 
 p1 = p3 // Can be assigned because it is a block with a `x` and a `y` of type Int
 ```
 
@@ -87,7 +87,7 @@ Point : {
     x Int
     y Int
     to_string: {
-      "`x`,`y`" // $(expr) for string interpolation
+      "`x`,`y`" // `expr` for string interpolation
    }
 }
 p: Point(0, 0)
