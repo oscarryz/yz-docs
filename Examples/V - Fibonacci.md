@@ -3,7 +3,7 @@ https://vosca.dev/p/9cd071f5fc
 ```javascript
 fib: {
     n Int
-    f: [0 1]
+    f: [0,1]
     2.to(n).each{ i Int
         f[i] = f[i - 1] + f[i - 2]
     }

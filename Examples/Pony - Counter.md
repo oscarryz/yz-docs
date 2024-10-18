@@ -14,10 +14,10 @@ Counter {
 }
 display: {
         result Int
-        print "$(result)"
+        print "`result`"
 }
 main:{
-    n: int.parse(os.args[1]).or {10}
+    n: int.parse(os.args[1]).or(Ok(10)).get()
     counter: Counter()
     
     _: n.times(counter.increment)

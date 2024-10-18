@@ -1,32 +1,31 @@
 
-
 https://rosettacode.org/wiki/Rendezvous#Python
 
 ```javascript
 Printer {
 	name String
-	backup Optional = optional.none// Printer
+	backup Optional = optional.None()// Printer
 	ink_level: 5
 	output: io.stdout
     // print {String Result}
 	print: {
 	    msg String
 		ink_level > 0  ? {
-			output.print('($(name)): $(msg)')
+			output.print('(`name`): `msg`')
 			ink_level = ink_level.--()
-			result.ok()
+			result.Ok()
 		} {
 			backup ? { p Printer 
 			   p.print(msg)
 			} {
-			   result.error('Out of ink error $(name)')
+			   result.Error('Out of ink error `name`')
 			}
 		}
 	}
 }
 main: {
 	reserve: Printer('reserve')
-	main: Printer('main' reserve)
+	main: Printer('main', reserve)
     humpty_lines : [
         "Humpty Dumpty sat on a wall."
         "Humpty Dumpty had a great fall."
@@ -51,7 +50,6 @@ main: {
 	            print('\t Humpty Dumpty out of ink!')
 				break
             }
-			
         }
     }
     print_goose: {
@@ -67,3 +65,4 @@ main: {
     print_humpty()
 }
 ```
+

@@ -9,7 +9,7 @@ solution: input
     line String
     digits: line
       .split()
-      .filter string.is_digit?
+      .filter(string.is_digit)
       .to_list()
     int.parse(
         digits.first().or {'0'} ++ 

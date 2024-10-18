@@ -27,11 +27,11 @@ RelatedPost: {
 main: {
    json_str: os.read_file '../post.json' .or { 
        err Error
-       printerr 'Failed to read file {err}'
+       printerr 'Failed to read file `err`'
    }
    posts: json.decode []Post json_str .or {
       err Error
-      printerr 'Failed to parse json {err}'
+      printerr 'Failed to parse json `err`'
    }
    start : time.now()
    tag_map: [String][]Int

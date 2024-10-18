@@ -3,15 +3,15 @@
 ```js
 Github : {
 	personal_access_token String
-	get_repo ( String, Promise(Repository))
+	get_repo #( String, Promise(Repository))
 }
 
 Repository : {
-	get_issue (number Int, Promise(Issue))
+	get_issue #(number Int, Promise(Issue))
 }
 
 Issue : {
-	title (String)
+	title #(String)
 }
 
 main: {
@@ -21,18 +21,26 @@ main: {
 	// in our case, get the issue
 	// 
 	repo.then { r Repository 
-		fetch_issue( 123 r ).then { i
+		fetch_issue( 123, r ).then { i
 			print_issue_title(issue)
 		}
 	}
 }
-fetch_issue (number Int, repo Repository, Promise(Issue)) = {
+fetch_issue #(number Int, repo Repository, Promise(Issue)) = {
 	repo.get_issue(number)
 }
-print_issue_title (issue Promise(Issue)) = {
+print_issue_title #(issue Promise(Issue)) = {
 	issue.then { 
 		i Issue
-		print("Issue $(i.title())")
+		print("Issue: `i.title()`")
 	}
+}
+...
+Promise : { 
+  T
+  next
+  flatten_next
+  add
+  
 }
 ```

@@ -3,9 +3,10 @@ https://vosca.dev/p/17d52c0759
 ```javascript
 // Experimental, if no type is defined, the variable is generic and will be binded on the first usage
 List: {
-    data []
+    T
+    data []T
     push: {
-        val
+        val T
         data << val
     }
     pop: {
@@ -13,17 +14,18 @@ List: {
     }
 }
 list_of: {
-   List{} 
+   T
+   List(T)
 }
 main: {
-    string_list: List{} // no data
-    string_list.push 'hello' // bebomes a list of String
+    string_list: List(String) 
+    string_list.push 'hello' 
     string_list.push 'world'
 
     last_string: string_list.pop() // returns a String 
 
-    bool_list: list_of() // Still nothing :/ not sure 
-    bool_list.push true // list of String
+    bool_list: list_of(Bool) 
+    bool_list.push true 
 }
 
 ```

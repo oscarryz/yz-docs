@@ -89,8 +89,9 @@ play: {
     report guess answer
     done guesses: update guess answer guesses
 
+
     done == false ? { 
-       play answer high done guesses + 1 errors
+       play(answer, high, done, guesses + 1, errors)
     }
 }
 

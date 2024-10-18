@@ -31,6 +31,25 @@ main_test: {
 }
 ```
 
+Using annotations?
+
+```js
+
+test: std.test
+asser: std.test.assert
+
+'test: "Main suilte"'
+main_test: {
+	'test: "Should work"'
+	exploration: {
+		result: 2 + 2
+		assert == result 4 
+		assert >= result 2
+	}
+}
+```
+
+
 Using test docs
 
 ```js
