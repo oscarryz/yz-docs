@@ -16,7 +16,7 @@ c2: `
 ch: 'c' // still a string
 
 // arrays
-d: [1, 2, 3]
+d: [1 2 3]
 
 // dictionaries
 e: ['name'   : 'John'
@@ -35,13 +35,13 @@ f(2) // 4
 h: date.now() // 2021-05-03T17:10:48+02:00
 
 // core values
-i1: true // core.true
-i2: false // core.false
-i3: maybe  // maybe not :P
+i1: true // std.true
+i2: false // std.false
+
 
 
 //---------------------------------------------------
-// Aritmethic is implemented in the core.Number block
+// Aritmethic is implemented in the std.Number block
 // eg. 1 + 1 is the same as 1.+(1) or 1.plus(1)
 //---------------------------------------------------
 1 + 1      // 2
@@ -94,7 +94,7 @@ true  && false // false
 true  || false // true
 false || false // true
 
-{1 == 2} && {2 < 3} // false
+(1 == 2) && {2 < 3} // false
                     // the second block will not be evaluated
 
 // simple "if" statements
@@ -107,15 +107,17 @@ false || false // true
 
 // "switch" statements 
 
-when [{2>3}: { print '2 is greater than 3'},
-      {true}:{ print '2 is not greater than 3'} // 2 is not greater than 3
+when [
+   {2>3}: { print '2 is greater than 3'}
+   {true}:{ print '2 is not greater than 3'} // 2 is not greater than 3
+]
 
 a: 2 > 3 ? {'yes'}, {'no'} // a: 'no'
 
 // "loops"
-arr: [1,4,5,3]
+arr: [1 4 5 3]
 arr.for_each { x Int
-    print 'x = $(x)'
+    print 'x = `x`'
 }
 // x = 1
 // x = 4
@@ -123,10 +125,8 @@ arr.for_each { x Int
 // x = 3
 
 // with index
-i: 0
-arr.for_each { x Int
-    print 'Item at positin $(i) => $(x)'
-    i = i + 1
+arr.for { i Int, x Int
+    print 'Item at position `i` => `x`'
 }
 // item at position 0 => 1
 // item at position 1 => 4
@@ -135,15 +135,15 @@ arr.for_each { x Int
 
 
 // ranges
-1 .to 3, { x Int
-    print '$(x)'
+1.to(3).do{ x Int
+    print '`x`'
 }
 // 1
 // 2
 // 3
 
-'a' .to 'c' { s String
-    print s
+'a' .to 'c' .do { s String
+    print(s)
 }
 // a
 // b
@@ -151,8 +151,8 @@ arr.for_each { x Int
 
 // looping through a dictionary
 dict: ['name': 'John', 'surname': 'Doe']
-dict.for_each { key String; value String
-    print '$(key) -> $(value)'
+dict.for_each { key String, value String
+    print '`key` -> `value`'
 }
 
 // name -> John
