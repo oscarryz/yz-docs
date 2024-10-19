@@ -74,7 +74,7 @@ p1 Point =  Point(x:10, y:20) // p1 variable declared and initialized
 p2: Point(40, 40) // p2 type `Point` inferred.
 
 // An anonymous block can still structurally match the new type
-p3 = {x: 10; y: 100} 
+p3 = {x: 10, y: 100} 
 p1 = p3 // Can be assigned because it is a block with a `x` and a `y` of type Int
 ```
 
@@ -108,7 +108,7 @@ Point : {
               y + other.y)
     }
 }
-p1: Point(1, 2) + Point(3, 4) // invoking `+` without `.` results in a new Point{x: 4 y:6} 
+p1: Point(1, 2) + Point(3, 4) // invoking `+` without `.` results in a new Point(x: 4 y:6)
 // same as 
 Point(1, 2).+(Point(3, 4))
 ```
@@ -118,16 +118,16 @@ Point(1, 2).+(Point(3, 4))
 It is also possible to have blocks with no variables and only expressions.
 
 ```javascript
-one_two: { 1 ; 2 }
+one_two: { 1, 2 }
 ```
 They behave the same, except they don't take parameters when executed, and naturally their values cannot be accessed by name, only by index.
 
 ```javascript
-one_two: { 1; 2 }
+one_two: { 1, 2 }
 a, b: one_two() // a:1 b:2
 
 // Desugared version
-one_two #(Int, Int) = { 1; 2 } // `one_two` is a block of product types `Int` `Int` initialized withbthe block `{1; 2}`
+one_two #(Int, Int) = { 1, 2 } // `one_two` is a block of product types `Int` `Int` initialized withbthe block `{1, 2}`
 a Int 
 b Int
 one_two()
@@ -165,15 +165,15 @@ person.age  // compilation error: no variable named `age`
 
 ## Structural typing
 
-Yz uses structural typing to know if a block can be used as a parameter and/or where other block is defined. The match of the structure includes the variable names.
+Yz uses structural typing to know if a block can be assigned to a variable. The match of the structure includes the variable names, if no names are specified only the types are used.
 
 ```js
 print_it: {
-    thing #(Int, Int ) // a `thing` is a block that returns two integers
-    a b :thing() // execute it
+    thing #(Int, Int ) // a `thing` is block with two integers
+    a,b : thing() // execute it
     print("`a` and `b`")
 }
-// All of the following will structurally match because they're things that return two ints
+// All of the following will structurally match because they're things with two ints
 
 time: {
    hour: 12
@@ -185,6 +185,7 @@ Point : {
 }
 print_it(time) // a regular named block
 print_it(Point(1, 2)) // an instance of a `Point` type
+
 print_it({ 4, 2 }) // and expression block
 ```
 
