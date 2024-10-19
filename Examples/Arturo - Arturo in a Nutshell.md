@@ -185,7 +185,7 @@ int.parse("123") // std.option.Ok(123)
 int.parse(":(") // std.option.Err("...")
 
 
-// string interpolation
+// string interpolation `
 x: 2
 print 'x = `x`' // x = 2
 
@@ -239,30 +239,30 @@ arr.sort() // [1,2,3,4,5]
 arr.sort { a Int, b Int, b - a} // descending order -> [5,4,3,2,1]
 
 // mapping values
-1 .to 10 {x Int; 2 * x}
-Range {1,10}.map{x Int; 2 * x} // [2,4,6,8,10,12,14,16,18,20]
+1 .to 10 .do {x Int, 2 * x}
+Range(1,10).map{x Int, 2 * x} // [2,4,6,8,10,12,14,16,18,20]
 
-n: []
-1.to 10, { x Int; n << x }
-n.select { x Int; x % 2 == 0} // [2,4,6,8 10]
-n.filter { x Int; x % 2 == 0} // [1,3,5,7,9]
+n: []Int
+1.to 10 .do { x Int, n << x }
+n.select { x Int, x % 2 == 0} // [2,4,6,8 10]
+n.filter { x Int, x % 2 == 0} // [1,3,5,7,9]
 
 // misc operations
-arr: ['one', 'two', 'three', 'four']
+arr: ['one' 'two' 'three' 'four']
 arr.reverse() // ['four', 'three', 'two', 'one']
 
 //------------------
 // function / blocks
 //------------------
 
-f: {x Int; 2 * x }
+f: {x Int, 2 * x }
 f(10) // 20
 
 // returning a value
-g: { x Int;
-    x < 2 ? { return 0} // return finishes the block
+g: { x Int
+    x < 2 ? { return 0 } // return finishes the block early 
     res: 0
-    0 .to x , { z Int
+    0 .to x .do { z Int
         res = res + z
     }   
     res
@@ -279,37 +279,38 @@ Person: {
     surname String
     age Int
     print: {
-        print 'NAME: $(name), SURNAME: $(surname), AGE: $(age)'
+        print 'NAME: `name`, SURNAME: `surname`, AGE: `age`'
     }    
-    compare: {other Person; age - other.age}
-    say_hello: $( print 'Hello $(name)')
+    compare: {other Person, age - other.age}
+    say_hello:{ print 'Hello `ame`'}
 }
-// constructor
-new_person: {name String; surname String; age Int;
-    Person{ name.capitalize(), surname, age}
+// "constructor"
+new_person: {name String, surname String, age Int
+    Person( name.capitalize(), surname, age)
 }
 
 // create new instances of custom type
-a: Person{'John', 'Doe', 34}
-b: Person{
+a: Person('John', 'Doe', 34)
+b: Person(
     name:'Jane'
     surname:'Doe'
     age:34
-}
+)
 a.say_hello() // Hello John
 b.say_hello() // Hello Jane
 
 // access block variables
-print 'First person name is $(a.name)'
-print 'Second person name is $(b.name)'
+print 'First person name is `a.name`'
+print 'Second person name is `b.name`'
 
 // modifing values
 a.name = 'bob'
 a.say_hello() // Hello bob
 
 // verifying type 
-core.type(a) // Person{String,String,Int}
-core.is Person{String,String,Int}, a // true
+std.info(a).type // Person
+std.is_a Person, a // true
+std.info(Person).type // #(String, String,Int)
 
 a.print() // NAME: John, SURNAME: Doe, AGE: 34
 
