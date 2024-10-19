@@ -150,7 +150,7 @@ arr.for { i Int, x Int
 // c
 
 // looping through a dictionary
-dict: ['name': 'John', 'surname': 'Doe']
+dict: ['name': 'John' 'surname': 'Doe']
 dict.for_each { key String, value String
     print '`key` -> `value`'
 }
@@ -161,7 +161,7 @@ dict.for_each { key String, value String
 //while loops
 i: 0
 while { 1 < 3 }, {
-    print 'i = {i}'
+    print 'i = `i`'
     i = i + 1
 }
 // i = 0 
@@ -173,17 +173,21 @@ a: 'tHis Is a stRinG'
 print a.upper() // THIS IS A STRING
 
 // concatenation
-a: 'Hello ' + 'World!'
-'hello'.split() // ['h', 'e', 'l', 'l', 'o']
-'hello world'.split(' ') // ['hello', 'world']
+a: 'Hello ' ++ 'World!'
+'hello'.split() // ['h' 'e' 'l' 'l' 'o']
+'hello world'.split(' ') // ['hello' 'world']
 
 // conversion 
 123.to_string() // "123"
-int.parse_int("123") // 123
+
+int.parse!("123") // 123
+int.parse("123") // std.option.Ok(123)
+int.parse(":(") // std.option.Err("...")
+
 
 // string interpolation
 x: 2
-print 'x = $(x)' // x = 2
+print 'x = `x`' // x = 2
 
 //--------
 // Blocks
@@ -194,7 +198,7 @@ sth: {print 'Hello world'}
 sth() // Hello world
 
 // array indexing
-arr: ['zero', 'one', 'two', 'three']
+arr: ['zero' 'one' 'two' 'three']
 arr[0]      // zero
 arr[arr.len()-1] // three
 arr[3]           // three
@@ -202,37 +206,37 @@ arr[3]           // three
 x: 2
 arr[x]            // two
 arr[0] = 'nada'
-print '$(arr)' // ['nada', 'one', 'two', 'three']
+print '`arr`' // ['nada' 'one' 'two' 'three']
 
 // adding elements
-arr: []
+arr: [] String 
 arr << 'one'
 arr << 'two'
 print arr // ['one', 'two']
 // also 
-arr.push 'one' 
-arr.push 'two' 
+arr.add('one')
+arr.add('two')
 
 // remove elements from array
-arr: ['one', 'two', 'three', 'four']
+arr: ['one' 'two' 'three' 'four']
 arr.remove 'two'  // ['one', 'two', 'three', 'four']
-arr.remove_at 0   // ['three', 'four']
+arr.remove_at(0)   // ['three', 'four']
 
 // getting the size fo an array 
-arr: ['one', 'two', 'three', 'four']
-print '$(arr.len())' // 4
+arr: ['one' 'two' 'three' 'four']
+print("`arr.len())`") // 4
 
 // getting a subarray
-arr: ['one', 'two', 'three', 'four']
+arr: ['one' 'two' 'three' 'four']
 arr.subarray 0,1  // ['one', 'two']
 arr.contains 'one' // true
 arr.contains 'five' // false
 
 
 // sorting
-arr: [1,5,3,2,4]
+arr: [1 5 3 2 4]
 arr.sort() // [1,2,3,4,5]
-arr.sort { a Int; b Int; b - a} // descending order -> [5,4,3,2,1]
+arr.sort { a Int, b Int, b - a} // descending order -> [5,4,3,2,1]
 
 // mapping values
 1 .to 10 {x Int; 2 * x}
