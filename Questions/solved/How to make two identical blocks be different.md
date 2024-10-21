@@ -1,13 +1,13 @@
-	```javascript
-PersonId {}
-PetId {}
+```javascript
+PersonId : {}
+PetId : {}
 
-Pet {
+Pet : {
   id PetId
   owner PersonId
 }
 a: PetId()
-Pet ( a a ) // valid
+Pet ( a, a ) // valid
 ```
 Currently creating a pet would accept in both the same thing (and that's good)
 Do we need a way to make them different to the type system can enforce it?

@@ -37,13 +37,13 @@ a = new Person {a.name  42}
 #challenged we might need it to solve [Instances for libraries](Instances%20for%20libraries.md)
 
 ```javascript
-true: Boolean { 
+true: Boolean ( 
     ?: {
-        tb {value}
-        fb {value}
+        tb #(V)
+        fb #(V)
         true_block()
     }
-}
+)
 {true ? { a } { b }}()
 {true ? { c } { d }}()
 

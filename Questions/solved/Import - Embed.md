@@ -1,4 +1,4 @@
-Embedding instantable blocks causes the enclosing obj to have the values as if they were declared previously.
+Embedding instantiable blocks causes the enclosing obj to have the values as if they were declared previously.
 They can be re-assigned, but no re-declared
 
 ```js
@@ -37,7 +37,7 @@ Component: {
     name String
 }
 
-b: Base{b: 10, tag: "b's tag"}
+b: Base(b: 10, tag: "b's tag")
 co: Container{c: 'foo', tag: "co's tag"} 
 c: Component{ name: 'Comp'} // ce: need value for tag
 print b.describe_tag() // Base tag is b'stag
@@ -47,7 +47,7 @@ print co.describe_tag() // Container tag is co'stag
 ```
 
 #answered Feb 15 2023
-No embed, but you can "hook", behaviour from other blocks, see  [Inheritence](../../Features/Inheritence.md)
+No embed, but you can "hook", behavior from other blocks, see  [Inheritence](../../Features/Inheritence.md)
 
 Import is a simple name shortening see [Import](../../Features/Import.md)
 

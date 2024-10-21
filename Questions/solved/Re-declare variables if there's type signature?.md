@@ -3,16 +3,14 @@
 If a block has a type: 
 
 ```javascript
-b { s String n Int }
-// Or soon 
-b ::{ s String n Int }
+b #(s String, n Int)
 ```
 
 Does it make sense to re-declare the variables in the body? 
 
 ```javascript
 // Explicit type signature
-b :: { s String n Int } 
+b #( s String, n Int )
 // initialization 
 b = {
     n.times {
@@ -42,15 +40,36 @@ b: {
 ```javascript
 // We could also use generics and constraint on their usage: 
 b: {
-    n
-    s
+    n N
+    s S
     n.times {
         s = s ++ s
     }
 }
 // b type would be
-b :: { 
-    n :: { times :: {}}
-    s :: { ++    :: {s s}} // smh 
+b # (
+    n # (times #())
+    s #(++ #(s S)) // smh 
+)
+```
+
+What if during declaration and initialization we use another symbol? 
+
+```js
+b #(s String,n Int) => {
+  n.times({
+    s = s.++(s)
+  })
 }
 ```
+
+Or no symbol at all 
+```js
+b #(s String,n Int) {
+  n.times({
+    s = s.++(s)
+  })
+}
+```
+
+🤔

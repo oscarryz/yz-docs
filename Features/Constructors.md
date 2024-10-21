@@ -1,4 +1,5 @@
-```javascript
+
+```js
 HelloWorldModel: {
   saying String
 }
@@ -8,7 +9,7 @@ model: HelloWorldModel (
 
 
 win: Frame (
-    title: '$(model.saying) JavaFX'
+    title: '`model.saying` YzFx'
     width: 200
     content: TextField(
         value: model.saying

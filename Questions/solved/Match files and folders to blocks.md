@@ -1,4 +1,6 @@
 In project structure I basically equated files to blocks, let's make sure that's what we want
+See [Code organization](Code%20organization.md)
+
 
 e.g. in a `/main.yz` file
 ```js

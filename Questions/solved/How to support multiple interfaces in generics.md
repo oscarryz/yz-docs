@@ -142,12 +142,26 @@ OrdOrDebug:{  }
 ```
 But I guess that's fine.
 
-Solution: Generic types can have any number of methods, but the compiler will verify if the arguments have the needed methods. 
+## Solution
+Generic types can have any number of methods, but the compiler will verify if the arguments have the needed methods. 
 
 ```js
 sort #(a [T], [T]) 
 sort([4 2 3 1]) // ok
 sort([{},{},{}]) // compile error, [#()] doesn't have a '>=' method.
+```
+
+Also, the generic will "expand" to verify based on the use e.g .
+
+
+```js
+foo:{
+  o T
+  o.something("blah")
+  o.bye()
+}
+foo(Person()) // will compile only if type `Person` has 
+//the method `something#(String)` and `bye#()`
 ```
 
 #answered 

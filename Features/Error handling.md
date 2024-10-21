@@ -1,12 +1,13 @@
 TLDR: 
 
-Use generic Option/Result to wrap and unwrap values
+Use generic Option/Result to wrap and unwrap values. See also [SumTypes](SumTypes.md)
+
 ```javascript
 compute: {
     if boolean.random() {
-        Ok{1}
+        Ok(1)
     } {
-        Err{'No luck'}
+        Err('No luck')
     }
 }
 // Some examples

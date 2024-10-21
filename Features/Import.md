@@ -1,3 +1,8 @@
+Update: Oct 19 2024
+#challenged [[Questions/import]]
+
+It might be hard to assign multiple variables by hand. 
+
 No import keyword, just assign to a new variable: 
 #answered  No `import` keyword, to "import" all assign the top level block e.g. `math: core.math; math.max(1 2)`
 

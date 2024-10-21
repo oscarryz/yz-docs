@@ -110,7 +110,7 @@ print_profession_name(Director{}) // 'A director'
 
 ```
 
-Is not necessarily this is a block, it could be another type creating a [Type Alias (wip)](Type%20Alias%20(wip).md) 
+Is not necessarily this is a block, it could be another type creating a [Type Alias](Features/Type%20Alias.md) 
 You can't add new methods until [Extension methods](../Questions/solved/Extension%20methods.md) are supported.
  
 ```
@@ -126,7 +126,7 @@ Time :: Int
 #answered 
 ### Solves: 
 [The block type](solved/The%20block%20type.md)
-[Type Alias (wip)](../Features/Type%20Alias%20(wip).md)
+[Type Alias](Features/Type%20Alias.md)
 [Instances](../Features/Instances.md)
 
 ### Related:

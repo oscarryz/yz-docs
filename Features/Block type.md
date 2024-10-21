@@ -24,7 +24,15 @@ Example of a block that takes or has a variable `v`
 #(v Int)={v Int}(2) // invoked with param 2
 ```
 
+if the `=` is omitted the variable can be used: 
+
+```js
+#(v Int) {
+  print("`v`")
+}
+```
+
 ## Type alias
 
-[Type Alias (wip)](Type%20Alias%20(wip).md)
+[Type Alias](Features/Type%20Alias.md)
 

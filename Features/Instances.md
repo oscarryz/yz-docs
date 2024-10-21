@@ -419,4 +419,4 @@ The reason why `Person:{}` is not enough to create a new instantiable  is becaus
 Also using `:` alone would create a variable (although uppercase would desamabiguate).
 
 
-[Type Alias (wip)](Type%20Alias%20(wip).md)
+[Type Alias](Features/Type%20Alias.md)
