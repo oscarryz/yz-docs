@@ -13,7 +13,7 @@ while {cond2()} {}
 The second call would override the  first parameter
 
 #idea
-Create and instance each time
+Manually create and instance each time
 
 
 ```javascript
@@ -40,16 +40,18 @@ Maybe it can be anonymous?
 ```javascript
 control: {
    while : {
-      {
+      w: {
        
-         cond {Bool}
-         action {v}
+         cond #(Bool)
+         action #(v)
          cond() ? { 
             action()
-            self(cond action)
+            w: (cond, action)
          }
       }
+      w()
    }
 }
 ```
 
+#related [Consider method execution to create a copy](Consider%20method%20execution%20to%20create%20a%20copy.md)

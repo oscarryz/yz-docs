@@ -108,7 +108,7 @@ false || false // true
 // "switch" statements 
 
 when [
-   {2>3}: { print '2 is greater than 3'}
+   {2 > 3}: { print '2 is greater than 3'}
    {true}:{ print '2 is not greater than 3'} // 2 is not greater than 3
 ]
 

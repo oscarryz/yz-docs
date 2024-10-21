@@ -264,3 +264,6 @@ when_equals: <K,V>{ subject K  comps [{K}]{V}
     }
 }
 ```
+
+
+TODO: verify with [Pattern Matching](Questions/solved/Pattern%20Matching.md)

@@ -96,7 +96,7 @@ Final v1.0
 Another version 
 
 ```javascript
-else: true
+else: {true}
 fizzbuzz: {
         n Int
         m3: n % 3 == 0
@@ -106,9 +106,26 @@ fizzbuzz: {
            { m3 && {m5} } : { 'FizzBuzz' }
            { m3 }: { 'Fizz' }
            { m5 } : { 'Buzz' }
-           { else }: { ints.to_string(n) }
+            else : { ints.to_string(n) }
         ]
-        print("$(r)")
+        print("`r`")
 }
 1.to(100).do fizzbuzz
+```
+
+Another one 
+```js
+else: {true}
+fizz_buzz: {
+  n Int
+  m3: n % 3
+  m5: n % 5
+  print(match_eq [
+    {{0, 0}} : {"FizzBuzz"}
+    {{0, any(Int)}}: {"Fizz"}
+    {{any(Int), 0}}: {"Buzz"}
+    else: {'`n`'}
+  ])
+}
+1.to(100).do(fizz_buzz)
 ```

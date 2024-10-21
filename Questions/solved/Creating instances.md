@@ -1,7 +1,7 @@
 
 This whole document was created using the `::` notion which was later rejected, it help to inform though how instances will be created. See `Re-Summary` at the bottom and feel free to ignore the whole doc.
 
-In Yz you can assign a value to a variable if it matches the variable typw structure, for instance
+In Yz you can assign a value to a variable if it matches the variable type structure, for instance
 
 ```javascript
 a Int = 0 

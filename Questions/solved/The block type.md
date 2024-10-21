@@ -38,5 +38,5 @@ Answers:
 See also: 
 [Generics without <>](Generics%20without%20<>.md)
 [Variables as data types](Variables%20as%20data%20types.md)
-[Type Alias (wip)](../../Features/Type%20Alias%20(wip).md)
+[Type Alias](Features/Type%20Alias.md)
 [Creating instances](Creating%20instances.md)

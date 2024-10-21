@@ -1,5 +1,5 @@
-Not like this, is not super obvious and still not decided if import would do something else that just use the names like in Java
-```javascript
+~~Not like this, is not super obvious and still not decided if import would do something else that just use the names like in Java
+```js
 Named: {
     name {String}
     upper_case: {
@@ -9,7 +9,7 @@ Named: {
 Boo: {
     // Dropped, see import
     import Named
-    // name: {'Boo'} // ce: name already defined
+    // name: {'Boo'} // compiler error, name already defined
     name =  { 'Boo' } 
 }
 b: Boo{}
@@ -42,20 +42,29 @@ If more are needed
 
 ```javascript
 Animal: {
-    tell {}
-    pet  {}
-    feed {}
+    talk #()
+    pet  #()
+    feed #()
 }
 Cat: {
-    tell { println 'Meow' }
-    pet  { println 'purr' }
-    feed { println 'lick' }
+    talk : { println 'Meow' }
+    pet  : { println 'purr' }
+    feed : { println 'lick' }
 }
 Lion: {
-   tell: { println 'Roar' }
+   talk: { println 'Roar' }
    pet: Cat.pet
    feed: Cat.feed
 }
+Tiger: {
+  import Cat
+}
+block: {
+  import Cat
+  
+}
+block.talk() // Meow
+Tiger().talk() // Meow
 ```
 
 ### Alternatives
@@ -63,9 +72,9 @@ Lion: {
 It is possible to create an "anonymous" instance with some methods changed
 
 ```javascript
-lion: Cat {
+lion: Cat(
     tell : { println 'Roal' } 
-}
+)
 ```
 Which is completely valid and the main way to have different behaviour. This is valid because in Yz, that's how new values are assigned: 
 
@@ -73,7 +82,7 @@ Which is completely valid and the main way to have different behaviour. This is 
 Person : {
     name String
 }
-me: Person { name: 'Yz' }
+me: Person ( name: 'Yz' )
 ```
 
 Still open question: [Reuse context? Or embedding?](../Questions/Reuse%20context?%20Or%20embedding?.md)

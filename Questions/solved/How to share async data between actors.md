@@ -8,12 +8,12 @@ We have two blocks, one produces a value, the other consumes it. How to make thi
 // but it's kind the idea 
 ```javascript
 producer: { 
-	s: 'Random number $(random.int(100))' 
+	s: 'Random number `random.int(100)`' 
 }
 consume: {
-   thing (String) // a thing that retuns a string
+   thing #(String) // a thing that retuns a string
    value: thing() // invoke and wait for a value
-   print 'The value is: $(value)'
+   print 'The value is: `value`'
 }
 main: {
 	consume(producer)

@@ -13,7 +13,7 @@ The producer knows when to stop
 // WORKS
 // To make it work as close as possible, the squarer needs to invoke the counter // until it closes. The counter needs to know when to stop
 `
-Creates a block that returns an Int and a Bool every times it's invoked.
+Creates a block that returns an Int and a Bool every times it is invoked.
 It will continue to be invoked while n < 100
 This counter is the "producer"
 `
@@ -27,13 +27,13 @@ counter: {
 
 }
 squarer: {
-	producer (Int ; Boolean)  //e.g. the counter
-	consumer (Int)
+	producer #(Int, Boolean)  //e.g. the counter
+	consumer #(Int)
 
 	value Int
 	open  Bool
 	is_open: { 
-	    value open = producer()
+	    value, open = producer()
 	}
 	// while calls a block `is_open`.. similar to
 	// while { is_open() } but better because it 
@@ -44,10 +44,10 @@ squarer: {
 }
 printer: {
 	n Int 
-	print '$(n)'
+	print '`n`'
 }
 main: {
-   squarer( counter() printer )
+   squarer( counter() , printer )
 }
 ```
 

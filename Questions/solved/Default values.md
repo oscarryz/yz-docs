@@ -3,7 +3,7 @@ How would this work with the parameters?
 
 
 ```
-point: {x Int y Int}
+point: {x Int, y Int}
 ```
 
 
@@ -12,7 +12,7 @@ For things that might not have a value we can use `Optional`
 
 ```js
 // default value
-point: {x Int = 0; y Int = 0} 
+point: {x Int = 0, y Int = 0} 
 x1 y1 = point() // x1: 0 y1: 0
 // no value
 Person: {
@@ -26,7 +26,7 @@ We could also allow don't have a default value, but if attempted to use the comp
 
 
 ```js
-say_hi: {message String print message } // no default value for message
+say_hi: {message String, print(message)} // no default value for message
 
 say_hi() // compilation error, `message` requires a value
 say_hi('Hello, world!') // there's a value
