@@ -21,6 +21,7 @@ name = ['Sheldon' 'Leonard' 'Penny' 'Rajesh' 'Howard']
 
 groups #([String])
 groups = { names.map(new_group) ++ groups.map(double_group) }
+
 new_group #(String, Group)
 new_group = {
     name String
