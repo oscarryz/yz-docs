@@ -19,7 +19,7 @@ stack: {
             additional Int
             len = additional > data.len() ? {
                 max: std.cmp.max
-                data = data.realloc max  data.len * 2 len + additional  
+                data = data.realloc(max (data.len * 2, len + additional))
             }
         }
         push: { 
