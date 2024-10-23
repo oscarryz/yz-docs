@@ -17,9 +17,9 @@ ArrayWrapper: {
     string: {
         r: '['
         l: nums.len()
-        nums.for_each { i Int e Int
-            r = r ++ '$(e)'
-            if i < l { 
+        nums.for_each { i Int, e Int
+            r = r ++ '`e`'
+            if i < l, { 
                 r = r == ', '
             }
         }
