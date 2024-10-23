@@ -1,3 +1,4 @@
+#open-question 
 ```js
 greet: {
     msg: 'Hello'
@@ -8,11 +9,11 @@ Person: {
 }
 
 
-a: Person {what: greet.msg }
+a: Person (what: greet.msg )
 a.say_hi() // 'Hello'
 
 greeet.msg: 'Bye'
-b: Person {what: greet.msg }
+b: Person(what: greet.msg)
 
 a.say_hi() // 'Hello' still referencing to the original 'Hello'
 b.say_hi() // 'Bye'   referencing to the new 'Bye'
@@ -22,8 +23,7 @@ b.say_hi() // 'Bye'   referencing to the new 'Bye'
 To avoid copying put in on an array or a box
 
 ```js
-Box: <T>{
+Box: {
     value T
 }
-greet
 ```
