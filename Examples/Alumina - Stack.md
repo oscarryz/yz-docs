@@ -12,18 +12,18 @@ stack: {
             len: 0
         }
     }
-    Stack {
+    Stack: {
         data []T
         len Int
         reserve: {
             additional Int
             len = additional > data.len() ? {
-                max: core.cmp.max
+                max: std.cmp.max
                 data = data.realloc max  data.len * 2 len + additional  
             }
         }
         push: { 
-	        value T
+	    value T
             reserve(1)
             data[len] = value
             len = len + 1
@@ -50,7 +50,7 @@ main: {
     v << 'I '
 
     while {v.is_empty() == false} {
-        print '$(v.pop())'
+        print '`v.pop()`'
     }
 }
 
