@@ -7,6 +7,9 @@ stack: {
     }
     with_capacity: { 
         capacity Int
+        // capacity is not used but in the
+        // oriinal example it was used to
+        // create an array of size capacity 
         Stack(data:[]T,len: 0)
     }
     Stack: {
@@ -16,6 +19,7 @@ stack: {
             additional Int
             additional > data.len() ? {
                 max: std.cmp.max
+                // no need to resize but left here as transcribed
                 data = data.realloc(max (data.len * 2, len + additional))
             }
         }
