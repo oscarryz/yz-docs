@@ -7,10 +7,7 @@ stack: {
     }
     with_capacity: { 
         capacity Int
-        Stack {
-            data:[]T
-            len: 0
-        }
+        Stack(data:[]T,len: 0)
     }
     Stack: {
         data []T
