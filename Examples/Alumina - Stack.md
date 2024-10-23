@@ -17,7 +17,7 @@ stack: {
         len Int
         reserve: {
             additional Int
-            len = additional > data.len() ? {
+            additional > data.len() ? {
                 max: std.cmp.max
                 data = data.realloc(max (data.len * 2, len + additional))
             }
