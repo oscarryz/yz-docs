@@ -50,7 +50,7 @@ main: {
     v << 'am '
     v << 'I '
 
-    while {v.is_empty() == false} {
+    while {v.is_empty() == false}, {
         print '`v.pop()`'
     }
 }
