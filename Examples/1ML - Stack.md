@@ -3,9 +3,9 @@
 
 
 ```js
-stack (
+stack #(
 	empty    #(T, Stack(T))
-	Stack (
+	Stack #(
 		T
 		push     #(a T)
 		pop      #(Opt(T))
@@ -39,10 +39,11 @@ stack = {
 				v: opt.Some(array[array.len()-1])
 				array.remove(array.len())
 				v
-			} {
+			}, {
 				opt.None()
 			}
 		}
+
 		is_empty = {
 			array.len() == 0
 		}
