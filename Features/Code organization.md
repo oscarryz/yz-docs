@@ -2,20 +2,40 @@
 
 ## Simple projects
 
-For simple project usually placing all the files in a single folder is enough, `yzc` will look for a top level block called `main` and will use it as a entry point. If there's more than one you can to specify the filename as parameter.
+For simple projects the `yz` build tool will compile each individual file and will create an executable if either they are named `main.yz` or have a `main` method or they have free floating code. You can also pass the filename to process a single file. If no entry point is found they are considered libraries and no executable would be created. This simple configuration applies for subdirectories too. 
+
+
+Example: 
+The directory contains 3 files `one.yz`, `two.yz` and `main.yz` all of them have free floating code and/or a main method 
 
 ```
-# Both contain a `main` block
-yzc one.yz
-yzc two.yz
-yzc main.yz // implicit main block
-
+project_name/
+   one.yz
+   two.yz
+   main.yz   
 ```
+
+When invoked without param the output would be:
+```
+yz 
+proj_name/
+   one.yz
+   two.yz
+   main.yz   
+   one.exe
+   two.exe
+   main.exe
+```
+(`.exe` is just to denote an executable was created, but only applies to Windows platform)
+
 
 ## Larger projects
 
-For larger project `yzc` can create a project with the following structure after executing `yz init project_name`
+If a `yz` file contains a `configuration` structure, then it will be used to create the executable. 
+Also you can create this configuration structure by invoking the build tool `init` _`project_name`_  which can create additional folders 
+
 ```
+yz init project_name
 project_name/
    project_name.yz
    doc/
@@ -25,9 +45,25 @@ project_name/
    vendor/
 ```
 
-At the root, a single `.yz` file acts as the project meta information, it contains information like version, entry point and dependencies among other information. It's tipically called the same name as the app (`project_name.yz`  in this example, but can be renamed to anything e.g. `mod.yz`, `manifest.yz`, `package.yz`, `project.yz`). 
+In either case: manually creating the configuratin file or with the `init` command, a configuration file is a `.yz` file that  information like version, entry point and dependencies. It's tipically called the same name as the app (`project_name.yz`  in this example, but can be renamed to anything e.g. `mod.yz`, `manifest.yz`, `package.yz`, `project.yz`). There could be more than one and they can create different targets but most of the times there would be none or just one. 
 
-Inside the information is structured as Yz block: 
+### Example: a restaurant app
+
+Let's say we want to create a `restaurant` app after invoking: 
+
+`yz init restaurant`
+
+The tool will create the following directories
+```
+restaurant/
+   doc/
+   src/
+   lib/
+   test/
+   vendor/
+```
+
+Inside the configuration  is structured: 
 
 File: `./restaurant.yz`
 
@@ -35,15 +71,24 @@ File: `./restaurant.yz`
  version: '0.1.0'
  entry: 'main.yz'
  src_path: ['./src/' './vendor/' './lib/']
- dependencies: [
-     printer: {version: "1.0.0"   url: 'https://example.org/print.git'} 
- ]
+ vendor: ['./vendor']
+ dependencies: []
 ```
 
-### Example: a restaurant app
 
-Our app `restaurant`, opens the doors to the public, a menu is printed using a 3rd party library and start taking orders.
-Usually in the restaurant industry the restaurant is know as the house, and has a front where people eat and a back, where meal is preprared.
+Our app `restaurant` functionality would be as follows:  A restaurant opens the doors to the public, a menu is printed using a 3rd party library and start taking orders.
+
+To add a dependency use `yz install printer`, the dependency will be added to the dependency section
+
+```js
+dependencies: [
+     printer: {version: "1.0.0"   url: 'https://example.org/print.git'} 
+]
+```
+
+And available in the `vendor/` directory
+
+Usually in the restaurant industry the restaurant is know as the house, and has a front where people eat and a back, where meal is prepared.
 
 The following is the filesystem for this project:
 
@@ -63,10 +108,7 @@ restaurant/
 ```
 
 
-
-When run inside the `restaurant/` direvtory the `yzc` compiler takes the first `.yz` file that matches the [project](./project.md) structure ( `restaurant.yz` in this example ) and looks for the `entry` variable in the the `src_path` list to create the application entry point. If there is more than one `.yz` file in the root, the project file has to be specified e.g.:`yzc -project something_else.yz` 
-
-In our example this is the file  `src/main.yz`
+Our configuration has the `main.yz` as entry point, and `src` among the source path, thus the main entry point is  `src/main.yz`
 
 ```javascript
 // src/main.yz creates an implicit `main` block see filesystem resolution below
@@ -93,10 +135,12 @@ take_orders: {
     // receive customers etc. 
 }
 ```
+
 File `src/house/front.yz`
 ```
 main_door: facade.Door()
 ```
+
 File: `src/house/front/Host.yz`
 ```javascript
 // src/house/front/Host.yz
@@ -111,7 +155,7 @@ open_doors: {
 
 The dependency `printer` was downloaded to the `vendor` directory which is listed in the `src_path` making it available for compilation. To re-download execute `yzc update`
 
-File: `/vendor/printer.yz`
+File: `./vendor/printer.yz`
 ```javascript
 // vendor/printer.yz
 print: {
@@ -153,13 +197,16 @@ The compiler resolves block names to filesystem files using the `src_path` varia
 
  1. File name including subdirectories eill create a block, even if is empty excluding directories defined in the project's `src_parg` variable
  
- `src/house/front/Host.yz` will create the `house.front.Host` block
+ `./src/house/front/Host.yz` will create the `house.front.Host` block
+ 
  ```
 // src/house/front/Host.yz
 // creates the empty type Host{}
 
 ```
-`vendor/printer.yz`  creates/matches `printer`
+
+`./vendor/printer.yz`  creates/matches `printer`
+
 ```
 //vendor/printer.yz
 print:{} // creates the `printer:{ print:{}}` block
