@@ -195,26 +195,20 @@ But is common to create aliases that work as "import" to avoid typing the whole 
 
 The compiler resolves block names to filesystem files using the `src_path` variable ( `src`, `lib`, `vendor` in this example ) using the following strategy:
 
- 1. File name including subdirectories eill create a block, even if is empty excluding directories defined in the project's `src_parg` variable
- 
- `./src/house/front/Host.yz` will create the `house.front.Host` block
- 
- ```
-// src/house/front/Host.yz
-// creates the empty type Host{}
+ 1. File name including subdirectories will create a block, even if is empty excluding directories defined in the project's `src_path` variable
+    `./src/house/front/Host.yz` will create the `house.front.Host` block
+    ```
+      // src/house/front/Host.yz
+      // creates the empty type Host #()
 
-```
+    ```
 
-`./vendor/printer.yz`  creates/matches `printer`
+    `./vendor/printer.yz`  creates `printer`
 
-```
-//vendor/printer.yz
-print:{} // creates the `printer:{ print:{}}` block
-
-
-```
- 
-
+   ```
+   //vendor/printer.yz
+   print:{} // creates the `printer.print #()` block
+   ```
 
 ### Summary
 
@@ -253,22 +247,18 @@ name String
 
 ```
 
-#open-question How can we add new types and variables to an existing type if the type was defined in a file format vs inside of another, eg
-
+- A combination of both
 ```
 // house/front/Host.yz
 Host {
     name String
 }
-// vs 
-// house/Front.yz
+// and house/Front.yz
 Front {
     House {
         name String
     }
 }
 ```
-When this would throw `already defined` or something like that?
-_temptative answer_ yes it will be a compilation error but you can still add new members with a day fferent name.
-
-#to-do Clarify only non instantiable blocks can be matched to filesystem directories.
+In this case, when a block is defined in different files or different source directories, they'll be merged in a single object.
+In case of repeating attributes, a compilation error will be shown (_it might be changed with a compilation variable where the first found in will take precedence_)
