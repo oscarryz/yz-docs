@@ -176,19 +176,23 @@ The match of the structure includes the variable names.
 
 ```js
 thing #(Int, Int) // `thing` is a variable of type block with two integers
-// Matches because `time` has two integers
-thing = time: {
+
+// Matches because time has two inta
+time: {
    hour: 12
    minute: 24
 }
+thing = time
+
+// Can be assigned because `Point` has two Int
 Point: {
   x Int
   y Int
 }
-// Can be assigned because `Point` has two Int
+
 thing = Point( 1 , 2 )
 
-// Can be assigned becaue the expresion block has two Ints
+// Can be assigned because the expresion block has two Ints
 thing = { 3, 4 }
 ```
 
