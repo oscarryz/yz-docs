@@ -27,7 +27,7 @@ result: match(number).conditions([
   else : { "I'm not sure }
 ])
 
-... 
+//... 
 
 main: {
 	print(get_first_non_empty([[]Int [1 2 3] [4 5]]))
