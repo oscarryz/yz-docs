@@ -36,7 +36,7 @@ main: {
 ```
 
 When invoking a block, parameters will be assigned to the block variables starting from the top.
-The return values are the last expressions evaluated starting from the bottom - n e.g. 
+The return values are the last expressions evaluated starting from the bottom - n
 
 ```js
 sum: {
@@ -60,7 +60,6 @@ sum(b:10, a:20) // 20 + 10
 ## Creating instances of a block
 
 If the identifier starts with uppercase then it defines a new type. When executed, an instance is created. 
-Example: 
 
 ```javascript
 // Defines a new type `Point` with integer variables `x` and `y` 
@@ -88,7 +87,7 @@ print(p.to_string()) //prints `0,0`
 ```
 
 ### Non-word names
-If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.` notation. This is a convenience to make the code look more traditional.
+If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.block()` notation. This is a convenience to make the code look more like traditional operators.
 
 ```javascript
 Point : {
@@ -112,7 +111,7 @@ It is also possible to have blocks with no variables and only expressions.
 ```javascript
 one_two: { 1, 2 }
 ```
-They behave the same as the other blocks, except they don't take parameters when executed, and naturally their values cannot be accessed by name, only by index.
+They don't take parameters when executed, and their values cannot be accessed by name, only by index.
 
 ```javascript
 one_two: { 1, 2 }
