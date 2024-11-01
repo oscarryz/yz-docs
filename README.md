@@ -19,6 +19,7 @@ Yz is a programming language that explores the possibility to simplify concurren
 ## Blocks
 A code of block is a series of expressions between `{` `}`, their variables can be accessed from outside the block (behaving like objects) and they can be executed concurrently (behaving like methods/functions/closures).
 
+To execute a block, use `()` as you would with a function
 
 ```javascript
 language: {
@@ -32,36 +33,31 @@ main: {
 }
 ```
 
-## Executing blocks
+When invoking a block parameters will be assigned to the block variables starting from the top.
+The return are the last expressions evaluated starting from the bottom - n e.g. 
 
-A block of code is executed by placing `()` after the block name, they are executed concurrently and synchronized at the end of the enclosing block of code.
-
-The parameters are any of the variables defined in the block (ordered top down) and the return values are any of the variables or expressions (starting from down to top reversed). If the last value has a name, that can be used, if it was an expression an index could be used instead.
-
-Here's an example: 
-```javascript
-// Fetches customer and product using customer_id and product_id parameters
-// This is concurrent by default
-retrieve_order: {
-  // "parameters"
-  cid Int
-  pid Int
-  // The following three blocks invocation run concurrently
-  print('Retrieving information')
-  fetch_customer(cid)
-  fetch_product(pid)
-  // The blocks finish excecution when all the blocks above had finished.
+```js
+sum: {
+   a : 0
+   b : 0
+   a + b
 }
+c: sum(1,2) // assing 1 to `a` and 2 to `b`.
+// c gets the last expression `a + b`
 
-// Executing the block
-// Defines two variables: `customer` and `product` using the last 2 computed values in the block
-customer, product: retrieve_order(89,12)
+x, y, z : sum(1, 2)
+// x, y, z are the  last n - 3 expressions thus:
+// x : 1 (the variable a)
+// y : 2 ( the variable b)
+// z : 3 (the expresion a + b) 
+
+// Also, the `()` invocation can name the variables, behaving like named parameters
+sum(b:10, a:20) // 20 + 10 
 ```
 
 ## Creating instances of a block
 
-A new type can be defined if the identifier stars with uppercase. Use `()` to create an instance.
-
+If the identifier starts with uppercase then it defines a new type. When you execute an instance is created. 
 Example: 
 
 ```javascript
@@ -70,12 +66,8 @@ Point : {
     x Int
     y Int
 }
-p1 Point =  Point(x:10, y:20) // p1 variable declared and initialized
+p1 Point =  Point(x:10, y:20) // p1 variable declared and initialized an a new instace created
 p2: Point(40, 40) // p2 type `Point` inferred.
-
-// An anonymous block can still structurally match the new type
-p3 = {x: 10, y: 100} 
-p1 = p3 // Can be assigned because it is a block with a `x` and a `y` of type Int
 ```
 
 Variables can be accessed from outside the block and blocks can be variables too, thus a nested block can be used as "methods". 
@@ -84,8 +76,7 @@ E.g. The following defines the `to_string` block (method) that access the variab
 
 ```javascript
 Point : {
-    x Int
-    y Int
+    ...
     to_string: {
       "`x`,`y`" // `expr` for string interpolation
    }
@@ -94,13 +85,12 @@ p: Point(0, 0)
 print(p.to_string()) //prints `0,0`
 ```
 
-If a "method" is a non-word name ( e.g. `+`, `>`, `<`  etc., it can be executed without the `.` notation, this is a convenience to make the code look more traditional.
+### Non-word names
+If a "method" is a non-word name ( e.g. `+`, `>`, `<`  etc.), it can be executed without the `.` notation, this is a convenience to make the code look more traditional.
 
 ```javascript
 Point : {
-   x Int
-   y Int
-
+   ...
    // `+` is a non-word name block/method
    +: { 
        other Point
@@ -108,7 +98,7 @@ Point : {
               y + other.y)
     }
 }
-p1: Point(1, 2) + Point(3, 4) // invoking `+` without `.` results in a new Point(x: 4 y:6)
+p1: Point(1, 2) + Point(3, 4) // invoking `+` without `.`
 // same as 
 Point(1, 2).+(Point(3, 4))
 ```
@@ -120,19 +110,15 @@ It is also possible to have blocks with no variables and only expressions.
 ```javascript
 one_two: { 1, 2 }
 ```
-They behave the same, except they don't take parameters when executed, and naturally their values cannot be accessed by name, only by index.
+They behave the same as the other blocks, except they don't take parameters when executed, and naturally their values cannot be accessed by name, only by index.
 
 ```javascript
 one_two: { 1, 2 }
 a, b: one_two() // a:1 b:2
-
-// Desugared version
-one_two #(Int, Int) = { 1, 2 } // `one_two` is a block of product types `Int` `Int` initialized withbthe block `{1, 2}`
-a Int 
-b Int
+// or 
 one_two()
-a = one_two.0 // 1 is the first computed value
-b = one_two.1 // 2 is the second computed value
+a : one_two.0 // 1 is the first computed value
+b : one_two.1 // 2 is the second computed value
 ```
 
 ## The block type
@@ -162,45 +148,63 @@ person.name // Bob
 person.age  // compilation error: no variable named `age`
 ```
 
+If the type uses a single uppercase letter, then is a generic:
+
+```js
+Box #(T) = {
+   data T
+}
+int_box : Box(1)
+string_box : Box("Hi")
+```
+
+A generic without variable can be used to "instantiate" the generic type:
+
+```js
+Node: {
+   T 
+   data T
+   left Node(T) // left hast to be of the same type T
+   right Node(T)
+}
+root : Node(String) // assigns the type String to the parameter type T
+root.left = Node(data:"a") // asserted vs the type T
+root.right = Node(data: -1 ) // compilation error
+``` 
+
 
 ## Structural typing
 
-Yz uses structural typing to know if a block can be assigned to a variable. The match of the structure includes the variable names, if no names are specified only the types are used.
-
+Yz uses structural typing to know if a block can be assigned to a variable. The match of the structure includes the variable names.
 ```js
-print_it: {
-    thing #(Int, Int ) // a `thing` is block with two integers
-    a,b : thing() // execute it
-    print("`a` and `b`")
-}
-// All of the following will structurally match because they're things with two ints
-
-time: {
+thing #(Int, Int) // `thing` is a variable of type block with two integers
+// Matches because `time` has two integers
+thing = time: {
    hour: 12
    minute: 24
-}  
-Point : {
-   x Int
-   y Int
 }
-print_it(time) // a regular named block
-print_it(Point(1, 2)) // an instance of a `Point` type
+Point: {
+  x Int
+  y Int
+}
+// Can be assigned because `Point` has two Int
+thing = Point( 1 , 2 )
 
-print_it({ 4, 2 }) // and expression block
+// Can be assigned becaue the expresion block has two Ints
+thing = { 3, 4 }
 ```
 
-### Special characters
+## Concurrency (or in Yz the functions color are ... purpple)<sup>1</sup>
+ 
+Every block executes concurrently and synchornizes at the end of the parent block. 
+To wait for a block to finish its execution, assign the return value to a variable (or put it inside another block and wait until that ends)
+```js
+main: {
+   fetch( "Order123ABC" )
+   print("Fetching order...")
+   fetch_order.order // This is the end of the `main` block so it waits until both `fetch_order` and `print` finish executing. 
+   // fetch.order has a value at this point
+}
 
-The following cannot be used as identifiers or  part of identifier
-- `{`,`}` used to create blocks.  
-- `#` Used for block signature
-- `(`,`)` used to execute blocks.  
-- `[`,`]` used to declare/access arrays/dictionaries.   
--  ``"``, ``'`` and \` used to declare strings.  
-- `:` used for type inference.  
-- `;` used to separate expressions in the same line. 
-- `,` not used, but reserved for clarity.  
-
-
-# Other things
-There are many other things not covered in this overview which is already too big, these topics are memory management, control structures (or the lack thereof), reusing code, generics, error handling, among others.
+```
+<sup>1: https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/</sup>
