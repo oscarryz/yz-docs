@@ -87,7 +87,7 @@ print(p.to_string()) //prints `0,0`
 ```
 
 ### Non-word names
-If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.block()` notation. This is a convenience to make the code look more like traditional operators.
+If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.name()` notation. This is a convenience to make the code look more like traditional operators.
 
 ```javascript
 Point : {
