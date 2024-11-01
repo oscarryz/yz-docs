@@ -16,8 +16,10 @@ print("`factorial(5)`")  // prints 120
 ```
 Yz is a programming language that explores the possibility to simplify concurrency, data, objects, methods, functions, closures, classes under a single artifact: a code of block.
 
-## Blocks
-A code of block is a series of expressions between `{` `}`, their variables can be accessed from outside the block (behaving like objects) and they can be executed concurrently (behaving like methods/functions/closures).
+# Blocks
+In Yz, almost everything is a block of code. 
+
+A code of block is a series of expressions between `{` `}`, their variables can be accessed from outside the block (behaving like objects) and they can be executed (behaving like methods/functions/closures) and they are concurrent (behaving like actors).
 
 To execute a block, use `()` as you would with a function
 
@@ -33,8 +35,8 @@ main: {
 }
 ```
 
-When invoking a block parameters will be assigned to the block variables starting from the top.
-The return are the last expressions evaluated starting from the bottom - n e.g. 
+When invoking a block, parameters will be assigned to the block variables starting from the top.
+The return values are the last expressions evaluated starting from the bottom - n e.g. 
 
 ```js
 sum: {
@@ -57,7 +59,7 @@ sum(b:10, a:20) // 20 + 10
 
 ## Creating instances of a block
 
-If the identifier starts with uppercase then it defines a new type. When you execute an instance is created. 
+If the identifier starts with uppercase then it defines a new type. When executed, an instance is created. 
 Example: 
 
 ```javascript
@@ -70,9 +72,9 @@ p1 Point =  Point(x:10, y:20) // p1 variable declared and initialized an a new i
 p2: Point(40, 40) // p2 type `Point` inferred.
 ```
 
-Variables can be accessed from outside the block and blocks can be variables too, thus a nested block can be used as "methods". 
+Variables can be accessed from outside the block and blocks can be variables too, thus a nested block can be used as methods. 
 
-E.g. The following defines the `to_string` block (method) that access the variables `x`  and `y` from the outer scope
+The following defines the `to_string` block (method) that access the variables `x`  and `y` from the outer scope.
 
 ```javascript
 Point : {
@@ -86,7 +88,7 @@ print(p.to_string()) //prints `0,0`
 ```
 
 ### Non-word names
-If a "method" is a non-word name ( e.g. `+`, `>`, `<`  etc.), it can be executed without the `.` notation, this is a convenience to make the code look more traditional.
+If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.` notation. This is a convenience to make the code look more traditional.
 
 ```javascript
 Point : {
@@ -121,37 +123,29 @@ a : one_two.0 // 1 is the first computed value
 b : one_two.1 // 2 is the second computed value
 ```
 
-## The block type
+## The block signature
 
-If we want to use a block as a parameter we have to declare its type. The syntax for a block type is `#()`  and can contain other types which can be optionally be named as variables. If not named they are expected to be expressions.
+If we want to use a block as a parameter we have to declare its type with a block signature. The syntax for a block signature is `#()` and can contain other types and can be optionally have variable names.  
+If they don't have variable names they are expected to be expressions of the given type.  
 
-The following declares a variable `a_two` of type block, that contains a variable `a` of type `Int` and a expression of type `Int` 
+The following declares a variable `two_ints` of type block, that contains a variable `a` of type `Int` and a expression of type `Int`.
 
 ```javascript
-a_two #(a Int, Int ) = {
+two_ints #(a Int, Int ) = {
   a: 1
   2
 }
 ```
 
+Most of the times you don't need to specify the block type to assign it to a variable, it can be inferred .
 
-Most of the times you don't need to specify the block type as it can be inferred and/or a uppercase type can be used instead. It could be beneficial for instance to keep variables "private"(ish)
+## Generics 
 
-For instance if the block type defines a string `{name String}`  only that variable can be seen, all the variables inside are not accessible: 
-
-```javascript
-person #(name String) = {
-    name: 'Bob'
-    age Int // not accessible from outside as the block only declared `name String`
-}
-person.name // Bob
-person.age  // compilation error: no variable named `age`
-```
-
-If the type uses a single uppercase letter, then is a generic:
+A type whose name is a  uppercase letter is a generic:
 
 ```js
-Box #(T) = {
+// Box is a new type with signature "block with variable of generic type T"
+Box #(data T) = {
    data T
 }
 int_box : Box(1)
@@ -161,6 +155,9 @@ string_box : Box("Hi")
 A generic without variable can be used to "instantiate" the generic type:
 
 ```js
+// Node is a block with a parameter type T
+// a variable `data` of type T
+// and two variable `left` and `right` of type Node of T
 Node: {
    T 
    data T
@@ -175,7 +172,9 @@ root.right = Node(data: -1 ) // compilation error
 
 ## Structural typing
 
-Yz uses structural typing to know if a block can be assigned to a variable. The match of the structure includes the variable names.
+Yz uses structural typing to know if a block can be assigned to a variable.  
+The match of the structure includes the variable names.  
+
 ```js
 thing #(Int, Int) // `thing` is a variable of type block with two integers
 // Matches because `time` has two integers
@@ -207,4 +206,5 @@ main: {
 }
 
 ```
-<sup>1: https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/</sup>
+<sup>1: [What Color Is Your Function? - stuffwithstuff.com](https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/)</sup>
+
