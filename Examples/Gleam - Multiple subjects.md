@@ -24,10 +24,8 @@ else: hamcrest.else
 result: match(number).conditions([
   is.either([2 4 6 0]): {"This is an even number"}
   is.either([1 3 5 6]): {"This is an even numer" }
-  else : { "I'm not sure }
+  else : { "I'm not sure" }
 ])
-
-//... 
 
 main: {
 	print(get_first_non_empty([[]Int [1 2 3] [4 5]]))
@@ -51,7 +49,7 @@ match(list).conditions[{
   
 }]
 
-..
+//..
 main: {
 	numbers: [1 2 3 4 5]
 	print(get_first_larger(numbers 3))
