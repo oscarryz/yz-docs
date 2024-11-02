@@ -199,11 +199,16 @@ thing = { 3, 4 }
 ## Concurrency (or in Yz the functions color are ... purpple)<sup>1</sup>
  
 Every block executes concurrently and synchornizes at the end of the parent block. 
-To wait for a block to finish its execution, assign the return value to a variable (or put it inside another block and wait until that ends)
+To wait for a block to finish its execution, assign the return value to a variable or wait until the enclosing blocks finishes
 ```js
 main: {
-   fetch( "Order123ABC" )
-   print("Fetching order...")
+   // get_id() executes and
+   // the main block waits until
+   // it finishes to assign thr value
+   // to `id`
+   id: get_id()
+   fetch( id ) // runs async
+   print("Fetching order...") // runs async
    // This is the end of the `main` block
    // so it waits until both `fetch` and `print` finish executing. 
    // `fetch.order` has a value at this point
