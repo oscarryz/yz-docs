@@ -204,8 +204,10 @@ To wait for a block to finish its execution, assign the return value to a variab
 main: {
    fetch( "Order123ABC" )
    print("Fetching order...")
-   fetch_order.order // This is the end of the `main` block so it waits until both `fetch_order` and `print` finish executing. 
-   // fetch.order has a value at this point
+   // This is the end of the `main` block
+   // so it waits until both `fetch` and `print` finish executing. 
+   // `fetch.order` has a value at this point
+   fetch_order.order 
 }
 
 ```
