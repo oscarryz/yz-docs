@@ -1,3 +1,6 @@
+>[!NOTE]
+> This is not complete Sum type, but rather how to provide a similar functionality
+
 How to allow a type to specify its variants while keeping the structural typing coherent
 
 Answer: The base type would define all the possible value and the subtypes would implement them to be considered subtypes. 
