@@ -27,7 +27,7 @@ hierarchy: {
         life Int
         
         'cue: list.MaxItems(11)'
-        nums []Int
+        nums [Int]
         struct #()
     }
     value: Constrained (
@@ -54,4 +54,11 @@ Server: {
     port: 1 
 }
 
+```
+
+```js
+// Disjuctions
+hello: "world" | "bob" | "mary"
+DayOfWeek:{}
+day DayOfWeek | Monday | Tuesday 
 ```
