@@ -76,7 +76,8 @@ The following defines the `to_string` block that access the variables `x`  and `
 
 ```javascript
 Point : {
-    ...
+    x Int
+    y Int
     to_string: {
       "`x`,`y`" // `expr` for string interpolation
    }
@@ -86,22 +87,23 @@ print(p.to_string()) //prints `0,0`
 ```
 
 ### Non-word variable names
-If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.name()` notation. 
+If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.`_name_`()` notation. 
 This makes the code look more like traditional operators.
 
 ```javascript
 Point : {
-   ...
+    x Int
+    y Int
    // `+` is a non-word name block/method
-   +: { 
+   + : { 
        other Point
        Point( x + other.x, 
               y + other.y)
     }
 }
-//.. p1 and p2 are Point's
+// p1 and p2 are Point's
 result : p1 + p2 
-// Is the same as 
+// is the same as 
 result : p1.+(p2)
 ```
 
@@ -125,10 +127,10 @@ b : one_two.1 // 2 is the second computed value
 
 ## The block signature
 
-The type of a block is defined by its signature. The syntax for a block signature is `#()` and can contain other types, and assing variables to them.  
+The type of a block is defined by its signature. The syntax for a block signature is `#(` _optional list of types_ `)`.  
 If they don't have variable names they are expected to be expressions of the given type.  
 
-The following declares a variable `two_ints` of type block, that contains a variable `a` of type `Int` and a expression of type `Int`.
+The following declares a variable `two_ints` of type block, that contains a named variable `a` of type `Int` and a unnamed expression of type `Int`.
 
 ```javascript
 // block signature: "block with an `Int` variable names `a` and a unnamed `Int` expression"
@@ -200,7 +202,7 @@ thing = Point( 1 , 2 )
 thing = { 3, 4 }
 ```
 
-## Concurrency (or in Yz the functions color are ... purpple)<sup>1</sup>
+## Concurrency (or in Yz the functions color are ... purple)<sup>1</sup>
  
 Every block executes concurrently and synchornizes at the end of the parent block. 
 To wait for a block to finish its execution, assign the return value to a variable or wait until the enclosing blocks finishes
