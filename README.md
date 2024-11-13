@@ -21,37 +21,36 @@ In Yz, almost everything is a block of code.
 
 A code of block is a series of expressions between `{` `}`, their variables can be accessed from outside the block (behaving like objects) and they can be executed (behaving like methods/functions/closures) and they are concurrent (behaving like actors).
 
-To execute a block, use `()` as you would with a function
 
 ```javascript
 language: {
-  name: 'Yz'         //  a variable `name` with the value `'Yz'` and infers the type String
-  description String //  variable `description` of type `String`
+  name: 'Yz' // `name` is a String with value 'Yz'
 }
 main: {
-  print(language.name) // prints: Yz
-  language.description = 'A programming language' // sets the value for `description`
-  print(language())    // Executes the block and prints `A programming language`
+  print(language.name) // Access the `name` variable
 }
 ```
 
-When invoking a block, parameters will be assigned to the block variables starting from the top.
-The return values are the last expressions evaluated starting from the bottom - n
+To execute a block, use `()` as you would with a function, parameters will be assigned to the block variables starting from the top, return values are the last expressions evaluated starting from the bottom - n
 
 ```js
+// A block with 3 Int expressions
 sum: {
    a : 0
    b : 0
    a + b
 }
-c: sum(1,2) // assing 1 to `a` and 2 to `b`.
-// c gets the last expression `a + b`
+// Assigns values and executes.
+//  a is 1 and b is 2
+// result == 3 (the last expression was `a + b`)
+result: sum(1,2)
 
+// "Multiple" return values
 x, y, z : sum(1, 2)
 // x, y, z are the  last n - 3 expressions thus:
-// x : 1 (the variable a)
-// y : 2 ( the variable b)
-// z : 3 (the expresion a + b) 
+// x is 1 (the variable a)
+// y is 2 (the variable b)
+// z is 3 (the expresion a + b) 
 
 // Also, the `()` invocation can name the variables, behaving like named parameters
 sum(b:10, a:20) // 20 + 10 
@@ -73,7 +72,7 @@ p2: Point(40, 40) // p2 type `Point` inferred.
 
 Variables can be accessed from outside the block and blocks can be variables too, thus a nested block can be used as methods. 
 
-The following defines the `to_string` block (method) that access the variables `x`  and `y` from the outer scope.
+The following defines the `to_string` block that access the variables `x`  and `y` from the outer scope behaving like a method.
 
 ```javascript
 Point : {
@@ -86,8 +85,9 @@ p: Point(0, 0)
 print(p.to_string()) //prints `0,0`
 ```
 
-### Non-word names
-If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.name()` notation. This is a convenience to make the code look more like traditional operators.
+### Non-word variable names
+If a "method" is a non-word name ( e.g. `+`, `>`, `<`, `>>=` etc.), it can be executed without the `.name()` notation. 
+This makes the code look more like traditional operators.
 
 ```javascript
 Point : {
@@ -99,9 +99,10 @@ Point : {
               y + other.y)
     }
 }
-p1: Point(1, 2) + Point(3, 4) // invoking `+` without `.`
-// same as 
-Point(1, 2).+(Point(3, 4))
+//.. p1 and p2 are Point's
+result : p1 + p2 
+// Is the same as 
+result : p1.+(p2)
 ```
 
 ## Expression blocks
@@ -124,48 +125,51 @@ b : one_two.1 // 2 is the second computed value
 
 ## The block signature
 
-If we want to use a block as a parameter we have to declare its type with a block signature. The syntax for a block signature is `#()` and can contain other types and can be optionally have variable names.  
+The type of a block is defined by its signature. The syntax for a block signature is `#()` and can contain other types, and assing variables to them.  
 If they don't have variable names they are expected to be expressions of the given type.  
 
 The following declares a variable `two_ints` of type block, that contains a variable `a` of type `Int` and a expression of type `Int`.
 
 ```javascript
+// block signature: "block with an `Int` variable names `a` and a unnamed `Int` expression"
 two_ints #(a Int, Int ) = {
   a: 1
   2
 }
 ```
-
-Most of the times you don't need to specify the block type to assign it to a variable, it can be inferred .
+If the short declaration form is used (`:`) the type is inferred.
+```js
+// Same as above.
+two_ints: {
+  a: 1
+  2
+}
+```
 
 ## Generics 
 
-A type whose name is a  uppercase letter is a generic:
+If the type is a single upper case leter, then it's a generic.
 
 ```js
-// Box is a new type with signature "block with variable of generic type T"
+// Box is a new type with signature "block with variable `data` of generic type T"
 Box #(data T) = {
    data T
 }
-int_box : Box(1)
-string_box : Box("Hi")
+int_box : Box(1) // data is 1
+string_box : Box("Hi") // data is "Hi"
 ```
 
 A generic without variable can be used to "instantiate" the generic type:
 
 ```js
-// Node is a block with a parameter type T
-// a variable `data` of type T
-// and two variable `left` and `right` of type Node of T
-Node: {
-   T 
-   data T
-   left Node(T) // left hast to be of the same type T
-   right Node(T)
+Box: {
+  T
+  data T
 }
-root : Node(String) // assigns the type String to the parameter type T
-root.left = Node(data:"a") // asserted vs the type T
-root.right = Node(data: -1 ) // compilation error
+// Declares a variable `int_box` of type Box of Int
+// The variable `data` is still not initialized but wil be of type Int
+int_box Box(Int) 
+int_box = Box(data:"Hi") // Compilation error: Cannot assing Box(String) to Box(Int) 
 ``` 
 
 
