@@ -2,7 +2,7 @@ https://rosettagit.org/tasks/99-bottles-of-beer/
 
 ```javascript
 
-99.down_to(1, { 
+_:99.down_to(1, { 
     n Int          
     s: n == 1 ? {'s'} {''}
     
@@ -10,7 +10,7 @@ https://rosettagit.org/tasks/99-bottles-of-beer/
            `n` bottle`s` of beer
            Take one down, pass it around")
 })
-print 'No more bottles'
+print('No more bottles')
 ```
 
 
