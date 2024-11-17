@@ -7,7 +7,7 @@ The construct is extremely simple and flexible
 To create a block put the code between `{` and `}`
 ```javascript
 {
-   print 'Hi'
+   print('Hi')
 }
 ```
 
@@ -15,7 +15,7 @@ Assign a block to a variable and execute it
 
 ```javascript
 hi: {
-    print 'Hi'
+    print('Hi')
 }
 hi() // Hi
 ```
@@ -26,7 +26,7 @@ Blocks naturally can have variables
 hi: {
    text: 'Hello'
    recipient: 'World'
-   print '{text}, {recipient}!'
+   print '`text`, `recipient`!'
     
 }
 ```
@@ -38,7 +38,7 @@ hi: {
    text: 'Hello'
    recipient: 'World'
    action: {
-       print '{text}, {recipient}!'
+       print '`text`, `recipient`!'
    }
    action()
 }
@@ -66,7 +66,8 @@ As a convenience for the modification and retrieval, we can use a function call 
 
 ```javascript
 
-a b c d : hi 'Goodbye' 'everybody'  // No commas as parameters and parenthesis are optional when arity >0
+a, b, c, d : hi('Goodbye', 'everybody')  
+// parenthesis are optional when arity >0
 // Before execution
 //   hi.text => Goodbye 
 //   hi.recipient => everybody
@@ -75,18 +76,18 @@ a b c d : hi 'Goodbye' 'everybody'  // No commas as parameters and parenthesis a
 // After
 //   a = 'Goodbye'
 //   b = 'everybody'
-//   c = {String} // a block that returns a String
-//   d = 'Goodbye, everybory', the result of the invocation, which is the last statement.
+//   c = #(String) // a block that returns a String
+//   d = 'Goodbye, everybody', the result of the invocation, which is the last statement.
 ```
 
 The assign order starts at the bottom to the top and assignees from the most right to the left.
 
 
 ```javascript
-z : hi 'Yz'             
+z : hi('Yz')             
 // hi.text => 'Yz'
 // z => 'Yz, world!' which is the last executed expression `hi.action`
-y z : hi 'Yz' 'blocks'  
+y z : hi('Yz', 'blocks')  
 // hi.text => 'Yz'
 // hi.recipient =>'blocks'
 // y => {String} the `action` String block
@@ -95,7 +96,7 @@ y z : hi 'Yz' 'blocks'
 
 Finally you can use the name of the variables as arguments to specify what variable you want to set:
 ```javascript
-hi(action: {print 'Nothing'}) 
+hi(action: {print('Nothing')}) 
 // hi.action => a string block {String} that prints 'Nothing'
 // prints: "Nothing"
 hi(recipient: 'Yz world') 
@@ -111,14 +112,14 @@ Hi: {
     text: 'Hello'
     recipient: 'World'
     action: {
-       print '{text}, {recipient}!'
+       print('`text`, `recipient`!')
     }
     action()
 }
-a: Hi{} // use default values
-b: Hi{'Hola' 'mundo'} // reassinging variable in order, can ommit name  
-c: Hi{recipient:'again'} // reassigning directly by name 
-d: Hi{action: {'Nothing'}}
+a: Hi() // use default values
+b: Hi('Hola' 'mundo') // reassinging variable in order, can ommit name  
+c: Hi(recipient:'again') // reassigning directly by name 
+d: Hi(action: {'Nothing'})
 
 // You can still call them 
 a() // Hello, World!
@@ -132,5 +133,5 @@ d() // (doesn't do anything)
 a.action() // Hello, World!
 b.recipient // 'mundo' 
 // etc
-a b c d e : Hi{}  Hi{'Hola' 'mundo'}  Hi{recipient:'again'} Hi{action: {'Nothing'}}
+a, b, c, d, e : Hi(), Hi('Hola', 'mundo'),  Hi(recipient:'again'), Hi(action: {'Nothing'})
 ```
