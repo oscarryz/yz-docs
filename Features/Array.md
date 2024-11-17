@@ -3,7 +3,7 @@ Array
 ```js
 // Jul 19 2024
 // Type
-[Element_Type]
+[Type]
 // e.g.
 // declaration
 a [Int]
@@ -16,8 +16,8 @@ a [Int] = [1 2 3]
 // short declr + init
 a : [1 2 3]
 
-// emtpy
-a [Int] = []Int // 
+// emtpy decl + init
+a [Int] = []Int // Is an empty array
 // short declr + init
 a : []Int // empty array of ints 
 
@@ -67,15 +67,15 @@ print(a[0]) // prints Hello
 Array block declaration
 ```javascript
 
-	'special'
-	Array: {
-		T
-		elements T
-		push: { e T 
-			elements << e
-		}
-		<< : push
+'special'
+Array: {
+  T
+  elements T
+	push: { e T 
+    	elements << e
 	}
+	<< : push
+	
 	... 
 strings: ['hola']
 strings << 'adios'

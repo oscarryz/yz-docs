@@ -22,7 +22,7 @@ person Person = Person {
   age: 5
 }
 
-alient Alien = person /// Error: property 'planed' is missing 
+alien Alien = person /// Error: property 'planet' is missing 
 ...
 person Person = {
   name: 'ET'
@@ -30,7 +30,7 @@ person Person = {
 }
 print: { person Person 
   person.info.properties().for_each { property Property 
-    print '{property}: {refection(person, property)}'
+    print '`property`: `refection.get(person, property)`'
   }
 }
  ```
@@ -40,20 +40,20 @@ print: { person Person
 Person: {
   name String
   speak: { 
-    "Hi, my name is {name}"
+    "Hi, my name is `name`"
   }
 }
 Computer: {
   model String
   speak: {
-    "[{model}]: Beep bop"
+    "[`mode`}]: Beep bop"
   }
 }
-do_speak: { speaker {String {String}}
-  print "{speaker.speak()}"
+do_speak: { speaker #(String, speak #(String))
+  print "`speaker.speak()`"
 }
-do_speak Person{"Oscar"}   // "Hi, my name is Oscar
-do_speak Person{"ABC-123"} // [ABC-123]: Beep bop
+do_speak Person("Oscar")   // "Hi, my name is Oscar
+do_speak Person("ABC-123") // [ABC-123]: Beep bop
 do_speak {name:"Yz"; speak: {"Yup"}}  // Yup
 ```
 
@@ -88,7 +88,7 @@ a.c
 Posible solution (April 9 2023)
 Type declaration do include names and if ommited can use index like tuples:
 ```javascript
-a {Int Int Int}
+a #(Int, Int, Int)
 a.0 // a[0]
 a.1 // a[1]
 a.2 // a[2]
@@ -97,13 +97,15 @@ a.2 // a[2]
 which is problematic because the type won't have the name of the variables
 
 ```javascript
-block {Int Int Int} = {a:1; b:2; c:3}
+block #(Int,Int,Int) = {a:1, b:2, c:3}
 block.a // how do we know there's an `a` ? 
+// A: we don't, we would need to use the index
+block.0
 ```
 
 Possible soution (April 9 2023), do include names
 ```javascript
-block {a Int b Int c Int}= {a:1; b:2; c:3}
+block #(a Int, b Int, c Int )= {a:1, b:2, c:3}
 block.a // 1
 block.b // 2
 ```
@@ -115,7 +117,7 @@ Possible solution: Include both, no names and named. If named, no semicolon and 
 //'Example without variable names in the parameter'
 hello: {
     message {Int String} // accepts a block that has an Int and a String
-    print '{message}'    // prints: {a:1 s:''}
+    print '`message`'    // prints: {a:1 s:''}
     message(42 'Hello')   // executes it
     message.1 // 42
     message.2 // 'Hello'
@@ -126,33 +128,33 @@ msg: {
     a:1
     s:''
 }
-hello msg // executes the method, same as hello(msg)
+hello(msg) // executes the method, same as hello(msg)
 Employee: {
     id Int
     name String
 }
-e: Employee{1 'John'}
+e: Employee(1, 'John')
 hello(e) // prints '{id:1 name:'John'}' and thend the rest
 
 // 'Example with names in parameter'
 hi: {
-   message {number Int label String}
+   message #(number Int, label String)
    // can be accessed by name 
-   print '{message}' // prints {number:0 label:''}
-   message(1 'Nothing')
+   print('`message`') // prints {number:0 label:''}
+   message(1, 'Nothing')
    message.number // 1
    message.label  // Nothing
-   n s: message(2 'Something') // n == 2, s == 'Something'
+   n, s: message(2, 'Something') // n == 2, s == 'Something'
 }
 msg:{
    a:1
    s:''
 }
-hi msg // comp errm msg doesn't have `id Int` and `name String` properties
-P: {
+hi(msg)// comp errm `msg` doesn't have `number Int` and `label String` properties
+Pa: {
    number Int
    label String
 }
-p: P{}
+p: Pa()
 hi p // works
 ```

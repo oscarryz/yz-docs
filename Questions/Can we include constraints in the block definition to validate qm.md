@@ -87,7 +87,7 @@ title NonBlankString = "" // compilation erors
 This constraint can be used to defined exhaustive values maybe? 
 
 ```js
-Mon:Tue:Wed:Thu:Fri:Sat:Sun:DayOfWeek:{random:"..."}
+Mon:Tue:Wed:Thu:Fri:Sat:Sun:DayOfWeek:{foo:"bar"}
 
 'constraints: Sat | Sun'
 WeekEnd: DayOfWeek

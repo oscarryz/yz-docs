@@ -7,7 +7,7 @@ check: {
        message: 'You have to be over 21 to access this site'
 	   return
    }
-   message: 'Welcomt to the site'
+   message: 'Welcome to the site'
 }
 m: check(20)
 print m // the last computed value was the `age <21` which in turn returned `message: 'You have to be... '`
