@@ -28,10 +28,26 @@ if the `=` is omitted the variable can be used:
 
 ```js
 #(v Int) {
-  print("`v`")
+  print("`v + v`")
 }
 ```
 
+Type can be generic
+
+```
+// Block that takes/returns a T and take/returns a U
+#(T, U)
+// e.g. 
+
+map #([T], #(T,U) ) = {
+    a [T]
+    mf #(T,U)
+    r : []T
+    a.each({e T; r.add(mf(e))})
+    r
+}
+map([1,2,3], int.to_str)
+```
 ## Type alias
 
 [Type Alias](Features/Type%20Alias.md)

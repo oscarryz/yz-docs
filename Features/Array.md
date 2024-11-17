@@ -8,13 +8,13 @@ Array
 // declaration
 a [Int]
 // initialization
-a = [1 2 3]
+a = [1, 2, 3]
 
 // decl + init
-a [Int] = [1 2 3]
+a [Int] = [1, 2, 3]
 
 // short declr + init
-a : [1 2 3]
+a : [1, 2, 3]
 
 // emtpy decl + init
 a [Int] = []Int // Is an empty array
@@ -22,7 +22,7 @@ a [Int] = []Int // Is an empty array
 a : []Int // empty array of ints 
 
 // Generic
-a [T] = [1 2 3]
+a [T] = [1, 2, 3]
 a : []T
 ```
 
@@ -57,7 +57,7 @@ a [String] // array of strings
 ```
 	
 
-Literal, elements separated by space
+Literal, elements separated by comma
 
 ```javascript
 a: ['Hello' 'World']
