@@ -8,7 +8,7 @@ Answer: The base type would define all the possible value and the subtypes would
 
 e.g. `Result`, `Ok` and `Error`
 
-```js
+```javascript
 std: {
   result: {
     // Define the base type
@@ -59,7 +59,6 @@ fetch_data("123").and_then({
   Ok(data) 
 })
 d Result(String,String) = Err("", "Unable to fetch stuff")
-
 
 ```
 

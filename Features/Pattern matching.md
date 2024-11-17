@@ -225,8 +225,8 @@ With match
 1.to 5 { it Int
     match it [
         2.>= : {print "{it}: it's less than 2"}
-        2.== : {print "{it}: it's 2"}
-        3.== : {print "{it}: it's 3"}
+        2.== : {print "{it}: it's 2"} 
+        3.== : {print "{it}: it's 3"} 
         when.else:  {print "{it}: the number is too big"}
     ]
 }

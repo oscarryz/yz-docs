@@ -4,11 +4,17 @@ You cannot add new operations on the new type, but you can override them on  cre
 e.g 
 
 ```js
-C: B: A: {
+// A and B are the same thing
+B: A: {
   say_hi: { "Hi" }
 }
-// A, B and C are the same thing
-C.say_hi = "Bye" // C changes the internal implemention, migth be useful to simulate inheritance
+// C structurally matches but redefines `say_hi`
+C: {
+  say_hi : A.say_hi
+  say_hi = { "Bye" }
+}
+// Compilation error because we can't write to `say_hi` outside the block
+// C.say_hi = "Bye" // C changes the internal implemention, migth be useful to simulate inheritance
 
 print(A().say_hi()) // Hi
 print(B().say_hi()) // Hi

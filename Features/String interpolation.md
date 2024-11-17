@@ -1,4 +1,4 @@
-Use backtick  \`  for string interpolation
+Use backtick  \`  for string interpolation like you would in markdown 
 
 ```javascript
 s: 'world'
