@@ -34,6 +34,7 @@ veggies: {
     BROCCOLI:Veggie{name:'broccoli';carbs:0}
 }
 
+
 ```
 
 If used without any other information a new type can be created and aliased to another: 
