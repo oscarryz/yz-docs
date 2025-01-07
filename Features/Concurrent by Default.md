@@ -27,6 +27,8 @@ main: {
 ### Asynchronous example
 
 We can use the `open_restaurant` method as an example of concurrent execution
+
+Update: *Actually these all would look sync as well because they send messages to the same object which then process them as received*
 ```javascript
 'Create a `Restaurant` instance and get everything ready'
 open_restaurant: {
@@ -83,12 +85,12 @@ Create a block that exits the current block by calling `return` after the specif
 fetch: {
     id String
     // creates a timeout
-    time.sleep 10.seconds() {
+    time.sleep(10.seconds(), {
         // after 10 seconds just return finilizing the `fetch` execution
         return
-    }
+    })
     data: find(id)
-    return // force return to avoid waiting for the sleep
+    return // #to-do Can we do this to force returning without waiting? (effectively losing the control of this object)
 }
 ```
 
@@ -101,15 +103,15 @@ A couple of options:
 ```javascript
 fetch:{
     id String
-    timeout(10 {return})
+    timeout(10, {return})
     // option 1
     data: find(id).or { "Couldn't find data"} 
     // option 2
-    data err: find(id)
+    data, err: find(id)
     err ? { "Couldn't find data" } { data } 
     // option 3
     data: find(id)
-    data == something.invalid ? { "Couldn't find data" } {data}
+    data == something.invalid ? { "Couldn't find data" }, {data}
     
 }
 ```

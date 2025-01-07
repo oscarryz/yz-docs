@@ -61,8 +61,8 @@ main: {
 ```javascript
 // Behaving like channels
 main: {
-    b {Int}
-    c: {n Int} // c: {n Int = ints.NAN}
+    b #(Int)
+    c: #(n Int) // c: {n Int = ints.NAN}
     a: {
         // do stuff if some cond is true, send x
         loop {

@@ -32,7 +32,8 @@ obj_counters : [
 	{ 'Alice': 0 }
 	{ 'Bob': 0 }
 ]
-obj_counters.map  {itm NameCounter
+obj_counters.map  {
+   itm NameCounter
    itm().1 = itm().1 + 1				  
 }
 // although, why would you? 

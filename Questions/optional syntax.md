@@ -12,7 +12,7 @@ factorial : {
      n * factorial n -1 
    }
 }
-//
+// Full punctuation
 factorial : {
    n Int;
    if (n == 0 { 

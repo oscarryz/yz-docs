@@ -1,3 +1,4 @@
+#open-question 
 Idea for another version perhaps. 
 
 In [CUE lang types are values](https://cuelang.org/docs/tour/basics/types-are-values/) and thus, you can specify a value as the type of a field

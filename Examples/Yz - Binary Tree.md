@@ -1,6 +1,6 @@
 https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/binarytrees.html#binarytrees
 
-Implementation based on: [V](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.v), [Pony](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.pony) and [Go](hhttps://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.go)
+Implementation based on: [V](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.v), [Pony](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.pony) and [Go](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.go)
 
 ```javascript
 
@@ -13,8 +13,8 @@ node: {
         left  : empty
         right : empty 
         check: {
-            check_left:  { check left } 
-            check_right: { check right } 
+            check_left:  { check(left) } 
+            check_right: { check(right) } 
             // execute in parallel 
             check_left()
             check_right()
@@ -26,9 +26,9 @@ node: {
     create: {
         depth: 0
         n == 0 ? {
-            Node{empty empty}
+            Node(empty,empty)
         } {
-            Node{create(n - 1) create(n-1)}
+            Node(create(n - 1), create(n-1))
         }
         
     }

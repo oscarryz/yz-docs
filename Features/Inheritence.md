@@ -1,7 +1,8 @@
 ~~Not like this, is not super obvious and still not decided if import would do something else that just use the names like in Java
+
 ```js
 Named: {
-    name {String}
+    name #(String)
     upper_case: {
         name().upper_case()
     }
@@ -24,7 +25,7 @@ Current accepted: in the new Block declaration hook up members from other blocks
 
 ```javascript
 Named: {
-    name {String}
+    name #(String)
     upper_case: {
         name().upper_case()
     }
@@ -34,7 +35,7 @@ Boo: {
     upper_case: Named.upper_case
 }
 //
-n: Boo{}
+n: Boo()
 n.upper_case() // BOO
 ```
 
@@ -73,7 +74,7 @@ It is possible to create an "anonymous" instance with some methods changed
 
 ```javascript
 lion: Cat(
-    tell : { println 'Roal' } 
+    tell : { println 'Roar' } 
 )
 ```
 Which is completely valid and the main way to have different behaviour. This is valid because in Yz, that's how new values are assigned: 

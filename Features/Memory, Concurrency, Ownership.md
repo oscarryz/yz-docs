@@ -1,5 +1,5 @@
 
-Variables declared in a block are owned by that block, they cannot be modified outside of the block. Yz provides a mechanism to make it look like they can be modified from the outside, but everytime is the owning block who performs the action. 
+Variables declared in a block are owned by that block, they cannot be modified outside of the block. Yz provides a mechanism to make it look like they can be modified from the outside, but every time is the owning block who performs the action. 
 
 e.g. 
 
@@ -14,4 +14,5 @@ other: {
 ```
 
 This allows to always have a single writer for a variable, the writer will be always the declaring block(`owner` in the example above).
+
 

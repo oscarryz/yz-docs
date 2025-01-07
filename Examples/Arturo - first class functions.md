@@ -10,7 +10,7 @@ fcf: {
     cube:  { x Int; x ^ 3}
     croot: { x Int; x ^ ( 1 / 3)}
     
-    names: ["sin/asin" 'cos/acos' 'cube/croot']
+    names: ["sin/asin", 'cos/acos', 'cube/croot']
     
     func_list: [math.sin math.cos cube]
     inv_list: [math.asin math.acos croot]
@@ -19,7 +19,7 @@ fcf: {
     
     0.to 2 {  i Int
         result: func_list[i](num)
-        print '$(name[f]) => $(inv_list[i](result))'
+        print '`name[f]` => `inv_list[i](result)`'
     }
 }
 ```

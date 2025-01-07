@@ -54,4 +54,4 @@ control: {
 }
 ```
 
-#related [Consider method execution to create a copy](Consider%20method%20execution%20to%20create%20a%20copy.md)
+#related [Consider each method invocation would create a boc copy](Consider%20each%20method%20invocation%20would%20create%20a%20boc%20copy.md)

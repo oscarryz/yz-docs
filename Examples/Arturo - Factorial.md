@@ -49,7 +49,7 @@ factorial: {n Int
 }
 
 1 .to 19 { x Int
-  print 'Factorial of $(x) = $(factorial x)'
+  print 'Factorial of `x` = `factorial x`'
 }
 // alternate formatting
 factorial: {n Int

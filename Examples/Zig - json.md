@@ -37,23 +37,30 @@ payload: `
             "production": 42
         },
         "uptime": 9999
-        `
-Config: {
-   Vals: {
-       testing Int
-       production Int
+  `
+Configuration: {
+   'json:vals'
+   values: {
+       'json:testing'
+       tests Int
+       
+       'json:production'
+       prod Int
    }
-   uptime Int
+
+   'json:uptime'
+   ut Int
 }
 config: {
-   stream: json.TokenStream{payload}
-   res = json.parse(Config stream {})
+   stream: json.TokenStream(payload)
+   res : json.parse(Config,stream).or_fail!()
 }
+
 main: {
-    if config.vals.production > 50 {
-         error "only up to 50 supported"
+    if config.res.values.prod > 50 {
+        print_err("Only up to 50 supported")
     }
-    print "up={config.uptime}"
+    print "up=`config.ut`"
 }
 ```
 

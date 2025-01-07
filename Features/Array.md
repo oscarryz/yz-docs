@@ -55,7 +55,6 @@ a [String] // array of strings
 // 28 agosto 2022. Maybe not
 // Sometime in 2024. Yes!
 ```
-	
 
 Literal, elements separated by comma
 

@@ -69,11 +69,25 @@ Possible answer: each thread creates its own world and the only way to sync with
 #open-question How to deal with concurrency and libraries? e.g
 ```javascript
 foo:{
-   x: max 1 2
+   x: max(1,2)
 }
 // somewhere else 
 bar: {
-   y: max 42 100
+   y: max(42,100)
 }
 ```
 If both are executed, is there a chance they get the wrong answer?  Or that one blocks the other? 
+A: They will queue the request and response one at a time. Which obviously can create bottle necks but  the recommendation is to create new instances: 
+```js
+// private implementation
+Max: {
+      a Int
+      b Int
+      ? : { a > b ? { a }, { b } }
+}
+ max #(Int,Int,Int) = {
+    a Int
+    b Int
+    Max(a, b).?() // creates a new object and returns 
+}
+```

@@ -67,6 +67,7 @@ The type signature would contain the constructor. For the above data the signatu
 ```
 
 
+(_Under revision if enums like this are possible, they should be_)
 These constructors are suited to group different variants of the type
 Constructors can also be used with the same data, e.g. 
 
@@ -87,7 +88,7 @@ Token: {
 a Token.Int()
 ```
 
-There are cases when a constructor is not needed but a variant, in this case a variable should be enough and it is usually declared outside of the type
+There are cases when a constructor is not needed,  but a variant is required, in this case a variable should be enough and it is usually declared outside of the type
 
 ```js
 planets: {
@@ -125,6 +126,37 @@ planets: {
 planet Planet = planets.VENUS
 ```
 
+If still want to use the constructor
+```js
+planets: {
+  Planet #(Mercury(), Venus(), Earth(), str #(String)) {
+    mass Decimal
+    radius Decimal
+    Mercury(3.303e+23, 2.4397e6)
+    Venus(4.869e+24, 6.0518e6),
+    Earth(5.976e+24, 6.37814e6),
+    str: {
+      "`magic`: Mass= `mass`, Radius= `radius`."
+    }
+  }
+}
+
+do_something #(p Planet) = { 
+  p.Mercury ? { "The planet is mercury" }
+  match(p).type([
+    { planets.Planet.Mercury } : { "The planet is mercury" }
+    { planets.Planet.Venus } : { "The planet is venus" }
+  ])
+}
+
+something_else #() = {
+
+  // p Planet = Planet() // compilation error, can't create etc.
+  p Planet = Planets.Mercury() // Weird but possibly this is what is needed. 
+
+}
+```
+
 
 How to allow a type to specify its variants while keeping the structural typing coherent
 
@@ -137,7 +169,7 @@ std: {
       Ok(data T),
       Err(err E),
       is_ok: { 
-        .Ok // .Ok means: was the constructor used Ok() ?
+        self.Ok // .Ok means: was the constructor used Ok() ?
       }
       get: { data }
       cause: { err }
@@ -156,6 +188,97 @@ std: {
  )
 ```
 
+Another example from https://doc.rust-lang.org/rust-by-example/custom_types/enum.html
+
+```js
+// WebEvent signature: 
+
+#(PageLoad, 
+
+WebEvent: {
+  PageLoad()
+  PageUnload()
+  KeyPress(k char)
+  Paste(text String)
+  Click(x Int, y Int)
+}
+
+// Using match(Any).type(dict[#(Constructor):#(Action)])
+inspect #(event WebEvent) = {
+  print(
+    match(event).type([
+      { WebEvent.PageLoad }   : { "Page loaded" }
+      { WebEvent.PageUnload } : { "page unloaded" }
+      { WebEvent.KeyPress }   : { "pressed `event.k`." }
+      { WebEvent.Paste }      : { "pasted `event.text`" }
+      { WebEvent.Click }      : { "clicked at x=`event.x`, y=`event.y`." }
+    ])
+  )
+}
+
+// Using `use` to bring the constructor names to the scope
+inspect_2 #(event WebEvent) = {
+    use WebEvent
+    print(
+        match(event).type([
+            { PageLoad }   : { "Page loaded" }
+            { PageUnload } : { "page unloaded" }
+            { KeyPress }   : { "pressed `event.k`." }
+            { Paste }      : { "pasted `event.text`" }
+            { Click }      : { "clicked at x=`event.x`, y=`event.y`." }
+        ])
+    )
+
+}
+// Using object.Constructor (that returns bool) 
+inspect_3 #(event WebEvent) = {
+    use WebEvent
+    print(
+        when ([
+            { event.PageLoad }   : { "Page loaded" }
+            { event.PageUnload } : { "page unloaded" }
+            { event.KeyPress }   : { "pressed `event.k`." }
+            { event.Paste }      : { "pasted `event.text`" }
+            { event.Click }      : { "clicked at x=`event.x`, y=`event.y`." }
+        ])
+    )
+
+}
+
+
+main: {
+  pressed: WebEvent.KeyPress("x")
+  // Second question....  Foo() or just Foo ? 
+  pasted : WebEvent.Paste("my text")
+  click : WebEvent.Click(x: 20, y: 80)
+  load: WebEvent.PageLoad()
+  unload: WebEvent.PageUnload()
+
+  inspect(pressed)
+  inspect(pasted)
+  inspect(click)
+  inspect(load)
+  inspect(unload)
+
+}
+
+use WebEvent
+AppEvent: {
+  use WebEvent // will insert 
+    /*
+      PageLoad()
+      PageUnload()
+      KeyPress(k char)
+      Paste(text String)
+      Click(x Int, y Int)
+    */
+}
+
+ae AppEvent = AppEvent.PageLoad()
+
+
+
+```
 
 *Previous information below, might be outdated*
 
