@@ -7,13 +7,13 @@ Base: {
     name String
 }
 Container: {
-    Base
+    embed Base
     to_string: { name }
 }
 // usage
 b: Base { 'base' }
 c: Container { 'container' }
-print c.to_string() // 'container'
+print(c.to_string()) // 'container'
 
 
 
@@ -29,19 +29,19 @@ Container: {
     c String
     //tag String // error: already declared in Base
     describe_tag = {
-        print 'Container tag is {tag}'
+        print 'Container tag is `tag`'
     }
 }
 Component: {
-    Base
+    use Base
     name String
 }
 
 b: Base(b: 10, tag: "b's tag")
 co: Container{c: 'foo', tag: "co's tag"} 
 c: Component{ name: 'Comp'} // ce: need value for tag
-print b.describe_tag() // Base tag is b'stag
-print co.describe_tag() // Container tag is co'stag
+print(b.describe_tag())// Base tag is b'stag
+print(co.describe_tag()) // Container tag is co'stag
 //print c.describe_tag() // Base tag is b'stag
 
 ```

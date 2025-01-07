@@ -82,21 +82,38 @@ Which is similar to the above, because the type is defined as `{result Int}` whi
 
 #answered 
 
-Block have a type, skip the private variable in the type:
+Add a block signature. Only variables included in the signature will be publicly accessible.
 
 ```javascript
-Counter { get {Num} inc {} } = {
+Counter #( get #(Num), inc #() ) = {
+    // not included in signature, not visible from the outside
     count : 0
-    get: {count}
-    inc: {count = count + 1}
-    ++: inc
+    get: {count} // the value is returned
+    inc: {count = count + 1} // and modified
+    ++: inc // "alias" of `inc`
 }
-a: Counter{}
+a: Counter()
 a.get() // returns 0
 a.inc() // sets a.count to 1
 a.++()  // set a.count to 2
 a.get() // 2
-a.count // err, no variable named `count` in type signature
+// compilation error, no variable `count` in type Counter
+// a.count 
+```
 
+```js
+Counter #(c Int) = {
+  c Int
+}
+counter : Counter()
+counter.c = 1 // compilation error, counter.c cannot assign value outside of the block, consider using a modifier method e.g. counter.set_c (or counter.c=)
+...
+Counter #(c= #(Int), c #(Int)) = { 
+  _c Int
+  c= { c Int; _c = c}
+  c : { _c }
+}
+counter : Counter()
+counter.c= counter.c() + 1 
 
 ```

@@ -5,14 +5,14 @@ greet: {
 }
 Person: {
     what String
-    say_hi: { print what }
+    say_hi: { print(what) }
 }
 
 
-a: Person (what: greet.msg )
+a: Person(what: greet.msg )
 a.say_hi() // 'Hello'
 
-greeet.msg: 'Bye'
+// greeet.msg: 'Bye'
 b: Person(what: greet.msg)
 
 a.say_hi() // 'Hello' still referencing to the original 'Hello'

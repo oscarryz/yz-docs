@@ -44,6 +44,7 @@ one two: swap 2 1
 ```js
 thing { {String} {String} }
 thing ::  :: String  :: String
+thing #( #(String), #(String))
 ```
 
 
@@ -161,4 +162,4 @@ main: {
 ```
 
 
-#answered   Keep using `{ }` 
+#answered  Use `#()` e.g. `max #(Int,Int,Int)` is a block that takes and/or returns 3 ints
