@@ -44,7 +44,8 @@ get_response #(NetworkResponse) = {
   Success([1,2,3])
 }
 nr: get_response()
-// to know what constructor was used call variable.Constructor e.g 
+
+// To know what constructor was used call: `variable.Constructor` e.g 
 
 nr.Sucess ? { print("It was a sucess, the data is: `nr.data`")}
 nr.Failure ? { 
@@ -67,7 +68,7 @@ The type signature would contain the constructor. For the above data the signatu
 ```
 
 
-(_Under revision if enums like this are possible, they should be_)
+(_Under revision to check if enums like this are possible. They should be_)
 These constructors are suited to group different variants of the type
 Constructors can also be used with the same data, e.g. 
 
@@ -132,7 +133,7 @@ planets: {
   Planet #(Mercury(), Venus(), Earth(), str #(String)) {
     mass Decimal
     radius Decimal
-    Mercury(3.303e+23, 2.4397e6)
+    Mercury(mass:3.303e+23, 2.4397e6)
     Venus(4.869e+24, 6.0518e6),
     Earth(5.976e+24, 6.37814e6),
     str: {
@@ -143,6 +144,10 @@ planets: {
 
 do_something #(p Planet) = { 
   p.Mercury ? { "The planet is mercury" }
+
+  p >_ { m planets.Planet.Mercury ; "The planet is mercury" } 
+  p >_ { v planets.Planet.Venus   ; "The planet is venus" } 
+
   match(p).type([
     { planets.Planet.Mercury } : { "The planet is mercury" }
     { planets.Planet.Venus } : { "The planet is venus" }
@@ -187,6 +192,19 @@ std: {
     Result.Err,
  )
 ```
+
+So, we have the following cases: 
+
+1. Same data types on all the variants
+  1. No values
+  2. Same values
+  3. Different values
+2. Different data types on all the variants
+  1. All the variants differ
+  2. Some of the variants differ
+
+[Example](features/sumtypes/Example.md)
+
 
 Another example from https://doc.rust-lang.org/rust-by-example/custom_types/enum.html
 
@@ -244,6 +262,29 @@ inspect_3 #(event WebEvent) = {
     )
 
 }
+// Another version, using "cast/match" operatro `>_`, obj >_ { n String; /*if obj is a string, this will execute */ }
+inspect_4 #(event WebEvent) = { 
+  print(
+      event >_ {pl WebEvent.PageLoad; "Page loaded" }
+      event >_ {pu WebEvent.PageUnload; "page unloaded" }
+      event >_ {kp WebEvent.KeyPress; "pressed `event.k`." }
+      event >_ {p  WebEvent.Paste; "pasted `event.text`" }
+      event >_ {c  WebEvent.Click; "clicked at x=`c.x`, y=`c.y`." }
+   )
+}
+
+// Another version, same as above, but with a single match and using comma
+// separaterd bocs
+inspect_5 #(event WebEvent) = { 
+  print(
+      event >_ {pl WebEvent.PageLoad; "Page loaded" },
+                {pu WebEvent.PageUnload; "page unloaded" },
+                {kp WebEvent.KeyPress; "pressed `event.k`." },
+                {p  WebEvent.Paste; "pasted `event.text`" },
+                {c  WebEvent.Click; "clicked at x=`c.x`, y=`c.y`." }
+   )
+}
+
 
 
 main: {
