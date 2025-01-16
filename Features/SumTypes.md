@@ -1,8 +1,9 @@
 >[!NOTE]
 > This is not complete Sum type, but rather how to provide a similar functionality
 > 
-> The feature is still under revision. Most up to date design in [[sumtypes/Example]]
+> The feature is still under revision. Most up to date design in [sumtypes/Example](./sumtypes/Example.md)
 > 
+
 
 
 
