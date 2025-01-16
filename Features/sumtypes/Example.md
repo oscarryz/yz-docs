@@ -48,10 +48,10 @@ Status {
 
 classify_status #(status Status) { 
   status when
-    {Success => print("Sucessful response (2xx): `status.code`"),
+    {Success => print("Sucessful response (2xx): `status.code`")},
     {Warning => print("Redirection (3xx): `status.code`"},
-    {Error   => print("Error ocurred: `status.mgs`(`status.code`)") },
-    { println("Other status")}
+    {Error   => print("Error ocurred: `status.mgs`(`status.code`)")},
+    { println("Other status")},
 }
 ```
 
@@ -62,8 +62,8 @@ Example from [Core-lang](https://core-lag.dev) landing page:
 // Pet has 3 properties  defined by 2 variants: 
 // `name String`, `lives Int` and `years Int`
 Pet: {
-  Cat(name String, lives Int)
-  Dog(name String, years Int)
+  Cat(name String, lives Int),
+  Dog(name String, years Int),
 }
 
 // Describe uses the `when` matching
@@ -75,7 +75,7 @@ Pet: {
 describe #(pet Pet, String) = {
   pet when 
     { Cat => "cat `pet.name` has `pet.lives` lives" },
-    { Dog => "dog `pet.name` has `pet.years` of age" }
+    { Dog => "dog `pet.name` has `pet.years` of age" },
 }
 
 [Cat("Lila", 7), Dog("Fenton", 6), Cat("Molly", 9)]
