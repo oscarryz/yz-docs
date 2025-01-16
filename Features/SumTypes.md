@@ -1,5 +1,8 @@
 >[!NOTE]
 > This is not complete Sum type, but rather how to provide a similar functionality
+> The feature is still under revision. Most up to date design in [Example](Example.md)
+
+
 
 
 A type can specify the different constructor names wrapping specific data, the used constructor for a given variable can be accessed with the form `.Contructor` which returns a `Bool`
