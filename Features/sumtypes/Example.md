@@ -75,7 +75,7 @@ Pet: {
 describe #(pet Pet, String) = {
   pet when 
     { Cat => "cat `pet.name` has `pet.lives` lives" },
-	{ Dog => "dog `pet.name` has `pet.years` of age" }
+    { Dog => "dog `pet.name` has `pet.years` of age" }
 }
 
 [Cat("Lila", 7), Dog("Fenton", 6), Cat("Molly", 9)]
