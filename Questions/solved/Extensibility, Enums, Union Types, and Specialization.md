@@ -1,5 +1,5 @@
 
-#answered  No need for macros nor pattern matching atm, see [SumTypes](SumTypes.md) and [Type Alias](Features/Type%20Alias.md)
+#answered  No need for macros nor pattern matching atm, see [Type variants (similar to SumTypes)](Type%20variants%20(similar%20to%20SumTypes).md) and [Type Alias](Features/Type%20Alias.md)
 
 
 

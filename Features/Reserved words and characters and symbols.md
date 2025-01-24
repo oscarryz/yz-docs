@@ -2,6 +2,8 @@
 break
 continue
 return
+when
+=>
 :
 `
 '

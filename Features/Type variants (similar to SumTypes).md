@@ -7,7 +7,7 @@
 
 
 
-A type can specify the different constructor names wrapping specific data, the used constructor for a given variable can be accessed with the form `.Contructor` which returns a `Bool`
+A type can specify the different constructor variants wrapping specific data used in that variant. 
 
 For instance, the type `NetworkResponse` has the attributes: `data T`, `error String`, `timeout Bool`
 

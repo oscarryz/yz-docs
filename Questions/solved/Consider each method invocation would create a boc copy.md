@@ -29,3 +29,5 @@ foo() // a : 2
 We need to find a way to reset the execution but preserving the fact that blocks are stateful objects. 
 
 _The example above is wrong, but the question remains..._
+
+#answered No need to create a copy because bocs execute their inner bocs sequentially, there is no override. In the invocation `a(1)` followed by `a(2)` the second only start once the first has completed

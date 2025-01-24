@@ -1,6 +1,6 @@
 
 
-#answered  [SumTypes](SumTypes.md)
+#answered  [Type variants (similar to SumTypes)](Type%20variants%20(similar%20to%20SumTypes).md)
 
 
 
