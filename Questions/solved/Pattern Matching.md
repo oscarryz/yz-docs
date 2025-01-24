@@ -1,4 +1,6 @@
-Revision of: [Pattern matching](Features/Pattern%20matching.md)
+#pattern-matching 
+#answered 
+Revision of: [Pattern matching 1](Pattern%20matching%201.md)
 
 ```js
 status : {
@@ -719,3 +721,5 @@ hamcrest {
 }
 
 ```
+
+#updated This will be solved by [Flow typing and conditionals](Flow%20typing%20and%20conditionals.md)

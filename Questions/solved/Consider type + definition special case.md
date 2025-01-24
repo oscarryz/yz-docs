@@ -35,3 +35,19 @@ hi #(msg String) => {
 n Int => 1
 n Int = 1
 ```
+
+#answered  
+Yes,  when the boc follows the signature immediately, the variables in the signature are automatically declared in the boc
+
+```
+greet #(msg String) {
+  print(msg) // no need to declar `msg` in the boc
+}
+
+greet = { 
+  msg String // to override still need to declare it
+}
+greet = {
+  print(msg) // compilation error, there is no print
+}
+```

@@ -19,6 +19,6 @@ The current option suggested by [Instances](../Features/Instances.md) (I think) 
 [Instances](../Features/Instances.md)
 
 ### Related:
-[Blocks](../Features/Blocks.md)
+[Bocs](Bocs.md)
 [Block type](../Features/Block%20type.md)
 

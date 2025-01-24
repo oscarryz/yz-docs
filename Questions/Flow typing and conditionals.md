@@ -1,3 +1,5 @@
+#pattern-matching 
+#answered 
 In the last example of [SumTypes/Example](Example.md) we use `>_` to match with one of the types. 
 
 Here is a more complex example that shows how could it interact with other features like  booleans ? , breaks, and assigments

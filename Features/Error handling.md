@@ -1,6 +1,6 @@
 TLDR: 
 
-Use generic Option/Result to wrap and unwrap values. See also [SumTypes](SumTypes.md)
+Use generic Option/Result to wrap and unwrap values. See also [Type variants (similar to SumTypes)](Type%20variants%20(similar%20to%20SumTypes).md)
 
 ```javascript
 compute: {
