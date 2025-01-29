@@ -1,7 +1,7 @@
 
 Variables
  ```js
-// Use variablle_name Type = expr optional initialization
+// Use variable_name Type = expr optional initialization
 msg String = "Hello"
 s String // declared but not initialized
 
@@ -11,6 +11,25 @@ t : "Sweet"
 
 Blocks of code ( bocs )
 ```js
+// Bocs: Functions and Objects Combined
+
+// In this language, a boc is a unique construct that acts as both a function (callable code) and an object (containing data). This means a boc can be invoked like a function and its members can be accessed like an object's properties.
+
+greet : { // Declares a boc named 'greet'
+    msg : "Hi" // A member (variable) of the boc
+    say_hello #(name String) { // A method (function) of the boc
+        print("`msg`, `name`!") // Accessing the boc's member 'msg' within the method
+        msg = "Hello again" // Modifying the boc's internal state
+    }
+}
+
+// Calling the boc's method:
+greet.say_hello("Alice") // Output: Hi, Alice!
+greet.say_hello("Bob")   // Output: Hello again, Bob! (State persists)
+
+// Accessing the boc's member directly:
+print(greet.msg) // Output: Hello again (Modified by the method call)
+
 // A boc is enclosed by `{` `}`
 // e.g.
 {
@@ -25,13 +44,13 @@ greet : {
   print(msg)
 }
 
-// Bocs have types too. A boc type its signature and 
+// Bocs have types too. A boc type is its signature and 
 // the syntax is `#(` boc_variable(s) `)`
 greet #(msg String) = { 
-  msg :"Hello world" // msg has to be defined here and match the signature
+  msg :"Hello world" // msg has to be defined here and match the signature and be assignable
   print(msg)
 }
-// A boc type followed by a boc literal defines it immediately
+// A boc type followed by a boc literal defines it immediately (no need to add `=` between signature and body )
 greet #(msg String) { 
   msg = "Hello world" // Uses the `msg` declared in the signature
   print(msg)
@@ -46,10 +65,55 @@ greet #(msg String) {
 // More about generics below
 ```
 
-Execute bocs
+Executing bocs
 ```js
-// Invoke by using `(` args `)` as you would in a function on some programming languges
+// Invoke by using `(` args `)` as you would in a function call 
+// on some programming languges
 greet() // prints "Hello world"
+
+x : foo() // The return value of foo is assigned to x. More details below
+```
+
+Parameters and return values 
+```js
+// The boc variables are not strictly parameters nor return values, they are both
+// The `()` notation is a shortcut to assign or read values eg
+greet("hi")  // assign "hi" to `msg`
+greet() // but then when executed, it will override it with "Hello world"
+
+// Likewise, return values are the last expression executed, in the greet example that is `print(msg)` which prints to the console and returns the printed value, which is "Hello world"
+// So the following assigns "Hello world" to `pm`
+pm : greet() 
+
+// There could be more than one argument and they can be used 
+// as more than one return value(s).
+// e.g 1 return value
+f #(Int) { 42 } // f is a boc with an Int value, which is the last executed and can be used as return value
+n : f() // n is not 42
+
+id : #(n Int) {  // fg names the variable `n` of type Int and simply return it
+  n 
+}
+one : id(1) // one gets the value `1`
+
+// eg. 2 return values
+// The following boc takes two String variables
+// and returns them in reverse order
+swap #(a String, b String) {
+   b
+   a 
+}
+a : "hello"
+b : "world"
+// The last value in the boc is treated as return value in order
+a, b = swap(a,b)
+// a is now "world"
+// b is now "hello"
+
+// If a boc has no expression at the end the previous expression is used 
+// if none exists the type is #() 
+noop #()
+// x : noop() // compilation error, `noop` doesn't return any value
 ```
 
 User defined types and creating instances
@@ -63,8 +127,10 @@ g Greet //Declares variable g of type Greet
 h : Greet() // creates a different instance
 
 // User defined types also have a type signature, this represents the programmable interface the type offers
-// For Greet above the type signature would be
-Greet #(msg String = "Hello world")
+
+// For `Greet` above the type signature would be
+Greet #(msg String)
+// It reads `Greet` is a type with a String variable named `msg`
 
 
 
@@ -78,6 +144,8 @@ f : {
 }
 print(f.m) // prints "Hi"
 f() // executes `f` which just assign "Hi" to f.m (again)
+// Note, bocs retains state between execution, unless of course the execution assings a new value. In the example above, f.m gets reassigned (to the same value "Hi")
+
 g Greet = Greet() // creates an instance of Greet
 print(g.msg) // prints "Welcome home"
 
@@ -87,22 +155,30 @@ print(g.msg) // prints "Welcome home"
 
 Writing boc variables
 ```js
-Greet : { 
+GreetUpdater : { 
   msg String // The boc Greet defines `msg`
-  update_msg #(new_mesage String) {
+  update_msg #(new_message String) {
     msg = new_message // inner boc modifies it
   }
 }
-g : Greet("Hola") // assigns "Hola" to message
-// g.msg = "Adios" // Compilation error
-g.update_msg("Bye") // Also ok
+g : GreetUpdater("Hola") // assigns "Hola" to message
+// Assignment only works if the variable assigned is inside the scope where is attempted to be assigned. 
+// For instance the following
+// g.msg = "Adios" 
+// Would cause a compilation error, because the variable `msg` is inside the boc `g` (defined in `GreetUpdater`) but the following: 
+
+g.update_msg("Bye") 
+// Would work, becuase the write happens inside the scope where `msg` was defined, because the inner boc `update_msg` can see the parent scope
+
+// g.update_msg is also valid, because is invoking the boc, but is not using the `=` operator directly.
+
 ```
 
 Generics
 ```js
 // A Single Uppercase letter denotes a generic type
-x T // x data is generic
-x = "hi" // data is bound to String
+x T = "hi" // x data is generic and initialized to String
+
 // x = 1 // Compilation error, x was already bound to String
 // Can be used in user defined types too
 Box : { 
@@ -116,13 +192,14 @@ Box : {
 bs Box(String) = Box(String) // bs will be a Box of String
 // or simply bs : Box(String)
 bs.set_data("value") // sets data to "value"
+
 bi : Box(Int) // bi will be a Box of Int
-bs.set_data(42)
+bi.set_data(42)
 
 // If specific usage is needed for the generic value, then the compiler will validate, e.g. the method `len` is called, then the instantiation must have a len boc 
 send #(value T) {
-  lenght : value.len() // T has to have the method len #(Int) to be instantiated
-  print("Sending `lenght` elements")
+  length : value.len() // T has to have a boc: `len #(Int)` to be instantiated
+  print("Sending `length` elements")
 }
 send("Hola") // compiles
 send([1,2,3]) // compiles
@@ -135,14 +212,15 @@ Constructor variants (similar to Enum, Unions and SumTypes, but they are none of
 // Inside a type, name the variant with the parameters it will use.
 // These variables will  become variables of the type itself.
 // Overlapping variables will be consolidated into one.
+// NOTE: These varians are an exception to structural typing and behave like nominal typing whe comparing against them inside the `when` conditional checking (see below)
 
 // e.g. With the same variables (`msg`)
-Greet : {
-  Hello(msg:"Hello")
+Greeter : {
+  Hello(msg:"Hello") // using `:` short syntax declaration
   Bye(msg:"Goodbye")
 }
-g Greet = Greet.Hello()
-h : Greet.Bye() // h type is Greet
+g Greet = Greeter.Hello()
+h : Greeter.Bye() // h type is Greet
 
 // With different variables 
 Messge : {
@@ -156,14 +234,14 @@ e : Message.Empty()
 
 
 // The variant is part of the type signature
-// For `Greet`
-Greet #(
-  Hello(msg String="Hello"),
+// For `Greeter`
+Greeter #(
+  Hello(msg String="Hello"), // using explicit type `=` value declaration
   Bye(msg String="Goodbye")
 )
 
 // For `Message`
-Messgage #(
+Message #(
   Text(text String=""),
   Empty()
 )
@@ -174,7 +252,7 @@ Option : {
   None() // defines a varian with no variables
 }
 maybe Option(T) = Option.Some("thing")
-maybe_not Option(T) = Option.None()
+maybe_not Option(T) = Option.None() // Safe to infer as the value won't be used 
 
 // Can have different generic types
 Result:{
@@ -182,18 +260,20 @@ Result:{
   Err(e E)
 }
 result Result(Int, String) = Result.Ok(1)
-bad_result Result(Int,String) = Resutlt.Err(":(" ))
+bad_result Result(Int,String) = Result.Err(":(" )
 
 ```
 
 Conditional blocks of code using `when { cond => action }`
 ```js
-// To know what kind of Greet we have.
-// (back ticks ` are used for string interpolation)
-g Greet = get_greet()
+// To know what kind of Greeter we have we can use `when`
+// `when` is an special case where the variant can be checked making use of nominal typing whereas the rest of the language uses structural typing
+
+// To check what kind of `Greeter` variant was used
+g Greeter = get_greet()
 g when
-{ Greet.Bye => "You say `g.msg`" },
-{ Greet.Hello => "and I say `g.msg`"},
+{ Greeter.Bye => "You say `g.msg`" },
+{ Greeter.Hello => "and I say `g.msg`"},
 
 // To know what kind of message we have
 m : get_message()
@@ -202,41 +282,55 @@ m when
 { Message.Empty => "There is no message" },
 
 // Accessing generic data
-maybe : Some("something") // 
+maybe : Some("something")
 maybe when
-{ Some => print("We have `maybe.value`)"},
+{ Some => print("We have `maybe.value`")},
 { None => print("We have nothing")}
 
-// Conditionals can use boolean expressions too: 
+// `when` conditionals can use boolean expressions too if no operand is used
 when
 { a > b  => "A is greater than B"},
-{ a == b =>  "A is equals to B"),
-    { => "A si lower than B"),
+{ a == b =>  "A is equals to B"},
+{ true => "A is lower than B"},
 ```
 
 
 Arrays and Dictionaries
 
 ```js
-[Type] // array type
-[]Type // Empty array of type Type
-[T] // generic array
+[Type] // array type of type `Type` e.g
+a [Int] // declares an array of Ints
+[]Type // Empty array literal (value) of type Type, e.g 
+a [Int] = []Int
 
+[T] // Generic array, needs a concrete initializaton e.g. 
+ga [T] = []Int // the generic array `ga` gets bound to []Int
 
+// same is a boc that takes a string  s and returns it
+same #(s String) {s}
 // Array literal
 [1,2,3] // type [Int]
-[ { print("Hello")}, {print("Goodbye")}] // type [#()]
+[{ same("Hello")}, {same("Goodbye")}] // type [#(s String)]
 
-// Array access returns Result(T, OutoOBoundError)
+// Array access returns Result(T, OutofBoundsError)
 a : [ 1, 2, 3 ]
-a[0] // Ok(1)
-a[5] // OutOfBoundError(5)
+a[0] // Result.Ok(1)
+a[5] // Result.OutOfBoundsError(5)
 
 
 
-[Key:Value] // Dictionary type
-[Key]Value // Empty dictionary with key of type Key and values of type Value
-[K:V] // generic dictionary
+// Dictionary type:
+[Key:Value] // is a dictionary type form Key to Value 
+// eg. 
+m [Int:String] // declares a dictionary of Int to Strings
+
+// Empty dictionary literal:
+[Key]Value  // e.g. 
+m [Int:String] = [Int]String // m is now an empty dictionary of Int to String
+
+
+[K:V] // generic dictionary type
+gm [K:V] = [Int]String // the generic dictionary `gm` is bound to `[Int:String]`
 
 // Dictionary literal of type [String:String]
 ["name": "Foo",
@@ -244,10 +338,10 @@ a[5] // OutOfBoundError(5)
 
 // Dictionary access returns Optional(V)
 d : [ 1 : 2, 3: 4] // [Int: Int]
-d[1] // Ok(2)
+d[1] // Some(2)
 d[5] // None()
 
-// A dictionary Language to Bocs that take a String and return a String
+// A dictionary from String to Bocs with two String values
 greet [String : #(String, String)]
 greet = [ 
   "English"   : { n String; "Hello `n`" }, 
