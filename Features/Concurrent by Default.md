@@ -1,80 +1,76 @@
 # Concurrent by Default 
-Yz is concurrent by default, every method invocation will run in its own coroutine asynchronously, although sharing the same memory space.
-When a variable is assigned to a method call Yz will wait until that method completes, turning the code into a synchronous call. 
-The block will finish until all the method calls it created finishes (structural concurrency)
+Yz is concurrent by default. Every method invocation will run in its own coroutine/thread asynchronously, although still sharing the same memory space.
+```js
+// Run concurrently 
+foo()
+bar()
+```
 
+If the result of a method call is assigned to a variable or used as argument to another boc, the code will be synchronous and will wait until the call completes
+
+```
+// Execution will wait for `fr` to have a value from the completion of `foo()`
+fr: foo()
+// `bar` will start execution when `baz()` call completes.
+bar(baz())
+```
+
+The block enclosing the bocs calls, will complete when all the internal bocs have completed (similar to structural concurrency without scopes)
+
+```
+parent_boc : { 
+   foo()
+   bar() 
+}
+// executing `parent_boc` will launch `foo()` and `bar()` one of them might finish earlier than the other
+// `parent_boc()` will complete only when both have completed
+parent_boc()
+```
+
+To sum up: 
 - Every method call is async
 - Assigned as variable (or used as argument for another method) the execution will wait
 - Once all the calls finishes, the method is self will finish. 
 
-### Synchronous example
-Here's a regular synchronous program. All the method invocations are assigned to a value and thus executed in sequential order
-```javascript
-'Will be executed synchronized, because `restaurant` cannot take orders or close before it opens'
-main: {
-    restaurant: open_restaurant()
-    restaurant: restaurante.take_orders()
-    restaurant.close()
-}
-// same program 
-main: {
-   open_restaurant()
-   .take_orders()
-   .close()
-   // main would finish at this point
-}
+**Note** executing multiple calls on the same boc will effectively be sequential too, as they are executed as received
+
 ```
-### Asynchronous example
-
-We can use the `open_restaurant` method as an example of concurrent execution
-
-Update: *Actually these all would look sync as well because they send messages to the same object which then process them as received*
-```javascript
-'Create a `Restaurant` instance and get everything ready'
-open_restaurant: {
-    r: Restaurant()
-    r.start_kitchen()
-    r.prepara_tables()
-    r.open_register()
-    r
-}
+// `two` will run until `one` completes 
+foo.one()
+foo.two()
+// but bar will trigger immediately
+bar() 
 ```
-In the previous example all the actions happen concurrently as they don't depend on each other. 
 
+If order of execution is important, synchronize it by waiting for the result. 
 
-### Syncing asyncs 
-Most of the time we require coordination of async calls after they complete. 
-We can let the methods run and then sync by requesting their values
+# Example
 
-```javascript
-retrieve_order: {
-    customer_id  Int
-    product_id Int
-    fetch_customer( customer_id ) // no assign, so will run async
-    fetch_product( product_id )  // no assign, so will run async
-    Order {
-       customer: fetch_customer.customer  // assigning, thus 'awaits' for methos completion
-       product : fetch_product.product    // assigning, thus 'awaits' for methos completion
-    }
-}    
+Because all the bocs synchronize at the end of the enclosing bloc, you can retrieve the result by accessing its state there.
+```
+{
+  foo() // puts the result in a variable `r`
+  // other calls
+  foo.r // at this point foo.t has a value 
+}
 ```
 
 Example modified from [Structured Concurrency in Java](https://openjdk.org/jeps/428#:~:text=For%20example%2C%20in%20this%20single%2Dthreaded%20version%20of%20handle()%20the%20task%2Dsubtask%20relationship%20is%20apparent%20from%20the%20syntactic%20structure%3A)
 ```javascript
-//Yz sequential
-handle: {
+//Yz synchronous
+synchronous_example : {
     the_user: find_user()
     the_order: find_order()
-    Response { the_user the_order}
+    Response(the_user, the_order)
 }
 // Yz concurrent
-handle: {
+concurrent_example: {
     find_user()
     find_order()
     if some_logic() {
         other_thing() // maybe this is executed first
     }
-    Response { find_user.user find_order.order }
+    Response(find_user.user, find_order.order)
 }
 ```
 
@@ -84,35 +80,26 @@ Create a block that exits the current block by calling `return` after the specif
 ```javascript
 fetch: {
     id String
-    // creates a timeout
+    // This will make the parent boc return after 10 seconds
     time.sleep(10.seconds(), {
         // after 10 seconds just return finilizing the `fetch` execution
         return
     })
-    data: find(id)
-    return // #to-do Can we do this to force returning without waiting? (effectively losing the control of this object)
+    // Will execute right away
+    return find(id) // explicity `return` will ignore the wait for `time.sleep` to complete. 
 }
 ```
 
 Error handling
 A couple of options:
-1. Have the async function return an Option/Result kind of data 
-2. Check the data to see if it's an error type
-3. Check the data to see if it's valid
+1. Have the async function return an Option/Result kind of data (Yes)
 
 ```javascript
 fetch:{
     id String
     timeout(10, {return})
     // option 1
-    data: find(id).or { "Couldn't find data"} 
-    // option 2
-    data, err: find(id)
-    err ? { "Couldn't find data" } { data } 
-    // option 3
-    data: find(id)
-    data == something.invalid ? { "Couldn't find data" }, {data}
-    
+    data: find(id).or_else({ "Couldn't find data"})
 }
 ```
 
