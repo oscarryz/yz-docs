@@ -3,8 +3,8 @@ From: https://cuetorials.com/introduction/
 ```js
 
 albums: [{
-    artist: 'Led Zeppelin'
-    album: 'BBC Sessions'
+    artist: 'Led Zeppelin',
+    album: 'BBC Sessions',
     date: '1997-11-11'
 }]
 ```
@@ -34,7 +34,7 @@ hierarchy: {
         hello: 'world'
         life: 42
         pi: 3.14
-        nums: [1 2 3 4 5]
+        nums: [1, 2, 3, 4, 5]
         struct: {
             a: 'a'
             b: 'b'

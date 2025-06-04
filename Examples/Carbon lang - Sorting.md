@@ -5,13 +5,13 @@ sorting: {
     partition: {
         s []T
         i: -1 
-        s.for_each {
+        s.for_each({
             it T
             it <= s[s.len()-1] ? {
                 i = i  + 1 
-                swap(s[i] e)
+                swap(s[i], e)
             }
-        }
+        })
         i
     }
     quick_sort: { 
@@ -35,14 +35,14 @@ geometry: {
     print_total_area: {
         circles [Circle]
         area Float = 0.0
-        circles.for_each {it Circle
+        circles.for_each({it Circle
             area = area + math.pi * c.r * c.r 
-        }
-        print "Total area: `area`"
+        })
+        print("Total area: `area`")
     }
     main: {
         circles: [Circle(1.0) Circle(2.0)]
-        print_total_area circles
+        print_total_area(circles)
     }
 }
 ```
