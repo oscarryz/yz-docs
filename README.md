@@ -203,24 +203,77 @@ thing = { 3, 4 }
 ```
 
 ## Concurrency (or in Yz the functions color are ... purple)<sup>1</sup>
- 
-Every block executes concurrently and synchornizes at the end of the parent block. 
-To wait for a block to finish its execution, assign the return value to a variable or wait until the enclosing blocks finishes
-```js
-main: {
-   // get_id() executes and
-   // the main block waits until
-   // it finishes to assign thr value
-   // to `id`
-   id: get_id()
-   fetch( id ) // runs async
-   print("Fetching order...") // runs async
-   // This is the end of the `main` block
-   // so it waits until both `fetch` and `print` finish executing. 
-   // `fetch.order` has a value at this point
-   fetch_order.order 
-}
 
+### Purple functions + Structured concurrency
+
+Every function call async, unless the return value is used right away.
+
+Say for instance you have two functions:
+```js
+fetch_image(iid)
+fetch_user(uid)
 ```
+If you assign a return value, the code will wait until the function finishes:
+
+```js
+// Fetch the image 
+image: fetch_image("129-083")
+
+// The following line will run
+//  only when image
+// fetch completes because
+/  we assigning the value
+// to the variable `image`
+user: fetch_user("mr_pink")
+```
+
+But if you don't assign the value, then they just run asynchronously:
+
+```js
+// These two run concurrently
+fetch_image("129-083")
+fetch_user("mr_pink")
+```
+
+Using a structural concurrency like approach, they would synchronize at the end of the enclosing block/function. 
+
+```js
+enclosing_block: {
+  // These two run concurrently
+  fetch_image("129-083")
+  fetch_user("mr_pink")
+  Profile(fetch_iamge.data, fetch_user.data)
+}
+```
+
+It is usually better to create a new instance to keep the state separated.
+
+For instance with a `Fetcher` type, with a `data` attribute would be like this: 
+```js
+enclosing_block : {
+
+  // Create `Fetcher`s
+  img : Fetcher()
+  usr  : Fetcher()
+
+  // fetch data async
+  img.fetch("129-083")
+  usr.fetch("mr_pink")
+
+  // When they reach the
+  //  "bottom" of 
+  // `enclosing_block`, 
+  // the data is ready 
+  // to use.
+  // Create a new object:
+  profile : Profile(usr.data,
+                    img.data)
+}
+```
+
+This allow sync and async calls with a very simple syntax and rules; if you need the value right away then it is sync, if you need it later then is async.  
+
+ 
+
 <sup>1: [What Color Is Your Function? - stuffwithstuff.com](https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/)</sup>
 
