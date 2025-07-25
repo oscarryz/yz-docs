@@ -2,7 +2,7 @@
 [Notes on 1ML](https://shonfeder.github.io/themata/programming/notes-on-1ml.html)
 
 
-```js
+```yz
 stack #(
 	empty    #(T, Stack(T))
 	Stack #(
