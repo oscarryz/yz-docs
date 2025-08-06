@@ -56,7 +56,7 @@ classify_status #(status Status) {
 ```
 
 
-Example from [Core-lang](https://core-lag.dev) landing page: 
+Example from [Core-lang](https://core-lang.dev) landing page: 
 
 ```js
 // Pet has 3 properties  defined by 2 variants: 
