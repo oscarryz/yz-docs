@@ -1,9 +1,10 @@
-# Built-in types
+# Type literals
 - [Array](Features/Array.md)
 - [Associative arrays](Features/Associative%20arrays.md)
-- [[features/Strings]]
-- [[features/Int]]
-- [[features/Decimal]]
+- [Strings](Features/Strings.md)
+- [Int](Features/Int.md)
+- [Decimal](Features/Decimal.md)
+- [Bocs](Features/Bocs.md)
 
 ## Features
 - [Bocs](Features/Bocs.md)
@@ -18,4 +19,8 @@
 - [Info strings](Features/Info%20strings.md)
 - [Structural typing](Features/Structural%20typing.md)
 - [Memory Management](Questions/Memory%20Management.md)
-- 
+
+## How to
+- [Enums](Features/Enums.md) (under revision)
+- [Constants](Features/Constants.md) (under revision)
+- [Code organization](Features/Code%20organization.md)
