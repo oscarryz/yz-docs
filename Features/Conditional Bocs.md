@@ -1,6 +1,5 @@
-
 #pattern-matching 
-
+A similar version of pattern matching
 A boc can validate a condition or match a type using the keyword `when` and separating the condition and the action with an arrow `=>`
 
 Example 
