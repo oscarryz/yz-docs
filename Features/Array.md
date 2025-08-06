@@ -59,7 +59,7 @@ a [String] // array of strings
 Literal, elements separated by comma
 
 ```javascript
-a: ['Hello' 'World']
+a: ['Hello', 'World']
 print(a[0]) // prints Hello
 ```
 
