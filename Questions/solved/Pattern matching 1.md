@@ -1,5 +1,5 @@
 #pattern-matching
-#answered 
+#answered in [Conditional Bocs](../../Features/Conditional%20Bocs.md)
 
 Compare two pieces of code (two blocks) and use some special notation to help the comparison
 

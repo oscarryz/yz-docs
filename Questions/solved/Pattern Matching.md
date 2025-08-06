@@ -1,5 +1,5 @@
 #pattern-matching 
-#answered 
+#answered in  [Conditional Bocs](../../Features/Conditional%20Bocs.md)
 Revision of: [Pattern matching 1](Pattern%20matching%201.md)
 
 ```js
