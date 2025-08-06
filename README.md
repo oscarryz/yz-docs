@@ -17,7 +17,7 @@ print("`factorial(5)`")  // prints 120
 Yz is a programming language that explores the possibility to simplify concurrency, data, objects, methods, functions, closures, classes under a single artifact: a code of block.
 
 # Blocks
-In Yz, almost everything is a block of code. 
+In Yz, almost everything is a block of code (boc for short). 
 
 A code of block is a series of expressions between `{` `}`, their variables can be accessed from outside the block (behaving like objects) and they can be executed (behaving like methods/functions/closures) and they are concurrent (behaving like actors).
 

@@ -18,7 +18,7 @@ main: spawn {
 
 ```
 
-With the latest content from:  [[Concurrent by Default]]
+With the latest content from:  [[../Features/Concurrency]]
 ```javascript
 // Attempt to run the above
 main: {

@@ -1,5 +1,5 @@
 This is probably for some other version or some other language. 
-Follow up exploration of [Type variants (similar to SumTypes)](Type%20variants%20(similar%20to%20SumTypes).md)
+Follow up exploration of [Type variants](../Features/Type%20variants.md)
 
 Currently the approach to take will be use "abstract classes" as describe by munificient here: 
 https://www.reddit.com/r/ProgrammingLanguages/comments/10jewgp/comment/j5m7jn9
@@ -95,7 +95,7 @@ Options:
 6. `switch value { Succ(pred) -> sum(pred,y),...}`  Built in pattern matching, but it needs a way to check for exhaustiveness (or to close the `Num` definition)
 7. `s Succ = value` Can compile time check if value is either `Succ` or a super 
 
-#answered  in [Type variants (similar to SumTypes)](Type%20variants%20(similar%20to%20SumTypes).md)
+#answered  in [Type variants](../Features/Type%20variants.md)
 
 The example above would be
 ```js

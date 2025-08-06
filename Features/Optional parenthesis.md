@@ -11,3 +11,5 @@ vs
 
 
 No args? Then still needs the params
+
+Style choice probably enforced by tool, use parenthesis always.

@@ -1,4 +1,4 @@
-Update (sometime in 2023) Yz will be [[Concurrent by Default]]
+Update (sometime in 2023) Yz will be [[../../../Features/Concurrency]]
 
 Single thread model with channels / process 
 // status: I don't know but the important part is to avoid threads 
