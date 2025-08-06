@@ -1,4 +1,4 @@
-#dropped  All things will be mutable; with [Concurrent by Default](../../Features/Concurrent%20by%20Default.md)  each variable would have a single writer, thus, this is not strictly speaking needed
+#dropped  All things will be mutable; with [Concurrency](../../Features/Concurrency.md)  each variable would have a single writer, thus, this is not strictly speaking needed
 ....
 
 Probably in Yz can use values instead of variables so they are always final. 

@@ -2,8 +2,8 @@ When block name is non-word and has at least one parameter
 
 ```js
 
-    Array: <T>{
-    
+    Array: {
+	    T 
         'Add element to array...'
         << : {
             element T

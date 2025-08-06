@@ -37,3 +37,5 @@ dow: {
      { dow.FRIDAY } : { dow.FRIDAY }
   ]
 ```
+
+#challenged by [Type variants](../../Features/Type%20variants.md)

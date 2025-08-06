@@ -1,3 +1,5 @@
+#answered with [Type variants](Type%20variants.md)
+
 There's no enums, but following the convention instances of a given type can be created and use them as enumeration types
 
 
