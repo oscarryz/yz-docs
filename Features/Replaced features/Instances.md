@@ -1,4 +1,4 @@
-Replaced with [Creating instances](../Questions/solved/Creating%20instances.md)
+Replaced with [Creating instances](../../Questions/solved/Creating%20instances.md)
 
 A new type can be created by creating an alias of a type signature. 
 

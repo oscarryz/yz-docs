@@ -91,5 +91,5 @@ Re-resummary 27/10/2023
 - As before only uppercase starting identifiers can be new types 
 ### Related
 [Define new types](../../Features/Define%20new%20types.md)
-[Instances](../../Features/Instances.md)
+[Instances](../../Features/Replaced%20features/Instances.md)
 [The block type](The%20block%20type.md)

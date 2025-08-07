@@ -1,8 +1,8 @@
 
 >[!NOTE]
-> This is not complete Sum type, but rather how to provide a similar functionality
+> Similar to Sum Types, but not exactly the same. 
 > 
-> The feature is still under revision. Most up to date design in [sumtypes/Example](./sumtypes/Example.md)
+>  Most up to date design in [sumtypes/Example](./sumtypes/Example.md)
 
 
 

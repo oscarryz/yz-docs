@@ -21,6 +21,6 @@
 - [Memory Management](Questions/Memory%20Management.md)
 
 ## How to
-- [Enums](Features/Enums.md) (under revision)
+- [Enums](Features/Replaced%20features/Enums.md) (under revision)
 - [Constants](Features/Constants.md) (under revision)
 - [Code organization](Features/Code%20organization.md)

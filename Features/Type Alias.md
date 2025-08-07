@@ -24,4 +24,4 @@ print(C().say_hi()) // Bye
 ```
 
 
-This could be also useful [Enums](Enums.md)
+This could be also useful [Enums](Replaced%20features/Enums.md)

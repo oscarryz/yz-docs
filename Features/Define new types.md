@@ -5,7 +5,7 @@ If we have a new type `Person`
 Person : {}
 ```
 
-The current option suggested by [Instances](../Features/Instances.md) (I think) is to see if it was defined earlier, but that doesn't seem to be enough. 
+The current option suggested by [Instances](Replaced%20features/Instances.md) (I think) is to see if it was defined earlier, but that doesn't seem to be enough. 
 
 ## Summary
 
@@ -16,7 +16,7 @@ The current option suggested by [Instances](../Features/Instances.md) (I think) 
 ### Solves: 
 [The block type](solved/The%20block%20type.md)
 [Type Alias](Features/Type%20Alias.md)
-[Instances](../Features/Instances.md)
+[Instances](Replaced%20features/Instances.md)
 
 ### Related:
 [Bocs](Bocs.md)
