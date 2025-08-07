@@ -1,0 +1,1 @@
+Contains features that were interesting but will be replaced by some other features, e.g. [Enums](Enums.md) (or the lack of thereof) can be implemented with [Type variants](../Type%20variants.md)

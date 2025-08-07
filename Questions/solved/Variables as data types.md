@@ -264,7 +264,7 @@ Would be the same as
 p { name String last_name String} = {name:'Yz'; last_name:'Language'}
 
 ```
-The explanation for `Person{}` can be found in [Instances](../../Features/Instances.md)
+The explanation for `Person{}` can be found in [Instances](../../Features/Replaced%20features/Instances.md)
 
 #answered  We'll only use uppercase variables as datatypes e.g. `Point` but not `point`
 

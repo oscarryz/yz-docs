@@ -51,7 +51,7 @@ x = valid_point // valid. `valid_point` satifies {x Int yInt}
 ```
 
 
-[Instances](../../Features/Instances.md)
+[Instances](../../Features/Replaced%20features/Instances.md)
 
 #answered Two ways, using the object literal and creating new types: 
 ```javascript

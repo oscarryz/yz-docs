@@ -7,7 +7,7 @@
 
 The `::` operators is used to create an alias to a type and optionally add new behavior. 
 
-The most common case is to define a block instance (see: [Instances](Instances.md))
+The most common case is to define a block instance (see: [Instances](../../Features/Replaced%20features/Instances.md))
 
 ```javascript
 // full syntax
