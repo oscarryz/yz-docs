@@ -44,3 +44,6 @@ name : *p.name // using `*` _varname_ will lock the execution until the value is
 ```
 
 Added more here: [https://www.reddit.com/r/ProgrammingLanguages/comments/1n0zd8o/lazyish_evaluation_with_pointerish_syntax_idea/]
+
+TODO: Go through all the concurrency examples and answer questions such as blocking, signaling, structured concurrency control etc. 
+
