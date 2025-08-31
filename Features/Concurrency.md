@@ -105,3 +105,6 @@ fetch:{
 
 
 See: [Go - Go Concurrency Patterns](Go%20-%20Go%20Concurrency%20Patterns.md)
+
+This might be replaced with: [lazy eval pointers](Questions/Async%20%2B%20Lazy%20eval%20%2B%20Structured%20Concurrency.md)
+
