@@ -25,4 +25,22 @@ name : profile.name()
 
 ```
 
-We might not even need the structured concurrency :/ 
+~~We might not even need the structured concurrency :/~~
+
+Update: One difficulty with this approach is the lack of explicit control, for instance, a thunk is resolved when needed but it might not be obvious when that happens. As an alternative we're looking at having a value referece/dereference syntax using a `*` just like a pointer. 
+
+
+```js
+// p is a pointer to Profile, a value that might still
+// not loaded
+p *Profile = load_profile()
+// can be passed
+do_something(p)
+q : p // aliased
+arr : [p, q] // stored
+
+// And when finally needed dereferenced
+name : *p.name // using `*` _varname_ will lock the execution until the value is loaded
+```
+
+Added more here: [https://www.reddit.com/r/ProgrammingLanguages/comments/1n0zd8o/lazyish_evaluation_with_pointerish_syntax_idea/]
