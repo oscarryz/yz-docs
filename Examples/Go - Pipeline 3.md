@@ -52,13 +52,12 @@ main: {
 ```
 
 
-```javascript
+```js
 
 // DOESNT_WORK
 // The counter takes a "channel" which is a block that receives an Int
 // it produces a number and sends it to the channel 
-counter (out (Int)) = {
-	channel (Int)
+counter (out #(Int)) = {
 	1.to(100).each { 
 		e Int
 		out(e) // send e to the channel
@@ -69,16 +68,14 @@ counter (out (Int)) = {
 // that's how the producer and the printer 
 // gets connected.
 squarer: {
-	out (Int)
-	{   
-		v Int 
-		out ( v * v )
+	out #(Int)
+	#(v Int) {   
+		out( v * v )
 	}
 }
 // The printer is a block that takes an Int and prints it
-printer: { 
-	n Int 
-    print "$(n)"
+printer #(n Int)  { 
+    print(`n`)
 }
 main: {
 	producer(squarer(printer)) 
@@ -88,29 +85,32 @@ main: {
 // Another approach that ressambles the actual Go code but doesn't work
 // 
 counter: {
-	out (Int)
+	out #(Int)
 	1.to(100).each { e Int ; out(e) }
 }
 squarer: {
-	in (Int)
-	out (Int)
+	in #(Int)
+	out #(Int)
 	v: in()
 	out(v * v)
 }
 printer: {
-  in (Int)
+  in #(Int)
   v: in()
-  print '$(v)'
+  print(`v`)
 }
 main: {
-    naturals : (n Int; n)
-    squares  : (n Int; n)
-    counter(naturals)
-    squarer(naturals squares)
+    naturals : {n Int; n}
+    squares  : {n Int; n}
+    counter(naturals) // ok
+    squarer(naturals squares) // no function found
     printer(squares)
 }
 
 // The reson it doesn't work is because the block `(Int)` by itself cannot stop for the value to be overriden before is read (channels do), it can block until the value is avaiable which is righ away.
 // It would work if a buffer is used to store the values so it is not overriden
+
+
+// Another reason it doesn't work is because it tries to use a function as a buffer, but returning the last value wouldn't sync (f(1), f(2), f(), f() wouldnt necesarily return 1 and 2 i the same order)
 
 ```

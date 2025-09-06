@@ -1,0 +1,1 @@
+Given he latest direction of using [Async + Lazy eval + Structured Concurrency](Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md), functions no longer _need_ to provide a result value as a property, and moving away from it might be more natural and would make easier to reason about functions vs objects, but at the same time would take away the uniqueness of the language.
