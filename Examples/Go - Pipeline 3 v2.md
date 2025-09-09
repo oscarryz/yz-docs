@@ -28,7 +28,7 @@ main #() {
 ```
 
 ```js
-// no signature version
+// Same without signatures.
 counter : {
 	consumer #(Int)
 	1.to(100).do({
@@ -51,8 +51,8 @@ main: {
 ```
 
 ```js
-// Direct version relying on closures, so no 
-// function parameters are needed. 
+// Direct version relying on closures, thus, no functions are passed
+// as arguments
 counter #(Int)
 squarer #(Int, Int)
 printer #(Int)
