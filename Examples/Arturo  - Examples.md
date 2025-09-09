@@ -5,31 +5,31 @@ print(arr.select({ x Int; x % 2 == 0 })).to_str()
 
 
 // Apply function to value
-arr: [1 2 3 4 5]
-print(arr.map 2.*).to_str() // [2 4 6 8 10]
+arr: [1, 2, 3, 4, 5]
+print(arr.map(2.*).to_str()) // [2 4 6 8 10]
 
  ```
 
-Explaination: 
+Explanation: 
 2 type is `Int`
 `Int`'s `*` method is defined as: 
 ```javascript
 Int: {
   value T // 2
-  *: {
+  * #(Int, Int) {
     other Int
     value * other
   }
 }
 ```
 Thus `2*` is the same as writing
-```javascript
+```js
 arr.map({other Int; 2 * other})
 ```
 
 Array concatenation
 ```javascript
-a = [1 2 3] ++ [4 5 6] // [1 2 3 4 5 6]
+a = [1, 2, 3] ++ [4, 5, 6] // [1 2 3 4 5 6]
 ```
 
 ```javascript
@@ -37,11 +37,16 @@ a = [1 2 3] ++ [4 5 6] // [1 2 3 4 5 6]
 print select 1..10 => even?
 // Yz
 print(1.to(10).select(even).to_str())
-print 1 .to 10 .to_array().select even? .to_str()
-// print(1.to(10).to_array().select(even?).to_str())
-even?: { n Int
+even #( n Int ) {
     n % 2 == 0
 }
+// or 
+even : {
+	n Int
+	n % 2 == 0
+}
+print(1.to(10).select({n Int; n % 2 == 0}).to_str())
+
 Array: {
    select: {
        predicate #(Int,Bool)
@@ -76,6 +81,25 @@ ackermann: { m Int, n Int
     }
   }
 }
+// or with match 
+ackermann : {
+	m Int
+	n Int
+	match {
+		 m == 0  =>  n + 1 
+		 n == 0  =>  ackermann( m - 1, 1) 
+		 default =>  ackermann(m - 1, ackermann(m, n - 1))
+	}
+}
+ackermann: { 
+  m Int
+  n Int
+  match {
+    m == 0 =>  n + 1
+    n == 0 => ackermann(m - 1, 1)
+    default => ackermann(m - 1, ackermann(m, n -1 ))
+  }
+}
 ```
 
 
@@ -90,4 +114,5 @@ ackermann: {
     _      : ackermann(m - 1, ackermann(m, n -1 ))
   }
 }
+
 ```
