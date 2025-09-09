@@ -16,7 +16,7 @@ c2: `
 ch: 'c' // still a string
 
 // arrays
-d: [1 2 3]
+d: [1, 2, 3]
 
 // dictionaries
 e: ['name'   : 'John'
