@@ -1,4 +1,4 @@
-#open-question 
+#answered  Use it
 
 There is an [interesting suggestion](https://www.reddit.com/r/ProgrammingLanguages/comments/1m4sse2/comment/n51yxkh/) about how Yz could handle concurrency: All the functions to be async, but the value returned (not a promise) to be "thunk" that can be passed around until it is used. 
 
@@ -43,7 +43,15 @@ arr : [p, q] // stored
 name : *p.name // using `*` _varname_ will lock the execution until the value is loaded
 ```
 
-Added more here: [https://www.reddit.com/r/ProgrammingLanguages/comments/1n0zd8o/lazyish_evaluation_with_pointerish_syntax_idea/]
+Added [more here][1]:
 
-TODO: Go through all the concurrency examples and answer questions such as blocking, signaling, structured concurrency control etc. 
+[1]: https://www.reddit.com/r/ProgrammingLanguages/comments/1n0zd8o/lazyish_evaluation_with_pointerish_syntax_idea/
+
+It seems using the pointer wouldn't be needed and might just complicate things, for instance `String` and `*String` would be different data types, and while this might add clarity it could also be overkill. 
+
+
+
+#TODO 
+- Update [Concurrency](../../../Features/Concurrency.md)
+- Go through all the concurrency examples and answer questions such as blocking, signaling, structured concurrency control etc. 
 

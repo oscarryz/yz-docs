@@ -1,3 +1,5 @@
+#example
+
 [Reddit.st](http://web.archive.org/web/20110122114420/http://homepage.mac.com/svc/Reddit.st/)
 
 
@@ -29,7 +31,7 @@ with_url_and_title: {
     title String
     RedditLink (
        url: url
-       title: title 
+       title: title
     )
     // or RedLink(url title)
 }

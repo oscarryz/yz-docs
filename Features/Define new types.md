@@ -1,3 +1,4 @@
+#feature
 If we have a new type `Person`  
 
 

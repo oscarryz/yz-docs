@@ -1,7 +1,8 @@
+#open-question
+#v2
 
 - Regular Yz code
 - Creates AST nodes at compile time
-
 
 ```js
 macro! say_hello {

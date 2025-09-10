@@ -1,3 +1,4 @@
+#example
 
 https://rosettacode.org/wiki/Rendezvous#Python
 
@@ -15,7 +16,7 @@ Printer {
 			ink_level = ink_level.--()
 			result.Ok()
 		} {
-			backup ? { p Printer 
+			backup ? { p Printer
 			   p.print(msg)
 			} {
 			   result.Error('Out of ink error `name`')
@@ -44,8 +45,8 @@ main: {
         "Flew up to the moon."
     ]
     print_humpty: {
-        humpty_line.each { 
-	        line String 
+        humpty_line.each {
+	        line String
             main.print(line).or {
 	            print('\t Humpty Dumpty out of ink!')
 				break
@@ -53,7 +54,7 @@ main: {
         }
     }
     print_goose: {
-        goose_line.each { 
+        goose_line.each {
 	        line String
             main.print(line).or {
 	            print('\t Mother Goose out of ink!')
@@ -65,4 +66,3 @@ main: {
     print_humpty()
 }
 ```
-

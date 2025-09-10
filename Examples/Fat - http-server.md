@@ -1,26 +1,28 @@
+#example
+
 Fat - http-server
 
 https://gitlab.com/fatscript/fry/-/blob/main/sample/http-server.fat?ref_type=heads
 
 ```js
-Chunk : fat.type.Chunk 
+Chunk : fat.type.Chunk
 http  : fat.http
 
 
 routes = [
-  Route( 
-    '/hello*', 
+  Route(
+    '/hello*',
     get: HttpResponse(body:'world')
-  ), 
+  ),
   Route(
     '/json'
     post: #(HttpRequest, HttpResponse) = {
         _ HttpRequest
         HttpResponse(
-          body: { "message": "hello" } 
+          body: { "message": "hello" }
         )
     }
-  ), 
+  ),
   Route(
     '/to-json'
     get: {
@@ -31,7 +33,7 @@ routes = [
     }
   )
   Route(
-     '/binary', 
+     '/binary',
      get: {
       _ HttpRequest
       HttpResponse(
@@ -43,4 +45,3 @@ routes = [
 http.listen(8080, routes)
 
 ```
-  

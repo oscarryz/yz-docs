@@ -1,3 +1,4 @@
+#feature
 A single uppercase letter will mean the data type is generic:
 
 ```js

@@ -1,3 +1,5 @@
+#example
+
 https://www.golangprograms.com/go-language/concurrency.html
 
 ```go
@@ -26,7 +28,7 @@ diningProblem:{
     phName String
     dominantHand sync.Mutex
     otherHand sync.Mutex
-	
+
 	print "{phName} Seated"
 	h : fnv.new64a()
 	h.Write(phName.to_byte_array())
@@ -80,10 +82,10 @@ eat: 100
 
 dining_problem: {
     ph_name String
-    dominant_hand ? 
-    other_hand ? 
+    dominant_hand ?
+    other_hand ?
 
     r: random.int(len(ph))
-    
+
 }
 ```

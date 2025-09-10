@@ -1,14 +1,16 @@
+#example
+
 https://tryhaskell.org/
 
 ```javascript
 23 * 26
-reverse "Hello" 
+reverse "Hello"
 [13 23 40]
 {28 "chirs"}
 {28 "chirs"}.0 // 28
 {x Int;x * x}(4) // 16
 {x Int; x + x}(8 * 10) // 160
-{villain {Int String}; villain.0 }({28 "chirs"}) // 28 
+{villain {Int String}; villain.0 }({28 "chirs"}) // 28
 [] << 'a' // ['a']
 '' ++ 'a' // "a" or 'a'
 [] << 'a' << 'b' == [ 'a' 'b']
@@ -24,7 +26,7 @@ second: {x {Int Int}; x.1} /*in*/; second {3 4} // 4
 
 square: {x Int; x * x} /*in*/; 1.to(10).map square
 
-square ::{Int} = {x * x}  
+square ::{Int} = {x * x}
 square:{x; x*x}
 
 // rejected
@@ -48,7 +50,7 @@ fn: {
     input {Int String}
     input.1.char_at(0)
 }
- 
+
 
 
 

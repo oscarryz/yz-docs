@@ -1,3 +1,5 @@
+#example
+
 [Defining Modules to Control Scope and Privacy](https://doc.rust-lang.org/book/ch07-02-defining-modules-to-control-scope-and-privacy.html)
 
 ```js
@@ -29,7 +31,7 @@ eat_at_restaurant:{
 hosting: front_of_house.hosting
 
 customer: {
-    
+
    eat_at_restaurant2:{
       hosting.add_to_waitlist()
    }
@@ -46,7 +48,7 @@ back_of_house:{
        SOUP: {}
        SALAD: {}
     }
-    
+
    summer_breakfast: {
           toast String
           Breakfast(
@@ -55,7 +57,7 @@ back_of_house:{
           )
    }
 
-    
+
    fix_incorrect_order:{
       cook_order()
       deliver_order()
@@ -67,7 +69,7 @@ back_of_house:{
 //
 boh:{
     // anenum macro could be used to declare variables
-    enum!(Appetizer 
+    enum!(Appetizer
           SOUP
           SALAD)
     // same as

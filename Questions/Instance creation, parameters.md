@@ -1,4 +1,4 @@
-
+#open-question 
 Should creating a new instance initialize all the uninitialized fields? Or should the compiler validate before calling? 
 
 

@@ -1,3 +1,4 @@
+#example
 
 [Scrape](https://www.reddit.com/r/ProgrammingLanguages/s/CAHHEo0Xil)
 
@@ -12,7 +13,7 @@ main: {
      panic(err)
   }
   defer {resp.body.close()}{
-     doc : html.parse(resp.body).or { 
+     doc : html.parse(resp.body).or {
        err Err
        panic(err)
      }

@@ -1,12 +1,14 @@
+#example
+
 https://github.com/adonovan/gopl.io/blob/master/ch8/pipeline3/main.go
 
-In a loop: 
+In a loop:
 
 - Produce numbers
 - Square them
 - Print them
 -
-The producer knows when to stop 
+The producer knows when to stop
 
 ```js
 
@@ -17,12 +19,12 @@ Creates a block that returns an Int and a Bool every times it is invoked.
 It will continue to be invoked while n < 100
 This counter is the "producer"
 `
-counter: { 
+counter: {
 	n: -1
-	{ 
-	    n < 100 ? {n = n + 1 } 
-	    n < 100 
-	    n 
+	{
+	    n < 100 ? {n = n + 1 }
+	    n < 100
+	    n
 	}
 
 }
@@ -32,18 +34,18 @@ squarer: {
 
 	value Int
 	open  Bool
-	is_open: { 
+	is_open: {
 	    value, open = producer()
 	}
 	// while calls a block `is_open`.. similar to
-	// while { is_open() } but better because it 
+	// while { is_open() } but better because it
 	// doesn't need to create an extra block
-	while is_open { 
+	while is_open {
 		consumer (value * value)
 	}
 }
 printer: {
-	n Int 
+	n Int
 	print '`n`'
 }
 main: {
@@ -56,34 +58,34 @@ main: {
 
 // DOESNT_WORK
 // The counter takes a "channel" which is a block that receives an Int
-// it produces a number and sends it to the channel 
+// it produces a number and sends it to the channel
 counter (out #(Int)) = {
-	1.to(100).each { 
+	1.to(100).each {
 		e Int
 		out(e) // send e to the channel
 	}
-} 
+}
 // The squarer takes a "channel" (a block that takes an int)
 // where to send the data and returns a block that expects an int;
-// that's how the producer and the printer 
+// that's how the producer and the printer
 // gets connected.
 squarer: {
 	out #(Int)
-	#(v Int) {   
+	#(v Int) {
 		out( v * v )
 	}
 }
 // The printer is a block that takes an Int and prints it
-printer #(n Int)  { 
+printer #(n Int)  {
     print(`n`)
 }
 main: {
-	producer(squarer(printer)) 
+	producer(squarer(printer))
 }
 
 //
 // Another approach that ressambles the actual Go code but doesn't work
-// 
+//
 counter: {
 	out #(Int)
 	1.to(100).each { e Int ; out(e) }

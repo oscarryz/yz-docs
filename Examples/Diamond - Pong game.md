@@ -1,3 +1,4 @@
+#example
 
 [pongGame.dmd](https://gist.githubusercontent.com/amzamora/ad4c84a73e1006a1d17d784c74b40a0a/raw/5f73279abaf9670545f696afee65838ac1b8d44c/pongGame.dmd)
 
@@ -25,7 +26,7 @@ Paddle: {
 
 windowWidth: 800
 windowHeghts: 600
-  
+
 //-- Initialize the game window and graphics context
 window: graphics.create_window("Pong", windowWidth, windowHeight)
 context: graphics.create_graphics_context(window)
@@ -45,12 +46,12 @@ while {true} , {
     context.drar_rect(paddle2.x, paddle2.y, paddle2.width, paddle2.height)
 
     //-- Handle user input
-   if_any [ 
+   if_any [
     { input.key_down("W") }: {
         paddle1.y -= 5
     }
 
-    { input.key_down("S") } : { 
+    { input.key_down("S") } : {
         paddle1.y += 5
     }
 
@@ -69,7 +70,7 @@ while {true} , {
 
     if_any [
       { ball.x < 0 }: {
-        score2 += 1 
+        score2 += 1
         reset(ball)
       }
 
@@ -112,13 +113,13 @@ intersects #(ball Ball, paddle Paddle, Bool) = {
       ball Ball
       paddle Paddle
 
-      ball.x + ball.size < paddle.x 
+      ball.x + ball.size < paddle.x
   ||  ball.x > paddle.x + paddle.width
   ||  ball.y + ball.size < paddle.y
   ||  ball.y > paddle.y + paddle.height
   == false
 }
-  
+
 displays_scores : {
     context graphics.Context
     score1 Int

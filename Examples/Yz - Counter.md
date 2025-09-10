@@ -1,3 +1,4 @@
+#example
 Actors and concurrency
 ```javascript
 Counter {

@@ -1,3 +1,4 @@
+#feature
  Private(ish) variables
 
 In a block create an entity block with the access method e.g. 

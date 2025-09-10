@@ -1,3 +1,4 @@
+#example
 Fibonacci
 
 ```javascript

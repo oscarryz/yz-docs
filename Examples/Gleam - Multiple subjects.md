@@ -1,3 +1,5 @@
+#example
+
 https://tour.gleam.run/flow-control/alternative-patterns/
 
 ```js
@@ -18,7 +20,7 @@ main: {
 }
 // using hamcrest match library
 is: hamcrest.is
-match: hamcrest.match 
+match: hamcrest.match
 else: hamcrest.else
 
 result: match(number).conditions([
@@ -35,18 +37,18 @@ main: {
 get_first_non_empty: {
 	lists [[T]]
 
-	when [	
-      { list[0].len() == 0 } : { list[0] } 
+	when [
+      { list[0].len() == 0 } : { list[0] }
       { list[0].len() > 0 } : { get_first_non_empty(lists.shift()) }
       { list.len() == 0 } : { list }
 	]
 }
-// hamcrests 
+// hamcrests
 match(list).conditions[{
   is(empty(list[0])) : { list[0] }
   is.not(empty) : { get_first_non_emtpy(list.shift()) }
   is.empty : {list}
-  
+
 }]
 
 //..

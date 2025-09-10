@@ -1,7 +1,9 @@
+#example
+
 https://github.com/contextfreecode/procfun/blob/main/Guess.java
 
 ```js
-// Pick a random number between 1 and 100 
+// Pick a random number between 1 and 100
 // ask to guess
 // evaluate and report guess
 // update answer and counter
@@ -18,7 +20,7 @@ Game {
     done        Bool
     guesses     Int
     error_count Int
-    
+
     play: {
        done == false ? {
            guess: ask_multi()
@@ -29,7 +31,7 @@ Game {
     }
 
     ask_multi: {
-         guess: ask_guess()   
+         guess: ask_guess()
          guess == numbers.invalid ? {
              print "I didn't understand"
              error_count = error_count + 1
@@ -37,12 +39,12 @@ Game {
          }
          guess
     }
-    
+
     ask_guess: {
         text = input 'Guess a number between 1 and $(high)'
         numbers.parse_int text
     }
-    
+
     report: { guess Int
        description: when [
            { guess < answer}: {'too low'}
@@ -50,9 +52,9 @@ Game {
            { when.else     }: {'the answer!'}
        ]
        print '$(guess) is $(description)'
-        
+
     }
-    
+
     update: { gues Int
         guess == answer ? {
             done = true
@@ -66,22 +68,22 @@ Game {
 
 https://github.com/contextfreecode/procfun/blob/main/guess.hs
 
-```js 
+```js
 // Same as above, but trying to avoid keeping state and passing it around
-// Good example on how default values and subsequent calls work together. 
+// Good example on how default values and subsequent calls work together.
 high: 100
 answer: pick_answer high
 guesses, errors: play answer, high
 print 'Finished in $(guesses)'
 print 'Total input errors $(error_count)'
 pick_answer: {high Int; random.next_int high }
-play: { 
+play: {
     answer  Int
     high    Int
     done    Bool
     guesses Int
     errors  Int
-      
+
     guess error_count _ : ask_multi()
     errors_count != 0 ? {
         errors = errors + error_count
@@ -90,7 +92,7 @@ play: {
     done guesses: update guess answer guesses
 
 
-    done == false ? { 
+    done == false ? {
        play(answer, high, done, guesses + 1, errors)
     }
 }
@@ -100,7 +102,7 @@ ask_multi: {
     error_count: 0
     guess == numbers.invalid ? {
       print "I didn't understand"
-      ask_multi(error_count: error_count + 1) 
+      ask_multi(error_count: error_count + 1)
     }
 }
 
@@ -117,7 +119,7 @@ report: { guess Int
    print '{guess} is {description}'
 }
 
-update: { 
+update: {
     guess Int
     answer Int
     guesses Int
@@ -126,7 +128,7 @@ update: {
         done = true
     } {
         guesses = guesses + 1
-    }       
+    }
 }
 
 ```

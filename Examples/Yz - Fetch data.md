@@ -1,3 +1,4 @@
+#example
 ```js
 http: std.net.http
 Result: std.result.Result

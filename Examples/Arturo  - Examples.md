@@ -1,3 +1,5 @@
+#example
+
 ```javascript
 
 arr: [1,2,3,4,5,6,7,8,9,10]
@@ -10,9 +12,9 @@ print(arr.map(2.*).to_str()) // [2 4 6 8 10]
 
  ```
 
-Explanation: 
+Explanation:
 2 type is `Int`
-`Int`'s `*` method is defined as: 
+`Int`'s `*` method is defined as:
 ```javascript
 Int: {
   value T // 2
@@ -33,14 +35,14 @@ a = [1, 2, 3] ++ [4, 5, 6] // [1 2 3 4 5 6]
 ```
 
 ```javascript
-// Arturo 
+// Arturo
 print select 1..10 => even?
 // Yz
 print(1.to(10).select(even).to_str())
 even #( n Int ) {
     n % 2 == 0
 }
-// or 
+// or
 even : {
 	n Int
 	n % 2 == 0
@@ -68,10 +70,10 @@ Array: {
 
 ```
 
-Ackerman 
+Ackerman
 ```javascript
 ackermann: { m Int, n Int
-  m == 0 ? { 
+  m == 0 ? {
     n + 1
   } {
     n == 0 ? {
@@ -81,17 +83,17 @@ ackermann: { m Int, n Int
     }
   }
 }
-// or with match 
+// or with match
 ackermann : {
 	m Int
 	n Int
 	match {
-		 m == 0  =>  n + 1 
-		 n == 0  =>  ackermann( m - 1, 1) 
+		 m == 0  =>  n + 1
+		 n == 0  =>  ackermann( m - 1, 1)
 		 default =>  ackermann(m - 1, ackermann(m, n - 1))
 	}
 }
-ackermann: { 
+ackermann: {
   m Int
   n Int
   match {
@@ -104,9 +106,9 @@ ackermann: {
 
 
 ```js
-// 2.0 
+// 2.0
 // With possible match pattern in the future
-ackermann: { 
+ackermann: {
   m Int, n Int
   match {
     m == 0 :  n + 1

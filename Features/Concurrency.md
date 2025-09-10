@@ -1,3 +1,4 @@
+#feature
 # Concurrent by Default 
 Yz is concurrent by default. Every method invocation will run in its own coroutine/thread asynchronously, although still sharing the same memory space.
 ```js
@@ -8,7 +9,7 @@ bar()
 
 If the result of a method call is assigned to a variable or used as argument to another boc, the code will be synchronous and will wait until the call completes
 
-```
+```js
 // Execution will wait for `fr` to have a value from the completion of `foo()`
 fr: foo()
 // `bar` will start execution when `baz()` call completes.
@@ -17,7 +18,7 @@ bar(baz())
 
 The block enclosing the bocs calls, will complete when all the internal bocs have completed (similar to structural concurrency without scopes)
 
-```
+```js
 parent_boc : { 
    foo()
    bar() 
@@ -106,5 +107,6 @@ fetch:{
 
 See: [Go - Go Concurrency Patterns](Go%20-%20Go%20Concurrency%20Patterns.md)
 
-This might be replaced with: [lazy eval pointers](../Questions/Async%20%2B%20Lazy%20eval%20%2B%20Structured%20Concurrency.md)
+This might be replaced with:  [Async + Lazy eval + Structured Concurrency](../Questions/solved/concurrency/Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md)
+
 

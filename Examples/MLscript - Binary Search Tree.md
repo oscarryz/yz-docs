@@ -1,3 +1,5 @@
+#example
+
 https://ucs.mlscript.dev/ > Advanced Examples > Binary Search Tree
 
 
@@ -20,19 +22,19 @@ type Tree = Node | Empty
 // fromlist
 // contains
 
-class Tree { 
-  data 
+class Tree {
+  data
   left// = new Tree() // empty
   right// = new Tree() // empty
-  
-  insert(d) { 
+
+  insert(d) {
     if (this.data == undefined) {
       this.data = d
       this.left = new Tree()
       this.right = new Tree()
     } else {
       let branch = d < this.data ? this.left : this.right
-      branch.insert(d) 
+      branch.insert(d)
     }
   }
 
@@ -42,17 +44,17 @@ class Tree {
       root.insert(e)
     }
     return root
-  
+
   }
   contains(element) {
     if ( this.data === element ) {
       return true
     } else if (this.data == undefined) {
-      return false 
+      return false
     } else  {
       let branch = element < this.data ? this.left : this.right
       return branch.contains(element)
-    } 
+    }
   }
 /*
  root.contains("fin")
@@ -85,7 +87,7 @@ type Tree[T constraints.Ordered] struct {
   right *Tree[T]
 }
 func (t *Tree[T]) insert(data T) {
-  if t == nil { 
+  if t == nil {
     t = &Tree[T]{data}
     t.data  = data
     t.left =  &Tree[T]{}
@@ -98,13 +100,13 @@ func (t *Tree[T]) insert(data T) {
   }
 }
 func (t *Tree[T]) contains(data T) {
-  if t.data == data { 
+  if t.data == data {
     return true
   }
   if t == nil {
     return false
   }
-  if data < t.data { 
+  if data < t.data {
     return t.left.contains(data)
   } else {
     return t.right.contains(data)

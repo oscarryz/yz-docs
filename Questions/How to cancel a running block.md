@@ -1,4 +1,4 @@
-
+#open-question 
 Say we need to cancel a block 
 
 [Hylo - concurrency/cancelation](https://docs.hylo-lang.org/language-tour/concurrency#cancellation)

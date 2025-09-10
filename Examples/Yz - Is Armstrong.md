@@ -1,3 +1,4 @@
+#example
 [Reddit](https://www.reddit.com/r/ProgrammingLanguages/comments/176it3o/showcase_your_lang_by_sharing_an_armstrong_number)
 
 ```js

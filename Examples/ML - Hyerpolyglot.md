@@ -1,3 +1,5 @@
+#example
+
 https://hyperpolyglot.org/ml
 
 ```javascript
@@ -26,7 +28,7 @@ empty_list_test: ([]Int).len() == 0
 // or maybe
 empty_list_test: len([]) == 0
 cons: [1] << 2 // [1 2] 2 >> [1]
-employee >> list // ?? what is this? 
+employee >> list // ?? what is this?
 head: list[0]
 tail: list.sub_array(0)
 l:   list.len()
@@ -41,14 +43,14 @@ all_gt_2 : true
 [1 2 3 4].each {x Int; all_gt_2 = all_gt_2 && {x > 2}}
 [1 2 3 4].all { x Int; x > 2 } // false
 [1 2 3 4].filter( 2.> )
-// 
-Array: { 
+//
+Array: {
   T
-... 
-    all: { 
+...
+    all: {
         predicate #(T,Bool)
         result: true
-        data.for_each { e T 
+        data.for_each { e T
            result = result && {block(e)}
         }
         result
@@ -71,7 +73,7 @@ functions: {
             {Blue}: {'blue'}
         ]
     }
-    recursive: {x Int; 
+    recursive: {x Int;
         x > 0 ? { recursive x - 1 }
     }
     // anon funcs
@@ -83,16 +85,16 @@ functions: {
     // Also
     plus2: 2.+
     plus2(5) // returns 7
-    // composition 
+    // composition
     f: {x Int; x + 2}
     g: {x Int; x * 3}
     f(g(4))
    // f g 4
-    // lazy eval 
+    // lazy eval
     arg1: {x Int; y #();  x }
     arg(7,{panic()})
-    
+
     // type synonym
-    Name: String 
-    
+    Name: String
+
 }

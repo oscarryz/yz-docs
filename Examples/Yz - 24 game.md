@@ -1,3 +1,4 @@
+#example
 From: http://rosettacode.org/wiki/24_game
 
 ```js

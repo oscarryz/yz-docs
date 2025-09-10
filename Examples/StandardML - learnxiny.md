@@ -1,3 +1,5 @@
+#example
+
 https://learnxinyminutes.com/docs/standard-ml/
 
 ```javascript
@@ -40,8 +42,8 @@ fibonacci: {n Int
 // Bool and nested bool
 fibonacci: {n Int
   n == 0 ? {
-    0 
-  }, { 
+    0
+  }, {
     n == 1 ? {
       1
     }, {
@@ -50,11 +52,11 @@ fibonacci: {n Int
   }
 }
 // Same with different format
-fibonacci: { 
+fibonacci: {
     n Int
-    n == 0 ?  
+    n == 0 ?
     {0},
-    { n == 1 ?  {1}, 
+    { n == 1 ?  {1},
     { fibonacci(n - 1) + flibonacci(n - 2) } }
 }
 
@@ -67,9 +69,9 @@ fibonacci: {
      {true}: {fibonacci(n - 1) + fibonacci(n - 2)}
     ]
 }
-// With ifs 
+// With ifs
 fibonacci: {n Int
-  if(n == 0 , {0}, 
+  if(n == 0 , {0},
     else_if(n == 1, {1},
       else({ fibonacci(n - 1) + flibonacci(n - 2) })
     )
@@ -78,7 +80,7 @@ fibonacci: {n Int
 // Same ifs without parenthesis
 fibonacci: {
   n Int
-  if n == 0 , {0}, 
+  if n == 0 , {0},
   else_if n == 1, {1},
   else { fibonacci(n - 1) + flibonacci(n - 2) }
 }
@@ -87,4 +89,3 @@ if #(Bool, then #(V), else #(V))
 else_if #(Bool, then #(V), else #(V))
 else #(#(V))
 ```
-

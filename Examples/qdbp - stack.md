@@ -1,3 +1,5 @@
+#example
+
 
 [Data structures](https://www.qdbplang.org/docs/examples#:~:text=str%20Print.-,Data%20Structures,-All%20of%20the)
 

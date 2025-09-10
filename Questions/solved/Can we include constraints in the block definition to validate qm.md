@@ -1,4 +1,5 @@
-#open-question 
+#answered  Keep the constraints with sumtypes or doc strings
+
 Idea for another version perhaps. 
 
 In [CUE lang types are values](https://cuelang.org/docs/tour/basics/types-are-values/) and thus, you can specify a value as the type of a field
@@ -70,7 +71,7 @@ weekend DayOfWeek.(Saturday|Sunday)
 ```
 No: starts getting weird
 
-Probably the best solution is to stick to the info string and have a preprocessor 
+Probably the best solution is to stick to the info string and have a preprocessor / macro
 
 ```js
 'constraints: > 0 && < 100'
@@ -100,21 +101,47 @@ day DayOfWeek = Mon // compilation error
 
 Status: Probably would be better to just stick to runtime validation and augment the type system to make better API but remain in the current status of `Some|None`  and abstract classes as sum types
 
+```js
+//
+DayOfWeek : {
+	Mon(),
+	Tue(),
+	Wed(),
+	Thu(),
+	Fri(),
+	Sat(),
+	Sun()
+	
+	is_weekend #(Bool) {
+		match {
+			Sat() => true
+		}, {
+			Sun() => true
+		}, {
+			false
+		}
+	}
+}
+```
+
 
 ```js
+// Using `Option(NonBlank)` to enforce non-blankness
 NonBlank: String 
-create #(String,Option(NonBlank)) = { 
+non_blank #(String,Option(NonBlank)) = { 
   s String
-  s.is_empty() ? {
-    None()
+  match {
+	  s.is_empty() => None()
   }, {
-    Some(s)
+	  Some(s)
   }
 }
-title : create("")
+title : non_blank("")
 title.and_then({ s String ;  print("`s` was a good book") }).or{panic()}
+title >>= ({ s String ;  print("`s` was a good book") }).or{panic()}
 
 ```
+
 
 
 

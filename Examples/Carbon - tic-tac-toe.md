@@ -1,17 +1,19 @@
+#example
+
 https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 
 ```js
 	board: "".repeat(3).repeat(3)
-	
+
 	display_board: {
     	board.split('\n').for_each({
           \row String
       	print(row.join("|"))
 		})
 	}
-	won_game: { 
-    player String 
-		win: player.repeat(3) 
+	won_game: {
+    player String
+		win: player.repeat(3)
 		[board, transpose(board)].for_each {
 			board.for_each { row String
 				row == win ? { return true }
@@ -62,7 +64,7 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 
 
 	Button: {
-		make: { count Int 
+		make: { count Int
 			times: when_eq count [
 				{1}: {"once"}
 				{2}: {"twice"}
@@ -83,7 +85,7 @@ main: {
 		e Error
 		panic ('$(e)')
 	}
-	lines.each { 
+	lines.each {
 		line String
 		p : line.split(' ')
 		d : p[0]
@@ -103,10 +105,10 @@ main: {
 		horizontal_direction: 0
 		lines: os.read_lines('input.txt').or {
 			err Error
-			panic('{err}') 
+			panic('{err}')
 		}
 
-		lines.for_each({ 
+		lines.for_each({
 			line String
 			parts: line.split(' ')
 			direction: parts[0]

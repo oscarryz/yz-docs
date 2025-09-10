@@ -1,3 +1,5 @@
+#example
+
 From: https://cuetorials.com/introduction/
 
 ```js
@@ -22,10 +24,10 @@ hierarchy: {
 
         'cue:=~"[a-z]+"'
         hello String
-        
+
         'cue:>0'
         life Int
-        
+
         'cue: list.MaxItems(11)'
         nums [Int]
         struct #()
@@ -51,7 +53,7 @@ a=t
 ```js
 Server: {
     'cue:[(cue.val)= ">5000 & <10_000"]'
-    port: 1 
+    port: 1
 }
 
 ```
@@ -60,5 +62,5 @@ Server: {
 // Disjuctions
 hello: "world" | "bob" | "mary"
 DayOfWeek:{}
-day DayOfWeek | Monday | Tuesday 
+day DayOfWeek | Monday | Tuesday
 ```

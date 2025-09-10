@@ -1,3 +1,5 @@
+#example
+
 https://youtu.be/Bxel30L6C5U?t=324
 
 ```js
@@ -35,9 +37,9 @@ Rgb: {
   r Decimal
   g Decimal
   b Decimal
-  Red(1.0, 0.0, 0.0) 
-  Yellow(1.0, 1.0, 0.0) 
-  Blue(1.0, 0.0, 0.0) 
+  Red(1.0, 0.0, 0.0)
+  Yellow(1.0, 1.0, 0.0)
+  Blue(1.0, 0.0, 0.0)
 }
 named_colors: [
   'red': Red

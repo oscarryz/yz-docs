@@ -1,3 +1,5 @@
+#example
+
 ```javascript
 print 'hello world'
 ```
@@ -14,20 +16,20 @@ image: {
 ```
 
 ```javascript
-year >= 2001 ? { 
+year >= 2001 ? {
     print '21st century'
 } {year >= 1901 ?  {
         '20th century'
-    
+
 }}
 
-// when function 
-when  [{ year >= 2001}: { print '21st Century'} 
+// when function
+when  [{ year >= 2001}: { print '21st Century'}
       { year >= 1901}: { print '20st Century'}]
 
 
 fly_by_objects.for_each { object String
-    print '{object}' 
+    print '{object}'
 }
 
 // might need to use `1.to(12)` syntax instead
@@ -43,7 +45,7 @@ while { year < 2016} {
 ```javascript
 fibonacci: { n Int
    (n == 0 || { n == 1 }) ? { return n }
-            
+
    fibonacci(n -1) + fibonacci(n - 2)
 }
 // might need to specify return type
@@ -58,7 +60,7 @@ result: fibonacci(20)
 
 ```javascript
 // This is a normal one-line comment.
-/* 
+/*
     Multiline
 */
 'Value of n is: {n}'
@@ -90,7 +92,7 @@ Television: {
     `Example:
      yz> tv: Television{}
      ... tv.activate()
-     
+
 
     @Deprecated('Use turn_on instead')
     Something else {something_else()}
@@ -99,7 +101,7 @@ Television: {
 
     // Turns the TV's power on
     turn_on: {
-       ... 
+       ...
     }
 }
 
@@ -108,17 +110,17 @@ tv: Television{}
 info(tv.activate) // @Deprecated('Use turn_on instead')
 process_annotations(info(tv.activate)) // Reads the `@` elements
 process_doc(info(tv.activate)) // Read the `Examples:` section etc.
-process_xyz(info(tv.activate)) // might read something else... 
+process_xyz(info(tv.activate)) // might read something else...
 ```
 
 ```javascript
 // Write can have an I/O error usually retuns the number of bytes written
 write: { data []Int r Int eh: {Int}
- ... 
+ ...
 }
 n: write([1 2 3] eh:{e Int;
      when [{ e == write.ERROR }:{ print 'Error: {info(e)}'}]
  })
 n: write([4 5 6])
-        
+
 ```

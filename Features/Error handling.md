@@ -1,3 +1,4 @@
+#feature
 TLDR: 
 
 Use generic Option/Result to wrap and unwrap values. See also [Type variants](Type%20variants.md)

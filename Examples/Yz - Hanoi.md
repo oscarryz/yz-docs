@@ -1,3 +1,4 @@
+#example
 ```javascript
 hanoi: { 
     s []Int

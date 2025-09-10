@@ -1,15 +1,17 @@
+#example
+
 
 [qdbp Examples](https://www.qdbplang.org/docs/examples)
 
 ```javascript
 // Functions
 // With generics
-add : { 
-	a P 
+add : {
+	a P
 	b P
-	a + b // a must support the `+ {n}` method 
+	a + b // a must support the `+ {n}` method
 }
-add 1 2 
+add 1 2
 // without generics
 add: {
 	a Int; b Int
@@ -36,19 +38,19 @@ if: {
 	then #(v V) // generic
 	else #(v V) // generic
 	cond.if_true_if_false(then, else)
-	// or 
-	cond ? then, else 
+	// or
+	cond ? then, else
 }
 // named args require use parenthesis
-if (cond: 1 > 2 
-	then: { 
+if (cond: 1 > 2
+	then: {
 		"true".print()
 	}
 	else: {
 		"false".print()
 	})
 // no named args
-if 1 > 2 { 
+if 1 > 2 {
 	"true".print()
 } {
 	"false".print()
@@ -60,7 +62,7 @@ Bool {
 	if: {
 		then {v}
 		else {v}
-		val ? then else	
+		val ? then else
 	}
 }
 true.if{
@@ -68,17 +70,17 @@ true.if{
 } {
 	"f".print()
 }
-// switch 
+// switch
 switch: {
 	v T
 	this : {
 		val : {
-			v T	
+			v T
 		}
 		result: {
 			None()
 		}
-		case: { 
+		case: {
 			v (T)
 			then (T)
 			val() == v ? {
@@ -92,7 +94,7 @@ switch: {
 			then
 			this.result().some?{ v T v }
 			this.result().none(then())
-		} 
+		}
 	}
 	this
 }
@@ -102,15 +104,15 @@ str: switch(5)
 	.case(3 {"three"})
 	.default({"none of the above"})
 
-str: switch 5 
+str: switch 5
 	.case 1 {"one"}
 	.case 2 {"two"}
 	.case 3 {"three"}
 	.default {"none of the above"}
-	
+
 // with a mapn in Yz
 switch: {
-    value 
+    value
 	conds [(Bool)](v V)
 	default {v}
 
@@ -123,7 +125,7 @@ switch: {
 			continue; // tricky part
 		}
 	}
-	// still here? 
+	// still here?
 	default()
 }
 
@@ -137,11 +139,11 @@ print str
 
 // Data structures
 stack: {
-	data: { 
+	data: {
 		None()
 	}
 	push: {
-		e 
+		e
 		current_data = this.data()
 		{
 			this.data = {Some({
@@ -174,7 +176,7 @@ circle: {
 my_circle: circle(radius:3)
 my_circle.print()
 
-basic_circle: { 
+basic_circle: {
 	radius: {3}
 	print: {radius().print()}
 }

@@ -1,3 +1,5 @@
+#example
+
 Using [Neptune impl](https://www.reddit.com/r/ProgrammingLanguages/s/ZJ4D36oZ2J)
 
 
@@ -12,7 +14,7 @@ solution: input
       .filter(string.is_digit)
       .to_list()
     int.parse(
-        digits.first().or {'0'} ++ 
+        digits.first().or {'0'} ++
         digits.last() .or {'0'}
     )
   }

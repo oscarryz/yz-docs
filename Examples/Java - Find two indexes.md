@@ -1,3 +1,5 @@
+#example
+
 ```java
 /*
  * Click `Run` to execute the snippet below!
@@ -22,8 +24,8 @@ r: 0, 5
 class Solution {
   public static void main(String[] args) {
     // var list = Arrays.asList( 1 ,2, 5,4,2,6,7 );
-    test(Arrays.asList(1,2), calc(1,2,5,4,2,6,7)); 
-    test(Arrays.asList(0,4), calc(4, 1, 2, 2, 3)); 
+    test(Arrays.asList(1,2), calc(1,2,5,4,2,6,7));
+    test(Arrays.asList(0,4), calc(4, 1, 2, 2, 3));
   }
 
   public static List<Integer> calc(int ... input ) {
@@ -35,12 +37,12 @@ class Solution {
     var result = new ArrayList<Integer>();
     var target = 7;
     for ( int i = 0 ; i < list.size() ; i++ ) {
-      var n = list.get(i); 
+      var n = list.get(i);
       if ( map.containsKey(n) ) {
         result.add(map.get(n));
         result.add(i);
         break;
-      } else { 
+      } else {
         map.put( target - n , i );
       }
     }

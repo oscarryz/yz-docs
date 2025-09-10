@@ -1,6 +1,8 @@
+#example
+
 ```typescript
 // Tagged Union Types for modelling state that can be in one of many shapes
-type State = 
+type State =
   | { type: "loading" }
   | { type: "success", value: number }
   | { type: "error", message: string };
@@ -25,11 +27,11 @@ loading: State{ type: 'loading'}
 success: State{ type: 'success'}
 error: State{ type: 'error'}
 state State
-... 
+...
 when(
     {state.type =='sucess'}, {print '{state.type}'},
     {state.type =='error'}, {print '{state.message}'},
-    
+
 })
 ```
 

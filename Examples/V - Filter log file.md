@@ -1,3 +1,4 @@
+#example
 https://vosca.dev/p/e31e438324
 ```javascript
 os.write_file('app.log' `

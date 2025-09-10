@@ -1,5 +1,7 @@
+#example
 
-Interesting links: 
+
+Interesting links:
 
 [tomprimozic/type-systems](https://github.com/tomprimozic/type-systems)
 [tomprimozic/type-systems - extensible_rows/infer.ml ](https://github.com/tomprimozic/type-systems/blob/master/extensible_rows/infer.ml)
@@ -12,8 +14,8 @@ For type inference
 
 ```javascript
 
-/* 
- Multiline comment 
+/*
+ Multiline comment
 */
 // Single line
 three: 3
@@ -39,9 +41,9 @@ four = block.method2 4 // or
 four = block.method2(arg:4) // if specified parenthesis are needed
 
 // Blocks are similar to functions and to invoke it use `()` as you see above
-// Also can have inner blocks (like method1 and 2), if the method name is 
-// a non-word name the `.` can be skipped during the call. 
-// e.g. of non-word names ! ? >> + - << >>= etc 
+// Also can have inner blocks (like method1 and 2), if the method name is
+// a non-word name the `.` can be skipped during the call.
+// e.g. of non-word names ! ? >> + - << >>= etc
 identity_fn: {
     ! : [T]{x T; x}
 }
@@ -51,7 +53,7 @@ five: identity_fn ! 5
 print_args: {
     !: <T>{
         arg1 T // although probably shouldn't be T but Printer
-        arg2 T = Printer{} 
+        arg2 T = Printer{}
         arg1.print()
         arg2.print()
     }
@@ -67,8 +69,8 @@ print_args "Hello world" ; print_args "Hello" "world"
 print_args(arg1: something_with_print{})
 print_args(arg2: something_with_print{}) // not possible, arg1 doesn't have a value
 // However all of these would execute concurrently, if sequence is needed, assign the result to a variable
-// assinging to `_` will make the execution to wait until the call is completed 
-_: print_args "Hello world" 
+// assinging to `_` will make the execution to wait until the call is completed
+_: print_args "Hello world"
 _: print_args "Hello" "world"
 
 print_args 3 // print_args is generic
@@ -77,7 +79,7 @@ Int: {
     + {other Int; ...}
 }
 five: 3.+(2)
-// Because methods with at lest one parameter can ommit parenthesis and methods named with non-words can omit `.` the following 
+// Because methods with at lest one parameter can ommit parenthesis and methods named with non-words can omit `.` the following
 // is the same
 five: 3 + 2
 
@@ -87,9 +89,9 @@ small_circle:{
     diameter: {radius() * 2}
 }
 
-// There's no inheritance but to reuse code, 
-// new variables can refer to existing variables. 
-// So the following 
+// There's no inheritance but to reuse code,
+// new variables can refer to existing variables.
+// So the following
 big_circle: {
     radius: {6}
     diameter: small_circle.diameter

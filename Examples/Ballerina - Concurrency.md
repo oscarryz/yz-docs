@@ -1,3 +1,5 @@
+#example
+
 (Invalid, see below) How concurrency is going to work is still TBD
 ```javascript
 spawn: yz.concurrent.spawn
@@ -5,9 +7,9 @@ context: yz.concurrent.context
 
 main: spawn {
     c: context.channel({n:0})
-    a: spawn { 
+    a: spawn {
         x: 10
-        // sending 10 to channel 
+        // sending 10 to channel
         c(x)
     }
     b: spawn {
@@ -81,7 +83,7 @@ main: {
             }
         }
     }
-    // who calls b though? And how to make b wait 
+    // who calls b though? And how to make b wait
 }
 ```
 
@@ -93,13 +95,13 @@ main: {
 function fetch(string url) returns string|error { ….
 }
 function altFetch(string urlA, string urlB) returns string|error {
-    worker A returns string|error { 
-        return fetch(urlA); 
-    } 
-    worker B returns string|error { 
+    worker A returns string|error {
+        return fetch(urlA);
+    }
+    worker B returns string|error {
        return fetch(urlB);
-	} 
-	return wait A | B; 
+	}
+	return wait A | B;
 }
 ```
 
@@ -107,7 +109,7 @@ Alternate wait in Yz
 ```js
 fetch: {
    string Url
-   // ... return string or error 	   
+   // ... return string or error
 }
 alt_fetch: {
    url_a String
@@ -127,7 +129,7 @@ alt_fetch: {
 ```
 (see: [return, break, continue](../../Features/return,%20break,%20continue.md))
 
-Inter worker message passing: 
+Inter worker message passing:
 
 ```js
 
@@ -142,8 +144,8 @@ main: {
 	   b(1)
 	   c(2)
    }
-   wait_for_a: a() // waits until a finishes 
-   y1: b.x1 
+   wait_for_a: a() // waits until a finishes
+   y1: b.x1
    y2: c.x2
    z:  y1 + y2
 }

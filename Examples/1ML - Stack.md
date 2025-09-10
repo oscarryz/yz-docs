@@ -1,3 +1,4 @@
+#example
 
 [Notes on 1ML](https://shonfeder.github.io/themata/programming/notes-on-1ml.html)
 
@@ -13,7 +14,7 @@ stack #(
 		size     #(Int)
 	)
 )
-// usage 
+// usage
 
 s : stack.empty(String)
 s.push("hola")
@@ -22,12 +23,12 @@ s.size() // 1
 
 
 // implmentation
-stack = { 
-	empty = { 
+stack = {
+	empty = {
 		T
 		Stack(T)
 	}
-	Stack = { 
+	Stack = {
 		T
 		array [T] = []T
 		push = {
@@ -35,7 +36,7 @@ stack = {
 			array.<<(a)
 		}
 		pop = {
-			array.len() > 0  ? { 
+			array.len() > 0  ? {
 				v: opt.Some(array[array.len()-1])
 				array.remove(array.len())
 				v

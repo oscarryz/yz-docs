@@ -1,3 +1,4 @@
+#example
 ```javascript
 // This is a single comment  
 /*  

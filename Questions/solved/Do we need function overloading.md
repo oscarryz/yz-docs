@@ -2,6 +2,6 @@ It can comes handy to take an action based on the type, although it might not ma
 
 See the example on [How to add sum types](How%20to%20add%20sum%20types.md)
 
-Won't be needed and might complicate things. 
+#answered Won't be needed and might complicate things. 
 #rejected 
 

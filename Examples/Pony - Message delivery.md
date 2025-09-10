@@ -1,3 +1,5 @@
+#example
+
 ```javascript
 
 Customer: {
@@ -22,11 +24,11 @@ Store : {
 Bank : {
 	balances [Customer:Int]= [Customer]Int
 
-	credit: { 
+	credit: {
 		customer Customer
 		amount Int
 		b : balances[customer]
-		balances[customer]= b + acount 
+		balances[customer]= b + acount
 	}
 	debit :{
 		customer Customer

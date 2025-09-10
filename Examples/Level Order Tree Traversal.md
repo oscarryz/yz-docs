@@ -1,3 +1,4 @@
+#example
 
 Description
 
@@ -67,7 +68,7 @@ import java.util.ArrayList;
 
 record Node<T>(
   T data,
-  Node<T> left, 
+  Node<T> left,
   Node<T> right
 ){}
 
@@ -109,35 +110,35 @@ void main() {
 Rust
 
 ```rust
-struct Node<T> { 
+struct Node<T> {
     value T,
     left Option<Box<Node<T>>>,
     right Option<Box<Node<T>>>,
 }
 
-fn main() { 
-    let mut root = Node<String> { 
-        "Hola", 
-        Some(Box::new(Node<String> { "Adios", None, None } ) ), 
+fn main() {
+    let mut root = Node<String> {
+        "Hola",
+        Some(Box::new(Node<String> { "Adios", None, None } ) ),
         None
     };
     print_level( &root ) ;
 }
 
 
-fn level_print<T: Debug>(n : &Node<T>) { 
+fn level_print<T: Debug>(n : &Node<T>) {
     let mut q: Vec<&Node<T>> = vec![n];
 
-    while !q.is_empty() { 
+    while !q.is_empty() {
         let c = q.remove(0);
 
         println!("{:#?", c.value);
 
-        if let Some(l) = c.left.as_ref() { 
+        if let Some(l) = c.left.as_ref() {
             q.push(l)
         }
-        
-        if let Some(r) = c.right.as_ref() { 
+
+        if let Some(r) = c.right.as_ref() {
             q.push(r)
         }
     }
@@ -149,10 +150,10 @@ Yz
 ```js
 // Node is a generic data structure
 // using "named constructors" (similar to sum types)
-Node: { 
-    T  // T is the generic type 
+Node: {
+    T  // T is the generic type
     // `None` is the constructor with no arguments
-    None() 
+    None()
     // `Tree` is the construtor with data, left and right defaulting to None
     Tree(
         data T,
@@ -163,34 +164,34 @@ Node: {
 
 main: {
     // Creating an instance with the `Tree` constructor
-    root : Tree( 0 
-            Tree( -2 
-                Tree( -3 ), 
+    root : Tree( 0
+            Tree( -2
+                Tree( -3 ),
                 Tree( -1 )
-            ), 
+            ),
             // `left` is ommited here, thus, named attributes are needed
-            Tree( data:  2, 
-                right = Tree(3) 
+            Tree( data:  2,
+                right = Tree(3)
             )
         )
     print_level(root)
 }
 
-print_level #(Node(T)) = { 
+print_level #(Node(T)) = {
     r Node(T)
     q : [q]
 
     // for control structure
-    for q.is_empty != false { 
-        
+    for q.is_empty != false {
+
         c : q.remove(0)
         println("`c.data`")
 
         // if match control structure
-        if c.left match Node.Tree { 
+        if c.left match Node.Tree {
             q.add(c.left)
         }
-        if c.right match Node.Tree { 
+        if c.right match Node.Tree {
             q.add(c.right)
         }
     }

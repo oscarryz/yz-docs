@@ -1,3 +1,4 @@
+#feature
 # Block type 
 
 Example of a block that takes nothing and returns nothing

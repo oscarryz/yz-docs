@@ -1,3 +1,4 @@
+#example
 https://github.com/jinyus/related_post_gen/blob/main/v/related.v
 
 ```javascript

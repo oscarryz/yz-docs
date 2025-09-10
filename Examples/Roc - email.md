@@ -1,3 +1,5 @@
+#example
+
 https://www.roc-lang.org/#examples
 
 ```javascript
@@ -9,10 +11,10 @@ main: {
 store_email: {
 	path Path
 	early_return: {e Err; return e}
-	url: file.read_utf8(path).or early_return 
+	url: file.read_utf8(path).or early_return
 	user: http.get url(json.codec).or early_return
 	dest: path.from_string('`user.name`.txt').or early_return
-	_: file.write_utf8 des user.email.or early_return 
+	_: file.write_utf8 des user.email.or early_return
 	print 'Wrote emai to `path.display(dest)`'
 }
 
@@ -40,7 +42,7 @@ store_email #(Path, Result(String,String)) = {
   }.and_then {
     json JSONObject
     p: path.from_string("`json.name`.txt")
-    fs.write(p, json.email)   
+    fs.write(p, json.email)
     print("Wrote email to: `p`")
   }
 }
@@ -63,9 +65,9 @@ store_email #(Path, Result(#(),String)) = {
     http.get(url, json.UTF8)
   }  >>= { json JSONObject
     p: path.from_string("`json.name`.txt")
-    fs.write_to(p, json.email)   
+    fs.write_to(p, json.email)
   } >>= {
-    p Path 
+    p Path
     print("Wrote email to: `p`")
     Ok("")
   }
