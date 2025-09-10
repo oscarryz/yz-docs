@@ -24,3 +24,7 @@
 - [Enums](Features/Replaced%20features/Enums.md) (under revision)
 - [Constants](Features/Constants.md) (under revision)
 - [Code organization](Features/Code%20organization.md)
+
+Read: 
+[Yz Programming Language Technical Documentation](../Yz%20Programming%20Language%20Technical%20Documentation.md)
+
