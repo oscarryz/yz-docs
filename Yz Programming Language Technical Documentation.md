@@ -27,9 +27,13 @@ Yz is a programming language that explores simplifying concurrency, data, object
 
 ```javascript
 // Factorial in Yz
-factorial: { n Int
-  n > 0 ? { n * factorial(n - 1) }
-          { 1 }
+factorial : {
+   n Int 
+   match {
+	   n > 0 => n * factorial(n - 1)
+   }, {
+	   1
+   }
 }
 print("`factorial(5)`")  // prints 120
 ```
@@ -52,8 +56,10 @@ The fundamental unit in Yz is a **block of code** (boc). Everything is a block:
 - Objects are blocks
 - Classes are blocks
 - Modules are blocks
+- Actors are blocks
 
-A block is simply a series of expressions between `{` and `}`:
+
+A block is a series of expressions between `{` and `}`:
 
 ```javascript
 {
@@ -132,7 +138,7 @@ greeting: "Hello, `name`!"  // "Hello, Alice!"
 {
   a: 1
   b: 2
-  a + b  // Last expression is the "return value"
+  a + b  // Last expression(s) are the "return value"
 }
 ```
 
@@ -209,7 +215,9 @@ x, y = swap(x, y)  // x = "world", y = "hello"
 ```javascript
 // Numbers
 n Int = 42
+m : -1
 pi Decimal = 3.14
+
 
 // Strings
 message String = "Hello"
@@ -224,6 +232,16 @@ words: ["hello", "world"]
 
 // Dictionaries
 ages [String:Int] = ["Alice": 30, "Bob": 25]
+
+// Bocs
+greet #(msg String,String) {
+    "Hello `msg`"
+}
+
+hi: {
+   42
+}
+
 ```
 
 ### Block Signatures
@@ -232,16 +250,30 @@ Block types are defined by their signature:
 
 ```javascript
 // Block that takes two Ints and returns an Int
-add #(x Int, y Int, Int) = {
+add #(x Int, y Int, Int) {
   x + y
 }
 
 // Block with just return type
-get_answer #(Int) = { 42 }
+get_answer #(Int) { 42 }
 
 // Block with no parameters or return
-do_something #() = {
+do_something #() {
   print("Done")
+}
+```
+
+The signature is inferred when using the short declaration + assignment operator `:`
+
+```js
+add : {
+   x Int
+   y Int
+   x + y
+}
+get_answer : { 42 }
+do_something: {
+   print("Done")
 }
 ```
 
@@ -252,7 +284,7 @@ do_something #() = {
 Uppercase names define new types:
 
 ```javascript
-Person: {
+Person : {
   name String
   age Int
   greet: {
@@ -275,9 +307,7 @@ alice.greet()  // "Hello, I'm Alice"
 
 ```javascript
 // Explicit signature
-Point #(x Int, y Int) = {
-  x Int
-  y Int
+Point #(x Int, y Int) {
   distance_to_origin: {
     sqrt(x * x + y * y)
   }
@@ -311,11 +341,21 @@ text: identity("hi")    // text: String
 
 ### Constrained Generics
 
+The constraints are inferred from the usage:
 ```javascript
 printable: {
   value T  // T must have a print method
   value.print()
 }
+
+Person: {
+   name String
+   print : {
+     println("My name is `name`")
+   }
+}
+printable(Person("Yz"))
+printable("oh oh") // "oh oh" doesn't have a `print` block
 ```
 
 ## Type Variants
@@ -332,8 +372,8 @@ Option: {
 maybe_number: Option.Some(42)
 nothing: Option.None()
 
-// Pattern matching with when
-result: maybe_number when {
+// Pattern matching with match
+result: match maybe_number {
   Some => "Got value: `maybe_number.value`"
 }, {
   None => "No value"
@@ -357,7 +397,7 @@ NetworkResponse: {
 
 handle_response: {
   response NetworkResponse
-  response when {
+  match reponse {
     Success => print("Data: `response.data`")
   }, {
     Failure => print("Error: `response.error`")  
@@ -398,15 +438,15 @@ process_coordinates(v)  // Works - Vector has x, y Int
 
 ### Async by Default
 
-Every block call is asynchronous unless the result is immediately used:
+Every block call is asynchronous, the value will be resolved by the time it is used:
 
 ```javascript
 // These run concurrently
 fetch_user("alice")
 fetch_orders("alice")
 
-// This waits for completion
-user: fetch_user("alice")  // Synchronous due to assignment
+user: fetch_user("alice")  
+print(user) // might be resolved by then, it will block if it hasn't completed.
 ```
 
 ### Structured Concurrency
@@ -416,11 +456,13 @@ Blocks synchronize at the end of their enclosing scope:
 ```javascript
 process_data: {
   // Both operations start concurrently
-  fetch_image("123")
-  fetch_user("alice")
+  img: fetch_image("123")
+  usr: fetch_user("alice")
   
-  // This line waits for both to complete
-  create_profile(fetch_user.data, fetch_image.data)
+  // The `process_data` will complete
+  // until `create_profile` complets. 
+  // It will block execution until it does. 
+  create_profile(img, usr)
 }
 ```
 
@@ -434,11 +476,11 @@ counter: {
 }
 
 increment: {
-  counter.count = counter.count + 1  // Channeled through counter
+  counter.count = counter.count + 1  // Modified through counter
 }
 
 decrement: {
-  counter.count = counter.count - 1  // Also channeled through counter  
+  counter.count = counter.count - 1  // Also modified through counter  
 }
 ```
 
@@ -457,11 +499,11 @@ divide: {
   }
 }
 
-result: divide(10, 2).or_else {
+result: divide(10, 2).or_else({
   error Error
   print("Error: `error`")
   0  // Default value
-}
+})
 ```
 
 ### Chaining Operations
@@ -490,22 +532,25 @@ process_file: {
 max: {
   a Int
   b Int
-  a > b ? { a } { b }
+  a > b ? { a },{ b }
 }
 
-status: user.age >= 18 ? { "adult" } { "minor" }
+status: user.age >= 18 ? { "adult" },{ "minor" }
 ```
 
-### match expressions
+### Match expressions
 
 ```javascript
 describe_number: {
   n Int
-  match {
-    { n < 0  => "negative" },
-    { n == 0 => "zero" },
-    { n > 0  => "positive" }
+  match  { 
+	  n < 0  => "negative"
+  },{ 
+	  n == 0 => "zero"
+  },{ 
+	  n > 0  => "positive" 
   }
+  
 }
 ```
 
@@ -523,12 +568,12 @@ names.each({ name String
   print("Hello, `name`!")
 })
 
-// While loops
+// "While" loops
 factorial: {
   n Int
   result: 1
   current: n
-  while({ current > 1 } {
+  while({ current > 1 }, {
     result = result * current
     current = current - 1
   })
@@ -543,9 +588,9 @@ factorial: {
 ```javascript
 // Arrays
 numbers: [1, 2, 3, 4, 5]
-doubled: numbers.map { n Int; n * 2 }
-evens: numbers.filter { n Int; n % 2 == 0 }
-sum: numbers.reduce { acc Int, n Int; acc + n }
+doubled: numbers.map({ n Int; n * 2 })
+evens: numbers.filter({ n Int; n % 2 == 0 })
+sum: numbers.reduce({ acc Int, n Int; acc + n })
 
 // Dictionaries  
 config: ["host": "localhost", "port": "8080"]
@@ -559,16 +604,20 @@ host: config["host"]  // Option type
 find_user: {
   id String
   // Returns Option(User)
-  users.find { user User; user.id == id }
+  users.find({ user User; user.id == id })
 }
 
-user: find_user("123").or_else { User("default") }
+user: find_user("123").or_else({ User("default") })
 
 // Result for error handling
 safe_divide: {
   a Int
   b Int
-  b == 0 ? { Err("Division by zero") } { Ok(a / b) }
+  match {
+	  b == 0 => Err("Division by zero")
+  }, {
+	  Ok(a / b)
+  }
 }
 ```
 
@@ -607,13 +656,13 @@ Tree: {
   
   insert: {
     value T
-    self when {
+    match {
       Empty => Node(value, Empty(), Empty())
     }, {
       Node => value < self.value ? {
-        Node(self.value, self.left.insert(value), self.right)
+        Node(value, left.insert(value), right)
       } {
-        Node(self.value, self.left, self.right.insert(value))
+        Node(value, left, right.insert(value))
       }
     }
   }
