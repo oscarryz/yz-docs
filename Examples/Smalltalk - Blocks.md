@@ -1,3 +1,5 @@
+#example
+
 https://cuis-smalltalk.github.io/TheCuisBook/Block-syntax.html
 
 ```javascript
@@ -21,7 +23,7 @@ m: 45
 1.to(m).select { d Int, m / d == 0}
 // [1 3 4 9 15 45]
 
-divisible_by: { 
+divisible_by: {
    d Int
    x Int
    x / d == 0
@@ -38,7 +40,7 @@ SpaceWar>>teleport: aShip
   aShip resupply.
   area := self morphLocalBounds insetBy: 20.
   randomCoordinate := [(area left to: area right) atRandom].
-  aShip 
+  aShip
     velocity: 0 @ 0;
     morphPosition: randomCoordinate value @ randomCoordinate value
 ```

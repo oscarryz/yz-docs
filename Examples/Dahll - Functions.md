@@ -1,10 +1,12 @@
+#example
+
 https://dhall-lang.org/
 
 
 
 ```javascript
-make_user: { 
-  user Text 
+make_user: {
+  user Text
   {
     home: '/home/{user}'
     private_key: '/{home}/.ssh/.id_ed25519'

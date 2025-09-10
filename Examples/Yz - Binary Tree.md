@@ -1,3 +1,4 @@
+#example
 https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/binarytrees.html#binarytrees
 
 Implementation based on: [V](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.v), [Pony](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.pony) and [Go](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.go)

@@ -4,7 +4,7 @@ Should we invent new names instead of saying "Block" all the time?
 
 ## Possible answer
 
-`node`
+~~node`~~
 
 #answered
 

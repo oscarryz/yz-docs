@@ -1,3 +1,5 @@
+#example
+
 From https://stackoverflow.com/a/73874369/20654
 
 
@@ -22,7 +24,7 @@ input: [
 ]
 map [Int][]Node
 map[1]=[]Node
-input.each: { node Node 
+input.each: { node Node
   list: map[node.level]
   list << node
   map[node.level + 1] = node.list

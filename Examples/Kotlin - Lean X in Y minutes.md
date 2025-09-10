@@ -1,3 +1,4 @@
+#example
 
 ```javascript
 com: {
@@ -5,7 +6,7 @@ com: {
         kotkin:{
             main: {
                 args: os.args
-                foo_val: 10 
+                foo_val: 10
                 foo_var: 10
                 foo_var = 20
 
@@ -16,15 +17,15 @@ com: {
                 hello: {
                    name String ='world'
 		           result String
-                   result= "hello `name`" 
+                   result= "hello `name`"
                    result
                 }
                 print(hello("foo")) // Hello, foo
                 print(hello(name='bar')) // Hello, bar
                 print(hello()) // Hello, world
                 print(hello("foo" "nada")) //  second param is "nada"
-				// no var args, use a list 
-                //varargg_example: { names ...Int; 
+				// no var args, use a list
+                //varargg_example: { names ...Int;
                 //    print('Argment has {len(names)} elements')
                 //}
                 //vararg_example()
@@ -38,12 +39,12 @@ com: {
 				vararg_ish([1])
 				vararg_ish([1 2])
 				vararg_ish([1 2 3])
- 
+
                 odd: { x Int; x % 2 == 1 }
                 print(odd(6))// false
                 print(odd(7))// true
                 even:{ x Int; x % 2 == 0 }
-                not: { 
+                not: {
 	                f (Int; Boolean)
                     {n Int; f(n) == false}
                 }
@@ -53,24 +54,24 @@ com: {
                 notPositive: not({n Int; n > 0})
 
                 0.to(4).each {
-	                i Int; 
+	                i Int;
                     print("`notOdd(i)` `notEven(i)` `notZero(i)` `notPositive(i)`")
                 }
 
                 ExampleClass: {
 	                x Int
-                    member_function: { 
+                    member_function: {
 	                    y Int
                         x + y
                     }
                     // There's not infix, but `.` and parens `()` can be ommited
 					// if name is "non-word"
-                    infix_member: { 
+                    infix_member: {
 	                    y Int
                         x * y
                     }
 					* : infix_member
-		
+
                 }
                 example_class: ExampleClass(7)
                 //example_class: ExampleClass(x=7)
@@ -90,15 +91,15 @@ com: {
 
                 map_data: ["a":1 "b":2]
                 entries(map_data).for_each({
-	                key String; 
+	                key String;
 	                value Int
                     print("`key` -> `value`")
                 })
-                
-                
-            }     
+
+
+            }
         }
-    
+
     }
 }
 ```
@@ -111,7 +112,7 @@ Employee: {
   name String
   email String
   company String
-  // no need for equals() hashCode 
+  // no need for equals() hashCode
 }
 myCompany: { // a singleton? a function
   name String = "MyCompany"
@@ -123,8 +124,8 @@ main: {
 }
 
 // Safe
-reply: { 
-  condition Boolean 
+reply: {
+  condition Boolean
   condition ? { "I'm fine" }
 }
 error: {
@@ -147,26 +148,25 @@ main: {
 
 ```kotlin
 // Kotlin
-// Ackermann using `when` in a similar way Yz will have a `when` function 
+// Ackermann using `when` in a similar way Yz will have a `when` function
 // awm stands for ackerman when (should've been amw but typo)
-fun ackermanWhen(m: Int, n: Int): Int = when {  
-    m == 0 -> n + 1  
-    n == 0 -> ackermanWhen(m - 1, 1)  
-    else -> amackermanWhenw(m - 1, ackermanWhen(m, n - 1))  
+fun ackermanWhen(m: Int, n: Int): Int = when {
+    m == 0 -> n + 1
+    n == 0 -> ackermanWhen(m - 1, 1)
+    else -> amackermanWhenw(m - 1, ackermanWhen(m, n - 1))
 }
 ```
 ```javascript
 // Yz
-ackerman_when: {
-    m Int 
+ackerman_match: {
+    m Int
     n Int
-    when [
-        {m == 0} : { n + 1}
-        {n == 0} : { ackerman_when m - 1 1}
-        {when.else}: {ackerman_when(m:m - 1 n:ackerman_when m n -1) }
-    ]
+    match
+        {m == 0 => n + 1},
+        {n == 0 => ackerman_when m - 1 1},
+        { ackerman_when(m:m - 1 n:ackerman_when m n -1) }
+
 }
 awm(m:3 n:4)
 
 ```
-

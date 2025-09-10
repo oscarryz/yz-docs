@@ -1,3 +1,4 @@
+#feature
 A type can be defined as another type, because the `:` is an expressions so `A:{}` defines the empty type `A` and `B:A` defines the same type, thus making it an alias. 
 You cannot add new operations on the new type, but you can override them on  creation:
 

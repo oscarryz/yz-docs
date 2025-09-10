@@ -1,3 +1,11 @@
+#answered Use them all. Each one preferred for a different use
+
+`#(){}` For variable declaration
+`{}` For lambdas
+`#()={}` For anything else
+
+--- 
+
 
 A boc type defines the signature for it, and a literal implicitly defines the signature too
 

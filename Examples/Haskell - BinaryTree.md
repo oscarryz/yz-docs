@@ -1,3 +1,5 @@
+#example
+
 https://www.anardil.net/2018/binary-tree-in-haskell.html
 
 ```javascript
@@ -8,19 +10,19 @@ binary_tree:{
   Tree : {
     T
     Empty(),
-    Node(data T, 
-      left Tree(T), 
+    Node(data T,
+      left Tree(T),
       right Tree(T)
     )
     self Tree(T)
     // Although T is generic`
     // is expected to have the methods
     // == #(T, Bool), < #(T, Bool), > #(T,Bool)
-    // The code would show something like 
-    //   insert #(a T) 
+    // The code would show something like
+    //   insert #(a T)
     //       where T is #(
     //                 == #(T, Bool),
-    //                  < #(T, Bool), 
+    //                  < #(T, Bool),
     //                  > #(T,Bool)
     //                )
     // But due the lack of "where" the compiler might
@@ -28,7 +30,7 @@ binary_tree:{
     // If explicit signature is needed, an explicit type should be created
     // Ord #(
     //   == #(T, Bool),
-    //   < #(T, Bool), 
+    //   < #(T, Bool),
     //   > #(T,Bool)
     // )
     // insert #(a Ord)
@@ -41,7 +43,7 @@ binary_tree:{
       a == t.data ? {
         return //Node(a, t.left, t.right)
       }
-      a < t.data ? { 
+      a < t.data ? {
         t.left.insert(a)
       }, {
         t.right.insert(a)
@@ -76,7 +78,7 @@ binary_tree:{
     a.each({e T, roo.insert(e)})
     root
   }
-  random #(n Int) = { 
+  random #(n Int) = {
     list : []Int
     n.times().do({
       list.add(random.int(1, 99))
@@ -98,19 +100,19 @@ InedibleError:{}
 mushrooms: [
   WildMushroom(
      name: "King Bolete",
-     is_edible: true, 
+     is_edible: true,
   ),
   WildMushroom(
      name: "Oyser",
-     is_edible: true, 
+     is_edible: true,
   ),
   WildMushroom(
      name: "Amanita",
-     is_edible: false, 
+     is_edible: false,
   ),
 ]
 
-total_price []Result(String,InedibleError) = 
+total_price []Result(String,InedibleError) =
   mushooms.map({
     m Mushroom,
     m.is_edible ? {

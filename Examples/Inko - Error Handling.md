@@ -1,5 +1,7 @@
+#example
 
 https://inko-lang.org/
+
 
 ```javascript
 
@@ -7,26 +9,26 @@ https://inko-lang.org/
 
 // Explicit syntax
 div1: {
-	left Int 
+	left Int
 	right Int
 
-	(right == 0).ifTrue(then:{ 
+	(right == 0).ifTrue(then:{
 		result.Error('divison by zero')
 	}
-	else: { 
+	else: {
 	   result.Ok( left / right)
 	})
 }
-// Implicit syntax, no parenthesis and `.` ommited on `?` 
+// Implicit syntax, no parenthesis and `.` ommited on `?`
 div2: {
    left Int
    right Int
-   
-   	right == 0  ? { 
+
+   	right == 0  ? {
 		result.Error 'Division by zero'
-	} 
+	}
 	{
-	    result.Ok left / right 
+	    result.Ok left / right
 	}
 }
 div3: {
@@ -57,7 +59,7 @@ result: {
 		get {v}
 	}
 	Ok {
-		value // generic value 
+		value // generic value
 		is_ok: {true}
 		is_ok_and: {predicate {Bool} predicate()}
 		or_else: {action {Err} }
@@ -67,11 +69,11 @@ result: {
 		message: ""
 		is_ok: {false}
 		is_ok_and: {p {Bool} false}
-		or_else: { 
+		or_else: {
 			action {Err}
 			action Err(message)
 		}
 	}
-	
+
 }
 ```

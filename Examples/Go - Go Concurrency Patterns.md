@@ -1,3 +1,4 @@
+#example
 
 [A boring function](https://go.dev/talks/2012/concurrency.slide#12)
 ```js
@@ -10,11 +11,11 @@ boring: {
 		// less boring
 		time.sleep(time.duration(random.int(1) * time.millisecond))
 		i = i + 1
-	} 
+	}
 }
 main: {
 	boring("boring!") // launches and continues
-	// but then waits at the end of the main block 
+	// but then waits at the end of the main block
 }
 ```
 
@@ -25,7 +26,7 @@ main: {
 not_a_channel: {
 	c Int
 }
-not_a_channel(1) // sending 
+not_a_channel(1) // sending
 value: not_a_channel.c // "receiving"
 ```
 
@@ -53,7 +54,7 @@ boring: {
 }
 ```
 
-Ideas: 
+Ideas:
 #open-question  How can we wait for a value to be set? [../../Questions/solved/Wait for a value to be set](../../Questions/solved/Wait%20for%20a%20value%20to%20be%20set.md)
 
 
@@ -67,4 +68,3 @@ loop: {
    print s
 }
 ```
-

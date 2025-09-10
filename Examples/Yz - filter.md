@@ -1,3 +1,4 @@
+#example
 ```js
 apple: 'apple'
 fruits: ['apple' 'pear' 'orange']

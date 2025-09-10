@@ -1,3 +1,5 @@
+#example
+
 https://ucs.mlscript.dev/  > MLscript Guide
 
 ```js
@@ -19,14 +21,14 @@ z : x + y // 3
 ```js
 // Functions can be defined with `{}`, parameters are variables
 id : { x T ; x }
-id("hello") // hello 
+id("hello") // hello
 sum : { x Int; y Int ; x + y}
 sum(40, 2) // 42
 ```
 
 ```js
 // The types of functions are automatically inferred. But you can also specify the types explicitly. Type parameters are single upper case letter
-id #(x A; A) = { 
+id #(x A; A) = {
   x A // #to-do we need to redefine here or not?
   x
 }
@@ -37,7 +39,7 @@ id #(x A; A) = {
 Point: { x Int; y Int }
 // variables are accesible for reading
 origin : Point(0, 0)
-origin.x + origin.y // 0 
+origin.x + origin.y // 0
 
 // We can also define classes with type parameters.
 Pair: {
@@ -45,7 +47,7 @@ Pair: {
    second B
 }
 
-// And the new type has a signature inferred as well, for explicity signature use #() 
+// And the new type has a signature inferred as well, for explicity signature use #()
 Pair #(first A, second B) = {
   first A
   second B
@@ -63,7 +65,7 @@ Some: {
 None: {
   use Option
 }
-// But we can do without reusing code and provide "explicit named constructors" 
+// But we can do without reusing code and provide "explicit named constructors"
 
 Option: {
   T
@@ -73,11 +75,11 @@ Option: {
 // Here the type Option can only be constructed with either `Some(T)` or `None`
 x Option(String) // x is an Option of String
 y Option(String) // y is an Option of String
-// 
+//
 x = Option.Some("Hello") // use the Some constructor
 y : Option.None()  // Use the None constructor
-// check with x.Some or x.None that returns a boolean 
-if x.Some , { 
+// check with x.Some or x.None that returns a boolean
+if x.Some , {
   print("We've got a value `x.v`")
 }
 if x.None, {
@@ -118,7 +120,7 @@ Int: {
 sum: {
   xs List(T)
   if xs.Nil , {
-     0 
+     0
   }, {
     // It wasn't Nil, which means it is Cons
     // thus the properties `head` and `tail` have values
@@ -127,7 +129,7 @@ sum: {
 }
 ```
 
-A bit of discussion on how to add "extension" methods: 
+A bit of discussion on how to add "extension" methods:
 
 ```js
 
@@ -136,8 +138,8 @@ Int : { ... }
 Hi: {
   sayHi #(String)
 }
-impl Hi for Int { 
-  sayHi #(String) = { 
+impl Hi for Int {
+  sayHi #(String) = {
     "My name is `self`"
   }
 }
@@ -145,12 +147,12 @@ impl Hi for Int {
 one Hi = 1
 
 // Our possible approach is to le the class be reopened
-// which will be needed for file based source anyways 
+// which will be needed for file based source anyways
 Hi: {
   sayHi #(String)
 }
 Int : {
-  sayHi #(String) = { 
+  sayHi #(String) = {
     "My name is `self`"
   }
 }

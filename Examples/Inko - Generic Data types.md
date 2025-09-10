@@ -1,11 +1,13 @@
+#example
+
 ```javascript
 stack: {
 
 	new: {
 		V
-		Stack(V) 
+		Stack(V)
 	}
-	Stack { 
+	Stack {
 		V
 		values []V // generic array
 		push: {
@@ -16,7 +18,7 @@ stack: {
 		pop: {
 			values.len() == 0 ? {
 			   option.None()
-			} { 
+			} {
 				option.Some(value.pop())
 			}
 		}
@@ -25,7 +27,7 @@ stack: {
 main: {
 	s: stack.new(Int)
 	s.push 42
-	s << 43 
+	s << 43
 	// This is an error, as the stack inner `values` is now bound to `Int` types
 	stack.push 'Oh no!'
 
@@ -37,7 +39,7 @@ main: {
 
 
     as_param: {
-	    t stack.Stack(T) 
+	    t stack.Stack(T)
 		10 + t.pop().get() // would require t.value to be bound to Int // :? maybe
     }
 }

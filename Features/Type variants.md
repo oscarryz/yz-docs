@@ -1,8 +1,9 @@
+#feature
 
 >[!NOTE]
 > Similar to Sum Types, but not exactly the same. 
 > 
->  Most up to date design in [sumtypes/Example](./sumtypes/Example.md)
+>  Most up to date design in [sumtypes/Example](../Examples/Yz%20-%20SumTypes.md)
 
 
 
@@ -207,7 +208,7 @@ So, we have the following cases:
   1. All the variants differ
   2. Some of the variants differ
 
-[Example](features/sumtypes/Example.md)
+[Yz - SumTypes](../Examples/Yz%20-%20SumTypes.md)
 
 
 Another example from https://doc.rust-lang.org/rust-by-example/custom_types/enum.html
@@ -401,3 +402,5 @@ root Node(Int) = Node(1, Some(Node(2, Some(Node(3, None())))))
 
 This approach doesn't need pattern matching, although it can be added later. 
 The drawback is it needs to define all the methods and variables in the upper type and those need to be repeated below even if not needed. 
+
+#todo Write a single [[SumTypes]] document.

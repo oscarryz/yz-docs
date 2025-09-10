@@ -1,3 +1,5 @@
+#example
+
 https://harelang.org/
 
 ```javascript
@@ -9,17 +11,17 @@ main: {
 		"Привіт, світ!"
 		"こんにちは世界！"
 	]
-	greetings.each { 
+	greetings.each {
 	    greet String
-		print greet 
-	} 
+		print greet
+	}
 }
 ```
 
 https://harelang.org/tutorials/introduction/
 
 ```js
-// fs.create(path, perms) can return an error 
+// fs.create(path, perms) can return an error
 path: '/tmp/xyz.txt'
 file: fs.create(path, fs.ErrorHandler {[
     {f File; f == fs.noaccess}: {"Error opening: {path}. Access denied"}
@@ -38,15 +40,15 @@ Blocks that return errors can provide a handling error block that will be invoke
 
 ```js
 fs: {
-    create: { 
+    create: {
         path String
         // do something
         error_handler ErrorHandler
-        file File = .... 
+        file File = ....
         file.noaccess ? {error_handler.handle(file)}
     }
     ErrorHandler: {
-       scenarios [{File,Boolean}:{}] 
+       scenarios [{File,Boolean}:{}]
        handle: { file File
            scenarios.keys().for_each({k {File,Boolean}
                 k(file).?({
@@ -61,7 +63,7 @@ fs: {
    create {path String; Result}
    create = {
 		path String
-		file File = ... 
+		file File = ...
 		ok(file)
 		// if error
 		error("cannot open file")

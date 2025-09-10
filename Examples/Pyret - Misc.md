@@ -1,8 +1,10 @@
+#example
+
 https://pyret.org/index.html
 
 ```javascript
 BinTree: {
-  value Int 
+  value Int
   left: leaf
   right: leaf
 }
@@ -10,7 +12,7 @@ leaf = BinTree()
 
 `'
 Calculate the sum of node values
-Examples: 
+Examples:
   >> tree_sum(leaf)
   0
   >> node4: BinTree{4}
@@ -24,14 +26,14 @@ tree_sum: { t BinTree
     {welse}: { t.value + tree_sum(t.left) + tree_sum(t.right) }
   ]
 }
-// also 
+// also
 tree_sum: {t BinTree
     t == leaf ? { 0 } {
-        t.value + tree_sum(t.left) + tree_sum(t.right) 
-    }          
+        t.value + tree_sum(t.left) + tree_sum(t.right)
+    }
 }
 
-// As "module" 
+// As "module"
 tree_sum: {
     doc: 'Calculate the sum of node values'
     tests: {
@@ -48,7 +50,7 @@ tree_sum: {
     }
     f: {
         t BinTree
-        t == leaf ? { 
+        t == leaf ? {
             0
         } {
             t.value + tree_sum(t.left) + tree_sum(t.right)
@@ -61,7 +63,7 @@ tree_sum: {
 ```javascript
 make_counter: {
     counter: 0
-    { 
+    {
         counter = counter + 1
         counter
     }

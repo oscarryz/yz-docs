@@ -1,3 +1,4 @@
+#example
 https://zig.news/edyu/zig-if-wtf-is-bool-48hh
 
 ```javascript

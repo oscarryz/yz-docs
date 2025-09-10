@@ -1,8 +1,8 @@
 #pattern-matching 
 #flow-typing
-#answered in  [Conditional Bocs](../Features/Conditional%20Bocs.md)
+#answered in  [Conditional Bocs](../../Features/Conditional%20Bocs.md)
 
-In the last example of  [SumTypes/Example](../Features/sumtypes/Example.md) we use `>_` to match with one of the types. 
+In the last example of  [SumTypes/Example](../../Examples/Yz%20-%20SumTypes.md) we use `>_` to match with one of the types. 
 
 Here is a more complex example that shows how could it interact with other features like  booleans ? , breaks, and assigments
 

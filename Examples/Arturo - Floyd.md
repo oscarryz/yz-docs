@@ -1,3 +1,5 @@
+#example
+
 https://arturo-lang.io/playground/?8RJD5F
 
 ```js
@@ -16,9 +18,9 @@ floyd: {
         print(pad("`n`",width(rows, col)))
         col = col + 1
         n = n + 1
-        col == row ? { 
+        col == row ? {
           print("")
-            col : 0 
+            col : 0
             row = row + 1
         }
     }

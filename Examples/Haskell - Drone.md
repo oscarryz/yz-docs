@@ -1,6 +1,7 @@
+#example
 
 ```haskell
--- Haskell 
+-- Haskell
 import Control.Monad (replicateM)
 import Data.Foldable (foldl')
 import qualified System.Random.Stateful as Rand
@@ -32,7 +33,7 @@ moveDrone drone move =
     ToRight -> drone { xPos = xPos drone + 1 }
     Up      -> drone { yPos = yPos drone + 1 }
     Down    -> drone { yPos = yPos drone - 1 }
-```   
+```
 
 ```javascript
 // Yz attempt
@@ -53,12 +54,12 @@ Drone {
     }
 }
 movement: {
-    forward  : 0 
+    forward  : 0
     back     : 1
     to_left  : 2
     to_right : 3
     up       : 4
-    down     : 5 
+    down     : 5
 
     values: [forward back to_left to_right up down]
     random: {
@@ -68,7 +69,7 @@ movement: {
 }
 main: {
     drone: Drone(0 10 0)
-    _ : 15.times { 
+    _ : 15.times {
         drone.move(movement.random())
     }
     print '$(drone)'

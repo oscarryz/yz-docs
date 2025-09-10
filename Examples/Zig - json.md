@@ -1,3 +1,4 @@
+#example
 ```zig
 const std = @import("std");
 const json = std.json;

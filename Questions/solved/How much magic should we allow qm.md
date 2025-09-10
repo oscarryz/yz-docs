@@ -1,3 +1,4 @@
+#answered Keep magic at minimum. It would be hard as it is with the [Async + Lazy eval + Structured Concurrency](solved/concurrency/Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md) updates. 
 
 
 The driving design is to avoid "magic" by making the syntax as self explanatory as possible ,  and avoid surprises.  By magic I mean things that the programmer didn't write and still are there present (not to confuse with library code that will be explicitly available in the library code ).

@@ -1,5 +1,24 @@
+
+#answered  in [Type variants](../../Features/Type%20variants.md)
+#accepted
+
+The example above would be
+```js
+Num: {
+  Succ(pred Num)
+  Zero()
+}
+sum #(x Num, y Num) {
+  match x  
+  { Zero => y },
+  { Succ => Succ(x.pred, y)},
+}
+```
+
+--- 
+_old discussion below_
 This is probably for some other version or some other language. 
-Follow up exploration of [Type variants](../Features/Type%20variants.md)
+Follow up exploration of [Type variants](../../Features/Type%20variants.md)
 
 Currently the approach to take will be use "abstract classes" as describe by munificient here: 
 https://www.reddit.com/r/ProgrammingLanguages/comments/10jewgp/comment/j5m7jn9
@@ -94,18 +113,3 @@ Options:
 5. `info(value).instance_of(Succ, { s Succ, /* do something with s } }` I mean.. at what cost, and still would need to cast it
 6. `switch value { Succ(pred) -> sum(pred,y),...}`  Built in pattern matching, but it needs a way to check for exhaustiveness (or to close the `Num` definition)
 7. `s Succ = value` Can compile time check if value is either `Succ` or a super 
-
-#answered  in [Type variants](../Features/Type%20variants.md)
-
-The example above would be
-```js
-Num: {
-  Succ(pred Num)
-  Zero()
-}
-sum #(x Num, y Num) {
-  x when 
-  { Zero => y },
-  { Succ => Succ(x.pred, y)},
-}
-```

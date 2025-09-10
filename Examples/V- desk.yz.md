@@ -1,3 +1,4 @@
+#example
 [twitter](https://twitter.com/preslavrachev/status/1467555292242186241/photo/1)
 ```js
 import os
@@ -17,11 +18,11 @@ main: {
       magnitude: numbers.parse_int(parts.at(1))
 
       when_eq direction  [
-          {'up'}: { vertical_direction = vertical_direction - magnitude } 
-          {'down'}:{ vertical_direction = vertical_direction + magnitude } 
+          {'up'}: { vertical_direction = vertical_direction - magnitude }
+          {'down'}:{ vertical_direction = vertical_direction + magnitude }
           {'forward'}: { horizontal_direction = horizontal_direction + magnitude }
       ]
-      
+
       direction == 'up' ? {
         vertical_direction = vertical_direction - magnitude
       }
@@ -37,5 +38,3 @@ main: {
 }
 
 ```
-
-

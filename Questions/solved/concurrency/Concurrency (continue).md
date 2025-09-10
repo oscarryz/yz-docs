@@ -1,3 +1,5 @@
+#answered  [Async + Lazy eval + Structured Concurrency](Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md)
+
 Feb 27 2023
 
 Similar to Structural Concurrency + Actors  

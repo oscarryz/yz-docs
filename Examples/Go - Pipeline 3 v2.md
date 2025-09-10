@@ -1,3 +1,4 @@
+#example
 
 [Go - Pipeline 3](Examples/Go%20-%20Pipeline%203.md)
 
@@ -36,7 +37,7 @@ counter : {
 		consumer(i)
 	})
 }
-squarer : { 
+squarer : {
 	consumer #(Int)
 	#(n Int) {
 		consumer(n * n)
@@ -57,7 +58,7 @@ counter #(Int)
 squarer #(Int, Int)
 printer #(Int)
 
-counter = { 
+counter = {
   1.to(100).do({
 	  i Int
      squarer(i)
@@ -71,4 +72,3 @@ printer = {
 	print(i)
 }
 ```
-

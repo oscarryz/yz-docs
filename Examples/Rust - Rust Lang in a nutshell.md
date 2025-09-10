@@ -1,3 +1,5 @@
+#example
+
 https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
 ### Variables
@@ -8,7 +10,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
     s1: 'Hello world'
     s2: s1
-    
+
     // Functions
     test: { x Int }
     add: { x Float; y Float; r Float}
@@ -25,7 +27,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     }
     */
     foo: {x Int x > 0 ? { x } {x + 1}}
-    
+
     foo: { x Int
         x.greaterThan(0).ifTrue({
             return x
@@ -47,7 +49,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     Color {Int Int Int}
     Nil: {}
     Foo: { text String }
-    foo: Foo {"Hi"} 
+    foo: Foo {"Hi"}
     foo2: Foo {text: "Hi"}
     foo3: Foo {}
     foo3.text = "Foo3"
@@ -57,7 +59,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
             self Foo
             text: "Hi"
             to_myself: {
-                print '{self.text}' 
+                print '{self.text}'
             }
         }
         new: {
@@ -65,14 +67,14 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
             f: Foo{}
             f.self = f
             f.text = s
-            f 
+            f
         }
     }
     a: foo.new("Nada")
     a.to_myself() // Nada
 
     class Node {
-        Node self; 
+        Node self;
         String data;
         public String toString() {
              return self.data;
@@ -98,13 +100,13 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     }
 
     Pancakes: {
-        algo: {}        
+        algo: {}
     }
 
     //main.yz
     listener: tcpListener.bind("1237.0.0.1:7878")
 
-    listener.incoming().for_each { stream Stream 
+    listener.incoming().for_each { stream Stream
     }
 
 
@@ -113,7 +115,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
         {print "1"}
         {print "1"}
     ] {print "none"})
-    
+
     "Extension method"
     yz.lang.Number: {
         case: {
@@ -154,15 +156,15 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
         tries: 1
 
         guess: input "What is the password?"
-        guess == correct ? { 
+        guess == correct ? {
           print "That's correct"
           return
         }
-          
+
         tries >= 3 ? {
           print "Too many attempts"
         }, {
-              guess_password tries + 1 
+              guess_password tries + 1
         }
     }
 
@@ -170,7 +172,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
 [[Private read only variables]]
 ```js
-// This is how smalltalk does it, not necessarily possible wiht yz 
+// This is how smalltalk does it, not necessarily possible wiht yz
 BlockWithExit: {
     exit  {}
     block {}
@@ -211,7 +213,7 @@ maxBeforeNil: {
 }
 `
 // Iterate an Int array and exit if value is null
-// update max 
+// update max
 yz>max_before_nan [1,2,3, core.int.NOT_A_NUMBER, 4, 5]
 >> 3
 `
@@ -245,7 +247,7 @@ Early return in smalltalk
       ^max
     ```
 ```js
-    max: { 
+    max: {
         a Int
         b Int
         a > b ? { a }, { b }
@@ -262,16 +264,8 @@ Early return in smalltalk
     }
 
     BlockClosure: {
-        
+
     }
     { 1 + 2 }() //-> 3
 
 ```
-    
-
-
-    
-    
-    
-    
-

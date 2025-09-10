@@ -1,3 +1,5 @@
+#answered No channels 
+#rejected 
 # Actors and Channels
 
 Every instantiable code is an actor (and/or can be used as actor)

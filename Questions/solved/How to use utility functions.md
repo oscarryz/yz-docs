@@ -1,3 +1,26 @@
+#answered Use them, and try to make them short lived so others can run.
+#todo  Document this further 
+
+
+Preferred is to create new types and instances of those types, but if using utility functions shouldn't be a problem because their usage will be sequential 
+
+Long lived executions like `while` will be either yielding all the time, or pushing themselves into the execution queue on recursive calls. 
+
+```js
+while #(cond#(Bool), action#()) {
+	match {
+		cond() => action() // calling `cond` and `action` might yield the thread
+		while(cond, action) // this would put then next `while` call in the queue
+	}, {
+	  // nothing
+	}
+}
+```
+
+See also: https://tutorial.ponylang.io/gotchas/scheduling#long-running-behaviors
+
+
+--- 
 Because functions are singletons, we can really have a library without each caller overriding each other
 
 ```javascript

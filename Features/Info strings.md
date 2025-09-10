@@ -1,3 +1,4 @@
+#feature
 Information Strings. You can add a string before any element and will be available by calling  `std.info(element)` 
 
 This text will be available as the `text` property of the returned block: 

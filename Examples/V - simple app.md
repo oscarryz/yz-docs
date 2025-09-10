@@ -1,3 +1,4 @@
+#example
 [Hownto write a simple application](https://blog.vosca.dev/how-to-write-a-simple-v-application-step-by-step/)
 
 ```javascript

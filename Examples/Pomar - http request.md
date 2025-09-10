@@ -1,7 +1,8 @@
+#example
 
 https://twitter.com/pomarlang/status/1763877680280187098/photo/1
 
-TBD: enums, asymetric structural typing? 
+TBD: enums, asymetric structural typing?
 ```js
 http_status: {
 	Ok: {
@@ -23,7 +24,7 @@ match_with_iflets: {
 		{http_status.Ok} : {println('Ok')}
 		{http_status.ClientErrr} : {println(response.error_msg)}
 	]
-	
+
 	result: HttpResult(make_http_request())
 	when_eq result.status [
 		{http.Ok}: {println('Ok')}

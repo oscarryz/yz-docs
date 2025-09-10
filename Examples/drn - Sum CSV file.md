@@ -1,26 +1,28 @@
+#example
+
 [DRN Example](https://www.reddit.com/r/ProgrammingLanguages/comments/1fey7qm/rate_my_syntax/)
 
 ## Example
 
-This was supposed to be a "simple" example of 
+This was supposed to be a "simple" example of
 
 > *Read a CSV file, sum the rows, filter those greater than zero*
 > *create a new CSV and write it*
 
-_(There's a short syntax reference at the bottom)_ 
+_(There's a short syntax reference at the bottom)_
 
-```Go
+```js
 // Opens a file and reads it into a String
 read_file: {
   file_name String
   os.open( file_name ).and_then {
-    file File 
+    file File
     string.from_array(file.read_all(), "UTF-8")
   }
 }
 
 // Reads a String, and sums each row and format it back to a string
-sum_rows: { 
+sum_rows: {
   content String
   Ok(content
     .split("\n")
@@ -40,8 +42,8 @@ sum_rows: {
 // This block  receives a string
 // and writes it to a file and returns a Result of nothign
 write_result: {
-  output_file String 
-  { 
+  output_file String
+  {
     output String
     os.open(output_file) .and_then {
       file File
@@ -54,7 +56,7 @@ main: {
   read_file("input.csv")
     .and_then(sum_rows)
     .and_then(write_result("output.csv"))
-    .or_else { 
+    .or_else {
       e Error
       println("Coulnd't process file. Error: `e`")
     }
@@ -63,7 +65,7 @@ main: {
 ```
 
 
-Now, as it can be seen, a lot of the code relies on standard library functions. 
+Now, as it can be seen, a lot of the code relies on standard library functions.
 
 Error handling is done similar to Rust, where there is a type with two possible outcomes: `Ok` or `Error`
 
@@ -81,7 +83,7 @@ std: {
     Result: {
       and_then #(action #(T, Result(T)), Result(T))
       or  #(e Error)
-      ... 
+      ...
     }
     Ok : {
       data T
@@ -106,12 +108,12 @@ std: {
          data [Int]
          split #(String, [String])
         }
-       
+
      ...
   }
   array: {
     T
-    // This is the "magic" implementation type 
+    // This is the "magic" implementation type
     // under the `[]` syntax
     Array: {
       map: #(#(T,U), [U])
@@ -120,7 +122,7 @@ std: {
     }
     ...
  }
-         
+
   os: {
     open #(file_name String, Result(File))
     File : {
@@ -134,12 +136,12 @@ std: {
 ```
 
 
-## Syntax 
+## Syntax
 
-Some syntax short explaination: 
+Some syntax short explaination:
 
 - `{ stuff }` a block of code containing _stuff_ . Variables inside blocks work as both parameter and return values (and attributes).
-  - e.g. `{ print("Hello world") }` 
+  - e.g. `{ print("Hello world") }`
 - `TypeName` uppercase name denotes a type
   - e.g. `String`
 - `TypeName(params)` creates an instance
@@ -159,4 +161,4 @@ Some syntax short explaination:
 - `T` lonely single uppercase letter, is a generic.
   - e.g. `Box(T)` generic box, `Box(String)` instantiates a box with type String
 - String interpolation uses backtick
-  - "Hello `whom`" would be `"Hello world"` if `person` is `"world"`   
+  - "Hello `whom`" would be `"Hello world"` if `person` is `"world"`

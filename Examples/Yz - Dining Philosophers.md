@@ -1,3 +1,4 @@
+#example
 [Dining Philosophers](https://en.wikipedia.org/wiki/Dining_philosophers_problem)
 
 The following is a basic setup. Will still need some time to do a test run and see what happens with the resources.

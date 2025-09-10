@@ -1,10 +1,12 @@
+#example
+
 https://learnxinyminutes.com/docs/haskell/
 
 ```javascript
 x: {
   r: []
-  1 .to 5  { x Int 
-     
+  1 .to 5  { x Int
+
     x * 2 > 4 ? { r << x * 2}
   }
 }
@@ -29,12 +31,12 @@ get: {
 }
 
 add: {a Int; b Int; a + b }
-// 
+//
 Adder: {
   + {Adder Adder}
 }
 Int: {
-  + {other Int 
+  + {other Int
   self + other // How to resolve self?
   }
 }
@@ -51,8 +53,8 @@ fib: {x Int
   fib(x - 1) + fib( x - 2)
 }
 
-fib: {x Int; 
-  when(  
+fib: {x Int;
+  when(
     { x == 1 } , { 1 }
     { x == 2 } , { 2 }
     { true }, { fib(x - 1 ) + fib( x - 2 ) }
@@ -60,7 +62,7 @@ fib: {x Int;
 }
 tuple: { "snd"; "can't touch this"; "da na na" }
 
-_, b, _: tuple() 
+_, b, _: tuple()
 b
 
 my_map: { array []A; f <A,B>{A;B}
@@ -69,7 +71,7 @@ my_map: { array []A; f <A,B>{A;B}
   push(r, f(array[0]), 0)
 }
 
-(1 .. 5).collect({ x Int; x + 2 }) 
+(1 .. 5).collect({ x Int; x + 2 })
 
 add: { a Int; b Int; a + b }
 foo: { c Int; add(c, 10) }
@@ -95,9 +97,9 @@ double {Int; Int} = { x Int; x * 2 }
 haskell: 1 == 1 ? {'awesome'}, {'awful'} // awesome
 
 // Identation is not important
-haskell: 1 == 1 ? 
+haskell: 1 == 1 ?
   {'awesome'},
-  {'awful'} 
+  {'awful'}
 
 args String
 when(
@@ -145,13 +147,13 @@ Point: {
 */
 
 distance {Point; Point; Float} = {
-    a Point; b Point 
+    a Point; b Point
     dx: (a.x - b.x) ** 2
     dy: (a.y - b.y) ** 2
     sqrt(dx + dy )
 }
 
-Name: { 
+Name: {
     name: ""
     last_name: ""
     second_last_name: ""
@@ -177,7 +179,7 @@ my_point_3: CartesianPoint{ 3.3; 4.0}
 distance_from_origin: {
     p: {x Float;y Float}
     when(
-        {meta_data(p).block_name == 'CartesianPoint2D'}, 
+        {meta_data(p).block_name == 'CartesianPoint2D'},
             { sqrt(p.x ** 2 + p.y ** 2)}
         {meta_data(p).block_name == 'PolarPoint2D'}, { p.r }
     )

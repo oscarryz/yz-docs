@@ -1,10 +1,12 @@
+#example
+
 https://github.com/golang/go/blob/f32519e5fbcf1b12f9654a6175e5e72b09ae8f3a/src/cmd/go/internal/work/gc.go#L68
 
 ```js
 Gc_tool_chain: {
 
     gc: {
-    
+
         b Builder;
         a Action
         archive String
@@ -16,7 +18,7 @@ Gc_tool_chain: {
         ofile String
         output []Byte
         error Error
-       
+
         p: a.package
         objdir: a.objdir
 
@@ -30,7 +32,7 @@ Gc_tool_chain: {
          default_gc_flags : ["-p", pkgpath]
          p.module != nil ? {
              v: p.module.goversion
-             v == '' ? { 
+             v == '' ? {
                 // We started adding a 'go' directive to the go.mod file unconditionally
                 // as of Go 1.12, so any module that still lacks such a directive must
                 // either have been authored before then, or have a hand-edited go.mod
@@ -49,7 +51,7 @@ Gc_tool_chain: {
                  default_gc_flags << '-lang=go' + v
              }
          }
-         p.standard ? { 
+         p.standard ? {
              default_gc_flags << '-std'
          }
 
@@ -58,32 +60,32 @@ Gc_tool_chain: {
         compiling_runtime ? {
             // runtime compiles with a special gc flag to check for
             // memory allocations that are invalid in the runtime package,
-            // and to implement some special compiler pragmas.            
+            // and to implement some special compiler pragmas.
             default_gc_flags << '-+'
         }
         // If we're giving the compiler the entire package (no C etc files), tell it that,
         // so that it can give good error messages about forward declarations.
         // Exceptions: a few standard packages have forward declarations for
         // pieces supplied behind-the-scenes by package runtime.
-        ext_file: p.cgo_files.len() 
-            + p.cfiles.len() 
-            + p.cxxfiles.len() 
-            + p.mfiles.len() 
-            + p.ffiiles.len() 
-            + p.sfiles.len() 
-            + p.sysofiles.len() 
-            + p.swigfiles.len() 
+        ext_file: p.cgo_files.len()
+            + p.cfiles.len()
+            + p.cxxfiles.len()
+            + p.mfiles.len()
+            + p.ffiiles.len()
+            + p.sfiles.len()
+            + p.sysofiles.len()
+            + p.swigfiles.len()
             + p.swigcxxfile.len()
-        p.standard ?  { 
-            ["bytes" 
-             "internal/poll" 
-             "net" 
+        p.standard ?  {
+            ["bytes"
+             "internal/poll"
+             "net"
              "os"
-             "runtime/metrics" 
-             "runtime/pprof" 
+             "runtime/metrics"
+             "runtime/pprof"
              "runtime/trace"
-             "sync" 
-             "syscall" 
+             "sync"
+             "syscall"
              "time"].contains(p.import_path) ? {
                   ext_files = ext_files + 1
               }
@@ -95,18 +97,18 @@ Gc_tool_chain: {
             default_gc_flags << '-installfuffix'
             default_gc_flags << cg.build_context.install_suffix
         }
-        a.build_id != '' ? { 
+        a.build_id != '' ? {
             default_gc_flags << '-buildid'
             default_gc_flags << a.build_id
         }
         p.internal.omit_debug || { cfg.goos == 'plan9'} || {cfg.goarch == "wasm"} ? {
             default_gc_flags << '-dwarf=false'
-            
+
         }
-        runtime_version.has_prefix "go1" && {os.args[0].contains 'go_bootstrap'} ? { 
+        runtime_version.has_prefix "go1" && {os.args[0].contains 'go_bootstrap'} ? {
             default_gc_flags << '-goversion'
             default_gc_flags << runtime_version
-        } 
+        }
         symabis != '' ? {
             default_gc_flags << '-symabis'
             default_gc_flags << symabis

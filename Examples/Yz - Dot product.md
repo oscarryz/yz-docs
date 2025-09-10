@@ -1,3 +1,4 @@
+#example
 https://rosettacode.org/wiki/Dot_product
 
 ```javascript

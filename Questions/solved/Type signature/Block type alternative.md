@@ -1,3 +1,5 @@
+#answered 
+#rejected 
 What if the block type could use `::` and `;`
 
 eg

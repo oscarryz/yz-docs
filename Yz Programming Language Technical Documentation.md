@@ -1,3 +1,4 @@
+#doc
 # The Yz Programming Language Documentation
 
 > **Note**: Yz is currently in the design phase with no compiler implementation yet. All examples and features described here represent the intended design.

@@ -1,3 +1,5 @@
+#example
+
 ```smalltalk
 "Smalltalk"
 | shipping bliling creditCard |
@@ -6,7 +8,7 @@
 	self isolate: [[self fillCart.
 					self confirmContentsOfCart]
 					whileFalse].
-	self isolate:  [ 
+	self isolate:  [
 		shipping := self getShippingAdddress.
 		billing := (self useAsBillingAdffresss: shipping)
 			ifFalse: [self getBilliAfddress ]

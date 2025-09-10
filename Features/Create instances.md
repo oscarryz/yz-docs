@@ -1,3 +1,4 @@
+#feature
 
 ```js
 // Given a type `HelloWorldModel`

@@ -1,3 +1,5 @@
+#example
+
 https://github.com/tibordp/alumina
 
 ```javascript
@@ -5,11 +7,11 @@ stack: {
     new: {
         with_capacity(0)
     }
-    with_capacity: { 
+    with_capacity: {
         capacity Int
         // capacity is not used but in the
         // oriinal example it was used to
-        // create an array of size capacity 
+        // create an array of size capacity
         Stack(data:[]T,len: 0)
     }
     Stack: {
@@ -23,18 +25,18 @@ stack: {
                 data = data.realloc(max (data.len * 2, len + additional))
             }
         }
-        push: { 
+        push: {
 	    value T
             reserve(1)
             data[len] = value
             len = len + 1
         }
-        << : push 
+        << : push
         pop: {
             len = len -1
             data[len]
         }
-    
+
         is_empty: {
             len == 0
         }

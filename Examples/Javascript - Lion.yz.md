@@ -1,3 +1,5 @@
+#example
+
 ```js
 Lion: {
   food_consumed : Set()
@@ -22,8 +24,8 @@ Lion: {
   }
 
   get_favorite_food: {
-    get_foods_consumed().filter { food String 
-      food.lenght % 2 == 1 
+    get_foods_consumed().filter { food String
+      food.lenght % 2 == 1
     }
   }
 }
@@ -34,25 +36,24 @@ No braces ( `{}` )
 ```js
 Lion:
    consumed: Set()
-   
+
    roar:
      'roar'
-     
-   eat: 
+
+   eat:
       food String
       validate food
       consumed.add food
-      
+
     validate:
        food String
        reversed: food.split '' .reverse().join ''
        reversed == food ?
            error "I don't like palindromes"
-           
+
     get_favorite_food:
        consumed.filter
           item String
           item.length() % 2 == 1
-          
-```
 
+```
