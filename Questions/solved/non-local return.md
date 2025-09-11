@@ -1,3 +1,6 @@
+
+#answered  Will be very similar to Smalltalk
+#accepted 
 ```js
 // How would we do a break in a for loop? 
 a: [1,2,3,4]

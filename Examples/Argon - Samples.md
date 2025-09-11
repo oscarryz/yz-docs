@@ -3,9 +3,9 @@
 [arlang.io](https://arlang.io)
 
 ```javascript
-NOBLE_GAS = [ 'Heliom' 'Neon' 'Argon' 'Krypton' 'Xenon']
+NOBLE_GAS = ['Helium', 'Neon', 'Argon', 'Krypton', 'Xenon']
 
-group_by_name_length : enum.group_by({s String, s.len() })
+group_by_name_length : enum.group_by({s String; s.len()})
 groups:  group_by_name_length(NOBLE_GAS)
 print("`groups`")
 

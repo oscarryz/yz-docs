@@ -52,9 +52,9 @@ main: {
     v << 'am '
     v << 'I '
 
-    while {v.is_empty() == false}, {
-        print '`v.pop()`'
-    }
+    while ({v.is_empty() == false}, {
+        print('`v.pop()`')
+    })
 }
 
 ```
