@@ -4,8 +4,9 @@
 
 
 ```js
+// Signature / interface
 stack #(
-	empty    #(T, Stack(T))
+	empty #(T, Stack(T))
 	Stack #(
 		T
 		push     #(a T)

@@ -68,4 +68,14 @@ factorial: {n Int
   ] /*else*/ {1}
 }
 
+// using match (real)
+factorial: {
+	n Int
+	match {
+	   n > 0 => n * factorial(n - 1)
+	}, {
+	   1
+	}
+}
+
 ```

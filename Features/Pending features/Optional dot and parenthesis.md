@@ -1,3 +1,5 @@
+#pending-feature
+
 When block name is non-word and has at least one parameter
 
 ```js
