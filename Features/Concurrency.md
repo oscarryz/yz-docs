@@ -107,6 +107,6 @@ fetch:{
 
 See: [Go - Go Concurrency Patterns](Go%20-%20Go%20Concurrency%20Patterns.md)
 
-This might be replaced with:  [Async + Lazy eval + Structured Concurrency](../Questions/solved/concurrency/Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md)
+This will be replaced with:  [Async + Lazy eval + Structured Concurrency](../Questions/solved/concurrency/Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md)
 
 

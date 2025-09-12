@@ -1,152 +1,112 @@
 #example
 
-(Invalid, see below) How concurrency is going to work is still TBD
-```javascript
-spawn: yz.concurrent.spawn
-context: yz.concurrent.context
 
-main: spawn {
-    c: context.channel({n:0})
-    a: spawn {
-        x: 10
-        // sending 10 to channel
-        c(x)
-    }
-    b: spawn {
-        // Receiving 10 from channel
-        x: c()
-    }
+https://ballerina.io/why-ballerina/concurrent/
+
+[First example](https://ballerina.io/why-ballerina/concurrent/#:~:text=import%20ballerina/io,y)
+
+
+For a list of persons and a list of quantities we want to calculate the average. 
+
+In the example, the sum for the quantities and the total number of employees want to be calculated concurrently. 
+
+Also, we want to calculate the message `Employed members: N` and `Average : A`
+
+So, we want to calculate concurrently as much as needed, until we need the value
+
+```js
+Person : {
+	name String
+	employed Bool
 }
 
-```
-
-With the latest content from:  [[../Features/Concurrency]]
-```javascript
-// Attempt to run the above
-main: {
-    c: {n Int}
-    a: {
-       x: 10
-       c(x) // calls `c` with arg value 10
-    }
-    b: {
-       x: c.n // receives the last arg from c
-    }
-    // Problem, b has to run until a has set the value.
-    // Solution: call b from c
-    a()
-    b()
+process #(members []Person, quantities []Int) {
+	// creates two variables and continues the flow
+	employee_count, total_message: employee_count(members)
+	// employee count is passed but still not needed, so it does't block
+	avg, avg_message : calculate_average(quantities, employee_count)
+	print(total_message)
+	print(avg_message)
 }
-```
-```javascript
-//Corrected
-main: {
-    b {Int}
-    c: {
-        n Int
-        b(n)
-    }
-    a: {
-        x:10
-        c(x)
-    }
-    b = {
-       x Int
-    }
-    a()
-    // b() no need to call `b` will be called from `c`
-    // slightly problem, this whole thing is synchronized
-    // we might want to run it async, but that's another example
+employee_count #(members []Person) {
+	// count is calculated async, but still not used
+    count: members.filter({p Person; p.employed}).len()
+	
+	// tbd if this constitutes usage, but if doesn't 
+	// it can keep going and return this value
+	"Employed members: `count`"
 }
-```
-
-```javascript
-// Behaving like channels
-main: {
-    b #(Int)
-    c: #(n Int) // c: {n Int = ints.NAN}
-    a: {
-        // do stuff if some cond is true, send x
-        loop {
-          x: int.random()
-          if x == 10 {
-              c(x) //
-          }
-        }
-    }
-    b: {
-        // do stuff... when c has a value act on it.
-        loop {
-            print "I'm doing stuff"
-            if c.n != int.nan {
-               print 'Hey I can see c has something' // at the cost of always be checking...
-            }
-        }
-    }
-    // who calls b though? And how to make b wait
-}
-```
-
-
-
-[Alternate wait in ballerina]()
-```ballerina
-// ballerina
-function fetch(string url) returns string|error { ….
-}
-function altFetch(string urlA, string urlB) returns string|error {
-    worker A returns string|error {
-        return fetch(urlA);
-    }
-    worker B returns string|error {
-       return fetch(urlB);
+calculate_average(quantities []Int, employed_cont Int ) {
+	total: quantities.sum()
+	// employed_count is needed here, the above can run aysn
+	// but the flow will stop here to let the calculation finish
+	// tbd, what determines "usage", is because it is inside a`match`? 
+	// is it because it is compared vs. 0? 
+	// is it because it used as arg to `/` ? (it should b)
+	match { 
+		employed_count == 0 => 0
+	}, {
+	    total / employed_count	
 	}
-	return wait A | B;
 }
 ```
 
-Alternate wait in Yz
 ```js
-fetch: {
-   string Url
-   // ... return string or error
+// Same as above but comments removed
+Person : {
+	name String
+	employed Bool
 }
-alt_fetch: {
-   url_a String
-   url_b String
-   a: {
-      fetch(url_a)
-      return
-   }
-   b: {
-      fetch(url_b)
-      return
-   }
-   // Launches both, but when one of them finishes it will exit the enclosing `alt_fetch`
-   a()
-   b()
+
+process #(members []Person, quantities []Int) {
+	employee_count, total_message: employee_count(members)
+	avg, avg_message : calculate_average(quantities, employee_count)
+	print(total_message)
+	print(avg_message)
+}
+employee_count #(members []Person) {
+    count: members.filter({p Person; p.employed}).len()
+	"Employed members: `count`"
+}
+calculate_average(quantities []Int, employed_cont Int ) {
+	total: quantities.sum()
+	match { 
+		employed_count == 0 => 0
+	}, {
+	    total / employed_count	
+	}
 }
 ```
-(see: [return, break, continue](../../Features/return,%20break,%20continue.md))
-
-Inter worker message passing:
 
 ```js
 
-main: {
-   b: {
-	   x1 Int
-   }
-   c: {
-	   x2 Int
-   }
-   a: {
-	   b(1)
-	   c(2)
-   }
-   wait_for_a: a() // waits until a finishes
-   y1: b.x1
-   y2: c.x2
-   z:  y1 + y2
+// Same as above bur more of a transliteration of the ballerina sample
+// Sept 12, 2025
+Person : {
+	name String
+	employed Bool
+}
+
+process #(members []Person, quantities []Int) {
+
+	employed_count, count_msg :  { 
+	    employedMembers: members.filter({p Person; p.employed})
+		count : employedMembers.len()
+		"Employed members: `count`"
+    }()
+	
+	avg, avg_msg : {
+		total: quantities.sum()
+		match { 
+			employed_count == 0 => 0
+		}, {
+			total / employed_count
+		}
+		"Average: `{avg}`"
+	}()
+	print(count_msg)
+	print(avg_msg)
+	
+
 }
 ```
