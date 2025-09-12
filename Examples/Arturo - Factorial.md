@@ -4,7 +4,7 @@ https://arturo-lang.io/playground/?example=factorial%20-%20recursive
 
 ```js
 factorial: { n Int
-    n > 0 ? { n * factorial n - 1 }
+    n > 0 ? { n * factorial(n - 1)}
             { 1 }
 }
 
@@ -35,8 +35,8 @@ Factorial of 19 = 121645100408832000`
 ```
 
 ```javascript
-arr: [1 2 3 4 5 6 7 8 9 10]
-print arr.filter { x Int x % 2 == 0 }
+arr: [1,2,3,4,5,6,7,8,9,10]
+print arr.filter { x Int; x % 2 == 0 }
 ```
 
 Other formatting
@@ -44,15 +44,15 @@ Other formatting
 ```javascript
 factorial: {n Int
   n > 0 ? {
-    n * factorial n - 1
+    n * factorial(n - 10)
   } {
     1
   }
 }
 
-1 .to 19 { x Int
-  print 'Factorial of `x` = `factorial x`'
-}
+// 1 .to 19 { x Int
+//   print 'Factorial of `x` = `factorial x`'
+// }
 // alternate formatting
 factorial: {n Int
    n > 0 ? { n * factorial n - 1} { 1 }
