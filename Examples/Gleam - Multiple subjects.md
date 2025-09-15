@@ -11,12 +11,15 @@ main: {
 	number: int.random(10)
   	printint(number)
 
-	result: when [
-		{  [2 4 6 8].contains(number) } : {"This is an even number"}
-		{  [1 3 5 6].contains(number) } : {"This is an odd number"}
-		{ when.else } : {"I'm not sure"}
-	]
-	debug(result)
+	result: match  {
+	  [2 4 6 8].contains(number) => "This is an even number"
+	  }, {
+	    [1 3 5 6].contains(number) => "This is an odd number"
+	  }, {
+	  "I'm not sure"
+	}
+	
+	print(result)
 }
 // using hamcrest match library
 is: hamcrest.is
