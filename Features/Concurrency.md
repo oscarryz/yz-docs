@@ -1,22 +1,32 @@
 #feature
 # Concurrent by Default 
-Yz is concurrent by default. Every method invocation will run in its own coroutine/thread asynchronously, although still sharing the same memory space.
+Yz is concurrent by default. Every method invocation will run asynchronously, although still sharing the same memory space.
 ```js
 // Run concurrently 
 foo()
 bar()
 ```
 
-If the result of a method call is assigned to a variable or used as argument to another boc, the code will be synchronous and will wait until the call completes
+The result of the execution can be used normally (assigned to a variable, passed as argument, stored in arrays, etc ) and methods can execute on them (or get prepared to execute), but the flow wont block until the value is actually needed, usually by means of interacting with the IO. 
 
 ```js
-// Execution will wait for `fr` to have a value from the completion of `foo()`
-fr: foo()
-// `bar` will start execution when `baz()` call completes.
-bar(baz())
+outer: {
+	// The following lines will execute concurrently
+	rv: foo()
+	bar(rv)
+	arr: [rv] 
+	s : rv.to_str() // this call will execute immediately too
+	
+	// Is until the value of `s` is written to IO (the console in this case)
+	// the flow will wait it is ready. 
+	// In this example, it will wait until `s.to_str()` completes
+	// which un turn will wait until `foo()` completes
+	print("The value is: `s`")
+}
+ 
 ```
 
-The block enclosing the bocs calls, will complete when all the internal bocs have completed (similar to structural concurrency without scopes)
+A block completes, when all the inner blocks complete. In the example above if someone is waiting for `outer` to complete, it will be done when `foo`, `bar` and `to_str` have completed.
 
 ```js
 parent_boc : { 
@@ -30,7 +40,8 @@ parent_boc()
 
 To sum up: 
 - Every method call is async
-- Assigned as variable (or used as argument for another method) the execution will wait
+- Assigned as variable (or used as argument for another method) won't stop the flow
+- Using the value (usually through IO) will make the flow to wait until the value is ready.
 - Once all the calls finishes, the method is self will finish. 
 
 **Note** executing multiple calls on the same boc will effectively be sequential too, as they are executed as received
