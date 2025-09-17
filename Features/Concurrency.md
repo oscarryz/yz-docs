@@ -1,4 +1,10 @@
-[feature](../tags/feature.md)
+---
+tags:
+- feature
+---
+
+
+
 
 # Concurrent by Default 
 Yz is concurrent by default. Every method invocation will run asynchronously, although still sharing the same memory space.
