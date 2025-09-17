@@ -1,7 +1,7 @@
 #answered [Async + Lazy eval + Structured Concurrency](Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md)
 
 
-Update (sometime in 2023) Yz will be [[../../../Features/Concurrency]]
+Update (sometime in 2023) Yz will be [Concurrency](../../../Features/Concurrency.md)
 
 Single thread model with channels / process 
 // status: I don't know but the important part is to avoid threads 

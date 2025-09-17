@@ -83,7 +83,7 @@ foo: lib2.lib2.foo
 import lib2.lib2
 ```
 
-[[../../Questions/solved/concurrency/Concurrency]] TBD
+[[../Questions/solved/concurrency/How to do concurrency]] TBD
 
 ```javascript
 
