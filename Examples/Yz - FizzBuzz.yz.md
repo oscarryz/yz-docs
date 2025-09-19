@@ -130,3 +130,23 @@ fizz_buzz: {
 }
 1.to(100).do(fizz_buzz)
 ```
+
+With match
+
+
+```js
+fizz_buzz: {
+  1.to(100).do({
+    i Int
+   print(
+      match {
+         i % 3 == 0 => "Fizz"
+         continue
+      },{ 
+         i % 5 == 0 => "Buzz"
+      }, {
+         `i`
+      }
+    )
+}
+```
