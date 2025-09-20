@@ -1,9 +1,6 @@
-#feature
 #feature 
 Also known as dictionaries or hash maps
 ```js
-
-
 // Type
 [Key_Type : Value_Type] 
 
@@ -12,6 +9,7 @@ Also known as dictionaries or hash maps
 d [String:Int] 
 // initialization 
 d = [ "one": 1, "two": 2]
+
 // decl + init 
 e [String:Int] = ["one":1, "two":2]
 

@@ -44,7 +44,7 @@ print '{me}' //
 
 ```
 
-If follow the idea of [Private read only variables](../../Features/Private%20read%20only%20variables.md) + [Consider Immutability](Consider%20Immutability.md)  we could have a private self that will be overriden on the next instance
+If follow the idea of [Private read only variables](../../Features/Replaced%20features/Private%20read%20only%20variables.md) + [Consider Immutability](Consider%20Immutability.md)  we could have a private self that will be overriden on the next instance
 Update: this doesn't work becuase `self` will be overriden and will change. I thought I could get away with that if the instance kept a separate reference. 
 
 ```javascript
