@@ -1,12 +1,21 @@
 #feature
-If we have a new type `Person`  
 
+To define a new type, we use upper case names, followed by the type body, the following would define a new type `Person`
 
 ```js
-Person : {}
+Person : {
+   name String
+   to_str : {
+	   "My name is `name`"
+   }
+}
 ```
 
-The current option suggested by [Instances](Replaced%20features/Instances.md) (I think) is to see if it was defined earlier, but that doesn't seem to be enough. 
+A type can also have a type signature, just like a regular boc
+
+```js
+Person #(name String, to_str #(String)) 
+```
 
 ## Summary
 

@@ -4,7 +4,7 @@ By default the blocks return all the last values computed. It is possible to ret
 ```js
 check: {
    age Int
-   age < 21 {
+   age < 21 ? {
        message: 'You have to be over 21 to access this site'
 	   return
    }

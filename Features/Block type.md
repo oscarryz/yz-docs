@@ -35,11 +35,12 @@ if the `=` is omitted the variable can be used:
 
 Type can be generic
 
-```
+```js
+
 // Block that takes/returns a T and take/returns a U
 #(T, U)
-// e.g. 
 
+// e.g. 
 map #([T], #(T,U) ) = {
     a [T]
     mf #(T,U)

@@ -64,7 +64,7 @@ r2: math.min 1 2
 ```
 
 Thinking .... what are the thread safe implications for this? What if two threads call the same function? What value is returned. 
-Possible answer: each thread creates its own world and the only way to sync with through [Channels](../Questions/solved/concurrency/Channels.md)
+Possible answer: each thread creates its own world and the only way to sync with through [Channels](../../Questions/solved/concurrency/Channels.md)
 #to-do Review with [Concurrency](Concurrency.md)
 
 #open-question How to deal with concurrency and libraries? e.g

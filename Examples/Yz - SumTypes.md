@@ -3,25 +3,25 @@
 1. Same data types on all the variants
   1. No values
 ```js
-Switch {
-  On()
+Switch:{
+  On(),
   Off()
 }
 ```
   
   2. Same values
   ```js
-FileAccess { 
-    Read(v:1)
-    Write(v:1)
+FileAccess:{ 
+    Read(v:1),
+    Write(v:1),
     Execute(v:1)
   }
 ```
 
   2. Different values
 ```js
-Planet {
-    Mercury(mass: 123, radius: 456)
+Planet:{
+    Mercury(mass: 123, radius: 456),
     Venus(mass: 9393, radius: 9881)
     ... 
   }
@@ -29,17 +29,17 @@ Planet {
 1. Different data types on all the variants
   2. All the variants differ
   ```js
-Shape {
-    Empty()
-    Circle(radius Double)
-    Rectangle(width Double, height Double)
-    Point(x Int, y Int)
+Shape:{
+    Empty(),
+    Circle(radius Double),
+    Rectangle(width Double, height Double),
+    Point(x Int, y Int),
     Text(msg String, font_size Int)
   }
 ```
   4. Some of the variants differ
   ```js
-Status { 
+Status:{ 
     Success(code Int),
     Warning(code Int),
     Error(code Int, msg String),
@@ -48,7 +48,7 @@ Status {
   }
 
 classify_status #(status Status) { 
-  status when
+  match status
     {Success => print("Sucessful response (2xx): `status.code`")},
     {Warning => print("Redirection (3xx): `status.code`")},
     {Error   => print("Error ocurred: `status.mgs`(`status.code`)")},
@@ -73,8 +73,8 @@ Pet: {
 // because now is safe to access pet.lives directly
 // TODO: Decide if the parameter type is needed 
 // e.g. Cat(String,Int), or even the `()` e.g Cat()
-describe #(pet Pet, String) = {
-  pet when 
+describe #(pet Pet, String) {
+	match pet
     { Cat => "cat `pet.name` has `pet.lives` lives" },
     { Dog => "dog `pet.name` has `pet.years` of age" },
 }

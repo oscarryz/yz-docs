@@ -279,72 +279,53 @@ two: {
 
 
 ## Control flow
-There are no specific control flow structures in the syntax, but Yz relies on the type system to perform flow logic. 
 
-For instance the `Bool` type has a `?` method (full signature: `? (when_true (T) when_false (T))`) method, and the `true` and `false` instances respond to each one to execute the logic:
+Most of the flow can be left to the types and their implementation. For instance the `Bool` class has methods that allows you to decide between two options or the `Option` boc would let you encapsulate a result
 
-```javascript
-Bool : {
-	? #(when_true #(T), when_false #(T))
-	// more methods ommited
+`Bool` example 
+```js
+// Returns a Bool instance 
+f #(Bool) {
+   1 < 2
 }
-true : Bool(
-	? = {
-		when_true #(T)
-		when_false #(T)
-		when_true() // executes the when true block
-	}
-)
-false : Bool(
-	? = {
-		when_true #(T)
-		when_false #(T)
-		when_false() // executes the when true block
-	}
-)
-is_it_monday : true 
-is_it_monday.?({
-	print("Time to go to work")
+r: f() 
+// the method `?` decides between two bocs
+r  ? {
+   println("it was true")
 }, {
-	print("At least is not monday")
-})
-
-
+   println("it was false")
+}
 ```
 
-We can create an `if` method  (`if (cond Bool, then (T), else (T)))`)  building on this `Bool` type
+`Option` example
 ```js
-if (cond Bool, then #(T), else #(T)) = {
-	cond.?(then, else)	
+
+o #(Option(String)) {
+    Some("hi")
 }
-is_it_monday: true
-if (is_it_monday {
-	print("Time to go to work")
-},{
-	print("At least is not monday")
-})
+f #(Option(String)) {
+   None()
+}
+
+// the `or` method returns the value or an alternative
+println(o.or("bye"))
 ```
 
-Similarly a "case/switch/match" like flow can be achieved using a dictionary (hash map) where the key is a block of code to be tested, and the value is the action to be executed
+But the main control structure will be most of the times a [Conditional Bocs](Conditional%20Bocs.md) which lets you evaluate a condition and execute the expressions next to the arrow `=>`
 
 ```js
-// When is a block/function that take a dictionary "conditions" whose keys 
-// are blocks that return booleans and values are blocks that return a generic type t
-when ( conditions [#(Bool)]#(T) ) = std.when 
-// dictionary syntax: [ key_1 : value_1  key_2: value_2]
-dow : day_of_the_week // the block/module/function day_of_the_week
-day_of_week = dow.today() // some function returning the day of the week
-when ([
-	{ day_of_week == dow.MONDAY } : { print("Time to go to work") },
-	{ day_of_week == dow.TUESDAY } : { print("Time to go to work") },
-	{ day_of_week == dow.SATURDAY } : { print("Not going to work") }
-])
-day_of_the_week : {
-	Day: {
-		name String
-	}
-	MONDAY: Day("Monday")
-	TUESDAY: Day("Tuesday")
-	FRIDAY: Day("Friday")
-}
+match 
+{ cond_1() => action_1() },
+{ cond_2() => action_2() },
+{ default_action() }
+```
+
+When passing a parameter to `match` the type varian will be matched
+
+```js
+x Option(String) = ...
+match x 
+	{ Option.Some() => print("We have `x.value`")},
+	{ Option.None() => print("We have nothing")}
+
 ```

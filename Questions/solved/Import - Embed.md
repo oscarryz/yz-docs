@@ -47,9 +47,9 @@ print(co.describe_tag()) // Container tag is co'stag
 ```
 
 #answered Feb 15 2023
-No embed, but you can "hook", behavior from other blocks, see  [Inheritence](../../Features/Inheritence.md)
+No embed, but you can "hook", behavior from other blocks, see  [Inheritence](../../Features/Pending%20features/Inheritence.md)
 
-Import is a simple name shortening see [Import](../../Features/Import.md)
+Import is a simple name shortening see [Import](../../Features/Pending%20features/Import.md)
 
 
 

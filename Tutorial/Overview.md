@@ -15,14 +15,14 @@
 - [Type variants](Features/Type%20variants.md)
 - [Error handling](Features/Error%20handling.md)
 - [Generics](Features/Generics.md)
-- [Import](Features/Import.md)
+- [Import](../Features/Pending%20features/Import.md)
 - [Info strings](Features/Info%20strings.md)
 - [Structural typing](Features/Structural%20typing.md)
 - [Memory Management](Questions/Memory%20Management.md)
 
 ## How to
 - [Enums](Features/Replaced%20features/Enums.md) (under revision)
-- [Constants](Features/Constants.md) (under revision)
+- [Constants](../Features/Replaced%20features/Constants.md) (under revision)
 - [Code organization](Features/Code%20organization.md)
 
 Read: 

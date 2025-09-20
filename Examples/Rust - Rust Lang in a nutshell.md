@@ -170,7 +170,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
 ```
 
-[[Private read only variables]]
+[[../Features/Replaced features/Private read only variables]]
 ```js
 // This is how smalltalk does it, not necessarily possible wiht yz
 BlockWithExit: {

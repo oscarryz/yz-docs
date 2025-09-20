@@ -1,5 +1,4 @@
 #feature
-#feature
 Array
 
 ```js
@@ -65,19 +64,3 @@ a: ['Hello', 'World']
 print(a[0]) // prints Hello
 ```
 
-Array block declaration
-```javascript
-
-'special'
-Array: {
-  T
-  elements T
-	push: { e T 
-    	elements << e
-	}
-	<< : push
-	
-	... 
-strings: ['hola']
-strings << 'adios'
-```
