@@ -135,18 +135,19 @@ With match
 
 
 ```js
-fizz_buzz: {
-  1.to(100).do({
-    i Int
-   print(
-      match {
-         i % 3 == 0 => "Fizz"
-         continue
-      },{ 
-         i % 5 == 0 => "Buzz"
-      }, {
-         `i`
-      }
-    )
+1.to(100).do({
+  i Int
+  print(fizz_buzz(i))
+})
+
+fizz_buzz #(i Int) {
+  match {
+   i % 3 == 0 => "Fizz"
+   continue
+  },{ 
+    i % 5 == 0 => "Buzz"
+  }, {
+   `i`
+  }
 }
 ```
