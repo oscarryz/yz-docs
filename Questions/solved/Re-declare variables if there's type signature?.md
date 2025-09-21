@@ -1,4 +1,6 @@
-#answered Yes, it looks a bit redundant, but 90% of the time we won't be using type signature.
+#answered Yes, it looks a bit redundant, but has its spot. 
+
+Answer in : [[Signatures + Literals duplication]]
 
 If a block has a type: 
 
@@ -63,7 +65,7 @@ b #(s String,n Int) => {
 }
 ```
 
-Or no symbol at all 
+Or no symbol at all (this is the accepted)
 ```js
 b #(s String,n Int) {
   n.times({
