@@ -264,7 +264,7 @@ bad_result Result(Int,String) = Result.Err(":(" )
 
 ```
 
-Conditional blocks of code using `when { cond => action }`
+Conditional blocks of code using `match { cond => action }`
 ```js
 // To know what kind of Greeter we have we can use `when`
 // `when` is an special case where the variant can be checked making use of nominal typing whereas the rest of the language uses structural typing
