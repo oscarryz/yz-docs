@@ -43,24 +43,23 @@ array << 1 // now type is []Int
 Example
 
 ```javascript
-a [String]// a is an array of string
-a = []String
-a << 'Hello' // or a.add 'Hello'
-print(a[0]) // prints Hello
+a [String]// a is declared as an array of strings
+a = []String // a initialized as an empty array of strings
+a << 'Hello' // or a.add 'Hello' // with non-word medthod invocation ()
+print(a[0]) // access element 0 of the array
 
 ```
 Also to consider
 
 ```javascript
 a [String] // array of strings
-// 28 agosto 2022. Maybe not
-// Sometime in 2024. Yes!
 ```
 
-Literal, elements separated by comma
+Literal: elements are separated by comma
 
 ```javascript
 a: ['Hello', 'World']
-print(a[0]) // prints Hello
+a[0] = "Hola"
+print(a[0]) // prints Hola
 ```
 
