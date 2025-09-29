@@ -35,10 +35,10 @@ Point {
 }
 p Point = { 1 2 {'(1 2)'}} //COMPERR: not possible because the block is specifiing values
 // but Point needs names too 
-Pointy { 
+Pointy:{ 
   Int 
   Int 
-  {String}
+  #(String)
 }
 p1 Pointy = { 78 89 {'78,89'}} // yes! Pointy only requires values 
 p = Point() // default values 
