@@ -658,9 +658,9 @@ Tree: {
   insert: {
     value T
     match {
-      Empty => Node(value, Empty(), Empty())
+      Empty() => Node(value, Empty(), Empty())
     }, {
-      Node => value < self.value ? {
+      Node() => value < self.value ? {
         Node(value, left.insert(value), right)
       } {
         Node(value, left, right.insert(value))
