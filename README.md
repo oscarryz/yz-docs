@@ -157,7 +157,7 @@ sum: calculator.add() // Call methods
 
 ### Block Variable Access
 
-Blocks variables can be accessed using `.` notation and modified before execution:
+Block variables can be accessed using `.` notation and modified before execution:
 
 ```javascript
 greet: { 
@@ -405,8 +405,8 @@ x = create_named() // Yes
 // or the block created with the type Person
 x = Person() // works too
 
-// But the later is more natural to create custom types
-// e.g Using a type `Person`
+// But the latter is more natural to create custom types
+// e.g., using a type `Person`
 greet #(p Person) = {
   print("Hello `p.name`") 
 }
@@ -637,7 +637,7 @@ process_data: {
   img: fetch_image("123")
   usr: fetch_user("alice")
   
-  // The `process_data` will complete
+  // The `process_data` will not complete
   // until `create_profile` completes. 
   // It will block execution until it does. 
   create_profile(img, usr)
@@ -896,7 +896,7 @@ version: 1.0
 author: 'Yz developers'
 `
 say_hello: {
-   // Any element can can an info string
+   // Any element can have an info string
   'What message to display'
   what: 'Hello' 
 
@@ -907,7 +907,7 @@ say_hello: {
    json_field: 'xyz'
   `
   who:  'World' 
-  // Could be also used as running examples
+  // Could also be used as running examples
   // that will be validated with yzc test  
   `
   Example: print 'Hello' 'world'
@@ -931,11 +931,11 @@ info.examples()  // run the examples
 
 ### Simple Projects
 
-For simple projects the `yz` build tool will compile each individual file and will create an executable if either they are named `main.yz` or have a `main` method or they have free floating code. You can also pass the filename to process a single file. If no entry point is found they are considered libraries and no executable would be created.
+For simple projects, the `yz` build tool will compile each individual file and will create an executable if they are named `main.yz`, have a `main` method, or have free floating code. You can also pass the filename to process a single file. If no entry point is found, they are considered libraries and no executable will be created.
 
 ### Larger Projects
 
-If a `yz` file contains a `configuration` structure, then it will be used to create the executable. Also you can create this configuration structure by invoking the build tool `init` _`project_name`_ which can create additional folders 
+If a `yz` file contains a `configuration` structure, then it will be used to create the executable. You can also create this configuration structure by invoking the build tool `init` _`project_name`_, which can create additional folders: 
 
 ```
 yz init project_name
@@ -974,7 +974,7 @@ dependencies: [
 
 The compiler resolves block names to filesystem files using the `src_path` variable using the following strategy:
 
-1. File name including subdirectories will create a block, even if is empty excluding directories defined in the project's `src_path` variable
+1. File name including subdirectories will create a block, even if it is empty, excluding directories defined in the project's `src_path` variable
    `./src/house/front/Host.yz` will create the `house.front.Host` block
 
 2. Files and subdirectories can be used to create blocks and nested blocks for better code organization.
