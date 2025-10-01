@@ -2,7 +2,7 @@
 
 https://hyperpolyglot.org/ml
 
-```javascript
+```js
 // blocks
 {}
 //
@@ -35,12 +35,12 @@ l:   list.len()
 nth: list[n]
 n:   [7 8 9].index_of(8) // 1
 //iterate
-list.for_each { e Int; print '`e`'}
+list.each({ e Int; print('`e`'})
 
 
 doubled: [1 2 3 4].map { x Int; x * 2}
 all_gt_2 : true
-[1 2 3 4].each {x Int; all_gt_2 = all_gt_2 && {x > 2}}
+[1 2 3 4].each({x Int; all_gt_2 = all_gt_2 && {x > 2}}
 [1 2 3 4].all { x Int; x > 2 } // false
 [1 2 3 4].filter( 2.> )
 //
@@ -50,7 +50,7 @@ Array: {
     all: {
         predicate #(T,Bool)
         result: true
-        data.for_each { e T
+        data.each({ e T
            result = result && {block(e)}
         }
         result

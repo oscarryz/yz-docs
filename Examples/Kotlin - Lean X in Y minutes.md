@@ -1,6 +1,6 @@
 #example
 
-```javascript
+```js
 com: {
     learninxminutes:{
         kotkin:{
@@ -53,7 +53,7 @@ com: {
                 notZero: not({n Int; n == 0})
                 notPositive: not({n Int; n > 0})
 
-                0.to(4).each {
+                0.to(4).each({
 	                i Int;
                     print("`notOdd(i)` `notEven(i)` `notZero(i)` `notPositive(i)`")
                 }
@@ -105,7 +105,7 @@ com: {
 ```
 
 Kotlin.org
-```javascript
+```js
 // from: https://kotlinlang.org/
 // Concise
 Employee: {
@@ -120,7 +120,7 @@ myCompany: { // a singleton? a function
 
 main: {
   employee: Employee ( 'Alice' 'alice@mycompany.com' myCompany.name )
-  print '`employee`'
+  print('`employee`')
 }
 
 // Safe
@@ -134,12 +134,12 @@ error: {
 main: {
   condition: true
   message: reply(condition)
-  print message.replace('fine' 'ok')
+  print(message.replace('fine' 'ok'))
   message != null ? {
-    println message.upperCase()
+    println(message.upperCase())
   }
   nonNull String = reply(condition: true) ? error
-  println nonNull
+  println(nonNull)
 }
 
 
@@ -156,7 +156,7 @@ fun ackermanWhen(m: Int, n: Int): Int = when {
     else -> amackermanWhenw(m - 1, ackermanWhen(m, n - 1))
 }
 ```
-```javascript
+```js
 // Yz
 ackerman_match: {
     m Int

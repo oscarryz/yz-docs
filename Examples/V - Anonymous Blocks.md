@@ -1,7 +1,7 @@
 #example
 https://mobile.twitter.com/v_language/status/1546061255013711875
 
-```javascript
+```js
 
 Book: {
   author: {
@@ -40,7 +40,7 @@ test_anonymous_structs: {
 
 https://vsql.readthedocs.io/en/latest/custom-functions.html
 
-```javascript
+```js
 // no_pennies will round to 0.05 denominations.
 db.register_function 'no_pennies(float) float', { 
   a []vsql.Value; 
@@ -55,8 +55,8 @@ db.query "INSERT INTO products (product_name, price) VALUES ('Ham Sandwhich', 3.
 db.query "INSERT INTO products (product_name, price) VALUES ('Bagel', 1.25)"
 
 result: db.query 'SELECT product_name, no_pennies(price) as total FROM products'
-result.each { row vsql.Row
+result.each({ row vsql.Row
   total: row.get_f64 'TOTAL'  
-  print '${row.get_string("PRODUCT_NAME") ?} ${total:.2f}'
+  print('${row.get_string("PRODUCT_NAME")) ?} ${total:.2f}'
 }
 ```

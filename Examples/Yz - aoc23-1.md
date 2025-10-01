@@ -57,5 +57,5 @@ state = first
 // Input, execute the 
 // state machine 
 _ : input.each(state())
-print("Solution: $(n)")
+print("Solution: `n`")
 ```

@@ -1,7 +1,7 @@
 #example
 Where X = Yz
 
-```javascript
+```js
 
 // Single line comments 
 /*
@@ -81,7 +81,7 @@ variable: 1
 m: math // alias for math module
 http: net.http // you can use http now directly 
 
-print 'Hello world'
+print('Hello world')
 
 beyond_hello() 
 beyond_hello: {
@@ -89,7 +89,7 @@ beyond_hello: {
     x = 3 // var assignment
     y: 4  // Short delcaration with type infer, declare and assign 
     sum, prod: learn_multiple(x, y) // take the last two variables "returned"
-    println("sum: $(sum) prod: $(prod)") simple output
+    println("sum: `sum` prod: `prod`") simple output
     learn_types() // < y minutes, learn more!
 }
 
@@ -135,12 +135,12 @@ learn_types: {
     a5 [3,1,5,10,100] // Array initialized with fixed size of 5?
     a4_copy : Array.copy(a4)
     a4_copy[0] = 25
-    print '$(a4_copy[0] == a4[0])' // false
+    print('`a4_copy[0] == a4[0]`' // false)
 
     s3: [4,5,9]
     s4: Array_new_size([]Int,4)
     d2 [][]Decimal
-    bs: []Byte$('A slice')
+    bs: []Byte`'A slice'`
     s3_copy: s3
 }
 // learn memory
@@ -155,7 +155,7 @@ expensive_computation : {
 }
 learn_flow_control: {
     true ? {
-        print 'told ya'
+        print('told ya')
     }
     false ? {
         // pout
@@ -164,9 +164,9 @@ learn_flow_control: {
     }
     x: 42
     when [
-        {x > 2} : {print 'x is gt 2'},
-        {x < 2} : {print 'x is lt 2'},
-        {true}  : {print 'true'}
+        {x > 2} : {print('x is gt 2'},)
+        {x < 2} : {print('x is lt 2'},)
+        {true}  : {print('true'})
     ]
 }
 

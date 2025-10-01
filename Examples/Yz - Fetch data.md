@@ -16,7 +16,7 @@ main: {
 	]
 	results: urls.map(fetch_data)
 
-	esults.each { 
+	esults.each({ 
 		r Result(String,Error)
 		r.if_ok { 
 		  value String

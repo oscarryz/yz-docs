@@ -30,7 +30,7 @@ pub fn main() !void {
 }
 ```
 
-```javascript
+```js
 json: std.json
 payload: `
         "vals": {
@@ -61,7 +61,7 @@ main: {
     if config.res.values.prod > 50 {
         print_err("Only up to 50 supported")
     }
-    print "up=`config.ut`"
+    print("up=`config.ut`")
 }
 ```
 

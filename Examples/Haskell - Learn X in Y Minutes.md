@@ -2,15 +2,15 @@
 
 https://learnxinyminutes.com/docs/haskell/
 
-```javascript
+```js
 x: {
   r: []
-  1 .to 5  { x Int
+  1 .to(5 ).each({ x Int
 
     x * 2 > 4 ? { r << x * 2}
   }
 }
-print "{x()}" // 2,4,6,7,10
+print("{x())}" // 2,4,6,7,10
 
 
 // "tuples"

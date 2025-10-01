@@ -1,5 +1,5 @@
 #example
-```javascript
+```js
 hanoi: { 
     s []Int
     h []Int

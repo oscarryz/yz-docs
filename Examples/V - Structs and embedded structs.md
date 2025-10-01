@@ -1,7 +1,7 @@
 #example
 https://vosca.dev/p/0e4be7f921
 
-```javascript
+```js
 Size: {
     width Int
     height Int
@@ -21,5 +21,5 @@ button: Button {
 }
 button.width = 3
 assert button.area() == 6
-print button
+print(button)
 ```

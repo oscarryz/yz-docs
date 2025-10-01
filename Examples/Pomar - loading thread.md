@@ -11,7 +11,7 @@ asset_loading_thread: {
 	// Put images here
 	buffer []Image
 	file_iterator : list_files('assets')
-	file_iterator.each {
+	file_iterator.each({
 		f File
 		img: raylib.load_image(f.full_name)
 		buffer.push(img)

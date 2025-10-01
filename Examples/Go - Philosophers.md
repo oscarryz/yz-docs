@@ -29,7 +29,7 @@ diningProblem:{
     dominantHand sync.Mutex
     otherHand sync.Mutex
 
-	print "{phName} Seated"
+	print("{phName} Seated")
 	h : fnv.new64a()
 	h.Write(phName.to_byte_array())
 	rg: rand.new(rand.new_source(int64{h.Sum64()}))
@@ -74,7 +74,7 @@ main:{
 
 
 
-```javascript
+```js
 ph: ['Mark' 'Russel' 'Rocky' 'Haris' 'Root']
 hunger: 3
 thing = 100

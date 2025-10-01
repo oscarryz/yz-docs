@@ -2,7 +2,7 @@
 
 https://vosca.dev/p/669817e77a
 
-```javascript
+```js
 sqr:  {n Int; n * n}
 cube: {n Int; n * n * n}
 run: {
@@ -12,7 +12,7 @@ run: {
 }
 main: {
     {
-        print 'Anonymous functions'
+        print('Anonymous functions')
     }()
 
     print(run, 5, srq) // 25
@@ -33,7 +33,7 @@ main: {
         'sqr': sqr
         'cube': cube
     ]
-    println fns_map['cube'](2)
+    println(fns_map['cube'](2))
 }
 
 ```

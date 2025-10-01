@@ -6,7 +6,7 @@ boring: {
 	i:0
 	msg String
 	loop: {
-		print '$(msg), $(i)'
+		print('`msg`, `i`')
 		time.sleep(time.second)
 		// less boring
 		time.sleep(time.duration(random.int(1) * time.millisecond))
@@ -37,18 +37,18 @@ main:{
 		s String
 	}
 	boring("boring" nac)
-	5.times {
+	5.times({
 		wait_for: nac.value_set()
-		print 'You say: $(nac.s)' // right now this would just print nac.s 5 times
+		print('You say: `nac.s`' // right now this would just print nac.s 5 times)
 	}
-	print "You're boring; I'm leaving"
+	print("You're boring; I'm leaving")
 }
 boring: {
 	msg String
 	nac (String)
 	loop: {
 		i Int
-		nac('$(msg) $(i)') // callback, and continues
+		nac('`msg` `i`') // callback, and continues
 		time.sleep(time.duration(rand.int(1)* time.millisecond))
 	}
 }
@@ -65,6 +65,6 @@ Ideas:
 loop: {
    s: nac.value // will wait until nac.value has something
    clear(nac.value)
-   print s
+   print(s)
 }
 ```

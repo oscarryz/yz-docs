@@ -11,8 +11,8 @@ high: 100
 answer: pick_answer high
 game = Game(answer high)
 game.play()
-print 'Finished in $(game.guesses)'
-print 'Total input errors $(game.error_count)'
+print('Finished in `game.guesses`')
+print('Total input errors `game.error_count`')
 pick_answer: { high Int random.next_int high}
 Game {
     answer      Int
@@ -33,7 +33,7 @@ Game {
     ask_multi: {
          guess: ask_guess()
          guess == numbers.invalid ? {
-             print "I didn't understand"
+             print("I didn't understand")
              error_count = error_count + 1
              ask_multi()
          }
@@ -41,7 +41,7 @@ Game {
     }
 
     ask_guess: {
-        text = input 'Guess a number between 1 and $(high)'
+        text = input 'Guess a number between 1 and `high`'
         numbers.parse_int text
     }
 
@@ -51,7 +51,7 @@ Game {
            { guess > answer}: {'too high'}
            { when.else     }: {'the answer!'}
        ]
-       print '$(guess) is $(description)'
+       print('`guess` is `description`')
 
     }
 
@@ -74,8 +74,8 @@ https://github.com/contextfreecode/procfun/blob/main/guess.hs
 high: 100
 answer: pick_answer high
 guesses, errors: play answer, high
-print 'Finished in $(guesses)'
-print 'Total input errors $(error_count)'
+print('Finished in `guesses`')
+print('Total input errors `error_count`')
 pick_answer: {high Int; random.next_int high }
 play: {
     answer  Int
@@ -101,13 +101,13 @@ ask_multi: {
     guess: ask_guess()
     error_count: 0
     guess == numbers.invalid ? {
-      print "I didn't understand"
+      print("I didn't understand")
       ask_multi(error_count: error_count + 1)
     }
 }
 
 ask_guess: {
-    numbers.parse_int  input 'Guess a number between 1 and $(high)'
+    numbers.parse_int  input 'Guess a number between 1 and `high`'
 }
 
 report: { guess Int
@@ -116,7 +116,7 @@ report: { guess Int
        { guess > answer}: {'too high'}
        { when.else     }: {'the answer!'}
    ]
-   print '{guess} is {description}'
+   print('{guess} is {description}')
 }
 
 update: {

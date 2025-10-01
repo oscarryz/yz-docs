@@ -38,7 +38,7 @@ option_parser: optionParser.parse({
     })
 
     parser.on ['-h'  '--help'  'Show help']  {
-        print '`parser`'
+        print('`parser`')
         return
     }
 
@@ -52,7 +52,7 @@ option_parser: optionParser.parse({
     }
 
     parser.on ['-r'  '--random_goobye_hello'  'Say hello to one random member']  {
-        print the_beatles[random.Int(the_beatles.len)]
+        print(the_beatles[random.Int(the_beatles.len))]
         return
     }
 
@@ -62,15 +62,15 @@ option_parser: optionParser.parse({
 
     parser.missing_option {
         option_flag String
-        print io.std_err('Error `option_flag` is missing something')
-        print io.std_err("")
-        print io.std_err('{parser}')
+        print(io.std_err('Error `option_flag` is missing something'))
+        print(io.std_err(""))
+        print(io.std_err('{parser}'))
         return
     }
 
     parser.invalid_option { option_flag String
-        print io.std_err  "Error: `option_flag` is not a valid option"
-        print io.std_err  '`parser`'
+        print(io.std_err  "Error: `option_flag` is not a valid option")
+        print(io.std_err  '`parser`')
         return
     }
 })
@@ -89,7 +89,7 @@ print(`
 `)
 member.for_each({
     member String
-    print '`strawberry ? {🍓} {-}` `member`'
+    print('`strawberry ? {🍓} {-}` `member`')
 })
 say_hi.empty() == false ? {
     print("You say goodbye  and I say hello to `say_hi_to`")
@@ -156,10 +156,10 @@ print(`
     =============
 `)
 member.for_each({ member String
-    print '{strawberry?{🍓} {-}} {member}'
+    print('{strawberry?{🍓} {-}} {member}')
 })
 say_hi.empty() == false ?({
-    print `
+    print(`)
     You say goodbye  and I say hello to {say_hi_to}
     `
 })

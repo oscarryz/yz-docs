@@ -33,7 +33,7 @@ employee_count #(members []Person) {
     count: members.filter({p Person; p.employed}).len()
 	
 	// tbd if this constitutes usage, but if doesn't 
-	// it can keep going and return this value
+	// it can keep going and this value
 	"Employed members: `count`"
 }
 calculate_average(quantities []Int, employed_cont Int ) {

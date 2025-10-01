@@ -1,7 +1,7 @@
 #example
 https://vosca.dev/p/fb2c261f00
 
-```javascript
+```js
 Node: {
     value Decimal
     left Option(Node) = None()

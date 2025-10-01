@@ -1,5 +1,5 @@
 #example
-```javascript
+```js
 // This is a single comment  
 /*  
    This is a multiline comment
@@ -17,13 +17,13 @@ Counter {
 }  
 main: {  
     c: Counter()
-    print 'c.count = $(c.count)'
+    print("c.count = `c.count`")
     c.increment()   
-    if c.count > 10 {
+    c.count > 10 ? {
           break   
     } {  
       continue
     }
-    return 0
+    0
 }
 ```

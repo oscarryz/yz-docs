@@ -46,7 +46,7 @@ class Solution {
         map.put( target - n , i );
       }
     }
-    return result;
+    result;
 
   }
   public static void test( List<Integer> expected, List<Integer> actual) {
@@ -57,11 +57,11 @@ class Solution {
 
 ```
 
-```javascript
+```js
 calc: {
    input []Int
    list: []Int
-   input.each { i Int
+   input.each({ i Int
        list << i
    }
    map: [Int]Int

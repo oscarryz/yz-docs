@@ -1,9 +1,9 @@
 #example
 https://rosettagit.org/tasks/99-bottles-of-beer/
 
-```javascript
+```js
 
-_:99.down_to(1).do({ 
+99.down_to(1).each({ 
     n Int          
     s: n == 1 ? {'s'} {''}
     

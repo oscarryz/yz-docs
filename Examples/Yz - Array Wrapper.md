@@ -1,16 +1,16 @@
 #example
 [leetcode-2695](https://leetcode.com/problems/array-wrapper/)
 
-```javascript
+```js
 ArrayWrapper: {
     nums []Int
     + : {
         other ArrayWrapper
         r : 0 
-        nums.each { n Int 
+        nums.each({ n Int 
             r = r + n
         }
-        other.nums.each { n Int 
+        other.nums.each({ n Int 
             r = r + n
         }
         r
@@ -18,7 +18,7 @@ ArrayWrapper: {
     string: {
         r: '['
         l: nums.len()
-        nums.for_each { i Int, e Int
+        nums.each({ i Int, e Int
             r = r ++ '`e`'
             if i < l, { 
                 r = r == ', '

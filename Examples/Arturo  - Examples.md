@@ -1,6 +1,6 @@
 #example
 
-```javascript
+```js
 
 arr: [1,2,3,4,5,6,7,8,9,10]
 print(arr.select({ x Int; x % 2 == 0 })).to_str()
@@ -15,7 +15,7 @@ print(arr.map(2.*).to_str()) // [2 4 6 8 10]
 Explanation:
 2 type is `Int`
 `Int`'s `*` method is defined as:
-```javascript
+```js
 Int: {
   value T // 2
   * #(Int, Int) {
@@ -30,13 +30,13 @@ arr.map({other Int; 2 * other})
 ```
 
 Array concatenation
-```javascript
+```js
 a = [1, 2, 3] ++ [4, 5, 6] // [1 2 3 4 5 6]
 ```
 
-```javascript
+```js
 // Arturo
-print select 1..10 => even?
+print(select 1..10 => even?)
 // Yz
 print(1.to(10).select(even).to_str())
 even #( n Int ) {
@@ -71,7 +71,7 @@ Array: {
 ```
 
 Ackerman
-```javascript
+```js
 ackermann: { m Int, n Int
   m == 0 ? {
     n + 1

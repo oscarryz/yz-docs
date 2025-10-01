@@ -1,6 +1,6 @@
 #example
 https://vosca.dev/p/e31e438324
-```javascript
+```js
 os.write_file('app.log' `
 ERROR: log file not found
 DEBUG: create new file
@@ -8,7 +8,7 @@ DEBUG: write text to log file
 ERROR: file not writeable
 `).or {
     err Error
-    eprintln 'failed to write the file `err`'
+    eprintln('failed to write the file `err`')
 }
 
 text: os.read_file 'app.log' .or { e Error
@@ -17,9 +17,9 @@ text: os.read_file 'app.log' .or { e Error
 
 list: text.split_into_lines()
 
-lines.each { line String
+lines.each({ line String
     line.starts_with 'DEBUG' ? {
-        print line
+        print(line)
     }
 }
 ```

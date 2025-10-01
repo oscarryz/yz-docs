@@ -1,7 +1,7 @@
 #example
 https://vosca.dev/p/9cd071f5fc
 
-```javascript
+```js
 fib: {
     n Int
     f: [0,1]
@@ -11,8 +11,8 @@ fib: {
     f[n]
 }
 main:{
-    31.times {
-        print fib(i)
+    31.times({
+        print(fib(i))
     }
 }
 `output

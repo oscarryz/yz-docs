@@ -2,7 +2,7 @@
 
 https://www.roc-lang.org/#examples
 
-```javascript
+```js
 
 main: {
 	store_email(path.from_string('url.txt')).map_err(handle_error)
@@ -10,20 +10,20 @@ main: {
 // store_email #(path Path, result.Result(V,E))
 store_email: {
 	path Path
-	early_return: {e Err; return e}
+	early_return: {e Err; e}
 	url: file.read_utf8(path).or early_return
 	user: http.get url(json.codec).or early_return
 	dest: path.from_string('`user.name`.txt').or early_return
 	_: file.write_utf8 des user.email.or early_return
-	print 'Wrote emai to `path.display(dest)`'
+	print('Wrote emai to `path.display(dest))`'
 }
 
 handler_error: {
 	err Err
 	when_eq err [
-		{HttpErr} : {print 'Error fetching URL $(err.cause)'}
-		{FileReaderErr} : {print 'Error reading from $(path.display(err.cause))'}
-		{FileWriter} : {print 'Error writing to $(path.display(err.cause))'}
+		{HttpErr} : {print('Error fetching URL `err.cause`'})
+		{FileReaderErr} : {print('Error reading from `path.display(err.cause`))'}
+		{FileWriter} : {print('Error writing to `path.display(err.cause`))'}
 	]
 }
 ```
@@ -49,9 +49,9 @@ store_email #(Path, Result(String,String)) = {
 handle_error: {
   err Error(String)
   when_eq info(err).type [
-    {HttpErr} : {print 'Error fetching URL: `err`'}
-    {FileReaderErr} : {print 'Error reading from path: `err`'}
-    {FileWriter} : {print 'Error writing file: `err`'}
+    {HttpErr} : {print('Error fetching URL: `err`'})
+    {FileReaderErr} : {print('Error reading from path: `err`'})
+    {FileWriter} : {print('Error writing file: `err`'})
   ]
 }
 ```

@@ -22,7 +22,7 @@ main = do
   -- Generate 15 moves randomly
   randomMoves <- replicateM 15 $ Rand.uniformEnumM Rand.globalStdGen
   let resultDrone = foldl' moveDrone initDrone randomMoves
-  print resultDrone
+  print(resultDrone)
 
 moveDrone :: Drone -> Movement -> Drone
 moveDrone drone move =
@@ -35,7 +35,7 @@ moveDrone drone move =
     Down    -> drone { yPos = yPos drone - 1 }
 ```
 
-```javascript
+```js
 // Yz attempt
 Drone {
     x_pos Int
@@ -69,9 +69,9 @@ movement: {
 }
 main: {
     drone: Drone(0 10 0)
-    _ : 15.times {
+    _ : 15.times({
         drone.move(movement.random())
     }
-    print '$(drone)'
+    print('`drone`')
 }
 ```

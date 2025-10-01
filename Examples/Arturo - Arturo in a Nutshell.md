@@ -100,26 +100,26 @@ false || false // true
                     // the second block will not be evaluated
 
 // simple "if" statements
-2 > 1 ? { print 'yes' }   // yes
-3 != 2 ? { print 'true!'} // true!
+2 > 1 ? { print('yes' }   // yes)
+3 != 2 ? { print('true!'} // true!)
 
 // if / else statements
-2 > 3 ? { print '2 is greated than 3'},
-{ print '2 is not greater then 3'} // 2 is ot greater than 3
+2 > 3 ? { print('2 is greated than 3'},)
+{ print('2 is not greater then 3'} // 2 is ot greater than 3)
 
 // "switch" statements
 
 when [
-   {2 > 3}: { print '2 is greater than 3'}
-   {true}:{ print '2 is not greater than 3'} // 2 is not greater than 3
+   {2 > 3}: { print('2 is greater than 3'})
+   {true}:{ print('2 is not greater than 3'} // 2 is not greater than 3)
 ]
 
 a: 2 > 3 ? {'yes'}, {'no'} // a: 'no'
 
 // "loops"
 arr: [1 4 5 3]
-arr.for_each { x Int
-    print 'x = `x`'
+arr.each({ x Int
+    print('x = `x`')
 }
 // x = 1
 // x = 4
@@ -128,7 +128,7 @@ arr.for_each { x Int
 
 // with index
 arr.for { i Int, x Int
-    print 'Item at position `i` => `x`'
+    print('Item at position `i` => `x`')
 }
 // item at position 0 => 1
 // item at position 1 => 4
@@ -138,13 +138,13 @@ arr.for { i Int, x Int
 
 // ranges
 1.to(3).do{ x Int
-    print '`x`'
+    print('`x`')
 }
 // 1
 // 2
 // 3
 
-'a' .to 'c' .do { s String
+'a' .to 'c' .each({ s String
     print(s)
 }
 // a
@@ -153,8 +153,8 @@ arr.for { i Int, x Int
 
 // looping through a dictionary
 dict: ['name': 'John' 'surname': 'Doe']
-dict.for_each { key String, value String
-    print '`key` -> `value`'
+dict.each({ key String, value String
+    print('`key` -> `value`')
 }
 
 // name -> John
@@ -163,7 +163,7 @@ dict.for_each { key String, value String
 //while loops
 i: 0
 while { 1 < 3 }, {
-    print 'i = `i`'
+    print('i = `i`')
     i = i + 1
 }
 // i = 0
@@ -172,7 +172,7 @@ while { 1 < 3 }, {
 
 // Strings
 a: 'tHis Is a stRinG'
-print a.upper() // THIS IS A STRING
+print(a.upper()) // THIS IS A STRING
 
 // concatenation
 a: 'Hello ' ++ 'World!'
@@ -189,14 +189,14 @@ int.parse(":(") // std.option.Err("...")
 
 // string interpolation `
 x: 2
-print 'x = `x`' // x = 2
+print('x = `x`' // x = 2)
 
 //--------
 // Blocks
 //--------
 
 // calculate block
-sth: {print 'Hello world'}
+sth: {print('Hello world'})
 sth() // Hello world
 
 // array indexing
@@ -208,13 +208,13 @@ arr[3]           // three
 x: 2
 arr[x]            // two
 arr[0] = 'nada'
-print '`arr`' // ['nada' 'one' 'two' 'three']
+print('`arr`' // ['nada' 'one' 'two' 'three'])
 
 // adding elements
 arr: [] String
 arr << 'one'
 arr << 'two'
-print arr // ['one', 'two']
+print(arr // ['one', 'two'])
 // also
 arr.add('one')
 arr.add('two')
@@ -241,11 +241,11 @@ arr.sort() // [1,2,3,4,5]
 arr.sort { a Int, b Int, b - a} // descending order -> [5,4,3,2,1]
 
 // mapping values
-1 .to 10 .do {x Int, 2 * x}
+1 .to 10 .each({x Int, 2 * x}
 Range(1,10).map{x Int, 2 * x} // [2,4,6,8,10,12,14,16,18,20]
 
 n: []Int
-1.to 10 .do { x Int, n << x }
+1.to 10 .each({ x Int, n << x }
 n.select { x Int, x % 2 == 0} // [2,4,6,8 10]
 n.filter { x Int, x % 2 == 0} // [1,3,5,7,9]
 
@@ -262,9 +262,9 @@ f(10) // 20
 
 // returning a value
 g: { x Int
-    x < 2 ? { return 0 } // return finishes the block early
+    x < 2 ? { 0 } // finishes the block early
     res: 0
-    0 .to x .do { z Int
+    0 .to x .each({ z Int
         res = res + z
     }
     res
@@ -281,10 +281,10 @@ Person: {
     surname String
     age Int
     print: {
-        print 'NAME: `name`, SURNAME: `surname`, AGE: `age`'
+        print('NAME: `name`, SURNAME: `surname`, AGE: `age`')
     }
     compare: {other Person, age - other.age}
-    say_hello:{ print 'Hello `ame`'}
+    say_hello:{ print('Hello `ame`'})
 }
 // "constructor"
 new_person: {name String, surname String, age Int
@@ -302,8 +302,8 @@ a.say_hello() // Hello John
 b.say_hello() // Hello Jane
 
 // access block variables
-print 'First person name is `a.name`'
-print 'Second person name is `b.name`'
+print('First person name is `a.name`')
+print('Second person name is `b.name`')
 
 // modifing values
 a.name = 'bob'
