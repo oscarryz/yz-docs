@@ -29,8 +29,8 @@ error: State{ type: 'error'}
 state State
 ...
 when(
-    {state.type =='sucess'}, {print '{state.type}'},
-    {state.type =='error'}, {print '{state.message}'},
+    {state.type =='sucess'}, {print('{state.type}'},)
+    {state.type =='error'}, {print('{state.message}'},)
 
 })
 ```

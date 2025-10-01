@@ -1,7 +1,7 @@
 #example
 https://zig.news/edyu/zig-if-wtf-is-bool-48hh
 
-```javascript
+```js
 // Basic _if_ statement
   if true, { 
     print('Hello Ed')
@@ -23,9 +23,9 @@ dude_is_ed: { name String;  name == 'Ed' }
 say_hello: {
     name String
     if dude_is_ed, {
-        println 'Hello `name`'
+        println('Hello `name`')
     }, {
-        println 'Hello world'
+        println('Hello world')
     }
 }
 ...
@@ -47,7 +47,7 @@ say_hello: {
       println('good seeing you `name` again')
     ).or_err({
         e Error
-        println 'got error `err`'
+        println('got error `err`')
     })
 }
 say_hello_ignore_error { 
@@ -66,7 +66,7 @@ dude_is_edish_or_error = {
     name String
     when [
         {name == 'Ed'}: {
-            print 'Hello `name`'
+            print('Hello `name`')
             Result.Ok(true)
         },
         {name == 'Edward'}: {
@@ -82,7 +82,7 @@ say_hello_edish: {
     name String
     dude_is_edish_or_error(name).and_then({
         ok Bool
-        println 'ed? `ok`'
+        println('ed? `ok`')
         ok ? { 
             println('Goog seeing your `name`')
         } { 
@@ -100,15 +100,15 @@ dude_is_maybe_ed: {
     name String
     when [
         {name == 'Ed'}: {
-            print 'Hello `(name)`'
+            print('Hello `(name))`'
             true
         }
         {name == 'Edward'}: {
-            println 'Hello again `(name)`'
+            println('Hello again `(name))`'
             false
         }
         {when.default}: {
-            println 'Hello world'
+            println('Hello world')
             null_boolean
         }
     ]
@@ -116,15 +116,15 @@ dude_is_maybe_ed: {
 say_hello_maybe_ed: {
     name String
     when_eq dude_is_mabe_ed() [
-        {true}: {println 'Hello `name`'},
-        {false}: {println 'Hello again `name`'},
-        {null_boolean}: {println 'Hello world'},
+        {true}: {println('Hello `name`'},)
+        {false}: {println('Hello again `name`'},)
+        {null_boolean}: {println('Hello world'},)
     ]
 }
 // also
 say_hello_maybe_ed: {
     name String
-    println when_eq dude_is_maybe_ed(name) [
+    println(when_eq dude_is_maybe_ed(name)) [
         {true}: {'Hello `name`'},
         {false}: {'Hello again `name`'},
         {null_boolean}: {'Hello world'},
@@ -144,17 +144,17 @@ say_hello_maybe_ed_or_error: {
     name String
     dude_is_maybe_ed_or_error().or_err {
         ok Bool
-        print "ed? `ok`"
+        print("ed? `ok`")
         when_eq ok [
-            {true}: { println 'Hello `(name)`' }
-            {false}: { println 'Hello again `(name)`' }
-            {null_boolean}: { println 'Good bye `(name)`' }
+            {true}: { println('Hello `(name))`' }
+            {false}: { println('Hello again `(name))`' }
+            {null_boolean}: { println('Good bye `(name))`' }
         ]
     
     } {
         err Error
-        println 'Got error $(err)'
-        println 'Hello world'
+        println('Got error `err`')
+        println('Hello world')
     }
 }
 //## Bonus

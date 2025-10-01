@@ -1,11 +1,11 @@
 #example
 Hola
 
-```javascript
+```js
 
 name: io.args[0]
 file: files.open(name 'r').or {
-    print 'Unable to open file'
+    print('Unable to open file')
     exit!
 }
 

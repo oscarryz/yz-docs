@@ -1,16 +1,16 @@
 #example
 https://rosettacode.org/wiki/Dot_product
 
-```javascript
+```js
 dot_product: {
   a []Int
   b []Int
 
   a.len() != b.len() ? {
-   return Err('vectors must be same length')
+   Err('vectors must be same length')
   }
   sum: 0
-  0.to(a.len()-1).do { i Int
+  0.to(a.len()-1).each({ i Int
     sum = sum + (a[i] * b[i])
   }
   Ok(sum)

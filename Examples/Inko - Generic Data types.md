@@ -1,6 +1,6 @@
 #example
 
-```javascript
+```js
 stack: {
 
 	new: {
@@ -31,7 +31,7 @@ main: {
 	// This is an error, as the stack inner `values` is now bound to `Int` types
 	stack.push 'Oh no!'
 
-    // Trying to use a generic type before is bound would return an error
+    // Trying to use a generic type before is bound would an error
     t: stack.new(Int)
     x: t.pop() // xruntime error, stack unferflow.
 	// x in an Option(Int)

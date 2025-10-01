@@ -3,7 +3,7 @@
 [Writing Assertive Code With Elixir](https://dashbit.co/blog/writing-assertive-code-with-elixir)
 
 First attempt
-```javascript
+```js
 `
 Yz>get_token "foo=bar&token=value&bar=baz"
 ...value

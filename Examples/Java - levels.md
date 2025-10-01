@@ -3,7 +3,7 @@
 From https://stackoverflow.com/a/73874369/20654
 
 
-```javascript
+```js
 Node: {
   id String
   level Int
@@ -29,6 +29,6 @@ input.each: { node Node
   list << node
   map[node.level + 1] = node.list
 }
-println '{map[1]}'
+println('{map[1]}')
 
 ```

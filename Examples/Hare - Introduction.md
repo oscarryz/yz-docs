@@ -2,7 +2,7 @@
 
 https://harelang.org/
 
-```javascript
+```js
 main: {
 	greetings: [
 		'Hello, world!'
@@ -11,9 +11,9 @@ main: {
 		"Привіт, світ!"
 		"こんにちは世界！"
 	]
-	greetings.each {
+	greetings.each({
 	    greet String
-		print greet
+		print(greet)
 	}
 }
 ```
@@ -21,7 +21,7 @@ main: {
 https://harelang.org/tutorials/introduction/
 
 ```js
-// fs.create(path, perms) can return an error
+// fs.create(path, perms) can an error
 path: '/tmp/xyz.txt'
 file: fs.create(path, fs.ErrorHandler {[
     {f File; f == fs.noaccess}: {"Error opening: {path}. Access denied"}
@@ -31,12 +31,12 @@ file: fs.create(path, fs.ErrorHandler {[
 path: '/tmp/xyz.txt'
 file: fs.create(path).or {
    e FileError
-   panic("Error opening: $(path). $(e))
+   panic("Error opening: `path`. `e`)
 }
 ```
 
 
-Blocks that return errors can provide a handling error block that will be invoked if an error is generated
+Blocks that errors can provide a handling error block that will be invoked if an error is generated
 
 ```js
 fs: {

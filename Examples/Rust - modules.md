@@ -23,7 +23,7 @@ eat_at_restaurant:{
    front_of_house.hosting.add_to_waitlist()
    meal: back_of_house.summer_breakfast("Rye")
    meal.toast = "Wheat"
-   print("I'd like $(meal.toast) please")
+   print("I'd like `meal.toast` please")
 
    order1: back_of_house.appetizer.SOUP
    order2: back_of_house.appetizer.SALAD

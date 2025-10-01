@@ -4,7 +4,7 @@ https://dhall-lang.org/
 
 
 
-```javascript
+```js
 make_user: {
   user Text
   {
@@ -14,7 +14,7 @@ make_user: {
   }
 }
 
-print to_json [
+print(to_json [)
   make_user 'bill'
   make_user 'jane'
 ]

@@ -2,7 +2,7 @@
  
 [Strong static typing, a hill I'm willing to die on...](https://www.svix.com/blog/strong-typing-hill-to-die-on/)
 
-```javascript
+```js
 birthday_greeting: {
     params [] 
     "{params[0] is params[1]!"
@@ -10,14 +10,14 @@ birthday_greeting: {
 birthday_greeting_2: {
    name
    age
-   "$(name) is $(age)!"
+   "`name` is `age`!"
 }
 
 
 birthday_greeting_3: {
    name String
    age  Int
-   "$(name) is $(age)!"
+   "`name` is `age`!"
 }
 type_of (birthday_greeting_3) // { String Int String } 
 
@@ -29,13 +29,13 @@ Person : {
 }
 birthday_greeting_2: { 
    person // generic variable
-  '$(person.name) will turn $(person.age + 1 ) next year!' 
+  '`person.name` will turn `person.age + 1 ` next year!' 
    // person will need to have a variable `name` of type any, and a `age` of type int (or something with `+` method that takes a int
 }
 
 birthday_greeting_3: {
    person Person
-  '$(person.name) will turn $(person.age + 1 ) next year!' 
+  '`person.name` will turn `person.age + 1 ` next year!' 
   // person is not generic, and would only take `Person`'s or something that matches 
 }
 
@@ -60,7 +60,7 @@ Pet : {
 id: 'p123'
 person: Person { 'John' 20 }
 cache.set 'person-{id}' person 
-pet Pet = cache.get 'preson-$(id)' // failure over failure... 
+pet Pet = cache.get 'preson-`id`' // failure over failure... 
 
 // Getting better
 PersonCacheKey: { String } 

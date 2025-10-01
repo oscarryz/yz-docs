@@ -3,7 +3,7 @@ https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/binarytr
 
 Implementation based on: [V](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.v), [Pony](https://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.pony) and [Go](hhttps://github.com/hanabi1224/Programming-Language-Benchmarks/blob/main/bench/algorithm/binarytrees/1.go)
 
-```javascript
+```js
 
 // SumTypes version
 node: {
@@ -55,12 +55,12 @@ main: {
         iterations: 1 << max_depth - depth + min_depth
         // sum = ... makes it wait until the iteration finishes (sync) so `depth = depth + 2` runs
         sum: 0
-        sum = iterations.times {
+        sum = iterations.times({
             sum = sum + node.create(depth).check()
         }
         depth = depth + 2
-        print '`iterations`\t trees of depth `depth`\t check: `sum`'
+        print('`iterations`\t trees of depth `depth`\t check: `sum`')
     }
-    _: print 'long lived tree of depth `max_depth`\t check `long_lived.check()`'
+    _: print('long lived tree of depth `max_depth`\t check `long_lived.check())`'
 }
 ```

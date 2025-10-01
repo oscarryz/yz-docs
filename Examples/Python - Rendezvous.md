@@ -2,13 +2,13 @@
 
 https://rosettacode.org/wiki/Rendezvous#Python
 
-```javascript
+```js
 Printer {
 	name String
 	backup Optional = optional.None()// Printer
 	ink_level: 5
 	output: io.stdout
-    // print {String Result}
+    // print({String Result})
 	print: {
 	    msg String
 		ink_level > 0  ? {
@@ -45,7 +45,7 @@ main: {
         "Flew up to the moon."
     ]
     print_humpty: {
-        humpty_line.each {
+        humpty_line.each({
 	        line String
             main.print(line).or {
 	            print('\t Humpty Dumpty out of ink!')
@@ -54,7 +54,7 @@ main: {
         }
     }
     print_goose: {
-        goose_line.each {
+        goose_line.each({
 	        line String
             main.print(line).or {
 	            print('\t Mother Goose out of ink!')
