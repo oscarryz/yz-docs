@@ -1,6 +1,6 @@
 # The Yz Programming Language
 
-> **Note**: Yz is currently in the design phase with no compiler implementation yet. All examples and features described here represent the intended design.
+> **Note**: [Yz compiler](https://github.com/oscarryz/yz) is work in progress. All examples and features described here represent the intended design.
 
 ## Table of Contents
 
