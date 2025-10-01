@@ -3,7 +3,7 @@
 Using [Neptune impl](https://www.reddit.com/r/ProgrammingLanguages/s/ZJ4D36oZ2J)
 
 
-```javascript
+```js
 
 solution: input
   .lines()

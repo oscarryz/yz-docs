@@ -43,17 +43,17 @@ class Tree {
     for (e of list ) {
       root.insert(e)
     }
-    return root
+    root
 
   }
   contains(element) {
     if ( this.data === element ) {
-      return true
+      true
     } else if (this.data == undefined) {
-      return false
+      false
     } else  {
       let branch = element < this.data ? this.left : this.right
-      return branch.contains(element)
+      branch.contains(element)
     }
   }
 /*
@@ -101,15 +101,15 @@ func (t *Tree[T]) insert(data T) {
 }
 func (t *Tree[T]) contains(data T) {
   if t.data == data {
-    return true
+    true
   }
   if t == nil {
-    return false
+    false
   }
   if data < t.data {
-    return t.left.contains(data)
+    t.left.contains(data)
   } else {
-    return t.right.contains(data)
+    t.right.contains(data)
   }
 }
 ```

@@ -4,7 +4,7 @@ From: [Jevko.org](https://jevko.org/)
 
 ## Data Interchange
 
-```javascript
+```js
   person: {
       first_name: 'John'
       last_name : 'Smith'
@@ -31,7 +31,7 @@ From: [Jevko.org](https://jevko.org/)
 
 ## Configuration
 
-```javascript
+```js
 'last modified 1 April 2001 by John Doe'
 owner: {
   name: 'John Doe'
@@ -52,7 +52,7 @@ database: {
 
 ## Text markup
 
-```javascript
+```js
 html:{
   head: {
     title: 'This is a title'

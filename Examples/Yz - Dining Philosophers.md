@@ -4,7 +4,7 @@
 The following is a basic setup. Will still need some time to do a test run and see what happens with the resources.
 
 
-```javascript
+```js
 // In lieu of imports, declare three typs to be the same as those returned 
 // by executing the anonymous block with those three types full qualified name
 Option, Some, None : std.option.Option,  std.option.Some,  std.option.None
@@ -47,13 +47,13 @@ Philosopher : {
     self Philosopher
 
     think #() = {
-           print("$(name) is thinking...")
+           print("`name` is thinking...")
            time.sleep(random(1 5)  time.SECONDS)
            eat()
     }
     eat  #() = {
         left.try_take(self) && { right.try_take(self) } {
-           print("$(name) is eating...")
+           print("`name` is eating...")
            wait: time.sleep(random(1 5)  time.SECONDS)
         }
         left.try_drop(self)
@@ -65,7 +65,7 @@ Philosopher : {
 main: { 
     philosophers = init(["Plato" "Socrates" "Kant"])
     while { true } { 
-        philosophers.each { 
+        philosophers.each({ 
             p Philosopher
             eat()
         }
@@ -75,7 +75,7 @@ main: {
 init: {
     names [String]
     philosophers : []Philosophers
-    w: names.for_each { 
+    w: names.each({ 
         i Int
         name String
 

@@ -4,7 +4,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
 ### Variables
 
-```javascript
+```js
     x : 3
     y Float = 9.0
 
@@ -30,7 +30,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
     foo: { x Int
         x.greaterThan(0).ifTrue({
-            return x
+            x
         })
         x + 1
     }
@@ -59,7 +59,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
             self Foo
             text: "Hi"
             to_myself: {
-                print '{self.text}'
+                print('{self.text}')
             }
         }
         new: {
@@ -77,7 +77,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
         Node self;
         String data;
         public String toString() {
-             return self.data;
+             self.data;
         }
     }
     Node s = new Node();
@@ -106,15 +106,15 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     //main.yz
     listener: tcpListener.bind("1237.0.0.1:7878")
 
-    listener.incoming().for_each { stream Stream
+    listener.incoming().each({ stream Stream
     }
 
 
     some_expresion.case([
-        {print "1"}
-        {print "1"}
-        {print "1"}
-    ] {print "none"})
+        {print("1"})
+        {print("1"})
+        {print("1"})
+    ] {print("none"}))
 
     "Extension method"
     yz.lang.Number: {
@@ -147,8 +147,8 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     args: os.args.sort {a String; b String
         a <=> b
     }
-    args .for_each { s String
-        print 'Hello {s}'
+    args .each({ s String
+        print('Hello {s}')
     }
 
     correct: "Pass123"
@@ -157,12 +157,12 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
         guess: input "What is the password?"
         guess == correct ? {
-          print "That's correct"
+          print("That's correct")
           return
         }
 
         tries >= 3 ? {
-          print "Too many attempts"
+          print("Too many attempts")
         }, {
               guess_password tries + 1
         }
@@ -221,16 +221,16 @@ max_before_nan: {numbers []Int
 
     max: {a Int; b Int; a > b ? {a}:{b}}
     m: 0
-    numbers.each { n Int
+    numbers.each({ n Int
         n == core.ints.NOT_A_NUMBER ? {
-            return m
+            m
         }
         m = max m, n
     }
 }
 ```
 
-Early return in smalltalk
+Early in smalltalk
 ```smalltalk
     maxBeforeNil: aCollection
       | max supplier loop |

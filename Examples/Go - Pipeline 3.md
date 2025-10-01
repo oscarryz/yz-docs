@@ -46,7 +46,7 @@ squarer: {
 }
 printer: {
 	n Int
-	print '`n`'
+	print('`n`')
 }
 main: {
    squarer( counter() , printer )
@@ -60,7 +60,7 @@ main: {
 // The counter takes a "channel" which is a block that receives an Int
 // it produces a number and sends it to the channel
 counter (out #(Int)) = {
-	1.to(100).each {
+	1.to(100).each({
 		e Int
 		out(e) // send e to the channel
 	}
@@ -88,7 +88,7 @@ main: {
 //
 counter: {
 	out #(Int)
-	1.to(100).each { e Int ; out(e) }
+	1.to(100).each({ e Int ; out(e) }
 }
 squarer: {
 	in #(Int)
@@ -113,6 +113,6 @@ main: {
 // It would work if a buffer is used to store the values so it is not overriden
 
 
-// Another reason it doesn't work is because it tries to use a function as a buffer, but returning the last value wouldn't sync (f(1), f(2), f(), f() wouldnt necesarily return 1 and 2 i the same order)
+// Another reason it doesn't work is because it tries to use a function as a buffer, but returning the last value wouldn't sync (f(1), f(2), f(), f() wouldnt necesarily 1 and 2 i the same order)
 
 ```

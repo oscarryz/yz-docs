@@ -12,7 +12,7 @@ split-and-save 10 0 ; returns a nested failure that turns into error
 ; Error(101): Can't split to no people
 ;	Error: Can't divide by Zero.
 
-; If we want to return 1 in case of any error because we
+; If we want to 1 in case of any error because we
 ; need it for further processing we can for example use fix
 ; function
 
@@ -20,7 +20,7 @@ split-and-save 10 0 |fix { 1 } ; returns 1
 ```
 
 
-```javascript
+```js
 // Yz
 split_and_save: {
    apples Int
@@ -44,11 +44,11 @@ split_and_save(10, 0).or_else { Ok(1) }
 10.checked_div(0).map_err{e Err
   Error("Custom message. Cause: `e`")
 }
-// Would print Error("Custom message. Cause: Error(Divison by zero)")
+// Would print(Error("Custom message. Cause: Error(Divison by zero))")
 
 ```
 
-```javascript
+```js
 /*
 Original idea of ifs
 if: <T> {

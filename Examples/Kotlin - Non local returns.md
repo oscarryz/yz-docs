@@ -7,7 +7,7 @@ bar #(Int) {
    list.each({
        it Int
        match { 
-          it >= 2 => return it
+          it >= 2 => it
 	  }
 	  println(it) 
    })

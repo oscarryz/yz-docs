@@ -1,12 +1,12 @@
 #example
 https://leetcode.com/problems/two-sum/solutions/
 
-```javascript
+```js
 two_sum: {
     array []Int
     target Int
     map: [Int]Int
-    array.for_each { i Int n Int 
+    array.each({ i Int n Int 
        map.contains v ? {
          return [i map.get n]
        } {
@@ -21,11 +21,11 @@ two_sum: {
 
   result: []Int
   hash : [Int]Int
-  nums.for_each { i Int; n Int 
+  nums.each({ i Int; n Int 
     hash.contains target - n ? {
       result << i
       result << hash.get need
-      return result
+      result
     } {
       hash.put n, i
     }

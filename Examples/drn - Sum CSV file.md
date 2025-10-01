@@ -73,7 +73,7 @@ Error handling is done similar to Rust, where there is a type with two possible 
 
 Here's made up signature of all the standard library functions signatures used above:
 
-```javascript
+```js
 // The block `std` has the blocks: `result`, `int`, `string`, `array` and  `os` in this example
 // each one of them declares functions and types
 // ... means: ommited for brevety
@@ -140,7 +140,7 @@ std: {
 
 Some syntax short explaination:
 
-- `{ stuff }` a block of code containing _stuff_ . Variables inside blocks work as both parameter and return values (and attributes).
+- `{ stuff }` a block of code containing _stuff_ . Variables inside blocks work as both parameter and values (and attributes).
   - e.g. `{ print("Hello world") }`
 - `TypeName` uppercase name denotes a type
   - e.g. `String`

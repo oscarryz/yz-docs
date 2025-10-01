@@ -1,16 +1,16 @@
 #example
 [Hownto write a simple application](https://blog.vosca.dev/how-to-write-a-simple-v-application-step-by-step/)
 
-```javascript
+```js
 if: stdlib.if
-print: stdlib.print 
+print: stdlib.print()
 panic: stdlib.panic
 http: net.http
 chalk: mewzax.chalk
 
 
 // With a macro system we could do
-// import!(stdlib if print panic)
+// import!(stdlib if print(panic))
 
 
 
@@ -33,26 +33,26 @@ main: {
     
     repositories_result : json.decode(GitHubRepositoriesSearchAPI response.body).or_else {
         err Err
-	    panic('An error occurred during JSON parsing: $(err)')
+	    panic('An error occurred during JSON parsing: `err`')
     }
     
-    print('The total repository count is $(repositories_result.total_count)')
+    print('The total repository count is `repositories_result.total_count`')
 
-    repositories_result.items.for_each {
+    repositories_result.items.each({
         index Int
         item  GitHubRepositoriesItem
         
 	   colored_description : chalk.fg(repository.description 'cyan')
 	   colored_star_count : chalk.fg(repository.stargazers_count.str() 'green')
 
-	   print('#$(index + 1) $(repository.full_name)')
-	   print('  URL: $(repository.html_url)')
+	   print('#`index + 1` `repository.full_name`')
+	   print('  URL: `repository.html_url`')
 
        if repository.description != ''  {
-		  print('  Description: $(colored_description)')
+		  print('  Description: `colored_description`')
 	   }
 
-	    print('  Star count: $(colored_star_count)')
+	    print('  Star count: `colored_star_count`')
     }
     print(response.body)
 }

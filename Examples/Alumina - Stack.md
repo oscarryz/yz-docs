@@ -2,7 +2,7 @@
 
 https://github.com/tibordp/alumina
 
-```javascript
+```js
 stack: {
     new: {
         with_capacity(0)

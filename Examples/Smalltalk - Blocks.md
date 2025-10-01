@@ -2,7 +2,7 @@
 
 https://cuis-smalltalk.github.io/TheCuisBook/Block-syntax.html
 
-```javascript
+```js
 
 
 { 1 + 2 }() // 3
@@ -44,7 +44,7 @@ SpaceWar>>teleport: aShip
     velocity: 0 @ 0;
     morphPosition: randomCoordinate value @ randomCoordinate value
 ```
-```javascript
+```js
 // Yz
 SpaceWar: {
     teleport: { a_ship Ship
@@ -57,7 +57,7 @@ SpaceWar: {
     }
 }
 ```
-```javascript
+```js
 17 * 3 > 220 ? {'bigger'}, {'smaller'}
 
 ```

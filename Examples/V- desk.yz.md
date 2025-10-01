@@ -8,7 +8,7 @@ main: {
   horizontal_direction: 0
 
   lines  err : os.read_lines 'input.txt'
-  err != null ? { panic '$(err)' }
+  err != null ? { panic '`err`' }
 
   lines forEach {
       line String
@@ -34,7 +34,7 @@ main: {
       }
 
   }
-  print '$(vertical_direction * horizontal_direction)'
+  print('`vertical_direction * horizontal_direction`')
 }
 
 ```

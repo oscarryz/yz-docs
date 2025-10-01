@@ -3,7 +3,7 @@
 
 [qdbp Examples](https://www.qdbplang.org/docs/examples)
 
-```javascript
+```js
 // Functions
 // With generics
 add : {
@@ -29,8 +29,8 @@ add {a Int; b Int; a + b }
 
 // Generics
 print: {that that.print()}
-print 3 // as long as `Int` has a `print` method
-print 'Hello' // same for `String`
+print(3 // as long as `Int` has a `print` method)
+print('Hello' // same for `String`)
 
 // If/Then/Else
 if: {
@@ -116,11 +116,11 @@ switch: {
 	conds [(Bool)](v V)
 	default {v}
 
-	conds.for_each {
+	conds.each({
 		condition {Bool}
 		then {v}
 		value == condition() ? {
-			return v() // breaks the cycle
+			v() // breaks the cycle
 		} {
 			continue; // tricky part
 		}
@@ -134,7 +134,7 @@ str: switch 5 [
 	{ 2 }: {"two"}
 	{ 3 }: {"three"}
 ]  { "none of the above"}
-print str
+print(str)
 
 
 // Data structures

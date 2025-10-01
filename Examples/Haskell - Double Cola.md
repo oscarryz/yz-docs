@@ -6,7 +6,7 @@ https://gist.github.com/rexim/6326e2d762283af715b7cdb69239bd65
 
 Video
 
-```javascript
+```js
 map: std.collections.map
 
 'derive: [Show]'

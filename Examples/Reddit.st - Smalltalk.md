@@ -3,7 +3,7 @@
 [Reddit.st](http://web.archive.org/web/20110122114420/http://homepage.mac.com/svc/Reddit.st/)
 
 
-```javascript
+```js
 RedditLink:  {
     id Int
     url String

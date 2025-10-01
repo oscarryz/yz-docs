@@ -14,7 +14,7 @@ From https://gowebexamples.com/static-files/
 ```js
 data: io.read '/tmp/something.txt'
 
-data.for_each { byte Int
+data.each({ byte Int
     when_eq byte [
         {'0xCAFEBABE'}:{init()}
         {'0xDEADBEEF'}:{finish()}

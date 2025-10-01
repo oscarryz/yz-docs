@@ -2,7 +2,7 @@
 
 https://github.com/carbon-language/carbon-lang#readme
 
-```javascript
+```js
 sorting: {
     partition: {
         s []T
@@ -29,7 +29,7 @@ sorting: {
 ```
 
 
-```javascript
+```js
 geometry: {
     Circle: {
         r Float

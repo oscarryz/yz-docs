@@ -23,7 +23,7 @@ func node[T any](data T, l *Node[T], r *Node[T]) *Node[T] {
         return &Node[T]{data, l, r}
 }
 func leaf[T any](data T) *Node[T] {
-        return node(data, nil, nil)
+        node(data, nil, nil)
 }
 
 func main() {

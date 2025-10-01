@@ -1,10 +1,10 @@
 #example
 
-```javascript
-print 'hello world'
+```js
+print('hello world')
 ```
 
-```javascript
+```js
 name: 'Voyager I'
 year: 1977
 antenna_diameter: 3.7
@@ -15,26 +15,26 @@ image: {
 }
 ```
 
-```javascript
+```js
 year >= 2001 ? {
-    print '21st century'
+    print('21st century')
 } {year >= 1901 ?  {
         '20th century'
 
 }}
 
 // when function
-when  [{ year >= 2001}: { print '21st Century'}
-      { year >= 1901}: { print '20st Century'}]
+when  [{ year >= 2001}: { print('21st Century'})
+      { year >= 1901}: { print('20st Century'}])
 
 
-fly_by_objects.for_each { object String
-    print '{object}'
+fly_by_objects.each({ object String
+    print('{object}')
 }
 
 // might need to use `1.to(12)` syntax instead
-1 .to 12 { month Int
-    print '{month}'
+1 .to(12).each({ month Int
+    print('{month}')
 }
 while { year < 2016} {
     year = year + 1
@@ -42,15 +42,15 @@ while { year < 2016} {
 
 ```
 
-```javascript
+```js
 fibonacci: { n Int
-   (n == 0 || { n == 1 }) ? { return n }
+   (n == 0 || { n == 1 }) ? { n }
 
    fibonacci(n -1) + fibonacci(n - 2)
 }
-// might need to specify return type
+// might need to specify type
 fibonacci: { n Int
-   (n == 0 || { n == 1 }) ? { return n }
+   (n == 0 || { n == 1 }) ? { n }
 
    fibonacci(n -1) + fibonacci(n - 2)
 }
@@ -58,7 +58,7 @@ result: fibonacci(20)
 
 ```
 
-```javascript
+```js
 // This is a normal one-line comment.
 /*
     Multiline
@@ -68,7 +68,7 @@ n: 0
 info n  // Value of n is: 0
 ```
 
-```javascript
+```js
 Element: lib1.lib1.Element
 lib2: lib2.lib2
 
@@ -77,7 +77,7 @@ element2 lib2.Element = lib2.Element{}
 
 ```
 
-```javascript
+```js
 foo: lib2.lib2.foo
 // all except foo
 import lib2.lib2
@@ -85,7 +85,7 @@ import lib2.lib2
 
 [[../Questions/solved/concurrency/How to do concurrency]] TBD
 
-```javascript
+```js
 
 Television: {
     // Use [turn_on] to turn the power on instead
@@ -113,13 +113,13 @@ process_doc(info(tv.activate)) // Read the `Examples:` section etc.
 process_xyz(info(tv.activate)) // might read something else...
 ```
 
-```javascript
+```js
 // Write can have an I/O error usually retuns the number of bytes written
 write: { data []Int r Int eh: {Int}
  ...
 }
 n: write([1 2 3] eh:{e Int;
-     when [{ e == write.ERROR }:{ print 'Error: {info(e)}'}]
+     when [{ e == write.ERROR }:{ print('Error: {info(e))}'}]
  })
 n: write([4 5 6])
 

@@ -1,6 +1,6 @@
 #example
 
-```javascript
+```js
 Project: {
     name String
     tagline String

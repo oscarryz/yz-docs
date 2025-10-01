@@ -2,7 +2,7 @@
 
 [arlang.io](https://arlang.io)
 
-```javascript
+```js
 NOBLE_GAS = ['Helium', 'Neon', 'Argon', 'Krypton', 'Xenon']
 
 group_by_name_length : enum.group_by({s String; s.len()})
@@ -11,7 +11,7 @@ print("`groups`")
 
 ```
 
-```javascript
+```js
 
 NameCounter: {
 	name String
@@ -24,7 +24,7 @@ obj_counters : [
 	NameCounter('Alice', 0)
 	NameCounter('Bob', 0)
 ]
-obj_counter.each { itm NameCounter
+obj_counter.each({ itm NameCounter
 	itm.inc_counter()
 }
 

@@ -2,7 +2,7 @@
 
 https://learnxinyminutes.com/docs/standard-ml/
 
-```javascript
+```js
 first_element: {
   list [T]
   list[0]
@@ -31,12 +31,12 @@ evenly_positioned_elements: {
 
 Fibonacci
 
-```javascript
+```js
 
 // With non-local returns (or just with `return`)
 fibonacci: {n Int
-  n == 0 ? {return 0}
-  n == 1 ? {return 1}
+  n == 0 ? {0}
+  n == 1 ? {1}
   fibonacci(n - 1) + fibonacci( n - 2)
 }
 // Bool and nested bool

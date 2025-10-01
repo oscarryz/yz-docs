@@ -2,7 +2,7 @@
 
 https://pyret.org/index.html
 
-```javascript
+```js
 BinTree: {
   value Int
   left: leaf
@@ -60,7 +60,7 @@ tree_sum: {
 }
 ```
 
-```javascript
+```js
 make_counter: {
     counter: 0
     {
@@ -77,7 +77,7 @@ l1() == 3
 l2() == 2
 ```
 
-```javascript
+```js
 [1 2 3].map{ n * n }      //[ 1 4 6]
 [1 2 3].filter { n >= 2 } //[2 3]
 [4 5 6].fold { sum Int n Int

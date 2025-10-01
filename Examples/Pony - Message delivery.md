@@ -1,6 +1,6 @@
 #example
 
-```javascript
+```js
 
 Customer: {
 	store Store

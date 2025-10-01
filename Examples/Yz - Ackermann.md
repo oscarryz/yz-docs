@@ -1,7 +1,7 @@
 #example
 [Ackermann function](https://en.wikipedia.org/wiki/Ackermann_function)
 
-```javascript
+```js
 ackermann: { m Int n Int
     when [
         {m == 0}: {n + 1}
@@ -19,7 +19,7 @@ fun amw(m: Int, n: Int): Int = when {
 }
 ```
 
-```javascript
+```js
 ackermann: { m Int; n Int
   m == 0 ? { 
     n + 1
@@ -35,7 +35,7 @@ ackermann: { m Int; n Int
 
 Is it the same as the following?
 
-```javascript
+```js
 ackermann: { m Int; n Int
   m == 0 ? { 
     n + 1
@@ -48,10 +48,10 @@ ackermann: { m Int; n Int
 }
 ```
 
-```javascript
+```js
 `
 function ack(m, n) {  
- return m === 0 ? n + 1 : ack(m - 1, n === 0  ? 1 : ack(m, n - 1));  
+ m === 0 ? n + 1 : ack(m - 1, n === 0  ? 1 : ack(m, n - 1));  
 }
 `
 ack: {m Int; n Int
@@ -71,9 +71,9 @@ ack: {m Int; n Int
     }     
 }
 
-0 .to 3 { m Int 
-    0 .to 4 { n Int 
-        print 'ackermann $(m) $(n) => $(ackermann m n)'
+0 .to(3).each({ m Int 
+    0 .to(4).each({ n Int 
+        print('ackermann `m` `n` => `ackermann m n`')
     }
 
 }

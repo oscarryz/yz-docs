@@ -16,7 +16,7 @@ roman_to_int: {
     pre : roman_t[roman.chat_at(0)]
 
     actual Int
-    roman.for_each { 
+    roman.each({ 
         cursor Int
         c String
         actual = roman_t[cursor]
@@ -30,6 +30,6 @@ roman_to_int: {
     num
 }
 in: input("Roman number: " )
-print (roman_to_int(in))
+print((roman_to_int(in)))
 
 ```

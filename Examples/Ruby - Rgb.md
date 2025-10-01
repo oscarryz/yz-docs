@@ -25,8 +25,8 @@ NAMED_COLORS: [
 names: ['red' 'yellow' 'blue']
 rgbs: names.map { name String; NAMED_COLORS[name] }
 darks: rgbs.map(darken)
-names.len().times { i Int
-  print '`names[i]` `rgbs[i]` `darks[i]`'
+names.len().times({ i Int
+  print('`names[i]` `rgbs[i]` `darks[i]`')
 })
 ```
 
@@ -54,7 +54,7 @@ darks: rbgs.map { rbg Rbg
   scale: 5.0
   Rbg(r * scale, g * scale, b * scale)
 }
-1.to(names.len()).do { i Int
+1.to(names.len()).each({ i Int
   print("`names[i]` `rbgs[i]` `darks[i]`")
 }
 

@@ -14,9 +14,9 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 	won_game: {
     player String
 		win: player.repeat(3)
-		[board, transpose(board)].for_each {
-			board.for_each { row String
-				row == win ? { return true }
+		[board, transpose(board)].each({
+			board.each({ row String
+				row == win ? { true }
 			}
 		}
 		diag: { board Board
@@ -83,13 +83,13 @@ main: {
 	hd: 0
 	lines: os.read_lines('input.txt').or {
 		e Error
-		panic ('$(e)')
+		panic ('`e`')
 	}
-	lines.each {
+	lines.each({
 		line String
 		p : line.split(' ')
 		d : p[0]
-		m : int.parse(p[1]).or { e Error panic('$(e)}) }
+		m : int.parse(p[1]).or { e Error panic('`e`}) }
 		vd = vd + when_eq d [
 			{'up'}: { m.neg() }
 			{'down'}: { m }
@@ -97,7 +97,7 @@ main: {
 		]
 		hd = hd + d == 'forward' ? { m } { 0 }
 	}
-	print("$(vd * hd)")
+	print("`vd * hd`")
 }
 
 	main: {

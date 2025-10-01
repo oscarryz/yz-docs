@@ -2,7 +2,7 @@
 
 https://tryhaskell.org/
 
-```javascript
+```js
 23 * 26
 reverse "Hello"
 [13 23 40]

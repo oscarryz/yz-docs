@@ -12,7 +12,7 @@ For type inference
 
 
 
-```javascript
+```js
 
 /*
  Multiline comment

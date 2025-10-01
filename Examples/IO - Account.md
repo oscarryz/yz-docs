@@ -11,7 +11,7 @@ account: {
         balance = balance +  v
     }
     show: {
-        println('Account balance $(balance)')
+        println('Account balance `balance`')
     }
 }
 print( "initial: " )

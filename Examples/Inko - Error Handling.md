@@ -3,7 +3,7 @@
 https://inko-lang.org/
 
 
-```javascript
+```js
 
 
 

@@ -36,7 +36,7 @@ headers: [
     'Created At'
     'Updated at'])
 
-  prs.for_each { pr PR
+  prs.each({ pr PR
     gsheets.append_row_to_sheet(
         spres_sheet_id
         sheet_name

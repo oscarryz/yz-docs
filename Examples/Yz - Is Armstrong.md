@@ -7,7 +7,7 @@ is_armstrong { Int Bool } = {
    n == digita(n).map(3.**).sun()
 }
 digits { Int []Int } = {
-  "$(n)".collect(strings.parse_int)
+  "`n`".collect(strings.parse_int)
 }
 ```
 

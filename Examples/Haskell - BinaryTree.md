@@ -2,7 +2,7 @@
 
 https://www.anardil.net/2018/binary-tree-in-haskell.html
 
-```javascript
+```js
 
 binary_tree:{
 

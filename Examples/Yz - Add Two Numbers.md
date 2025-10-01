@@ -1,7 +1,7 @@
 #example
 https://leetcode.com/problems/add-two-numbers/
 
-```javascript
+```js
 
 some: std.optional.some
 none: std.optional.none
@@ -32,7 +32,7 @@ solution: {
 list_from: {
     array []Int
     r: c: Node()
-    array.each {item Int
+    array.each({item Int
         c.next =  some(Node(item))
         c = c.next
     }

@@ -1,7 +1,7 @@
 #example
 https://vosca.dev/p/17d52c0759
 
-```javascript
+```js
 // Experimental, if no type is defined, the variable is generic and will be binded on the first usage
 List: {
     T

@@ -2,7 +2,7 @@
 
 [counter/main.pony](https://github.com/ponylang/ponyc/blob/54225e41bd141b8b7a64f0e65d3dbe46bc5317d4/examples/counter/main.pony)
 
-```javascript
+```js
 Counter: {
     count Int = 0
     increment: {
@@ -16,7 +16,7 @@ Counter: {
 }
 display: {
         result Int
-        print "`result`"
+        print("`result`")
 }
 main:{
     n: int.parse(os.args[1]).or(Ok(10)).get()
