@@ -25,7 +25,8 @@ Example of a block that takes or has a variable `v`
 #(v Int)={v Int}(2) // invoked with param 2
 ```
 
-if the `=` is omitted the variable can be used: 
+
+The assignment (`=`) can be omitted if the body follows immediately. in that case the body doesn't need to declare the variables and can use them directly 
 
 ```js
 #(v Int) {
