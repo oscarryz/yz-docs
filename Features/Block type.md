@@ -1,5 +1,35 @@
 #feature
-# Block type 
+# Boc type 
+
+A block of code `boc` has a type. Just like a number literal `1` has a type `Int` or `1.0` a type `Decimal` a boc literal has a boc type defined by `#(` optional variables or expression types  `)`
+
+The variables of a boc type follow the same rules as regular variables: 
+
+- Named with a type: 
+  `#(a Int)`
+
+- Assigned a default value: 
+   `#(a Int = 1)`
+
+- Short decl:
+   `#(a : 1)`
+
+- Other boc types
+   `#(a #())`
+- Generic:
+   `#(a T)`
+
+In adition to variables, the boc type can have pure expression types, these are always at the end of the list. They can be thought as input and output parameters:
+
+- A boc that just returns a String 
+  `#(String)`
+
+- A boc that takes an integer and returns a string
+   `#(Int, String)`
+
+- For instance the type of a variable `map` that takes a mapping function from A to B, an arrays of A and retuns an array of B would be:  
+   `#(#(A,B), [A], [B])`
+
 
 Example of a block that takes nothing and returns nothing
 
@@ -34,24 +64,12 @@ The assignment (`=`) can be omitted if the body follows immediately. in that cas
 }
 ```
 
-Type can be generic
+Type of the variable can be generic
 
 ```js
 
 // Block that takes/returns a T and take/returns a U
 #(T, U)
 
-// e.g. 
-map #([T], #(T,U) ) = {
-    a [T]
-    mf #(T,U)
-    r : []T
-    a.each({e T; r.add(mf(e))})
-    r
-}
-map([1,2,3], int.to_str)
-```
-## Type alias
 
-[Type Alias](Features/Type%20Alias.md)
 
