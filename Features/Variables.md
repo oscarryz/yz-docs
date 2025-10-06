@@ -41,6 +41,12 @@ greet #(msg String, to_whom String,String) {
    "`msg` `to_whom`"
 }
 ```
+Variables can also have a generic type: 
+
+```js
+generic T
+```
 
 See: 
 [Signatures + Literals duplication](../Questions/solved/Signatures%20+%20Literals%20duplication.md)
+[Generics](./Generics.md)

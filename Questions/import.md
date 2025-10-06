@@ -8,13 +8,13 @@ It is mostly like a macro.
 ```js
 a : {x Int, y Int}
 b : {
-  import a
+  mix a
   x = 0 // valid, x was created by the import above.
 }
 b.x = 1 // valid
 b.y = 2 // valid
 c : { 
-  import b // would be the same as import a
+  mix b // would be the same as import a
   x Int // invalid, x being redeclared
 }
 ```
@@ -28,7 +28,7 @@ Animal : {
   walk: #(String) = { "I'm walking" }
 }
 Dog: {
-  import Animal
+  mix Animal
   talk = {"Woof woof"}
 }
 d : Dog()
