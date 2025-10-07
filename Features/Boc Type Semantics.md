@@ -154,6 +154,115 @@ main: {
 }
 ```
 
+## User-Defined Type Instantiation
+
+User-defined types (types with uppercase names) have special instantiation semantics that differ from regular boc calls.
+
+### Instantiation Patterns
+
+#### Positional Arguments
+```yz
+One: { a String }
+
+main: {
+    o: One("hi")  // Positional argument
+    println(o.a)  // prints "hi"
+}
+```
+
+**Generated Go Pattern**:
+```go
+o := func() *OneImpl { 
+    inst := NewOne().(*OneImpl); 
+    inst.a = "hi"; 
+    return inst 
+}()
+```
+
+#### Named Arguments
+```yz
+Person: { name String, age Int }
+
+main: {
+    p: Person(name: "Alice", age: 25)  // Named arguments
+    println(p.name)  // prints "Alice"
+}
+```
+
+**Generated Go Pattern**:
+```go
+p := func() *PersonImpl { 
+    inst := NewPerson().(*PersonImpl); 
+    inst.SetName("Alice"); 
+    inst.SetAge(25); 
+    return inst 
+}()
+```
+
+### Key Semantic Rules
+
+1. **Uppercase Detection**: Types starting with uppercase letters (Unicode-aware) are user-defined types
+2. **Constructor Pattern**: Always use constructor pattern, never struct literals
+3. **New Instance**: Each call creates a new instance, never reuses global instances
+4. **Field Assignment**: Positional arguments map to fields in declaration order
+5. **Setter Methods**: Named arguments use setter methods for interface-based types
+
+### Type Resolution
+
+#### Interface-Based Generation
+User-defined types generate both interfaces and implementations:
+
+```go
+type Boc_One interface {
+    Run()
+    GetA() string
+    SetA(string)
+}
+
+type OneImpl struct {
+    a string
+}
+
+func NewOne() Boc_One {
+    return &OneImpl{a: ""}
+}
+```
+
+#### Field Access
+Field access uses getter methods:
+```go
+o.GetA()  // Instead of o.a
+```
+
+#### Field Assignment
+Field assignment uses setter methods:
+```go
+o.SetA("hi")  // Instead of o.a = "hi"
+```
+
+### Multi-Pass Processing
+
+The compiler uses multi-pass processing for user-defined types:
+
+1. **First Pass**: Identify all user-defined boc types
+2. **Store Types**: Populate `typeFieldNames` map with field information
+3. **Second Pass**: Process calls with known type references
+4. **Generate Code**: Use constructor pattern with proper type assertions
+
+### Error Handling
+
+#### Common Issues
+1. **Undefined Type**: `One` not recognized as user-defined type
+2. **Missing Fields**: Positional arguments don't match field count
+3. **Type Mismatch**: Arguments don't match expected field types
+4. **Interface Access**: Direct field access instead of getter methods
+
+#### Debugging
+- Check if type name starts with uppercase letter
+- Verify field names in `typeFieldNames` map
+- Ensure proper constructor pattern generation
+- Validate type assertions in generated code
+
 ## Implementation Details
 
 ### Multi-Pass Processing
