@@ -1,5 +1,7 @@
 #feature
 Update: Oct 19 2024
+Update: Oct 7 2025 Will use the keyworkd `mix`
+
 #challenged [[Questions/import]]
 
 It might be hard to assign multiple variables by hand. 
@@ -35,10 +37,11 @@ core: {
 r1: core.math.max 1 2
 r2: core.math.min 1 2
 // Could also be written as
-import core.math.max
-r1: max 1 2
-import core.math.min
-r2: min 1 2
+mix core.math
+//import core.math.max
+r1: max(1,2)
+//import core.math.min
+r2: min(1, 2)
 
 // or 
 max: core.math.max
@@ -55,6 +58,12 @@ math.max 1 2
 math.min 1 2
 ```
 
+But with `mix`  now we can
+```js
+mix core.math
+
+```
+
 So, there's no real benefit, because we can just use variable assignation
 
 ```javascript
@@ -64,8 +73,11 @@ r2: math.min 1 2
 ```
 
 Thinking .... what are the thread safe implications for this? What if two threads call the same function? What value is returned. 
-Possible answer: each thread creates its own world and the only way to sync with through [Channels](../../Questions/solved/concurrency/Channels.md)
-#to-do Review with [Concurrency](Concurrency.md)
+A: use instantiable bocs
+
+Possible answer: each thread creates its own world and the only way to sync with through [Channels](../../Questions/solved/concurrency/Channels.md) NOPE
+
+#to-do Review with [Concurrency](Concurrency.md) All good. 
 
 #open-question How to deal with concurrency and libraries? e.g
 ```javascript
