@@ -565,13 +565,13 @@ a [Int] = [1, 2, 3]
 a : [1, 2, 3]
 
 // empty decl + init
-a [Int] = []Int // Is an empty array
+a [Int] = [Int]() // Is an empty array
 // short declr + init
-a : []Int // empty array of ints 
+a : [Int]() // empty array of ints 
 
 // Generic
 a [T] = [1, 2, 3]
-a : []T
+a : [T]()
 
 // Array operations
 a << 'Hello' // or a.add 'Hello'
@@ -597,12 +597,12 @@ e [String:Int] = ["one":1, "two":2]
 f : ["one":1, "two":2 ]
 
 // empty 
-g2 [String:Int] = [String]Int
+g2 [String:Int] = [String:Int]()
 // short decl + init empty
-g1 : [String]Int
+g1 : [String:Int]()
 
 // generic + initialization
-g3 [K:V] = [String]Int 
+g3 [K:V] = [String:Int]() 
 g4 [K:V]
 g4["hello":1]
 
@@ -825,7 +825,7 @@ check: {
 
 // Break from loops
 max_from_list: {
-  list []
+  list [Int]
   m Int
   list.for_each {
     item Int
