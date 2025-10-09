@@ -59,7 +59,7 @@ s_root.left = Node('left')
 ```js
 create_array: { 
 	T
-	[]T
+	[T]()
 }
 a [Int] = create_array(Int) 
 ```

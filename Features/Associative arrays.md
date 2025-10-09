@@ -17,12 +17,12 @@ e [String:Int] = ["one":1, "two":2]
 f : ["one":1, "two":2 ]
 
 // empty 
-g2 [String:Int] = [String]Int
+g2 [String:Int] = [String:Int]()
 // short decl + init empty
-g1 : [String]Int
+g1 : [String:Int]()
 
 // generic + initialization
-g3 [K:V] = [String]Int 
+g3 [K:V] = [String:Int]() 
 g4 [K:V]
 g4["hello":1]
 

@@ -188,8 +188,8 @@ half down_to 0 { i Integer
     sol[index-i] = i
 } 
 // arrays and associative arrays
-a: []Int
-b: [String]Int
+a: [Int]()
+b: [String:Int]()
 
 
 HelloMessage: {

@@ -72,4 +72,17 @@ Type of the variable can be generic
 #(T, U)
 
 
+```
 
+### Note 
+
+For v0.1 The type `Unit` means the boc returns nothing e.g. 
+
+```js
+println #(String, Unit) 
+```
+instead of 
+
+```js
+println #(String)
+```
