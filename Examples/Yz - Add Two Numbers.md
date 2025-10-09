@@ -30,7 +30,7 @@ solution: {
 
 // aux method to create a list from an array
 list_from: {
-    array []Int
+    array [Int]()
     r: c: Node()
     array.each({item Int
         c.next =  some(Node(item))

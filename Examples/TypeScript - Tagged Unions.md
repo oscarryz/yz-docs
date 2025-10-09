@@ -39,7 +39,7 @@ when(
 // https://stackoverflow.com/questions/71948940/copying-a-static-variable-in-copy-constructor
 
 Park: {
-    tickets []Ticket
+    tickets [T]()icket
 }
 Ticket: {
     id Int

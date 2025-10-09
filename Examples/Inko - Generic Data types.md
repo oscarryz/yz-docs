@@ -9,7 +9,7 @@ stack: {
 	}
 	Stack {
 		V
-		values []V // generic array
+		values [V]() // generic array
 		push: {
 			v  V // generic value
 			values << v

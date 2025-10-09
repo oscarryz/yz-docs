@@ -3,7 +3,7 @@
 
 ```js
 ArrayWrapper: {
-    nums []Int
+    nums [Int]()
     + : {
         other ArrayWrapper
         r : 0 

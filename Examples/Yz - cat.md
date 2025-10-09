@@ -9,7 +9,7 @@ file: files.open(name 'r').or {
     exit!
 }
 
-bytes []Bytes
+bytes [Bytes]()
 while { rc: file.read_into bytes ; rc != files.eof } {
     io.stdout.write bytes
 }

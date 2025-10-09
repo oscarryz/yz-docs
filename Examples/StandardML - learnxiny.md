@@ -21,7 +21,7 @@ fun evenly_positioned_elems (odd::even::xs) = even::evenly_positioned_elems xs
 evenly_positioned_elements: {
   list [T]
   (list.len() == 0 || {list.len() == 1}) ? {
-    []T
+    [T]()
   }, {
     list[1] ++ evenly_positioned_elements(list.sublist(1))
   }

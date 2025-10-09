@@ -79,7 +79,7 @@ binary_tree:{
     root
   }
   random #(n Int) = {
-    list : []Int
+    list : [Int]()
     n.times().do({
       list.add(random.int(1, 99))
     })
@@ -112,7 +112,7 @@ mushrooms: [
   ),
 ]
 
-total_price []Result(String,InedibleError) =
+total_price [Result]()(String,InedibleError) =
   mushooms.map({
     m Mushroom,
     m.is_edible ? {

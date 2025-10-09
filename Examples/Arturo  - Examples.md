@@ -52,7 +52,7 @@ print(1.to(10).select({n Int; n % 2 == 0}).to_str())
 Array: {
    select: {
        predicate #(Int,Bool)
-       r: []Int
+       r: [Int]()
 
        n Int
        i: 0

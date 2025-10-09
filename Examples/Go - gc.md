@@ -10,13 +10,13 @@ Gc_tool_chain: {
         b Builder;
         a Action
         archive String
-        importcfg []Byte
+        importcfg [B]()yte
         embedcfg []byte
         symabis String
         asmhdr Bool
-        gofiles []String
+        gofiles [String]()
         ofile String
-        output []Byte
+        output [B]()yte
         error Error
 
         p: a.package

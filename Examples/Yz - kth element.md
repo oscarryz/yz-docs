@@ -7,15 +7,15 @@ Note that it is the `kth` largest element in the sorted order, not the `kth`�
 You must solve it in `O(n)` time complexity.
 `
 
-kth: { a []Int  k Int
+kth: { a [Int]()  k Int
 
-    l: []Int
+    l: [Int]()
     a.each({ e Int 
         add k e l
     }
     l[0]
 }
-add: { k Int e Int l []Int 
+add: { k Int e Int l [Int]() 
 
     i: 0
     while { i < l.len() } {

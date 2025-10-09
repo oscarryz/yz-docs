@@ -10,7 +10,7 @@ Post: {
    title String
 
   "json: 'tags'"
-   tags []String
+   tags [String]()
 }
 
 PostWithSharedTags: {
@@ -21,8 +21,8 @@ PostWithSharedTags: {
 RelatedPost: {
     'json: "_id"'
     id String
-    tags []String
-    related []Post
+    tags [String]()
+    related [Post]()
 }
 
 main: {
@@ -30,12 +30,12 @@ main: {
        err Error
        printerr 'Failed to read file `err`'
    }
-   posts: json.decode []Post json_str .or {
+   posts: json.decode [Post]() json_str .or {
       err Error
       printerr 'Failed to parse json `err`'
    }
    start : time.now()
-   tag_map: [String][]Int
+   tag_map: [String][Int]()
    posts.each({
       i Int
       post Post
@@ -44,8 +44,8 @@ main: {
           tag_map[tag] << i 
      }
   }
-  all_related_posts : []ReletedPost
-  tagged_post_count : []Int
+  all_related_posts : [ReletedPost]()
+  tagged_post_count : [Int]()
   posts.each({
       i Int
       post Post
@@ -58,7 +58,7 @@ main: {
               tagged_post_count[post_index] += 1
          }
      }
-     top_5 : []PostWithSharedTags
+     top_5 : [Post]()WithSharedTags
      min_tags: 0
      // custom prority queue
      tagged_post_count.each({ idx Int n Int
@@ -75,7 +75,7 @@ main: {
             min_tags = top_5[ 4 ].shared_tags
 	  }
       }
-      top_post: []Post
+      top_post: [Post]()
       top_5.each({ top_post_index Int p String 
         top_post[top_post_index] = post[p.post]
       }
