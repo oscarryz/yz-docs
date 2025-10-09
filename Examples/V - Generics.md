@@ -5,7 +5,7 @@ https://vosca.dev/p/17d52c0759
 // Experimental, if no type is defined, the variable is generic and will be binded on the first usage
 List: {
     T
-    data []T
+    data [T]()
     push: {
         val T
         data << val

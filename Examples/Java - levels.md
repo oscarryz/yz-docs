@@ -8,7 +8,7 @@ Node: {
   id String
   level Int
   name String
-  list []Node = []
+  list [Node]() = []
 }
 
 input: [
@@ -22,8 +22,8 @@ input: [
   Node{"8" "3" "Item8"}
   Node{"9" "4" "Item9"}
 ]
-map [Int][]Node
-map[1]=[]Node
+map [Int][Node]()
+map[1]=[Node]()
 input.each: { node Node
   list: map[node.level]
   list << node

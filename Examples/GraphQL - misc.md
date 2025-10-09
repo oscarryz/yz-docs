@@ -4,7 +4,7 @@
 Project: {
     name String
     tagline String
-    contributors []User // [User]
+    contributors [User]() // [User]
 }
 
 // Get tagline from project GraphQL

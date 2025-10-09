@@ -74,7 +74,7 @@ main: {
 }
 init: {
     names [String]
-    philosophers : []Philosophers
+    philosophers : [Philosophers]()
     w: names.each({ 
         i Int
         name String

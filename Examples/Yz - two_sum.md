@@ -3,7 +3,7 @@ https://leetcode.com/problems/two-sum/solutions/
 
 ```js
 two_sum: {
-    array []Int
+    array [Int]()
     target Int
     map: [Int]Int
     array.each({ i Int n Int 
@@ -16,10 +16,10 @@ two_sum: {
     []
 }
 two_sum: {
-  nums []Int
+  nums [Int]()
   target Int
 
-  result: []Int
+  result: [Int]()
   hash : [Int]Int
   nums.each({ i Int; n Int 
     hash.contains target - n ? {

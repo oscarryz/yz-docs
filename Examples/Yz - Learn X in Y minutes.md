@@ -45,14 +45,14 @@ false
 
 
 
-first_elem : <T>{ a []T; a[0] }
-second_elem: <T>{ a []T; a[1] }
+first_elem : <T>{ a [T](); a[0] }
+second_elem: <T>{ a [T](); a[1] }
 `"
 fun evenly_positioned_elems (odd::even::xs) = even::evenly_positioned_elems xs
   | evenly_positioned_elems [odd] = []  (* Base case: throw away *)
   | evenly_positioned_elems []    = []  (* Base case *)
 "`
-evently_positioned_elemens: <T>{ a []T 
+evently_positioned_elemens: <T>{ a [T]() 
     len(a) == 0 ? { a }, {
         len(a) == 1 ? { }
     }
@@ -131,22 +131,22 @@ learn_types: {
     pi Decimal = 22.0 / 7 
 
     n: Byte{'\n'}
-    a4 []Int = Array.new_size([]Int, 4) 
+    a4 [Int]() = Array.new_size([Int](), 4) 
     a5 [3,1,5,10,100] // Array initialized with fixed size of 5?
     a4_copy : Array.copy(a4)
     a4_copy[0] = 25
     print('`a4_copy[0] == a4[0]`' // false)
 
     s3: [4,5,9]
-    s4: Array_new_size([]Int,4)
-    d2 [][]Decimal
-    bs: []Byte`'A slice'`
+    s4: Array_new_size([Int](),4)
+    d2 [][Decimal]()
+    bs: [Byte]()`'A slice'`
     s3_copy: s3
 }
 // learn memory
 learn_memory: {
     p = Int{}
-    s: array.new([]Int, 20)
+    s: array.new([Int](), 20)
     s[3] = 7
     r: -2
 }

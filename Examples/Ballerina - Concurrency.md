@@ -20,7 +20,7 @@ Person : {
 	employed Bool
 }
 
-process #(members []Person, quantities []Int) {
+process #(members [Person](), quantities [Int]()) {
 	// creates two variables and continues the flow
 	employee_count, total_message: employee_count(members)
 	// employee count is passed but still not needed, so it does't block
@@ -28,7 +28,7 @@ process #(members []Person, quantities []Int) {
 	print(total_message)
 	print(avg_message)
 }
-employee_count #(members []Person) {
+employee_count #(members [Person]()) {
 	// count is calculated async, but still not used
     count: members.filter({p Person; p.employed}).len()
 	
@@ -36,7 +36,7 @@ employee_count #(members []Person) {
 	// it can keep going and this value
 	"Employed members: `count`"
 }
-calculate_average(quantities []Int, employed_cont Int ) {
+calculate_average(quantities [Int](), employed_cont Int ) {
 	total: quantities.sum()
 	// employed_count is needed here, the above can run aysn
 	// but the flow will stop here to let the calculation finish
@@ -58,17 +58,17 @@ Person : {
 	employed Bool
 }
 
-process #(members []Person, quantities []Int) {
+process #(members [Person](), quantities [Int]()) {
 	employee_count, total_message: employee_count(members)
 	avg, avg_message : calculate_average(quantities, employee_count)
 	print(total_message)
 	print(avg_message)
 }
-employee_count #(members []Person) {
+employee_count #(members [Person]()) {
     count: members.filter({p Person; p.employed}).len()
 	"Employed members: `count`"
 }
-calculate_average(quantities []Int, employed_cont Int ) {
+calculate_average(quantities [Int](), employed_cont Int ) {
 	total: quantities.sum()
 	match { 
 		employed_count == 0 => 0
@@ -87,7 +87,7 @@ Person : {
 	employed Bool
 }
 
-process #(members []Person, quantities []Int) {
+process #(members [Person](), quantities [Int]()) {
 
 	employed_count, count_msg :  { 
 	    employedMembers: members.filter({p Person; p.employed})

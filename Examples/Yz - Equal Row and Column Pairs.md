@@ -9,7 +9,7 @@ https://leetcode.com/problems/equal-row-and-column-pairs/
     - Iterate columns and lookup in hashmap
 */
 equal_pairs: {
-    grid [][]Int
+    grid [][Int]()
     count : 0 
     map: add_rows grid 
     grid.each({ i Int v Int 
@@ -21,9 +21,9 @@ equal_pairs: {
     count
 }
 add_rows: {
-    grid [][]Int
+    grid [][Int]()
     map [Int:Int] = [:]
-    grid.each({ row []Int 
+    grid.each({ row [Int]() 
         h: hash(row)
         map[h] = map[h] + 1
     }
@@ -31,7 +31,7 @@ add_rows: {
 }
 search: {
     map [Int:Int]
-    grid [][]Int
+    grid [][Int]()
     i Int // column index
 
     column: []
@@ -41,7 +41,7 @@ search: {
     map[hash(colum)]
 }
 hash: { 
-    a []Int
+    a [Int]()
     r : 31
     a.each({ i Int 
         r = 31 * r + i

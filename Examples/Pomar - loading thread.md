@@ -9,7 +9,7 @@
 // one block is filling the array, another is reading from it.
 asset_loading_thread: {
 	// Put images here
-	buffer []Image
+	buffer [Image]()
 	file_iterator : list_files('assets')
 	file_iterator.each({
 		f File
@@ -18,7 +18,7 @@ asset_loading_thread: {
 	}
 }
 main: {
-	buffer: []Image
+	buffer: [Image]()
 	// starts putting images in the array
 	// it will go to the nextline immediately
 	asset_loading_thread(buffer)

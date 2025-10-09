@@ -5,7 +5,7 @@ https://github.com/carbon-language/carbon-lang#readme
 ```js
 sorting: {
     partition: {
-        s []T
+        s [T]()
         i: -1
         s.for_each({
             it T
@@ -17,7 +17,7 @@ sorting: {
         i
     }
     quick_sort: {
-        s []T
+        s [T]()
         s.len() <= 1 ? {
             return
         }
