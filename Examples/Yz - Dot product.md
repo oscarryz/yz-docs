@@ -3,8 +3,8 @@ https://rosettacode.org/wiki/Dot_product
 
 ```js
 dot_product: {
-  a []Int
-  b []Int
+  a [Int]()
+  b [Int]()
 
   a.len() != b.len() ? {
    Err('vectors must be same length')

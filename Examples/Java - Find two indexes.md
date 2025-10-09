@@ -59,13 +59,13 @@ class Solution {
 
 ```js
 calc: {
-   input []Int
-   list: []Int
+   input [Int]()
+   list: [Int]()
    input.each({ i Int
        list << i
    }
    map: [Int]Int
-   result: []Int
+   result: [Int]()
    target: 7
    list.each_item: { item Int; index Int
        if map.contains(item) {

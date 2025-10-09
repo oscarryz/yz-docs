@@ -65,8 +65,8 @@ tuple: { "snd"; "can't touch this"; "da na na" }
 _, b, _: tuple()
 b
 
-my_map: { array []A; f <A,B>{A;B}
-  len(array) == 0 ? { <- []B }
+my_map: { array [A](); f <A,B>{A;B}
+  len(array) == 0 ? { <- [B]() }
   r: my_map(sub_array(array, 0), f)
   push(r, f(array[0]), 0)
 }
@@ -109,7 +109,7 @@ when(
 )
 
 (1 to 5).map({a Int; a *2 }) // [2,4,6,8,10]
-for: { array []A; f <A,B>{A,B}
+for: { array [A](); f <A,B>{A,B}
     array.map(f)
 }
 for( [1,2,3,4,5], {a Int; show(a)} )

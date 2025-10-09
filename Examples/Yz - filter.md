@@ -10,7 +10,7 @@ let predicate = {
 }
 predicate('apple') // false 
 
-r: []String
+r: [String]()
 fruits.each({ f String 
   if predicate(f) {
     r.push(f)

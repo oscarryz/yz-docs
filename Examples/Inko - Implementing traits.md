@@ -11,7 +11,7 @@ Person:{
 	}
 }
 List:{
-  data []T
+  data [T]()
   ...
 }
 // # Here `ToString` is only available for instances

@@ -33,9 +33,9 @@ result: match(number).conditions([
 ])
 
 main: {
-	print(get_first_non_empty([[]Int [1 2 3] [4 5]]))
+	print(get_first_non_empty([[Int]() [1 2 3] [4 5]]))
 	print(get_first_non_empty([[1 2] [3 4 5] []]))
-	print(get_first_non_empty([[]Int []Int []Int]))
+	print(get_first_non_empty([[Int]() [Int]() [Int]()]))
 }
 get_first_non_empty: {
 	lists [[T]]

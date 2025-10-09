@@ -12,10 +12,10 @@ stack: {
         // capacity is not used but in the
         // oriinal example it was used to
         // create an array of size capacity
-        Stack(data:[]T,len: 0)
+        Stack(data:[T](),len: 0)
     }
     Stack: {
-        data []T
+        data [T]()
         len Int
         reserve: {
             additional Int

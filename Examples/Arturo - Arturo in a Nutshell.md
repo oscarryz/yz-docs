@@ -244,7 +244,7 @@ arr.sort { a Int, b Int, b - a} // descending order -> [5,4,3,2,1]
 1 .to 10 .each({x Int, 2 * x}
 Range(1,10).map{x Int, 2 * x} // [2,4,6,8,10,12,14,16,18,20]
 
-n: []Int
+n: [Int]()
 1.to 10 .each({ x Int, n << x }
 n.select { x Int, x % 2 == 0} // [2,4,6,8 10]
 n.filter { x Int, x % 2 == 0} // [1,3,5,7,9]

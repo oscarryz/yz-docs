@@ -31,7 +31,7 @@ stack = {
 	}
 	Stack = {
 		T
-		array [T] = []T
+		array [T] = [T]()
 		push = {
 			a T
 			array.<<(a)

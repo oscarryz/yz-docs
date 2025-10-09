@@ -115,7 +115,7 @@ process_xyz(info(tv.activate)) // might read something else...
 
 ```js
 // Write can have an I/O error usually retuns the number of bytes written
-write: { data []Int r Int eh: {Int}
+write: { data [Int]() r Int eh: {Int}
  ...
 }
 n: write([1 2 3] eh:{e Int;

@@ -217,7 +217,7 @@ maxBeforeNil: {
 yz>max_before_nan [1,2,3, core.int.NOT_A_NUMBER, 4, 5]
 >> 3
 `
-max_before_nan: {numbers []Int
+max_before_nan: {numbers [Int]()
 
     max: {a Int; b Int; a > b ? {a}:{b}}
     m: 0

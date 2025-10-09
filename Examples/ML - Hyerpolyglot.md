@@ -23,8 +23,8 @@ foo == -999 ? { None() } { Some(n) }
 r: foo == -999 ? {Err()},{Ok(n)}
 
 literal: [1 2 3]
-empty_list: []Int
-empty_list_test: ([]Int).len() == 0
+empty_list: [Int]()
+empty_list_test: ([Int]()).len() == 0
 // or maybe
 empty_list_test: len([]) == 0
 cons: [1] << 2 // [1 2] 2 >> [1]

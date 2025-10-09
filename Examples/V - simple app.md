@@ -18,7 +18,7 @@ github_repositories_url : 'https://api.github.com/search/repositories?sort=stars
 
 GitHubRepositoriesSearchAPI {
 	total_count Int
-	items       []GitHubRepositoriesItem
+	items       [GitHubRepositoriesItem]()
 }
 
 GitHubRepositoriesItem {
