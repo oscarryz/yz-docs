@@ -18,25 +18,25 @@ a [Int] = [1, 2, 3]
 a : [1, 2, 3]
 
 // emtpy decl + init
-a [Int] = []Int // Is an empty array
+a [Int] = [Int]() // Is an empty array
 // short declr + init
-a : []Int // empty array of ints 
+a : [Int]() // empty array of ints 
 
 // Generic
 a [T] = [1, 2, 3]
-a : []T
+a : [T]()
 ```
 
 ```javascript
 // Type
 array [Int]
 // init
-array = []Int
+array = [Int]()
 
 //short decl + init 
-array: []Int // identical to the init 
+array: [Int]() // identical to the init 
 // or 
-array: []T // no type specified yet until first usage
+array: [T]() // no type specified yet until first usage
 array << 1 // now type is []Int
 ```
 
@@ -44,7 +44,7 @@ Example
 
 ```javascript
 a [String]// a is declared as an array of strings
-a = []String // a initialized as an empty array of strings
+a = [String]() // a initialized as an empty array of strings
 a << 'Hello' // or a.add 'Hello' // with non-word medthod invocation ()
 print(a[0]) // access element 0 of the array
 
