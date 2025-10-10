@@ -504,6 +504,96 @@ greet #(String, Int)  // result1, result2
 - Named `result`, `result1`, `result2`, etc.
 - Used for explicit return types
 
+## Closure Support (Variable Capture)
+
+Nested bocs can access variables from their parent scope through closures. The compiler automatically detects captured variables and generates the necessary context passing code.
+
+### Basic Closure Example
+
+```yz
+Person: {
+    name String
+    greet: {
+        "Hello, I'm `name`"  // 'name' captured from parent
+    }
+}
+
+main: {
+    p: Person("Alice")
+    println(p.greet())  // Output: Hello, I'm Alice
+}
+```
+
+### How Closures Work
+
+1. **Capture Detection**: Semantic analyzer detects when a nested boc uses parent variables
+2. **Context Field**: Nested boc struct gets a `context` field referencing the parent
+3. **Parent Passing**: Parent instance is passed when creating nested boc
+4. **Variable Access**: Captured variables accessed via `context.GetVarName()`
+
+### Generated Code Pattern
+
+```go
+type Boc_StringImpl struct {
+    context Boc_Person  // Added only when captures exist
+    result string
+}
+
+func NewBoc_String(parent Boc_Person) Boc_String {
+    return &Boc_StringImpl{context: parent}
+}
+
+func (impl *Boc_StringImpl) Run() {
+    impl.result = fmt.Sprintf("Hello, I'm %v", impl.context.GetName())
+}
+```
+
+### Multiple Captured Variables
+
+```yz
+Person: {
+    name String
+    age Int
+    introduce: {
+        "I'm `name`, age `age`"  // Both captured
+    }
+}
+```
+
+Both `name` and `age` are accessible through the same `context` field.
+
+### Optimization: No Context When Not Needed
+
+```yz
+Container: {
+    data: {
+        "hello"  // No parent variables used
+    }
+}
+```
+
+The `data` boc gets **no context field** since it doesn't capture any variables. This keeps the generated code clean and efficient.
+
+### Closure Scope Rules
+
+1. **Local variables** take precedence (checked first)
+2. **Parameters** are next
+3. **Captured variables** from parent (via context)
+4. **Global variables** last
+
+### Current Support
+
+✅ **Supported:**
+- Basic closures (inner accessing outer)
+- Multiple captured variables
+- String interpolation with captures
+- User-defined types (TypeDecls)
+- Context optimization (only added when needed)
+
+❌ **Not Yet Supported:**
+- Singleton bocs with nested field bocs (type inference issue)
+- Multi-level TypeDecl nesting (separate issue)
+
 ## Error Handling
 
 ### Common Issues
