@@ -128,7 +128,7 @@ DayOfWeek : {
 ```js
 // Using `Option(NonBlank)` to enforce non-blankness
 NonBlank: String 
-non_blank #(String,Option(NonBlank)) = { 
+non_blank #(String, Option(NonBlank)) = { 
   s String
   match {
 	  s.is_empty() => None()
@@ -137,8 +137,8 @@ non_blank #(String,Option(NonBlank)) = {
   }
 }
 title : non_blank("")
-title.and_then({ s String ;  print("`s` was a good book") }).or{panic()}
-title >>= ({ s String ;  print("`s` was a good book") }).or{panic()}
+title.and_then({ s String ;  print("`s` was a good book") }).or({panic()})
+title >>= { s String ;  print("`s` was a good book") }.or({panic()})
 
 ```
 

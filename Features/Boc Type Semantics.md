@@ -25,6 +25,90 @@ greeter: {
 }
 ```
 
+## Variable, Type, and Literal Distinction
+
+In Yz, the distinction between **variable**, **type**, and **literal** applies uniformly across all types, not just bocs. This fundamental pattern is consistent whether dealing with `String`, `Int`, or boc types.
+
+### The Three Forms
+
+For any type (including bocs), you can have:
+
+1. **Variable Declaration** - Declares a variable with a type
+2. **Type Definition** - Defines a new type (user-defined types start with uppercase)
+3. **Literal/Value** - The actual value or implementation
+
+### Examples Across Types
+
+#### String Type
+```yz
+s String              // Variable declaration
+s String = "hello"    // Declaration + initialization
+s : "hello"           // Shortcut: declaration + initialization
+// No special form for String
+```
+
+#### Boc Type
+```yz
+// Variable declaration
+foo #(a String)
+
+// Declaration + initialization (assigning a boc literal)
+foo #(a String) = { 
+   a String
+}
+
+// Shortcut: declaration + initialization
+foo : {
+   a String
+}
+
+// Special case: type + body (no = needed)
+foo #(a String) {
+    // a is available here, no need to re-declare
+}
+```
+
+### User-Defined Types
+
+User-defined types (uppercase names) allow creating multiple instances, similar to classes in OOP:
+
+```yz
+// Type definition
+Name : { 
+   s String 
+}
+
+// Type definition with explicit type signature
+Name #(s String)
+
+// Creating instances
+foo : Name("hello")
+bar : Name("bye")
+baz : Name("guess")
+```
+
+**Key distinction**: Boc literals create singletons, while user-defined types create independent instances.
+
+### Nested Bocs
+
+Bocs can contain other bocs, creating hierarchical structures:
+
+```yz
+// Nested boc in user-defined type
+Outer : {
+    inner : {
+        value String
+    }
+}
+
+// Usage
+o : Outer()
+o.inner.value = "nested"
+println(o.inner.value)  // prints "nested"
+```
+
+**Important**: Nested bocs are treated as fields with boc types, not methods.
+
 ## Type Inference
 
 ### Explicit Return Types
@@ -299,6 +383,97 @@ func() interface{} {
     return instance.result 
 }()
 ```
+
+## Nested Boc Semantics
+
+Nested bocs allow you to create hierarchical data structures. Each nested boc is a field with its own boc type.
+
+### Basic Nested Bocs
+
+```yz
+Container : {
+    data : {
+        value : "hello"
+    }
+}
+
+main: {
+    c : Container()
+    println(c.data.value)  // prints "hello"
+}
+```
+
+### Code Generation for Nested Bocs
+
+Nested bocs generate separate type declarations in Go:
+
+```go
+// Outer boc type
+type Boc_Container interface {
+    Run()
+    GetData() Boc_data
+    SetData(Boc_data)
+}
+
+// Nested boc type (generated automatically)
+type Boc_data interface {
+    Run()
+    GetValue() string
+    SetValue(string)
+}
+
+// Constructor initializes nested bocs
+func NewContainer() Boc_Container {
+    inst := &ContainerImpl{
+        data: NewBoc_data(),  // Create nested boc
+    }
+    inst.data.Run()  // Initialize nested boc with defaults
+    return inst
+}
+```
+
+### Deeply Nested Bocs
+
+Bocs can be nested to arbitrary depth:
+
+```yz
+Outer : {
+    middle : {
+        inner : {
+            value : "deep"
+        }
+    }
+}
+
+main: {
+    o : Outer()
+    println(o.middle.inner.value)  // prints "deep"
+}
+```
+
+### Multiple Nested Bocs
+
+A boc can contain multiple nested bocs:
+
+```yz
+Container : {
+    first : { x : 1 }
+    second : { y : 2 }
+}
+
+main: {
+    c : Container()
+    println(c.first.x)   // prints "1"
+    println(c.second.y)  // prints "2"
+}
+```
+
+### Initialization Rules for Nested Bocs
+
+1. **Constructor Creation**: Each nested boc gets its own constructor (`NewBoc_name()`)
+2. **Initialization**: The `Run()` method is called to set default values
+3. **Order**: Initialization happens depth-first (innermost first)
+4. **Independence**: Each instance gets its own nested boc instances
 
 ## Built-in Operators
 
