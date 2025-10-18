@@ -14,3 +14,5 @@ a: Int { value: 1 } //??
 s: "Hola"
 s: String {value: 'Hola'} // ?? How does Java does this? 
 ```
+
+A: The compiler creates an instance of the built-in and generates the correct value
