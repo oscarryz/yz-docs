@@ -877,8 +877,8 @@ info(message).text // A message
 
 You can add blocks there too, these block don't need to be valid yz code, but different tools might require them to be.
 
-```javascript
-`
+```typescript
+"
 Prints the classics "Hello, World!" program to the screen
 
 variables: {
@@ -887,14 +887,14 @@ variables: {
 }
 
 tests: {
-  assert say_hello()            == "Hello, World!"                   // Uses defaults      
-  assert say_hello 'Hola'       == "Hola, World!"                    // Overrides first variable 'what'
-  assert say_hello who: 'there' == "Hello, there!"                   // Explicitly overrides variable 'who'
-  assert say_hello who: 'home' what: 'Welcome'  == "Welcome, home!"  // "Named parameters"
+  assert say_hello()== "Hello, World!" // Uses defaults      
+  assert say_hello 'Hola' == "Hola, World!" // Overrides first variable 'what'
+  assert say_hello who: 'there' == "Hello, there!" // Explicitly overrides variable 'who'
+  assert say_hello who: 'home' what: 'Welcome'  == "Welcome, home!" // "Named parameters"
 }
 version: 1.0
 author: 'Yz developers'
-`
+"
 say_hello: {
    // Any element can have an info string
   'What message to display'
@@ -902,26 +902,26 @@ say_hello: {
 
    // Can have validation info
    // Or serialization info
-  `
+  "
    validation: "\w*"
    json_field: 'xyz'
-  `
+  "
   who:  'World' 
   // Could also be used as running examples
   // that will be validated with yzc test  
-  `
+  "
   Example: print 'Hello' 'world'
   Output: Hello, world!
-  `
-  print '{what}, {who}!'
+  "
+  print('`what`, `who`!')
 }
 ```
 
 To retrieve it use the `std.info` block and pass the element
 
 ```javascript
-info: std.info say_hello
-print info.text  // Prints the classics "Hello, World!"... etc.etc
+info: std.info(say_hello)
+println(info.text)  // Prints the classics "Hello, World!"... etc.etc
 info.tests()     // Runs the tests
 info.version     // 1.0
 info.examples()  // run the examples 
@@ -1066,6 +1066,7 @@ break
 continue
 return
 match
+mix
 =>
 :
 `
