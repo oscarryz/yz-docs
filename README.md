@@ -579,6 +579,7 @@ print(a[0]) // access element 0 of the array
 a[0] = "Hola"
 ```
 
+
 ### Dictionaries (Associative Arrays)
 
 ```javascript
