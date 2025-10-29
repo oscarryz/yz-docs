@@ -1,4 +1,8 @@
-#open-question 
+#solved
+
+See [mix](Features/mix.md)
+
+
 The `import` keyword would import in the current scope the variables in the scope imported. 
 
 
