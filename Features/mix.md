@@ -65,7 +65,7 @@ Person : {
 // --- Usage & Resulting Scope ---
 
 // Instance created via UDT:
-p := Person("Jon", "Doe") 
+p : Person("Jon", "Doe") 
 
 // 1. Unqualified access to mixed-in behavior:
 p.hi()          // Success: Resolves to Person's 'hi' using Person's 'name' state. 
