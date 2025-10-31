@@ -49,7 +49,7 @@ Named : {
     
     // Behavior that operates on the injected state
     hi: {
-        "My name is `{name}`"
+        "My name is `name`"
     }
 }
 
