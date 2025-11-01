@@ -20,7 +20,7 @@ Person : {
 	employed Bool
 }
 
-process #(members [Person](), quantities [Int]()) {
+process #(members [Person], quantities [Int]) {
 	// creates two variables and continues the flow
 	employee_count, total_message: employee_count(members)
 	// employee count is passed but still not needed, so it does't block
@@ -28,7 +28,7 @@ process #(members [Person](), quantities [Int]()) {
 	print(total_message)
 	print(avg_message)
 }
-employee_count #(members [Person]()) {
+employee_count #(members [Person]) {
 	// count is calculated async, but still not used
     count: members.filter({p Person; p.employed}).len()
 	
@@ -58,13 +58,13 @@ Person : {
 	employed Bool
 }
 
-process #(members [Person](), quantities [Int]()) {
+process #(members [Person], quantities [Int]) {
 	employee_count, total_message: employee_count(members)
 	avg, avg_message : calculate_average(quantities, employee_count)
 	print(total_message)
 	print(avg_message)
 }
-employee_count #(members [Person]()) {
+employee_count #(members [Person]) {
     count: members.filter({p Person; p.employed}).len()
 	"Employed members: `count`"
 }
@@ -80,14 +80,14 @@ calculate_average(quantities [Int](), employed_cont Int ) {
 
 ```js
 
-// Same as above bur more of a transliteration of the ballerina sample
+// Same as above but more of a transliteration of the ballerina sample
 // Sept 12, 2025
 Person : {
 	name String
 	employed Bool
 }
 
-process #(members [Person](), quantities [Int]()) {
+process #(members [Person], quantities [Int]) {
 
 	employed_count, count_msg :  { 
 	    employedMembers: members.filter({p Person; p.employed})
@@ -102,7 +102,7 @@ process #(members [Person](), quantities [Int]()) {
 		}, {
 			total / employed_count
 		}
-		"Average: `{avg}`"
+		"Average: `avg`"
 	}()
 	print(count_msg)
 	print(avg_msg)
