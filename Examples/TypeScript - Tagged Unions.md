@@ -1,5 +1,7 @@
 #example
 
+[https://learnxinyminutes.com/typescript/](https://learnxinyminutes.com/typescript/#:~:text=//%20Tagged%20Union%20Types%20for%20modelling%20state%20that%20can%20be%20in%20one%20of%20many%20shapes)
+
 ```typescript
 // Tagged Union Types for modelling state that can be in one of many shapes
 type State =
@@ -16,23 +18,38 @@ if (state.type === "success") {
 
 ```
 
-Would be
+Would be: 
+
+```js
+// With type variants
+State: {
+	Loading(type: "loading"),
+	Success(type: "success", value Number),
+	Error(type: "error", message String)
+}
+state State
+match {
+	Sucess() => println(state.value)
+}, {
+	Error() => println(state.message)
+}
+```
+
 ```js
 State: {
     type  String
     value Int
     message String
 }
-loading: State{ type: 'loading'}
-success: State{ type: 'success'}
-error: State{ type: 'error'}
+loading: State( type: 'loading')
+success: State( type: 'success')
+error: State( type: 'error')
 state State
 ...
-when(
-    {state.type =='sucess'}, {print('{state.type}'},)
-    {state.type =='error'}, {print('{state.message}'},)
+match
+    {state.type =='sucess' => print('{state.type}'},
+    {state.type =='error' => print('{state.message}'}
 
-})
 ```
 
 ```js
