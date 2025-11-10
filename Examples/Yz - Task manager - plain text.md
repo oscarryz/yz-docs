@@ -72,6 +72,4 @@ add_task("Review the new software design document")
 
 // D. View the updated list 
 view_tasks()
-
-
 ```
