@@ -32,7 +32,7 @@ com: {
                 //vararg_example(1)
                 //vararg_example(1,2,3)
 				vararg_ish: {
-					name [String]()
+					name [String]
 					print('Argument has `names.len()`) elements')
 				}
 				vararg_ish([])
