@@ -1,0 +1,280 @@
+# 2. Grammar
+
+This chapter defines the syntactic grammar of Yz in Extended Backus-Naur Form (EBNF). The grammar operates on the token stream produced by the lexer (see Chapter 1).
+
+## 2.1 Notation
+
+```
+=       definition
+|       alternation
+( )     grouping
+[ ]     optional (0 or 1)
+{ }     repetition (0 or more)
+" "     terminal (literal token)
+```
+
+## 2.2 Source File
+
+```ebnf
+SourceFile     = { Statement ";" } .
+```
+
+A source file is a sequence of semicolon-terminated statements. Semicolons are typically inserted by the ASI rules (§1.12).
+
+## 2.3 Statements
+
+```ebnf
+Statement      = Declaration
+               | Assignment
+               | KeywordStmt
+               | Expression .
+
+Declaration    = ShortDecl
+               | TypedDecl .
+
+ShortDecl      = IdentifierList ":" ExpressionList .
+
+TypedDecl      = Identifier TypeExpr [ "=" Expression ] .
+
+Assignment     = AccessExpr "=" Expression
+               | IdentifierList "=" ExpressionList .
+
+KeywordStmt    = ReturnStmt
+               | BreakStmt
+               | ContinueStmt
+               | MixStmt .
+
+ReturnStmt     = "return" [ Expression ] .
+BreakStmt      = "break" .
+ContinueStmt   = "continue" .
+MixStmt        = "mix" Identifier .
+```
+
+## 2.4 Identifiers and Lists
+
+```ebnf
+Identifier        = identifier | type_identifier | generic_identifier .
+IdentifierList    = Identifier { "," Identifier } .
+ExpressionList    = Expression { "," Expression } .
+```
+
+## 2.5 Type Expressions
+
+```ebnf
+TypeExpr       = SimpleType
+               | ArrayType
+               | DictType
+               | BocType .
+
+SimpleType     = type_identifier
+               | generic_identifier
+               | type_identifier "(" TypeArgList ")" .
+
+TypeArgList    = TypeExpr { "," TypeExpr } .
+
+ArrayType      = "[" TypeExpr "]" .
+
+DictType       = "[" TypeExpr ":" TypeExpr "]" .
+
+BocType        = "#" "(" [ BocParamList ] ")" .
+
+BocParamList   = BocParam { "," BocParam } .
+
+BocParam       = [ Identifier ] TypeExpr [ "=" Expression ]
+               | VariantConstructor .
+
+VariantConstructor = type_identifier "(" [ BocParamList ] ")" .
+```
+
+## 2.6 Expressions
+
+All non-word method invocations have **equal precedence** and are evaluated **left-to-right** (Smalltalk-style). The only special case is unary `-` (negation). Parentheses control evaluation order.
+
+```ebnf
+Expression     = UnaryExpr { non_word_identifier UnaryExpr } .
+
+UnaryExpr      = [ "-" ] PostfixExpr .
+
+PostfixExpr    = PrimaryExpr { Postfix } .
+Postfix        = "." Identifier
+               | "(" [ ArgList ] ")"
+               | "[" Expression "]"
+               | NonWordInvocation .
+
+NonWordInvocation = non_word_identifier UnaryExpr .
+
+ArgList        = Argument { "," Argument } .
+Argument       = [ Identifier ":" ] Expression .
+```
+
+### Evaluation Examples
+
+```yz
+1 + 2 * 3
+// Left-to-right: (1.+(2)).*(3) = 9
+// Use parens: 1 + (2 * 3) = 7
+
+x == 0 ? { "zero" }, { "nonzero" }
+// Left-to-right: (x.==(0)).?({...}, {...})
+// Works naturally: == returns Bool, ? is a method on Bool
+```
+
+## 2.7 Primary Expressions
+
+```ebnf
+PrimaryExpr    = identifier
+               | type_identifier
+               | generic_identifier
+               | int_literal
+               | decimal_literal
+               | string_literal
+               | BocLiteral
+               | ArrayLiteral
+               | DictLiteral
+               | MatchExpr
+               | "(" ExpressionList ")" .
+```
+
+## 2.8 Block of Code (Boc) Literals
+
+```ebnf
+BocLiteral     = "{" BocBody "}" .
+
+BocBody        = { BocElement ";" } .
+
+BocElement     = Declaration
+               | Assignment
+               | KeywordStmt
+               | Expression
+               | VariantDef .
+
+VariantDef     = type_identifier "(" [ BocParamList ] ")" .
+```
+
+### Boc with Signature (Type + Body)
+
+```ebnf
+BocWithSig     = BocType [ BocLiteral ] .
+```
+
+When a boc type signature is immediately followed by a boc literal (no `=`), the parameters declared in the signature are available inside the body without redeclaration:
+
+```yz
+greet #(name String, String) {
+    "Hello, `name`!"   // name from signature
+}
+```
+
+## 2.9 Type Declarations
+
+A type declaration is a statement where the identifier starts with an uppercase letter:
+
+```ebnf
+TypeDecl       = type_identifier ":" BocLiteral
+               | type_identifier BocType [ BocLiteral ] .
+```
+
+Type declarations with variants:
+
+```yz
+Result: {
+    T, E,
+    Ok(value T),
+    Err(error E)
+}
+```
+
+## 2.10 Array and Dictionary Literals
+
+```ebnf
+ArrayLiteral   = "[" [ ExpressionList ] "]"
+               | "[" TypeExpr "]" "(" ")" .
+
+DictLiteral    = "[" DictEntry { "," DictEntry } "]"
+               | "[" TypeExpr ":" TypeExpr "]" "(" ")" .
+
+DictEntry      = Expression ":" Expression .
+```
+
+### Examples
+
+```yz
+// Arrays
+numbers: [1, 2, 3]
+empty: [Int]()
+
+// Dictionaries
+ages: ["Alice": 30, "Bob": 25]
+empty_dict: [String:Int]()
+```
+
+## 2.11 Match Expressions
+
+```ebnf
+MatchExpr      = VariantMatch | ConditionMatch .
+
+VariantMatch   = "match" Expression ConditionalBocList .
+
+ConditionMatch = "match" ConditionalBocList .
+
+ConditionalBocList = ConditionalBoc { "," ConditionalBoc } .
+
+ConditionalBoc = "{" [ Condition "=>" ] BocBody "}" .
+
+Condition      = Expression
+               | type_identifier "." type_identifier "(" ")" .
+```
+
+### Examples
+
+```yz
+// Condition match (no subject)
+grade: match {
+    score >= 90 => "A"
+}, {
+    score >= 80 => "B"
+}, {
+    "C"  // default — no condition
+}
+
+// Variant match (with subject)
+match response {
+    Success => print("Data: `response.data`")
+}, {
+    Failure => print("Error: `response.error`")
+}, {
+    Timeout => print("Timed out")
+}
+```
+
+## 2.12 Iteration
+
+Yz has no built-in loop syntax. Loops are method calls on ranges and collections:
+
+```yz
+// Range iteration
+1.to(10).each({ i Int
+    print("`i`")
+})
+
+// Array iteration
+names.each({ name String
+    print("`name`")
+})
+
+// While loop (function, not syntax)
+while({ current > 1 }, {
+    result = result * current
+    current = current - 1
+})
+```
+
+## 2.13 Grammar Summary
+
+| Level | Construct |
+|-------|-----------|
+| Statement | `:` declaration, `=` assignment, keyword stmts |
+| Expression | Left-to-right chain of `UnaryExpr { non_word_identifier UnaryExpr }` |
+| Unary | `-` (negation) |
+| Postfix | `.member`, `(args)`, `[index]`, non-word invocation |
+| Primary | identifiers, literals, blocks, arrays, dicts, `match`, `(expr)` |
