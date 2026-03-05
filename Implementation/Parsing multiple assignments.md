@@ -441,4 +441,4 @@ If inside `{}` use semicolons
 { 1, 2, 3 } /*would become*/ {1; 2; 3}
 ```
 
-
+fin decision: `=` is not an expression, it is a statement.
