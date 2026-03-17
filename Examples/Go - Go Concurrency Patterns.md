@@ -15,7 +15,7 @@ boring: {
 }
 main: {
 	boring("boring!") // launches and continues
-	// but then waits at the end of the main block
+	// but then waits at the end of the main block because of structural concurrency
 }
 ```
 
@@ -27,7 +27,7 @@ not_a_channel: {
 	c Int
 }
 not_a_channel(1) // sending
-value: not_a_channel.c // "receiving"
+value: not_a_channel.c // "receiving", value has type `Int` but is a thunk, it will materialize when used.
 ```
 
 ```js
@@ -56,10 +56,6 @@ boring: {
 
 Ideas:
 #open-question  How can we wait for a value to be set? [../../Questions/solved/Wait for a value to be set](../../Questions/solved/Wait%20for%20a%20value%20to%20be%20set.md)
-
-
-- We could potentially block until a variable has a value, just like `c <- chan`  in Go blocks until the channel has a value.
-- We could check for a special value and clear it after use
 
 ```js
 loop: {
