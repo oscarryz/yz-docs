@@ -32,7 +32,7 @@ Resolved 2026-03-04, prior to starting compiler implementation.
 | 7 | Compiler language | **Go** |
 | 8 | Compiler architecture | Emit **Go source code** → then `go build` (not AST, not interpreter) |
 | 9 | v0.1 milestone scope | **Full** — all spec features |
-| 10 | Repository | `/Users/oscar/code/github/oscarryz/yz` — **new branch**, start from scratch (no reuse of existing code). Git: `https://github.com/oscarryz/yz` |
+| 10 | Repository | `compiler/` directory in this repo (`yz-docs`). Go module: `module yz` (local-only, not go-getable). |
 
 ## Runtime Semantics
 
