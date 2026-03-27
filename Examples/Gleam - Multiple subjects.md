@@ -60,6 +60,8 @@ main: {
 	print(get_first_larger(numbers 3))
 	print(get_first_larger(numbers 5))
 }
+/* 
+// original style...
 get_first_larger #(list [Int], limit Int, Int) = {
 	when [
 		{list[0] > limit}  : {list[0]}
@@ -67,4 +69,25 @@ get_first_larger #(list [Int], limit Int, Int) = {
 		{list.len() == 0} : {0}
 	]
 }
+*/
+get_first_larger #(list [Int], limit Int, Int) {
+	match {
+		list[0] > limit  => list[0]
+	},{
+		list[0] <= limit =>  get_first_larger(list.shift()) 
+	}, {
+		list.len() == 0 => 0
+	}
+}
+/*
+// What should probably be
+get_first_larger #(list [Int], limit Int, Int) {
+	match {
+		list[0] > limit  => list[0],
+		list[0] <= limit =>  get_first_larger(list.shift()),
+		list.len() == 0 => 0
+	}
+}
+*/
+
 ```
