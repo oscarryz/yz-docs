@@ -1,0 +1,6 @@
+Named: {
+    name String
+    hi: {
+        print(name)
+    }
+}
