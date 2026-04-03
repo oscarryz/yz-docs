@@ -314,3 +314,32 @@ func (t *UnknownType) String() string { return "<unknown>" }
 
 // Unknown is the singleton error-recovery type.
 var Unknown = &UnknownType{}
+
+// ---------------------------------------------------------------------------
+// Namespace type (directory hierarchy node)
+// ---------------------------------------------------------------------------
+
+// NamespaceType represents a directory-level namespace node.
+// Children maps the next path segment name to a symbol whose type is either
+// another NamespaceType (subdirectory) or a PackageType (leaf package).
+type NamespaceType struct {
+	Children map[string]*Symbol
+}
+
+func (t *NamespaceType) typeName() string             { return "<namespace>" }
+func (t *NamespaceType) IsCompatibleWith(_ Type) bool { return false }
+
+// ---------------------------------------------------------------------------
+// Package type (leaf of namespace tree — imported Go package)
+// ---------------------------------------------------------------------------
+
+// PackageType represents a compiled Yz sub-package that has been imported.
+// Exports maps each exported Yz name to its sema Symbol.
+type PackageType struct {
+	PkgAlias   string            // Go import alias, e.g. "front"
+	ImportPath string            // full Go import path, e.g. "yzapp/house/front"
+	Exports    map[string]*Symbol
+}
+
+func (t *PackageType) typeName() string             { return "<package:" + t.ImportPath + ">" }
+func (t *PackageType) IsCompatibleWith(_ Type) bool { return false }

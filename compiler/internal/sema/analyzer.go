@@ -102,6 +102,67 @@ func (a *Analyzer) LookupInFile(name string) *Symbol {
 
 func (a *Analyzer) LastExpr() ast.Node { return a.lastExpr }
 
+// ExportedSymbols returns a snapshot of all symbols defined at file scope.
+func (a *Analyzer) ExportedSymbols() map[string]*Symbol {
+	result := make(map[string]*Symbol, len(a.fileScope.syms))
+	for name, sym := range a.fileScope.syms {
+		result[name] = sym
+	}
+	return result
+}
+
+// RegisterPackage registers the exports of a compiled sub-package under the
+// FQN namespace tree. relDir is like "house/front", pkgAlias is "front",
+// importPath is "yzapp/house/front".
+func (a *Analyzer) RegisterPackage(relDir, pkgAlias, importPath string, exports map[string]*Symbol) {
+	pkgType := &PackageType{PkgAlias: pkgAlias, ImportPath: importPath, Exports: exports}
+	pkgSym := &Symbol{Name: pkgAlias, Type: pkgType}
+
+	parts := strings.Split(relDir, "/")
+	if len(parts) == 1 {
+		a.fileScope.Define(&Symbol{Name: parts[0], Type: pkgType})
+		return
+	}
+	// Build or extend the namespace tree rooted at parts[0].
+	rootName := parts[0]
+	existing := a.fileScope.LookupLocal(rootName)
+	var ns *NamespaceType
+	if existing != nil {
+		if existingNs, ok := existing.Type.(*NamespaceType); ok {
+			ns = existingNs
+		} else {
+			ns = &NamespaceType{Children: make(map[string]*Symbol)}
+		}
+	} else {
+		ns = &NamespaceType{Children: make(map[string]*Symbol)}
+	}
+	// Recursively insert remaining parts into the namespace tree.
+	insertNamespace(ns, parts[1:], pkgSym)
+	a.fileScope.Define(&Symbol{Name: rootName, Type: ns})
+}
+
+// insertNamespace inserts pkgSym at the leaf of a namespace path.
+func insertNamespace(ns *NamespaceType, parts []string, pkgSym *Symbol) {
+	if len(parts) == 1 {
+		ns.Children[parts[0]] = pkgSym
+		return
+	}
+	childName := parts[0]
+	childSym, ok := ns.Children[childName]
+	var childNs *NamespaceType
+	if ok {
+		if existingNs, ok2 := childSym.Type.(*NamespaceType); ok2 {
+			childNs = existingNs
+		} else {
+			childNs = &NamespaceType{Children: make(map[string]*Symbol)}
+		}
+	} else {
+		childNs = &NamespaceType{Children: make(map[string]*Symbol)}
+	}
+	insertNamespace(childNs, parts[1:], pkgSym)
+	ns.Children[childName] = &Symbol{Name: childName, Type: childNs}
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -670,6 +731,16 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 		sym := a.currentScope.Lookup(fieldName)
 		if sym != nil {
 			return sym.Type
+		}
+		return Unknown
+	case *NamespaceType:
+		if child, ok := ot.Children[fieldName]; ok {
+			return child.Type
+		}
+		return Unknown
+	case *PackageType:
+		if exp, ok := ot.Exports[fieldName]; ok {
+			return exp.Type
 		}
 		return Unknown
 	case *UnknownType:

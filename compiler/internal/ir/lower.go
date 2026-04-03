@@ -28,6 +28,7 @@ func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
 
 type lowerer struct {
 	analyzer *sema.Analyzer
+	irFile   *File // current output file — used to accumulate extra imports
 
 	// When lowering a method body, these describe the receiver.
 	recvName   string
@@ -40,12 +41,26 @@ type lowerer struct {
 
 func (l *lowerer) lowerFile(sf *ast.SourceFile, pkgName string) *File {
 	f := &File{PkgName: pkgName}
+	l.irFile = f
 	for _, node := range sf.Stmts {
 		if d := l.lowerTopLevel(node); d != nil {
 			f.Decls = append(f.Decls, d)
 		}
 	}
 	return f
+}
+
+// addImport adds importPath to the ir.File's import list, deduplicating.
+func (l *lowerer) addImport(importPath string) {
+	if l.irFile == nil {
+		return
+	}
+	for _, imp := range l.irFile.Imports {
+		if imp == importPath {
+			return
+		}
+	}
+	l.irFile.Imports = append(l.irFile.Imports, importPath)
 }
 
 func (l *lowerer) lowerTopLevel(node ast.Node) Decl {
@@ -615,12 +630,107 @@ var builtinGoName = map[string]string{
 	"info":  "std.Info",
 }
 
+// ---------------------------------------------------------------------------
+// FQN (cross-package) call resolution
+// ---------------------------------------------------------------------------
+
+// tryLowerFQNCall detects and lowers cross-package FQN calls such as
+// house.front.Host("Alice") → front.NewHost(std.NewString("Alice")).
+// Returns (expr, true) if the callee is a known package FQN.
+func (l *lowerer) tryLowerFQNCall(c *ast.CallExpr) (Expr, bool) {
+	pkg, symName, ok := l.fqnCalleePackage(c.Callee)
+	if !ok {
+		return nil, false
+	}
+	exportedSym, ok := pkg.Exports[symName]
+	if !ok {
+		return nil, false
+	}
+	var args []Expr
+	for _, arg := range c.Args {
+		args = append(args, l.lowerExpr(arg.Value))
+	}
+	l.addImport(pkg.ImportPath)
+	// Struct constructor: Host → pkg.NewHost(args)
+	if _, isStruct := exportedSym.Type.(*sema.StructType); isStruct {
+		return &FuncCall{Func: &Ident{Name: pkg.PkgAlias + ".New" + symName}, Args: args}, true
+	}
+	// Singleton boc or BocWithSig: pkg.func(args)
+	return &FuncCall{Func: &Ident{Name: pkg.PkgAlias + "." + symName}, Args: args}, true
+}
+
+// fqnCalleePackage resolves a callee expression to (PackageType, symbolName).
+// The callee must be a MemberExpr whose object chain resolves to a PackageType.
+func (l *lowerer) fqnCalleePackage(callee ast.Expr) (*sema.PackageType, string, bool) {
+	mem, ok := callee.(*ast.MemberExpr)
+	if !ok {
+		return nil, "", false
+	}
+	pkg := l.resolveExprToPackage(mem.Object)
+	if pkg == nil {
+		return nil, "", false
+	}
+	return pkg, mem.Member.Name, true
+}
+
+// resolveExprToPackage walks an AST expression and returns the PackageType it
+// resolves to, if any.
+func (l *lowerer) resolveExprToPackage(expr ast.Expr) *sema.PackageType {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		sym := l.analyzer.LookupInFile(e.Name)
+		if sym == nil {
+			return nil
+		}
+		if pt, ok := sym.Type.(*sema.PackageType); ok {
+			return pt
+		}
+		return nil
+	case *ast.MemberExpr:
+		ns := l.resolveExprToNamespace(e.Object)
+		if ns == nil {
+			return nil
+		}
+		child, ok := ns.Children[e.Member.Name]
+		if !ok {
+			return nil
+		}
+		if pt, ok := child.Type.(*sema.PackageType); ok {
+			return pt
+		}
+		return nil
+	}
+	return nil
+}
+
+// resolveExprToNamespace walks an AST expression and returns the NamespaceType
+// it resolves to, if any.
+func (l *lowerer) resolveExprToNamespace(expr ast.Expr) *sema.NamespaceType {
+	id, ok := expr.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	sym := l.analyzer.LookupInFile(id.Name)
+	if sym == nil {
+		return nil
+	}
+	if ns, ok := sym.Type.(*sema.NamespaceType); ok {
+		return ns
+	}
+	return nil
+}
+
 func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	// Check for known builtins first — they emit as direct std.Xxx calls.
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		if goName, isBuiltin := builtinGoName[id.Name]; isBuiltin {
 			return l.lowerBuiltinCall(goName, c)
 		}
+	}
+
+	// Cross-package FQN call: house.front.Host("Alice") → front.NewHost(...)
+	if result, ok := l.tryLowerFQNCall(c); ok {
+		return result
 	}
 
 	callee := l.lowerExpr(c.Callee)
