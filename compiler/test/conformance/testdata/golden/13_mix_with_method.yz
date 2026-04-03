@@ -1,0 +1,10 @@
+Named: {
+    name String
+    hi: {
+        print(name)
+    }
+}
+Person: {
+    mix Named
+    last_name String
+}
