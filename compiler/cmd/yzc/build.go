@@ -7,20 +7,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	"yz/internal/ast"
+	"yz/internal/codegen"
 	"yz/internal/ir"
 	"yz/internal/parser"
 	"yz/internal/sema"
-	"yz/internal/codegen"
 )
 
 // cmdBuild compiles the Yz project in dir to a binary at target/bin/app.
 func cmdBuild(dir string) error {
-	src, err := readProjectDir(dir)
+	paths, err := collectYzFiles(dir)
 	if err != nil {
 		return err
 	}
 
-	goSrc, err := compileSource(src)
+	goSrc, err := compileFiles(paths)
 	if err != nil {
 		return err
 	}
@@ -57,49 +58,86 @@ func cmdRun(dir string) error {
 	return cmd.Run()
 }
 
-// readProjectDir finds main.yz (or any single .yz file) in dir and returns its source.
-func readProjectDir(dir string) ([]byte, error) {
-	mainPath := filepath.Join(dir, "main.yz")
-	if src, err := os.ReadFile(mainPath); err == nil {
-		return src, nil
-	}
-
-	// Fall back: any single .yz file in dir.
+// collectYzFiles returns all .yz file paths in dir (non-recursive, flat only).
+// main.yz is always last so it can reference types from other files.
+func collectYzFiles(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("reading directory %s: %w", dir, err)
 	}
-	var yzFiles []string
+	var main, others []string
 	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".yz") {
-			yzFiles = append(yzFiles, filepath.Join(dir, e.Name()))
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yz") {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		if e.Name() == "main.yz" {
+			main = append(main, path)
+		} else {
+			others = append(others, path)
 		}
 	}
-	switch len(yzFiles) {
-	case 0:
+	if len(others)+len(main) == 0 {
 		return nil, fmt.Errorf("no .yz files found in %s", dir)
-	case 1:
-		return os.ReadFile(yzFiles[0])
-	default:
-		return nil, fmt.Errorf("multiple .yz files in %s: use main.yz as entry point", dir)
 	}
+	// Non-main files first (alphabetical via ReadDir), main.yz last.
+	return append(others, main...), nil
 }
 
-// compileSource runs the full Yz pipeline and returns Go source bytes.
-func compileSource(src []byte) (string, error) {
-	p := parser.New(src)
-	sf, err := p.ParseFile()
-	if err != nil {
-		return "", fmt.Errorf("parse: %w", err)
+// compileFiles runs the full Yz pipeline over multiple source files and
+// returns combined Go source. Files are analyzed in order (main.yz last)
+// using a single shared sema scope so cross-file references resolve.
+func compileFiles(paths []string) (string, error) {
+	type parsedFile struct {
+		sf   *ast.SourceFile
+		path string
 	}
 
+	// Parse all files.
+	var pfiles []parsedFile
+	for _, path := range paths {
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return "", fmt.Errorf("reading %s: %w", path, err)
+		}
+		p := parser.New(src)
+		sf, err := p.ParseFile()
+		if err != nil {
+			return "", fmt.Errorf("parse %s: %w", path, err)
+		}
+		pfiles = append(pfiles, parsedFile{sf: sf, path: path})
+	}
+
+	// Analyze all files with a single shared scope.
 	a := sema.NewAnalyzer()
-	if err := a.AnalyzeFile(sf); err != nil {
-		return "", fmt.Errorf("sema: %w", err)
+	for _, pf := range pfiles {
+		if err := a.AnalyzeFile(pf.sf); err != nil {
+			return "", fmt.Errorf("sema %s: %w", pf.path, err)
+		}
 	}
 
-	f := ir.Lower(sf, a, "main")
-	return codegen.Generate(f), nil
+	// Lower all files and merge decls into one ir.File.
+	combined := &ir.File{PkgName: "main"}
+	for _, pf := range pfiles {
+		f := ir.Lower(pf.sf, a, "main")
+		combined.Decls = append(combined.Decls, f.Decls...)
+		for _, imp := range f.Imports {
+			if !containsStr(combined.Imports, imp) {
+				combined.Imports = append(combined.Imports, imp)
+			}
+		}
+	}
+
+	return codegen.Generate(combined), nil
+}
+
+func containsStr(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // writeGeneratedGo writes main.go and go.mod into genDir.
