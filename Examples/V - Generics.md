@@ -8,7 +8,7 @@ List: {
     data [T]()
     push: {
         val T
-        data << val
+        data.push(val)
     }
     pop: {
         data.last()
@@ -19,14 +19,14 @@ list_of: {
    List(T)
 }
 main: {
-    string_list: List(String) 
-    string_list.push 'hello' 
-    string_list.push 'world'
+    string_list: List(String)
+    string_list.push('hello')
+    string_list.push('world')
 
-    last_string: string_list.pop() // returns a String 
+    last_string: string_list.pop() // returns a String
 
-    bool_list: list_of(Bool) 
-    bool_list.push true 
+    bool_list: list_of(Bool)
+    bool_list.push(true)
 }
 
 ```

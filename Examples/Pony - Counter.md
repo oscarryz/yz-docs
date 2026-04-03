@@ -18,11 +18,11 @@ display: {
         result Int
         print("`result`")
 }
-main:{
+main: {
     n: int.parse(os.args[1]).or(Ok(10)).get()
     counter: Counter()
 
-    _: n.times(counter.increment)
+    0.to(n).each({ _ Int; counter.increment() })
 
     counter.get_and_reset(display)
 }

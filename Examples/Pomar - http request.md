@@ -11,24 +11,26 @@ http_status: {
 		error_msg String
 	}
 }
-HttpResult {
+HttpResult: {
 	ok Option(Ok)
 	error Option(ClientError)
 }
-make_http_request : {
+make_http_request: {
 	http_status.ClientError("Invalid request")
 }
 match_with_iflets: {
 	response: make_http_request()
-	when_eq response [
-		{http_status.Ok} : {println('Ok')}
-		{http_status.ClientErrr} : {println(response.error_msg)}
-	]
+	match {
+		response == http_status.Ok         => println('Ok')
+	}, {
+		response == http_status.ClientError => println(response.error_msg)
+	}
 
 	result: HttpResult(make_http_request())
-	when_eq result.status [
-		{http.Ok}: {println('Ok')}
-		{http.ClientErrpr} : {println(response.error_msg)}
-	]
+	match {
+		result.status == http_status.Ok          => println('Ok')
+	}, {
+		result.status == http_status.ClientError => println(response.error_msg)
+	}
 }
 ```

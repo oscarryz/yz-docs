@@ -8,14 +8,14 @@ First attempt
 Yz>get_token "foo=bar&token=value&bar=baz"
 ...value
 `
-get_token {
+get_token: {
   string String
-  parts: string.split '&'
-  parts.find {
+  parts: string.split('&')
+  parts.find({
     pair String
-    key value : pair.split '=' // should fail if split returns != 2
-    key == token && { value }
-  }
+    key, value: pair.split('=') // should fail if split returns != 2
+    key == 'token' && { value }
+  })
 }
 
 ```

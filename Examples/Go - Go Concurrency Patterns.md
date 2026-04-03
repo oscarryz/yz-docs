@@ -3,7 +3,7 @@
 [A boring function](https://go.dev/talks/2012/concurrency.slide#12)
 ```js
 boring: {
-	i:0
+	i: 0
 	msg String
 	loop: {
 		print('`msg`, `i`')
@@ -31,25 +31,24 @@ value: not_a_channel.c // "receiving", value has type `Int` but is a thunk, it w
 ```
 
 ```js
-not_a_channel
-main:{
-	nac (String) = {
+main: {
+	nac #(String) {
 		s String
 	}
-	boring("boring" nac)
-	5.times({
+	boring("boring", nac)
+	0.to(5).each({ _ Int
 		wait_for: nac.value_set()
-		print('You say: `nac.s`' // right now this would just print nac.s 5 times)
-	}
+		print('You say: `nac.s`') // right now this would just print nac.s 5 times
+	})
 	print("You're boring; I'm leaving")
 }
 boring: {
 	msg String
-	nac (String)
+	nac #(String)
 	loop: {
 		i Int
 		nac('`msg` `i`') // callback, and continues
-		time.sleep(time.duration(rand.int(1)* time.millisecond))
+		time.sleep(time.duration(rand.int(1) * time.millisecond))
 	}
 }
 ```

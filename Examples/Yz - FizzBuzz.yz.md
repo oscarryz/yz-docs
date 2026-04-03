@@ -1,5 +1,5 @@
 #example
-[FizzBuzz.st] https://gist.github.com/oscarryz/d54dd569fea585ec008c6f20af2e97ec 
+[FizzBuzz.st] https://gist.github.com/oscarryz/d54dd569fea585ec008c6f20af2e97ec
 
 Possible v0.0.1
 ```js
@@ -9,13 +9,13 @@ s: ''
   by5: i % 5 == 0
   by3: i % 3 == 0
 
-  by5 ? { s = s + 'Fizz' }
-  by3 ? { s = s + 'Buzz' }
-  (by5 && by3) == false ? { s = i.to_string() } 
+  by5 ? { s = s + 'Fizz' }, { }
+  by3 ? { s = s + 'Buzz' }, { }
+  (by5 && by3) == false ? { s = i.to_string() }, { }
 
-  println s 
+  println(s)
   s = ''
-} 
+})
 ```
 Improved v0.0.1
 
@@ -24,49 +24,29 @@ Improved v0.0.1
   by5: i % 5 == 0
   by3: i % 3 == 0
 
-  by5 ? { s = s + 'Fizz' }
-  by3 ? { s = s + 'Buzz' }
+  by5 ? { s = s + 'Fizz' }, { }
+  by3 ? { s = s + 'Buzz' }, { }
 
-   (by5 || by3) == false ? { s = i.to_string() }
-  println s 
+  (by5 || by3) == false ? { s = i.to_string() }, { }
+  println(s)
   s = ''
-  
-} 
+})
 ```
 
 Ideal v0.1.0
 ```js
-1.to(100).each({ i Int 
+1.to(100).each({ i Int
   by5: i % 5 == 0
   by3: i % 3 == 0
 
-  by5 ? { s = s + 'Fizz' }
-  by3 ? { s = s + 'Buzz' }
-  (by5 || by3) == false ? { s = i.to_string() } 
+  by5 ? { s = s + 'Fizz' }, { }
+  by3 ? { s = s + 'Buzz' }, { }
+  (by5 || by3) == false ? { s = i.to_string() }, { }
 
-  println s 
+  println(s)
   s = ''
-} 
+})
 
-```
-
-Ideal v0.1.0
-
-```js
-
-1.to(100).each({ i Int 
-
-	by5: i % 5 == 0
-	by3: i % 3 == 0
-
-	by5 ? { s = s + 'Fizz'}
-	by3 ? { s = s + 'Buzz'}
-	(by5 || by3) == false ? { s = i.to_string() }
-	print s 
-	s = ''
-
-
-}
 ```
 
 Yz v1.0.0
@@ -80,24 +60,24 @@ Yz v1.0.0
     }, {
         s = s + i.to_string()
     }
-    print s    
-}
+    print(s)
+})
 ```
 
-Final v1.0 
+Final v1.0
 ```js
-1.to(10).each({ i Int 
-    i % 3 == 0 ? { print('Fizz') }
-    i % 5 == 0 ? { print('Buzz') }
-    (i % 3 != 0 && i % 5 != 0) ? { print('`i`') }
+1.to(10).each({ i Int
+    i % 3 == 0 ? { print('Fizz') }, { }
+    i % 5 == 0 ? { print('Buzz') }, { }
+    (i % 3 != 0 && i % 5 != 0) ? { print('`i`') }, { }
     println()
-}
+})
 ```
 
-Another version 
+Another version
 
 ```js
-else: {true}
+else: { true }
 fizzbuzz: {
         n Int
         m3: n % 3 == 0
@@ -117,9 +97,9 @@ fizzbuzz: {
 1.to(100).each({ i Int; fizzbuzz(i) })
 ```
 
-Another one 
+Another one
 ```js
-else: {true}
+else: { true }
 fizz_buzz: {
   n Int
   m3: n % 3
@@ -141,15 +121,14 @@ With match
 
 
 ```js
-1.to(100).each({
-  i Int
+1.to(100).each({ i Int
   print(fizz_buzz(i))
 })
 
-fizz_buzz #(i Int) {
+fizz_buzz #(i Int, String) {
   match {
    i % 3 == 0 => "Fizz"
-  }, { 
+  }, {
     i % 5 == 0 => "Buzz"
   }, {
    "`i`"

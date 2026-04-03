@@ -37,41 +37,47 @@ moveDrone drone move =
 
 ```js
 // Yz attempt
-Drone {
+Drone: {
     x_pos Int
     y_pos Int
     z_pos Int
     move: {
         direction Int
-        when_eq direction [
-            { movement.forward }  : { z_pos = z_pos + 1 }
-            { movement.back }     : { z_pos = z_pos - 1 }
-            { movement.to_left }  : { x_pos = x_pos - 1 }
-            { movement.to_right } : { x_pos = x_pos + 1 }
-            { movement.up }       : { y_pos = y_pos + 1 }
-            { movement.down }     : { y_pos = y_pos - 1 }
-        ]
+        match {
+            direction == movement.forward  => { z_pos = z_pos + 1 }
+        }, {
+            direction == movement.back     => { z_pos = z_pos - 1 }
+        }, {
+            direction == movement.to_left  => { x_pos = x_pos - 1 }
+        }, {
+            direction == movement.to_right => { x_pos = x_pos + 1 }
+        }, {
+            direction == movement.up       => { y_pos = y_pos + 1 }
+        }, {
+            direction == movement.down     => { y_pos = y_pos - 1 }
+        }
     }
 }
 movement: {
-    forward  : 0
-    back     : 1
-    to_left  : 2
-    to_right : 3
-    up       : 4
-    down     : 5
+    forward:  0
+    back:     1
+    to_left:  2
+    to_right: 3
+    up:       4
+    down:     5
 
-    values: [forward back to_left to_right up down]
+    values: [forward, back, to_left, to_right, up, down]
     random: {
-        index: int.random(values.len())
+        index: int.random(values.length())
         values[index]
     }
 }
 main: {
-    drone: Drone(0 10 0)
-    _ : 15.times({
+    drone: Drone(0, 10, 0)
+    _: 0.to(15).each({
+        _ Int
         drone.move(movement.random())
-    }
+    })
     print('`drone`')
 }
 ```

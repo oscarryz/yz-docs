@@ -6,134 +6,120 @@
 ```js
 // Functions
 // With generics
-add : {
+add: {
 	a P
 	b P
 	a + b // a must support the `+ {n}` method
 }
-add 1 2
+add(1, 2)
 // without generics
 add: {
 	a Int; b Int
 	a + b
 }
 // With type
-add #( a Int, b Int ) = {
+add #(a Int, b Int, Int) {
 	a + b
 }
-// idea... when adding a type we can define inplace using | or ->
-//add {a Int b Int |  a + b }
-//add {a Int b Int ->  a + b }
-// not needed
-add {a Int; b Int; a + b }
+add: { a Int; b Int; a + b }
 
 // Generics
-print: {that that.print()}
+print: { that; that.print() }
 print(3 // as long as `Int` has a `print` method)
 print('Hello' // same for `String`)
 
 // If/Then/Else
 if: {
 	cond Bool
-	then #(v V) // generic
-	else #(v V) // generic
-	cond.if_true_if_false(then, else)
-	// or
+	then #(V)
+	else #(V)
 	cond ? then, else
 }
 // named args require use parenthesis
-if (cond: 1 > 2
+if(cond: 1 > 2,
 	then: {
 		"true".print()
-	}
+	},
 	else: {
 		"false".print()
 	})
 // no named args
-if 1 > 2 {
+(1 > 2) ? {
 	"true".print()
-} {
+}, {
 	"false".print()
 }
 
 // kinda weird
-Bool {
+Bool: {
 	val Bool
 	if: {
-		then {v}
-		else {v}
-		val ? then else
+		then #(V)
+		else #(V)
+		val ? { then() }, { else() }
 	}
 }
-true.if{
+true.if({
 	"t".print()
-} {
+}, {
 	"f".print()
-}
-// switch
+})
+// switch (exploration)
 switch: {
 	v T
-	this : {
-		val : {
+	this: {
+		val: {
 			v T
 		}
 		result: {
 			None()
 		}
 		case: {
-			v (T)
-			then (T)
+			v T
+			then #(T)
 			val() == v ? {
 				result = then()
 				this.result = { Some(result) }
-			} {
+			}, {
 				this
 			}
 		}
 		default: {
 			then
-			this.result().some?{ v T v }
+			this.result().some?({ v T; v })
 			this.result().none(then())
 		}
 	}
 	this
 }
 str: switch(5)
-	.case(1 {"one"})
-	.case(2 {"two"})
-	.case(3 {"three"})
-	.default({"none of the above"})
+	.case(1, { "one" })
+	.case(2, { "two" })
+	.case(3, { "three" })
+	.default({ "none of the above" })
 
-str: switch 5
-	.case 1 {"one"}
-	.case 2 {"two"}
-	.case 3 {"three"}
-	.default {"none of the above"}
-
-// with a mapn in Yz
+// with a map in Yz
 switch: {
     value
-	conds [(Bool)](v V)
-	default {v}
+	conds [(Bool)](V)
+	default #(V)
 
 	conds.each({
-		condition {Bool}
-		then {v}
+		condition #(Bool)
+		then #(V)
 		value == condition() ? {
-			v() // breaks the cycle
-		} {
-			continue; // tricky part
+			return v()
 		}
-	}
+	})
 	// still here?
 	default()
 }
 
-str: switch 5 [
-	{ 1 }: {"one"}
-	{ 2 }: {"two"}
-	{ 3 }: {"three"}
-]  { "none of the above"}
+str: switch(5, [
+	{ 1 }: { "one" }
+	{ 2 }: { "two" }
+	{ 3 }: { "three" }
+], { "none of the above" })
 print(str)
 
 
@@ -144,24 +130,24 @@ stack: {
 	}
 	push: {
 		e
-		current_data = this.data()
+		current_data: this.data()
 		{
-			this.data = {Some({
-				value: {e}
-				next: {current_data}
-			})}
+			this.data = { Some({
+				value: { e }
+				next: { current_data }
+			}) }
 		}
 	}
 	peek: {
 		d: this.data()
-		d.is_none({Err("empty stack")})
-		d.is_some({v v})
+		d.is_none({ Err("empty stack") })
+		d.is_some({ v T; v })
 	}
 }
-stack.push(3).push(2).peek().print
+stack.push(3).push(2).peek().print()
 
 
-// Clases
+// Classes
 circle: {
 	radius Float
 	{
@@ -169,20 +155,20 @@ circle: {
 			radius
 		}
 		print: {
-			r.print()
+			radius.print()
 		}
 	}
 }
-my_circle: circle(radius:3)
+my_circle: circle(radius: 3)
 my_circle.print()
 
 basic_circle: {
-	radius: {3}
-	print: {radius().print()}
+	radius: { 3 }
+	print: { radius().print() }
 }
 colored_circle: {
 	radius: basic_circle.radius
-	color: {"red"}
+	color: { "red" }
 	print: {
 		 color().print()
 		 radius().print()

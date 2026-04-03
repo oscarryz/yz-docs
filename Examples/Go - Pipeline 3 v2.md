@@ -8,42 +8,42 @@ https://github.com/adonovan/gopl.io/blob/master/ch8/pipeline3/main.go
 // Version with a parameter to chain the pipeline
 
 // Counter takes a transformer ()
-counter #(transformer #(Int)) {
-	1.to(100).do({
+counter #(transformer #(Int), Unit) {
+	1.to(100).each({
 		i Int
 		transformer(i)
 	})
 }
-create_squarer #(consumer #(Int)) {
-	squarer #(i Int) {
-		consumer( i * i)
+create_squarer #(consumer #(Int), #(Int)) {
+	squarer #(i Int, Unit) {
+		consumer(i * i)
 	}
 	squarer
 }
-printer #(n Int) {
+printer #(n Int, Unit) {
 	print(n)
 }
-main #() {
+main #(Unit) {
 	counter(create_squarer(printer))
 }
 ```
 
 ```js
 // Same without signatures.
-counter : {
+counter: {
 	consumer #(Int)
-	1.to(100).do({
+	1.to(100).each({
 		i Int
 		consumer(i)
 	})
 }
-squarer : {
+squarer: {
 	consumer #(Int)
 	#(n Int) {
 		consumer(n * n)
 	}
 }
-printer #(n Int) {
+printer #(n Int, Unit) {
 	print("`n`")
 }
 main: {
@@ -59,7 +59,7 @@ squarer #(Int, Int)
 printer #(Int)
 
 counter = {
-  1.to(100).do({
+  1.to(100).each({
 	  i Int
      squarer(i)
   })

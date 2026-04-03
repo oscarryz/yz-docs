@@ -3,26 +3,25 @@ From [2048.v](https://github.com/vlang/v/blob/master/examples/2048/2048.v#:~:tex
 
 ```js
 
-	App : {
-		draw_title: {
-			xstart: app.ui.x_padding + app.ui.border_size
-			ystart: app.ui.y_padding + app.ui.border.size + app.ui.header_size
-			toffset: app.ui.title_size + app.ui.padding_size
+App: {
+    draw_title: {
+        xstart: app.ui.x_padding + app.ui.border_size
+        ystart: app.ui.y_padding + app.ui.border.size + app.ui.header_size
+        toffset: app.ui.title_size + app.ui.padding_size
 
-			0.to(4,  { y Int
-				0.to(4, { x Int 
-					tttidx: app.gborer.field[y][x]
-					tile_color String
-					tidx < app.theme.tile_colors.len ? {
-						tiele_color = app.theme.tile_colors[tidx]
-					} ,  {
-						tiele_color = app.theme.tile_colors.last
-					}
-				
-				})
-					
-			})
-		}
-	}
+        0.to(4).each({ y Int
+            0.to(4).each({ x Int
+                tidx: app.gborer.field[y][x]
+                tile_color String
+                tidx < app.theme.tile_colors.length() ? {
+                    tile_color = app.theme.tile_colors[tidx]
+                }, {
+                    tile_color = app.theme.tile_colors.last()
+                }
+            })
+        })
+    }
+}
 ```
+
 

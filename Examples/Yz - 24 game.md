@@ -5,35 +5,35 @@ From: http://rosettacode.org/wiki/24_game
 24_game: {
   // Gets 4 random numbrs from 1 ..9 inclusive
   get_random_numbers: {
-    [random.get(1, 9), 
-     random.get(1, 9), 
-     random.get(1, 9), 
+    [random.get(1, 9),
+     random.get(1, 9),
+     random.get(1, 9),
      random.get(1, 9)]
   }
   // Ask user for an aritmetic operation
   prompt_user: {
-    numbers [] Int
+    numbers [Int]
     expression: input("Enter an aritmetic expression to add up to 24 using `numbers[0]` `numbers[1]` `numbers[2]` and `numbers[3]`.
     You can only use the following operators: + - / *")
-    eval expression 
+    eval(expression)
   }
 
   // Eval user aritmetic operation
   eval: {
-    expression String 
-    stack util.Stack{}
+    expression String
+    stack: util.Stack()
     operations: [
-        '+': {a Int; b Int; a + b}, 
-        '-': {a Int; b Int; a - b}, 
-        '*': {a Int; b Int; a * b}, 
-        '/': {a Int; b Int; a / b}
+        '+': { a Int; b Int; a + b },
+        '-': { a Int; b Int; a - b },
+        '*': { a Int; b Int; a * b },
+        '/': { a Int; b Int; a / b }
     ]
-      
+
     expression.each({ item String
         match {
           ['+', '-', '*', '/'].contains(item) => {
             a: stack.pop()
-            b: stack.pop() 
+            b: stack.pop()
             stack.push(operators[item](a, b))
           }
         }, {
@@ -41,30 +41,31 @@ From: http://rosettacode.org/wiki/24_game
             // skip whitespace
           }
         }, {
-          allowed_numbers.contains(item) => { 
+          allowed_numbers.contains(item) => {
             stack.push(numbers.parseInt(item))
           }
         }, {
           panic("Invalid character `item`")
         }
-    }
+    })
     stack.pop()
-  }  
-  
+  }
+
   main: {
-    numbers:get_random_numbers()
-    expression: prompt_user numbers
-    result: eval expression  numbers
+    numbers: get_random_numbers()
+    expression: prompt_user(numbers)
+    result: eval(expression, numbers)
     print(result == 24 ? {
       "You got it!"
-    } {
+    }, {
       "I'm sorry that doesn't evaluate to 24"
     })
+  }
 }
 
 ```
 
-Actual go implementation 
+Actual go implementation
 ```go
 package main
 
@@ -169,95 +170,68 @@ func evaluate(expression string, numbers []int) int {
 24_game: {
   // Gets 4 random numbrs from 1 ..9 inclusive
   get_random_numbers: {
-    [random.get(1, 9), 
-    random.get(1, 9), 
-    random.get(1, 9), 
+    [random.get(1, 9),
+    random.get(1, 9),
+    random.get(1, 9),
     random.get(1, 9)]
   }
   // Ask user for an aritmetic operation
   prompt_user: {
-    numbers [] Int
+    numbers [Int]
     expression: input("Enter an aritmetic expression to add up to 24 using `numbers[0]`, `numbers[1]`, `numbers[2]` and `numbers[3]`.
     You can only use the following operators: + - / *")
-    eval expression 
+    eval(expression)
   }
 
   // Eval user aritmetic operation
   eval: {
-    expression String 
-    stack util.Stack{}
+    expression String
+    stack: util.Stack()
     take2: { a: stack.pop(); b: stack.pop() }
     expression.each({ item String
       (item == '+' || item == '-' || item == '*' || item == '/') ? {
         a, b: take2()
         stack.push(a + b)
-      } {
+      }, {
         (item == ' ' || item == '\n') ? {
           continue
-        } {
+        }, {
           stack.push(numbers.parse(item))
         }
       }
-    }
+    })
     stack.pop()
   }
   main: {
-    numbers:get_random_numbers()
-    expression: prompt_user numbers
-    result: eval expression  numbers
+    numbers: get_random_numbers()
+    expression: prompt_user(numbers)
+    result: eval(expression, numbers)
     result == 24 ? {
       "You got it!"
-    } {
+    }, {
       "I'm sorry that doesn't evaluate to 24"
     }
+  }
 }
 ```
 
-Possible  `when`  definition 
+Possible  `match`  definition
 ```js
-when: {
-  conditions [{Bool}]{}
-  conditions.for_each { 
-    cond   {Bool}
-    action {}
-    cond() ? { action(); return}
-  }
-}
-
-match {
-  ['+', '-', '*', '/'].contains(item) => {
-    a, b: take2()
-    stack.push(operators[item](a, b))
-  }
-}, {
-  [' ', "\n"].contains(item) => {
-    continue
-  }
-}, {
-  allowed_numbers.contains(item) => { 
-    stack.push(numbers.parseInt(item))
-  }
-}, {
-  print("Invalid character `item`")
-  panic()
-}
-
 eval: {
-    expression String 
-    stack util.Stack{}
+    expression String
+    stack: util.Stack()
     operations: [
-        '+': {a Int; b Int; a + b}, 
-        '-': {a Int; b Int; a - b}, 
-        '*': {a Int; b Int; a * b}, 
-        '/': {a Int; b Int; a / b}
+        '+': { a Int; b Int; a + b },
+        '-': { a Int; b Int; a - b },
+        '*': { a Int; b Int; a * b },
+        '/': { a Int; b Int; a / b }
     ]
-    eval2: { 
+    eval2: {
         a: stack.pop()
-        b: stack.pop() 
-        stack.push operators[item](a b)
+        b: stack.pop()
+        stack.push(operators[item](a, b))
     }
-    continue: {}
-      
+
     expression.each({ item String
         match {
           ['+', '-', '*', '/'].contains(item) => {
@@ -265,16 +239,16 @@ eval: {
           }
         }, {
           [' ', "\n"].contains(item) => {
-            continue()
+            continue
           }
         }, {
-          allowed_numbers.contains(item) => { 
+          allowed_numbers.contains(item) => {
             stack.push(numbers.parseInt(item))
           }
         }, {
           panic("Invalid character `item`")
         }
+    })
     stack.pop()
-  }
+}
 ```
-

@@ -7,21 +7,22 @@ Person: {
     birth_year Int
     death_year Int
     format: {
-        dys: death_year != int.nan?{
-                '{death_year}'
-            } {
+        dys: death_year != int.nan ? {
+                '`death_year`'
+            }, {
                 ''
             }
-         '{name} ({birth_year}-{dys})'    
+        '`name` (`birth_year`-`dys`)'
     }
 }
-test 'custom fmt' {
-    claude: Person {
-       name: "Claude Shannon"
-       birth_year: 1916
+test: {
+    name: 'custom fmt'
+    claude: Person(
+       name: "Claude Shannon",
+       birth_year: 1916,
        death_year: 2002
-    }
+    )
     claude_string: claude.format()
-    assert equals claude_string "Claude Shannong (1916-2001)"
+    assert(equals(claude_string, "Claude Shannon (1916-2002)"))
 }
 ```

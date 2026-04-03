@@ -6,74 +6,74 @@ https://ballerina.io/why-ballerina/concurrent/
 [First example](https://ballerina.io/why-ballerina/concurrent/#:~:text=import%20ballerina/io,y)
 
 
-For a list of persons and a list of quantities we want to calculate the average. 
+For a list of persons and a list of quantities we want to calculate the average.
 
-In the example, the sum for the quantities and the total number of employees want to be calculated concurrently. 
+In the example, the sum for the quantities and the total number of employees want to be calculated concurrently.
 
 Also, we want to calculate the message `Employed members: N` and `Average : A`
 
 So, we want to calculate concurrently as much as needed, until we need the value
 
 ```js
-Person : {
+Person: {
 	name String
 	employed Bool
 }
 
-process #(members [Person], quantities [Int]) {
+process #(members [Person], quantities [Int], Unit) {
 	// creates two variables and continues the flow
 	employee_count, total_message: employee_count(members)
 	// employee count is passed but still not needed, so it does't block
-	avg, avg_message : calculate_average(quantities, employee_count)
+	avg, avg_message: calculate_average(quantities, employee_count)
 	print(total_message)
 	print(avg_message)
 }
-employee_count #(members [Person]) {
+employee_count #(members [Person], String) {
 	// count is calculated async, but still not used
-    count: members.filter({p Person; p.employed}).len()
-	
-	// tbd if this constitutes usage, but if doesn't 
+    count: members.filter({ p Person; p.employed }).length()
+
+	// tbd if this constitutes usage, but if doesn't
 	// it can keep going and this value
 	"Employed members: `count`"
 }
-calculate_average(quantities [Int](), employed_cont Int ) {
+calculate_average: { quantities [Int](); employed_count Int
 	total: quantities.sum()
 	// employed_count is needed here, the above can run aysn
 	// but the flow will stop here to let the calculation finish
-	// tbd, what determines "usage", is because it is inside a`match`? 
-	// is it because it is compared vs. 0? 
+	// tbd, what determines "usage", is because it is inside a`match`?
+	// is it because it is compared vs. 0?
 	// is it because it used as arg to `/` ? (it should b)
-	match { 
+	match {
 		employed_count == 0 => 0
 	}, {
-	    total / employed_count	
+	    total / employed_count
 	}
 }
 ```
 
 ```js
 // Same as above but comments removed
-Person : {
+Person: {
 	name String
 	employed Bool
 }
 
-process #(members [Person], quantities [Int]) {
+process #(members [Person], quantities [Int], Unit) {
 	employee_count, total_message: employee_count(members)
-	avg, avg_message : calculate_average(quantities, employee_count)
+	avg, avg_message: calculate_average(quantities, employee_count)
 	print(total_message)
 	print(avg_message)
 }
-employee_count #(members [Person]) {
-    count: members.filter({p Person; p.employed}).len()
+employee_count #(members [Person], String) {
+    count: members.filter({ p Person; p.employed }).length()
 	"Employed members: `count`"
 }
-calculate_average(quantities [Int](), employed_cont Int ) {
+calculate_average: { quantities [Int](); employed_count Int
 	total: quantities.sum()
-	match { 
+	match {
 		employed_count == 0 => 0
 	}, {
-	    total / employed_count	
+	    total / employed_count
 	}
 }
 ```
@@ -82,22 +82,22 @@ calculate_average(quantities [Int](), employed_cont Int ) {
 
 // Same as above but more of a transliteration of the ballerina sample
 // Sept 12, 2025
-Person : {
+Person: {
 	name String
 	employed Bool
 }
 
-process #(members [Person], quantities [Int]) {
+process #(members [Person], quantities [Int], Unit) {
 
-	employed_count, count_msg :  { 
-	    employedMembers: members.filter({p Person; p.employed})
-		count : employedMembers.len()
+	employed_count, count_msg: {
+	    employedMembers: members.filter({ p Person; p.employed })
+		count: employedMembers.length()
 		"Employed members: `count`"
     }()
-	
-	avg, avg_msg : {
+
+	avg, avg_msg: {
 		total: quantities.sum()
-		match { 
+		match {
 			employed_count == 0 => 0
 		}, {
 			total / employed_count
@@ -106,7 +106,7 @@ process #(members [Person], quantities [Int]) {
 	}()
 	print(count_msg)
 	print(avg_msg)
-	
+
 
 }
 ```

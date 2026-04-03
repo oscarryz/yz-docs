@@ -4,16 +4,16 @@ https://vosca.dev/p/9cd071f5fc
 ```js
 fib: {
     n Int
-    f: [0,1]
-    2.to(n).each{ i Int
+    f: [0, 1]
+    2.to(n).each({ i Int
         f[i] = f[i - 1] + f[i - 2]
-    }
+    })
     f[n]
 }
-main:{
-    31.times({
+main: {
+    0.to(31).each({ i Int
         print(fib(i))
-    }
+    })
 }
 `output
 0

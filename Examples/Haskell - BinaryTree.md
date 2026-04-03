@@ -4,10 +4,10 @@ https://www.anardil.net/2018/binary-tree-in-haskell.html
 
 ```js
 
-binary_tree:{
+binary_tree: {
 
   "deriving:['Read', 'Equal']"
-  Tree : {
+  Tree: {
     T
     Empty(),
     Node(data T,
@@ -49,22 +49,22 @@ binary_tree:{
         t.right.insert(a)
       }
     }
-    height #(Int) = {
-      self.Empty ? { 0 },{
+    height #(Int) {
+      self.Empty ? { 0 }, {
         max(1, 1 + left.height(), 1 + right.height())
       }
     }
   }
   "Helper function"
-  show #(t Tree(T), depth Int, width Int, String) = {
-    t.Empty ? {" "},{
+  show #(t Tree(T), depth Int, width Int, String) {
+    t.Empty ? { " " }, {
       leftside: show(t.left, depth + width, width)
       rightside: show(t.right, depth + width, width)
       center: depth.times.join(" ") ++ show(t)
       leftside ++ center ++ rightside
     }
   }
-  widest_element #(t Tree(T), Int) = {
+  widest_element #(t Tree(T), Int) {
     t.Empty ? { 0 }, {
       maximum(
         widest_element(t.left)
@@ -73,13 +73,13 @@ binary_tree:{
       )
     }
   }
-  make #(a [T], Tree(T)) = {
+  make #(a [T], Tree(T)) {
     root: Empty()
-    a.each({e T, roo.insert(e)})
+    a.each({ e T; root.insert(e) })
     root
   }
-  random #(n Int) = {
-    list : [Int]()
+  random #(n Int) {
+    list: [Int]()
     n.times().do({
       list.add(random.int(1, 99))
     })
@@ -95,7 +95,7 @@ WhildMushroom: {
   is_edible Bool
 }
 "derive:['Debug']"
-InedibleError:{}
+InedibleError: {}
 
 mushrooms: [
   WildMushroom(
@@ -112,7 +112,7 @@ mushrooms: [
   ),
 ]
 
-total_price [Result]()(String,InedibleError) =
+total_price [Result]()(String, InedibleError) =
   mushooms.map({
     m Mushroom,
     m.is_edible ? {

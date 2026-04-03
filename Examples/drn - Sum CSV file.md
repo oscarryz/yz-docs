@@ -15,10 +15,10 @@ _(There's a short syntax reference at the bottom)_
 // Opens a file and reads it into a String
 read_file: {
   file_name String
-  os.open( file_name ).and_then {
+  os.open(file_name).and_then({
     file File
     string.from_array(file.read_all(), "UTF-8")
-  }
+  })
 }
 
 // Reads a String, and sums each row and format it back to a string
@@ -26,13 +26,13 @@ sum_rows: {
   content String
   Ok(content
     .split("\n")
-    .map {
+    .map({
       line String
-      line.split(',').map {
+      line.split(',').map({
         column String
         int.parse_int(column).or(0)
-      }
-    }
+      })
+    })
     .reduce(int.+)
     .filter(0.>)
     .join(",")
@@ -45,10 +45,10 @@ write_result: {
   output_file String
   {
     output String
-    os.open(output_file) .and_then {
+    os.open(output_file).and_then({
       file File
       file.write_all(output.to_array())
-    }
+    })
   }
 }
 
@@ -56,10 +56,10 @@ main: {
   read_file("input.csv")
     .and_then(sum_rows)
     .and_then(write_result("output.csv"))
-    .or_else {
+    .or_else({
       e Error
       println("Coulnd't process file. Error: `e`")
-    }
+    })
 }
 
 ```
@@ -85,7 +85,7 @@ std: {
       or  #(e Error)
       ...
     }
-    Ok : {
+    Ok: {
       data T
       ...
     }
@@ -96,8 +96,8 @@ std: {
   // int defines the Int type nd operations on it
   int: {
     parse_int #(input Int, Result(Int))
-    + #(Int,Int,Int)
-    Int : {
+    + #(Int, Int, Int)
+    Int: {
         > #(Int, Bool) // e.g. 1 > 2 returns false
         + #(Int, Int)  // e.g. 1 + 2 returns 3
     }
@@ -116,16 +116,16 @@ std: {
     // This is the "magic" implementation type
     // under the `[]` syntax
     Array: {
-      map: #(#(T,U), [U])
-      reduce #( #(T, T, T), [T])
-      filter #( #(T, Bool), [T])
+      map: #(#(T, U), [U])
+      reduce #(#(T, T, T), [T])
+      filter #(#(T, Bool), [T])
     }
     ...
  }
 
   os: {
     open #(file_name String, Result(File))
-    File : {
+    File: {
       read_all #(Result([Int]))
       write_all #([Int], Result(Int))
     }
@@ -153,7 +153,7 @@ Some syntax short explaination:
 - `[TypeName]` array of that type
   - e.g. `a [String]` is an array of strings
 - `expr.identifier(params)` invoked the method `identifier` on the resulting type of `expr`
-  - e.g. `"hi".len()` (can ommit parenthesis if more than one argument)
+  - e.g. `"hi".length()` (can ommit parenthesis if more than one argument)
 - `expr.identifier` access the field `identifier` on the resulting type of `expr`
   -  e.g. `{ a : 1 }.a` access the variable `a` declared in the block.
 -  `#(TypesName)` block signature

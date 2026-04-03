@@ -164,36 +164,34 @@ Node: {
 
 main: {
     // Creating an instance with the `Tree` constructor
-    root : Tree( 0
-            Tree( -2
-                Tree( -3 ),
-                Tree( -1 )
+    root: Tree(0,
+            Tree(-2,
+                Tree(-3),
+                Tree(-1)
             ),
             // `left` is ommited here, thus, named attributes are needed
-            Tree( data:  2,
-                right = Tree(3)
+            Tree(data: 2,
+                right: Tree(3)
             )
         )
     print_level(root)
 }
 
-print_level #(Node(T)) = {
+print_level #(Node(T)) {
     r Node(T)
-    q : [q]
+    q: [r]
 
-    // for control structure
-    for q.is_empty != false {
-
-        c : q.remove(0)
+    while({ q.is_empty() == false }, {
+        c: q.remove(0)
         println("`c.data`")
 
-        // if match control structure
-        if c.left match Node.Tree {
+        // match on variant to check if left/right are Tree nodes
+        c.left.Tree ? {
             q.add(c.left)
         }
-        if c.right match Node.Tree {
+        c.right.Tree ? {
             q.add(c.right)
         }
-    }
+    })
 }
 ```

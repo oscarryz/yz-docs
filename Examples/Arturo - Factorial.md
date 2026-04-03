@@ -4,13 +4,12 @@ https://arturo-lang.io/playground/?example=factorial%20-%20recursive
 
 ```js
 factorial: { n Int
-    n > 0 ? { n * factorial(n - 1)}
-            { 1 }
+    n > 0 ? { n * factorial(n - 1) }, { 1 }
 }
 
-1.to(19 ).each({ x Int
-    print('Factorial of `x` = `factorial x`')
-}
+1.to(19).each({ x Int
+    print('Factorial of `x` = `factorial(x)`')
+})
 `Output:
 Factorial of 1 = 1
 Factorial of 2 = 2
@@ -35,37 +34,24 @@ Factorial of 19 = 121645100408832000`
 ```
 
 ```js
-arr: [1,2,3,4,5,6,7,8,9,10]
-print(arr.filter { x Int; x % 2 == 0 })
+arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+print(arr.filter({ x Int; x % 2 == 0 }))
 ```
 
 Other formatting
 
 ```js
-factorial: {n Int
+factorial: { n Int
   n > 0 ? {
     n * factorial(n - 10)
-  } {
+  }, {
     1
   }
 }
 
-// 1 .to(19).each({ x Int
-//   print('Factorial of `x` = `factorial x`')
-// }
 // alternate formatting
-factorial: {n Int
-   n > 0 ? { n * factorial n - 1} { 1 }
-}
-// using if
-factorial: {n Int
-    if n > 0 { n * factorial n - 1 } { 1 }
-}
-// using `when` (silly)
-factorial: {n Int
-  when [
-     {n > 0}: {n * factorial n - 1}
-  ] /*else*/ {1}
+factorial: { n Int
+   n > 0 ? { n * factorial(n - 1) }, { 1 }
 }
 
 // using match (real)

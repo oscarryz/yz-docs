@@ -4,17 +4,17 @@
 [Data structures](https://www.qdbplang.org/docs/examples#:~:text=str%20Print.-,Data%20Structures,-All%20of%20the)
 
 ```js
-Stack {
+Stack: {
 
-  data : { None() }
-  push : {
+  data: { None() }
+  push: {
     element
-    curr_data : data()
+    curr_data: data()
     Stack(
         data: {
             Some({
-              val: {element}
-              next: {curr_data}
+              val: { element }
+              next: { curr_data }
             })
          }
     )
@@ -26,5 +26,5 @@ Stack {
 
 }
 
-Sack().push(3).push(2).peek().print()
+Stack().push(3).push(2).peek().print()
 ```

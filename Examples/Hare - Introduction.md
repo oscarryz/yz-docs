@@ -5,34 +5,28 @@ https://harelang.org/
 ```js
 main: {
 	greetings: [
-		'Hello, world!'
-		'¡Hola Mundo!'
-		"Γειά σου Κόσμε!"
-		"Привіт, світ!"
+		'Hello, world!',
+		'¡Hola Mundo!',
+		"Γειά σου Κόσμε!",
+		"Привіт, світ!",
 		"こんにちは世界！"
 	]
 	greetings.each({
 	    greet String
 		print(greet)
-	}
+	})
 }
 ```
 
 https://harelang.org/tutorials/introduction/
 
 ```js
-// fs.create(path, perms) can an error
+// fs.create(path, perms) can return an error
 path: '/tmp/xyz.txt'
-file: fs.create(path, fs.ErrorHandler {[
-    {f File; f == fs.noaccess}: {"Error opening: {path}. Access denied"}
-    {f File; f == fs.error   }: {"Error opening: {path}. {info(file)}"}
-]})
-// Updated
-path: '/tmp/xyz.txt'
-file: fs.create(path).or {
+file: fs.create(path).or({
    e FileError
-   panic("Error opening: `path`. `e`)
-}
+   panic("Error opening: `path`. `e`")
+})
 ```
 
 
@@ -44,15 +38,15 @@ fs: {
         path String
         // do something
         error_handler ErrorHandler
-        file File = ....
-        file.noaccess ? {error_handler.handle(file)}
+        file: File()
+        file.noaccess ? { error_handler.handle(file) }
     }
     ErrorHandler: {
        scenarios [{File,Boolean}:{}]
        handle: { file File
-           scenarios.keys().for_each({k {File,Boolean}
+           scenarios.keys().each({ k {File,Boolean}
                 k(file).?({
-                    scenarios[k]();
+                    scenarios[k]()
                 })
            })
        }
@@ -60,10 +54,10 @@ fs: {
 }
 // Updated
 fs: {
-   create {path String; Result}
+   create: { path String; Result }
    create = {
 		path String
-		file File = ...
+		file: File()
 		ok(file)
 		// if error
 		error("cannot open file")
@@ -73,12 +67,13 @@ fs: {
 
 ```js
 keep: true
-while ({keep},{
-    line : bufio.scanline(os.stdin)
-    what: when([
-        {line == u8}:{line}
-        {line == io.EOF}: { keep = false}
-    ])
+while({ keep }, {
+    line: bufio.scanline(os.stdin)
+    what: match {
+        line == u8    => line
+    }, {
+        line == io.EOF => { keep = false }
+    }
     append(lines, strings.fromutf8(what))
 })
 ```

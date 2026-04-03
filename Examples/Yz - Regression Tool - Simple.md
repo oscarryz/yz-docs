@@ -56,46 +56,46 @@ that traditionally require multiple language constructs (classes, functions, act
 */  
   
 // Core data structures for regression testing  
-TestResults: {  
-    go_tests_passed Bool = false  
-    compiler_built Bool = false  
-    failing_to_passing Int = 0  
-    passing_to_regressed Int = 0  
-    regressed_to_passing Int = 0  
-    still_failing Int = 0  
-    still_passing Int = 0  
-    still_regressed Int = 0  
-    total_files_tested Int = 0  
-    regression_detected Bool = false  
-    output_mismatches Int = 0  
-    missing_expected_output Int = 0  
+TestResults: {
+    go_tests_passed: false
+    compiler_built: false
+    failing_to_passing: 0
+    passing_to_regressed: 0
+    regressed_to_passing: 0
+    still_failing: 0
+    still_passing: 0
+    still_regressed: 0
+    total_files_tested: 0
+    regression_detected: false
+    output_mismatches: 0
+    missing_expected_output: 0
 }  
   
-TestFileResult: {  
-    compiled Bool = false  
-    executed_successfully Bool = false  
-    output_matched Bool = false  
-    missing_expected_output Bool = false  
-    error_message String = ""  
+TestFileResult: {
+    compiled: false
+    executed_successfully: false
+    output_matched: false
+    missing_expected_output: false
+    error_message: ""
 }  
   
-TestJob: {  
-    file_path String  
-    source_dir String  // "failing", "passing", or "regressed"  
-    compiler_path String  
-    show_generated_code Bool = false  
-    is_directory Bool = false  
+TestJob: {
+    file_path String
+    source_dir String  // "failing", "passing", or "regressed"
+    compiler_path String
+    show_generated_code: false
+    is_directory: false
 }  
   
 // Configuration for the regression tester  
-Config: {  
-    project_root String  
-    failing_dir String  
-    passing_dir String  
-    regressed_dir String  
-    compiler_path String  
-    verbose Bool = false  
-    incremental Bool = false  
+Config: {
+    project_root String
+    failing_dir String
+    passing_dir String
+    regressed_dir String
+    compiler_path String
+    verbose: false
+    incremental: false
 }  
   
 // Create singleton instances  
@@ -203,7 +203,7 @@ CommandExecutor: {
             // In real implementation: exec.Command("go", "build", "-o", compiler_path, "./cmd/yzc")  
             logger.success("Compiler built successfully!")  
             true  
-        } {  
+        }, {
             logger.warning("Skipping compiler build due to test failures")  
             false  
         }  
@@ -241,16 +241,16 @@ TestParser: {
                     expected_end: comment_block.last_index_of("\"")  
                     expected_end > content_start ? {  
                         comment_block.substring(content_start, expected_end)  
-                    } {  
+                    }, {
                         ""  
                     }  
-                } {  
+                }, {
                     ""  
                 }  
-            } {  
+            }, {
                 ""  
             }  
-        } {  
+        }, {
             ""  
         }  
     }  
@@ -295,14 +295,14 @@ TestExecutor: {
                 result.compiled = true  
                 result.executed_successfully = true  
                 result.output_matched = true  
-            } {  
+            }, {
                 result.compiled = true  
                 result.executed_successfully = true  
                 result.output_matched = false  
                 result.error_message = "Output mismatch"  
                 results.output_mismatches = results.output_mismatches + 1  
             }  
-        } {  
+        }, {
             result.missing_expected_output = true  
             result.error_message = "Missing expected output block"  
             results.missing_expected_output = results.missing_expected_output + 1  
@@ -338,19 +338,19 @@ TestExecutor: {
                     result.compiled = true  
                     result.executed_successfully = true  
                     result.output_matched = true  
-                } {  
+                }, {
                     result.compiled = true  
                     result.executed_successfully = true  
                     result.output_matched = false  
                     result.error_message = "Output mismatch"  
                     results.output_mismatches = results.output_mismatches + 1  
                 }  
-            } {  
+            }, {
                 result.missing_expected_output = true  
                 result.error_message = "Missing expected output block"  
                 results.missing_expected_output = results.missing_expected_output + 1  
             }  
-        } {  
+        }, {
             result.error_message = "No main file found in directory"  
         }  
           
@@ -369,7 +369,7 @@ TestExecutor: {
           
         main_yz.length() > 0 ? {  
             "`dir_path`/`main_yz`"  
-        } {  
+        }, {
             // Look for file with main boc  
             main_boc_file: files.find({ file String  
                 content: file_system.read_file("`dir_path`/`file`")  
@@ -378,7 +378,7 @@ TestExecutor: {
               
             main_boc_file.length() > 0 ? {  
                 "`dir_path`/`main_boc_file`"  
-            } {  
+            }, {
                 ""  
             }  
         }  
@@ -389,9 +389,9 @@ TestExecutor: {
 RegressionTester: {  
     // Run the complete regression test suite  
     run_regression_tests: {  
-        project_root String  
-        verbose Bool = false  
-        incremental Bool = false  
+        project_root String
+        verbose: false
+        incremental: false
           
         config: Config()  
         config.project_root = project_root  
@@ -416,7 +416,7 @@ RegressionTester: {
         // Step 3: Run regression tests  
         results.compiler_built ? {  
             regression_tester.run_file_tests(config, results)  
-        } {  
+        }, {
             logger.warning("Skipping regression tests - compiler not built")  
         }  
           
@@ -426,10 +426,10 @@ RegressionTester: {
         // Return exit code  
         results.regression_detected ? {  
             1  // Exit with error if regression detected  
-        } {  
+        }, {
             results.go_tests_passed && results.compiler_built ? {  
                 0  // Success  
-            } {  
+            }, {
                 1  // Some tests failed  
             }  
         }  
@@ -457,7 +457,7 @@ RegressionTester: {
           
         results.go_tests_passed ? {  
             println("✅ Go Tests: PASSED")  
-        } {  
+        }, {
             println("❌ Go Tests: FAILED")  
         }  
           
@@ -471,18 +471,18 @@ RegressionTester: {
         println("   Files still regressed: `results.still_regressed`")  
         println("   Total files tested: `results.total_files_tested`")  
           
-        results.output_mismatches > 0 ? {  
-            println("   Files with output mismatches: `results.output_mismatches`")  
-        }  
-          
-        results.missing_expected_output > 0 ? {  
-            println("   Files missing expected output: `results.missing_expected_output`")  
-        }  
-          
-        results.regression_detected ? {  
-            println()  
-            println("`colors.red`🚨 REGRESSION DETECTED: `results.passing_to_regressed` previously passing test(s) now regressed!`colors.reset`")  
-        }  
+        results.output_mismatches > 0 ? {
+            println("   Files with output mismatches: `results.output_mismatches`")
+        }, { }
+
+        results.missing_expected_output > 0 ? {
+            println("   Files missing expected output: `results.missing_expected_output`")
+        }, { }
+
+        results.regression_detected ? {
+            println()
+            println("`colors.red` REGRESSION DETECTED: `results.passing_to_regressed` previously passing test(s) now regressed!`colors.reset`")
+        }, { }
           
         println("==================================================")  
     }  
@@ -501,7 +501,7 @@ RegressionTester: {
         file_system.ensure_directory(config.regressed_dir)  
           
         // Collect test jobs  
-        all_jobs: []  
+        all_jobs: [TestJob]()
           
         // Collect failing directory files  
         logger.info("Collecting items from test/failing (known broken features)...")  
@@ -515,7 +515,7 @@ RegressionTester: {
             job.compiler_path = config.compiler_path  
             job.show_generated_code = config.verbose  
             job.is_directory = file_system.is_directory(job.file_path)  
-            all_jobs << job  
+            all_jobs.push(job)
         })  
           
         // Collect regressed directory files  
@@ -530,7 +530,7 @@ RegressionTester: {
             job.compiler_path = config.compiler_path  
             job.show_generated_code = config.verbose  
             job.is_directory = file_system.is_directory(job.file_path)  
-            all_jobs << job  
+            all_jobs.push(job)
         })  
           
         // Collect passing directory files  
@@ -545,12 +545,12 @@ RegressionTester: {
             job.compiler_path = config.compiler_path  
             job.show_generated_code = config.verbose  
             job.is_directory = file_system.is_directory(job.file_path)  
-            all_jobs << job  
+            all_jobs.push(job)
         })  
           
         all_jobs.length() > 0 ? {  
             // Track files to move  
-            files_to_move: []  
+            files_to_move: [FileMove]()
               
             // Process each test job  
             all_jobs.each({ job TestJob  
@@ -559,7 +559,7 @@ RegressionTester: {
                 // Simulate test execution  
                 test_result: job.is_directory ? {  
                     test_executor.test_directory(job.compiler_path, job.file_path, job.show_generated_code, results)  
-                } {  
+                }, {
                     test_executor.test_file(job.compiler_path, job.file_path, job.show_generated_code, results)  
                 }  
                   
@@ -568,32 +568,32 @@ RegressionTester: {
                     print("  [failing] `item_name`... ")  
                     test_result.output_matched ? {  
                         println("✓ SUCCESS (moving to passing)")  
-                        files_to_move << FileMove(job.file_path, "`config.passing_dir`/`item_name`")  
+                        files_to_move.push(FileMove(job.file_path, "`config.passing_dir`/`item_name`"))
                         results.failing_to_passing = results.failing_to_passing + 1  
-                    } {  
+                    }, {
                         println("✗ FAILED (staying in failing) - `test_result.error_message`")  
                         results.still_failing = results.still_failing + 1  
                     }  
-                } {  
+                }, {
                     job.source_dir == "regressed" ? {  
                         print("  [regressed] `item_name`... ")  
                         test_result.output_matched ? {  
                             println("✓ SUCCESS (moving to passing) `colors.green`- FIXED!`colors.reset`")  
-                            files_to_move << FileMove(job.file_path, "`config.passing_dir`/`item_name`")  
+                            files_to_move.push(FileMove(job.file_path, "`config.passing_dir`/`item_name`"))
                             results.regressed_to_passing = results.regressed_to_passing + 1  
-                        } {  
+                        }, {
                             println("✗ FAILED (staying in regressed) - `test_result.error_message`")  
                             results.still_regressed = results.still_regressed + 1  
                         }  
-                    } {  
+                    }, {
                         // passing directory  
                         print("  [passing] `item_name`... ")  
                         test_result.output_matched ? {  
                             println("✓ SUCCESS (staying in passing)")  
                             results.still_passing = results.still_passing + 1  
-                        } {  
+                        }, {
                             println("✗ FAILED (moving to regressed) `colors.red`- REGRESSION!`colors.reset`")  
-                            files_to_move << FileMove(job.file_path, "`config.regressed_dir`/`item_name`")  
+                            files_to_move.push(FileMove(job.file_path, "`config.regressed_dir`/`item_name`"))
                             results.passing_to_regressed = results.passing_to_regressed + 1  
                             results.regression_detected = true  
                         }  
@@ -604,16 +604,16 @@ RegressionTester: {
             })  
               
             // Move files  
-            files_to_move.length() > 0 ? {  
-                println()  
-                logger.info("Moving `files_to_move.length()` files...")  
-                files_to_move.each({ move FileMove  
-                    file_system.move_file(move.src, move.dst)  
-                })  
-            }  
+            files_to_move.length() > 0 ? {
+                println()
+                logger.info("Moving `files_to_move.length()` files...")
+                files_to_move.each({ move FileMove
+                    file_system.move_file(move.src, move.dst)
+                })
+            }, { }
               
             logger.success("Completed `all_jobs.length()` tests in 12.34 seconds")  
-        } {  
+        }, {
             logger.info("No files to test")  
         }  
     }  

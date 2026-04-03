@@ -1,16 +1,16 @@
 #example
 
 ```js
-ToString : {
-	to_string (String)
+ToString: {
+	to_string #(String)
 }
-Person:{
+Person: {
 	name String
 	to_string: {
 		name
 	}
 }
-List:{
+List: {
   data [T]()
   ...
 }
@@ -18,7 +18,7 @@ List:{
 // # of `List` if `T` also implements `ToString`.
 ListOfToStrings: {
 	data [] ToString
-	add ( ts ToString ) = {
+	add: { ts ToString
 		data.add(ts)
 	}
 }

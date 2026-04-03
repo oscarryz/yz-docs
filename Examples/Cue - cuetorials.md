@@ -17,7 +17,7 @@ hierarchy: {
         hello String
         life Int
         pi Decimal
-        nums [] Int
+        nums [Int]
         struct #()
     }
     Constrained: {
@@ -32,7 +32,7 @@ hierarchy: {
         nums [Int]
         struct #()
     }
-    value: Constrained (
+    value: Constrained(
         hello: 'world'
         life: 42
         pi: 3.14
@@ -47,7 +47,7 @@ hierarchy: {
 ```js
 t: a
 b: a
-a=t
+a = t
 ```
 
 ```js
@@ -59,8 +59,9 @@ Server: {
 ```
 
 ```js
-// Disjuctions
-hello: "world" | "bob" | "mary"
-DayOfWeek:{}
-day DayOfWeek | Monday | Tuesday
+// Disjunctions (exploration - Yz uses match for this)
+// hello: "world" | "bob" | "mary"
+DayOfWeek: {}
+day DayOfWeek
+// Use match to pattern-match on variants
 ```

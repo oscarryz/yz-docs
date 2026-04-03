@@ -20,7 +20,7 @@ fun evenly_positioned_elems (odd::even::xs) = even::evenly_positioned_elems xs
 */
 evenly_positioned_elements: {
   list [T]
-  (list.len() == 0 || {list.len() == 1}) ? {
+  (list.length() == 0 || list.length() == 1) ? {
     [T]()
   }, {
     list[1] ++ evenly_positioned_elements(list.sublist(1))
@@ -33,21 +33,16 @@ Fibonacci
 
 ```js
 
-// With non-local returns (or just with `return`)
-fibonacci: {n Int
-  n == 0 ? {0}
-  n == 1 ? {1}
-  fibonacci(n - 1) + fibonacci( n - 2)
-}
-// Bool and nested bool
-fibonacci: {n Int
+// With nested conditionals
+fibonacci: {
+  n Int
   n == 0 ? {
     0
   }, {
     n == 1 ? {
       1
     }, {
-      fibonacci(n - 1) + fibonacci( n - 2)
+      fibonacci(n - 1) + fibonacci(n - 2)
     }
   }
 }
@@ -55,37 +50,20 @@ fibonacci: {n Int
 fibonacci: {
     n Int
     n == 0 ?
-    {0},
-    { n == 1 ?  {1},
-    { fibonacci(n - 1) + flibonacci(n - 2) } }
+    { 0 },
+    { n == 1 ? { 1 },
+    { fibonacci(n - 1) + fibonacci(n - 2) } }
 }
 
-// With `when_eq`
+// With `match`
 fibonacci: {
     n Int
-    when_eq n [
-     {0}: {0}
-     {1}: {1}
-     {true}: {fibonacci(n - 1) + fibonacci(n - 2)}
-    ]
+    match {
+     n == 0 => 0
+    }, {
+     n == 1 => 1
+    }, {
+     fibonacci(n - 1) + fibonacci(n - 2)
+    }
 }
-// With ifs
-fibonacci: {n Int
-  if(n == 0 , {0},
-    else_if(n == 1, {1},
-      else({ fibonacci(n - 1) + flibonacci(n - 2) })
-    )
-  )
-}
-// Same ifs without parenthesis
-fibonacci: {
-  n Int
-  if n == 0 , {0},
-  else_if n == 1, {1},
-  else { fibonacci(n - 1) + flibonacci(n - 2) }
-}
-// Where the ifs signatures are
-if #(Bool, then #(V), else #(V))
-else_if #(Bool, then #(V), else #(V))
-else #(#(V))
 ```
