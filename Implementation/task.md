@@ -47,8 +47,15 @@
 - [ ] `compiler/examples/` — counter, concurrent fetch, etc.
 
 ## Language Features — Not Yet Implemented
-- [ ] `while` loop — runtime has `std.While` but lowerer doesn't handle it
-- [ ] `BocWithSig` — boc parameters: `counter #(n Int) { ... }`
-- [ ] `match` expression
-- [ ] `mix` statement
-- [ ] Multi-file projects
+- [x] `while` loop
+- [x] `BocWithSig` — top-level functions and methods inside singleton/struct bocs
+- [x] `match` expression (condition form)
+- [x] `mix` statement — Go embedding
+- [x] Multi-file projects — flat and subdirectory (cross-package FQN)
+- [ ] `BocWithSig` body-only form — `name #(params) = { body }` (body re-declares params)
+- [ ] Type-only BocWithSig — `Name #(params)` (no body) as struct declaration shorthand
+- [ ] Interface declaration — `Printable: #(to_string #(String))`
+- [ ] Access control enforcement — only `#()`-declared methods callable externally
+- [ ] Variant/discriminant match — `match expr { Variant.Case => body }`
+- [ ] Cross-package singleton method calls — `pkg.singletonVar.method()`
+- [ ] Examples directory (first milestone concurrent program)

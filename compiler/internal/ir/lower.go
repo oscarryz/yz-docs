@@ -153,6 +153,12 @@ func (l *lowerer) lowerSingletonBoc(name string, b *ast.BocLiteral) *SingletonDe
 				initExpr = l.lowerExpr(e.Value)
 			}
 			sd.Fields = append(sd.Fields, &FieldSpec{Name: e.Name.Name, Type: typ, Init: initExpr})
+
+		case *ast.BocWithSig:
+			if e.Body != nil {
+				m := l.lowerBocWithSigAsMethod(e, "*"+typeName, fieldNames)
+				sd.Methods = append(sd.Methods, m)
+			}
 		}
 	}
 	return sd
@@ -407,6 +413,12 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				Embedded:       true,
 				EmbeddedFields: subFields,
 			})
+
+		case *ast.BocWithSig:
+			if e.Body != nil {
+				m := l.lowerBocWithSigAsMethod(e, "*"+name, fieldNames)
+				sd.Methods = append(sd.Methods, m)
+			}
 		}
 	}
 	return sd
@@ -500,6 +512,44 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 // ---------------------------------------------------------------------------
 // BocWithSig
 // ---------------------------------------------------------------------------
+
+// lowerBocWithSigAsMethod lowers a BocWithSig that appears inside a singleton
+// or struct boc body as a receiver method. Params come from the signature;
+// the body is lowered with receiver context so field names resolve to self.xxx.
+func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, parentFields map[string]bool) *MethodDecl {
+	bocSemType := l.analyzer.ExprType(bws)
+	bt, _ := bocSemType.(*sema.BocType)
+
+	resultType := "std.Unit"
+	if bt != nil && len(bt.Returns) > 0 {
+		resultType = l.goType(bt.Returns[0])
+	}
+
+	var params []*ParamSpec
+	if bt != nil {
+		for _, p := range bt.Params {
+			if !p.IsReturn && p.Label != "" {
+				params = append(params, &ParamSpec{
+					Name: p.Label,
+					Type: l.goType(p.Type),
+				})
+			}
+		}
+	}
+
+	prev := l.setReceiver("self", parentFields)
+	body := l.lowerBocBody(bws.Body, resultType)
+	l.restoreReceiver(prev)
+
+	return &MethodDecl{
+		RecvType: recvType,
+		RecvName: "self",
+		Name:     bws.Name.Name,
+		Params:   params,
+		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Body:     body,
+	}
+}
 
 func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig, recvType string, parentFields map[string]bool) Decl {
 	if bws.Body == nil {
