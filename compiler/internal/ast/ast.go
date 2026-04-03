@@ -273,6 +273,17 @@ type InterpolatedStringExpr struct {
 
 func (e *InterpolatedStringExpr) exprNode() {}
 
+// ConditionalExpr is `cond ? {trueCase}, {falseCase}` — a Bool conditional.
+// TrueCase and FalseCase are typically BocLiterals.
+type ConditionalExpr struct {
+	Pos
+	Cond      Expr
+	TrueCase  Expr
+	FalseCase Expr
+}
+
+func (e *ConditionalExpr) exprNode() {}
+
 // ArrayLiteral is `[expr, expr, ...]` or the empty form `[Type]()`.
 type ArrayLiteral struct {
 	Pos

@@ -386,19 +386,29 @@ func (p *Parser) parseExpr() (ast.Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		left = &ast.BinaryExpr{
+		bin := &ast.BinaryExpr{
 			Pos:   p.posOf(opTok),
 			Left:  left,
 			Op:    opTok.Literal,
 			Right: right,
 		}
-		// After a non-word + unary, check for comma-continuation:
-		// `? { a }, { b }` — the `,` starts the next boc argument.
-		// We only do this continuation if the non-word op was the last one
-		// (i.e., we're at a comma followed by a boc). The outer boc call
-		// will be represented as BinaryExpr(left, "?", first_boc) but the
-		// second boc needs to be added to the enclosing call's arg list.
-		// This is handled at the CallExpr level in parsePostfix (comma args).
+		left = bin
+
+		// `cond ? {trueCase}, {falseCase}` — after parsing `cond ? {trueCase}`,
+		// if we see a comma followed by a boc, consume it as the false branch.
+		if opTok.Literal == "?" && p.at(token.COMMA) && p.peekIs(token.LBRACE) {
+			p.advance() // consume ','
+			falseCase, err := p.parseUnary()
+			if err != nil {
+				return nil, err
+			}
+			left = &ast.ConditionalExpr{
+				Pos:       bin.Pos,
+				Cond:      bin.Left,
+				TrueCase:  bin.Right,
+				FalseCase: falseCase,
+			}
+		}
 	}
 
 	return left, nil

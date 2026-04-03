@@ -545,6 +545,11 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 			}
 		}
 		t = TypString
+	case *ast.ConditionalExpr:
+		a.analyzeExpr(expr.Cond)
+		trueType := a.analyzeExpr(expr.TrueCase)
+		a.analyzeExpr(expr.FalseCase)
+		t = trueType
 	case *ast.Ident:
 		t = a.analyzeIdent(expr)
 	case *ast.UnaryExpr:
