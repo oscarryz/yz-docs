@@ -1,0 +1,10 @@
+counter: {
+    count: 0
+    increment: { count = count + 1 }
+    value: { count }
+}
+main: {
+    counter.increment()
+    counter.increment()
+    print(counter.value())
+}
