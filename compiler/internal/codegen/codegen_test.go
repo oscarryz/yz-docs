@@ -10,6 +10,30 @@ import (
 	"yz/internal/sema"
 )
 
+// genWithPackages compiles Yz source to Go, with pre-registered sub-packages
+// (simulating what build.go does for cross-package FQN resolution).
+func genWithPackages(t *testing.T, src string, pkgs map[string]map[string]*sema.Symbol) string {
+	t.Helper()
+	_ = lexer.Tokenize([]byte(src))
+	p := parser.New([]byte(src))
+	sf, err := p.ParseFile()
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	a := sema.NewAnalyzer()
+	for relDir, exports := range pkgs {
+		parts := strings.Split(relDir, "/")
+		pkgAlias := parts[len(parts)-1]
+		importPath := "yzapp/" + relDir
+		a.RegisterPackage(relDir, pkgAlias, importPath, exports)
+	}
+	if err := a.AnalyzeFile(sf); err != nil {
+		t.Fatalf("sema: %v", err)
+	}
+	f := ir.Lower(sf, a, "main")
+	return Generate(f)
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -225,5 +249,47 @@ func TestGenerateCounterProgram(t *testing.T) {
 		"func (self *_counterBoc) increment()",
 		"func (self *_counterBoc) value()",
 		"var counter = &_counterBoc{",
+	)
+}
+
+// ---------------------------------------------------------------------------
+// 11 — Cross-package FQN resolution
+// ---------------------------------------------------------------------------
+
+func TestFQNStructConstructor(t *testing.T) {
+	// Simulate a "front" package (at relDir "front") exporting Host struct.
+	hostStruct := &sema.StructType{Name: "Host", Fields: []sema.StructField{
+		{Name: "name", Type: sema.TypString},
+	}}
+	exports := map[string]*sema.Symbol{
+		"Host": {Name: "Host", Type: hostStruct},
+	}
+	got := genWithPackages(t, `main: {
+    h: front.Host("Alice")
+}`, map[string]map[string]*sema.Symbol{
+		"front": exports,
+	})
+	contains(t, got,
+		`"yzapp/front"`,
+		`front.NewHost(std.NewString("Alice"))`,
+	)
+}
+
+func TestFQNNestedNamespace(t *testing.T) {
+	// Simulate "house/front" package exporting Host struct.
+	hostStruct := &sema.StructType{Name: "Host", Fields: []sema.StructField{
+		{Name: "name", Type: sema.TypString},
+	}}
+	exports := map[string]*sema.Symbol{
+		"Host": {Name: "Host", Type: hostStruct},
+	}
+	got := genWithPackages(t, `main: {
+    h: house.front.Host("Alice")
+}`, map[string]map[string]*sema.Symbol{
+		"house/front": exports,
+	})
+	contains(t, got,
+		`"yzapp/house/front"`,
+		`front.NewHost(std.NewString("Alice"))`,
 	)
 }
