@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"yz/internal/ast"
@@ -16,12 +18,7 @@ import (
 
 // cmdBuild compiles the Yz project in dir to a binary at target/bin/app.
 func cmdBuild(dir string) error {
-	paths, err := collectYzFiles(dir)
-	if err != nil {
-		return err
-	}
-
-	goSrc, err := compileFiles(paths)
+	sources, err := compileProject(dir)
 	if err != nil {
 		return err
 	}
@@ -29,7 +26,7 @@ func cmdBuild(dir string) error {
 	genDir := filepath.Join(dir, "target", "gen")
 	binDir := filepath.Join(dir, "target", "bin")
 
-	if err := writeGeneratedGo(genDir, goSrc, dir); err != nil {
+	if err := writeGeneratedGo(genDir, sources, dir); err != nil {
 		return err
 	}
 
@@ -58,57 +55,140 @@ func cmdRun(dir string) error {
 	return cmd.Run()
 }
 
-// collectYzFiles returns all .yz file paths in dir (non-recursive, flat only).
-// main.yz is always last so it can reference types from other files.
-func collectYzFiles(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("reading directory %s: %w", dir, err)
-	}
-	var main, others []string
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yz") {
-			continue
-		}
-		path := filepath.Join(dir, e.Name())
-		if e.Name() == "main.yz" {
-			main = append(main, path)
-		} else {
-			others = append(others, path)
-		}
-	}
-	if len(others)+len(main) == 0 {
-		return nil, fmt.Errorf("no .yz files found in %s", dir)
-	}
-	// Non-main files first (alphabetical via ReadDir), main.yz last.
-	return append(others, main...), nil
+// fileEntry is one .yz source file discovered during the project walk.
+type fileEntry struct {
+	absPath string // absolute path to the .yz file
+	relDir  string // slash-separated path relative to source root, "" for root
+	name    string // file name without .yz extension
 }
 
-// compileFiles runs the full Yz pipeline over multiple source files and
-// returns combined Go source. Files are analyzed in order (main.yz last)
-// using a single shared sema scope so cross-file references resolve.
-func compileFiles(paths []string) (string, error) {
+// walkYzFiles recursively finds all .yz files under srcRoot, skipping
+// target/ and hidden directories.
+func walkYzFiles(srcRoot string) ([]fileEntry, error) {
+	var entries []fileEntry
+	err := filepath.WalkDir(srcRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			base := d.Name()
+			if base == "target" || strings.HasPrefix(base, ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".yz") {
+			return nil
+		}
+		rel, _ := filepath.Rel(srcRoot, path)
+		relDir := filepath.ToSlash(filepath.Dir(rel))
+		if relDir == "." {
+			relDir = ""
+		}
+		name := strings.TrimSuffix(d.Name(), ".yz")
+		entries = append(entries, fileEntry{absPath: path, relDir: relDir, name: name})
+		return nil
+	})
+	return entries, err
+}
+
+// pkgNameFromDir returns the Go package name for a relative directory.
+// The root ("") is the main package; subdirs use their last path segment.
+func pkgNameFromDir(relDir string) string {
+	if relDir == "" {
+		return "main"
+	}
+	parts := strings.Split(relDir, "/")
+	return parts[len(parts)-1]
+}
+
+// compileProject walks all .yz files, compiles each directory as a separate
+// Go package, and returns a map of relative output path → Go source.
+// Sub-packages are compiled before the root so their symbols are registered
+// first (cross-package resolution is Phase 2; for now each dir is independent).
+func compileProject(srcRoot string) (map[string]string, error) {
+	entries, err := walkYzFiles(srcRoot)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("no .yz files found in %s", srcRoot)
+	}
+
+	// Group by relative directory.
+	byDir := map[string][]fileEntry{}
+	for _, e := range entries {
+		byDir[e.relDir] = append(byDir[e.relDir], e)
+	}
+
+	// Sort dirs: deepest first so sub-packages are ready before root.
+	var dirs []string
+	for d := range byDir {
+		dirs = append(dirs, d)
+	}
+	sort.Slice(dirs, func(i, j int) bool {
+		// More path segments = deeper = first. Ties broken alphabetically.
+		di := strings.Count(dirs[i], "/")
+		dj := strings.Count(dirs[j], "/")
+		if di != dj {
+			return di > dj
+		}
+		return dirs[i] < dirs[j]
+	})
+
+	result := map[string]string{}
+	for _, dir := range dirs {
+		goSrc, err := compilePackageDir(byDir[dir], dir)
+		if err != nil {
+			return nil, err
+		}
+		pkgName := pkgNameFromDir(dir)
+		var outPath string
+		if dir == "" {
+			outPath = "main.go"
+		} else {
+			outPath = filepath.Join(filepath.FromSlash(dir), pkgName+".go")
+		}
+		result[outPath] = goSrc
+	}
+	return result, nil
+}
+
+// compilePackageDir compiles all .yz files in one directory into a single Go
+// source string. Within the directory, non-main files are analyzed first so
+// that main.yz (if present) can reference them.
+func compilePackageDir(files []fileEntry, relDir string) (string, error) {
+	pkgName := pkgNameFromDir(relDir)
+
+	// Sort: main.yz last within each dir.
+	sort.Slice(files, func(i, j int) bool {
+		if files[i].name == "main" {
+			return false
+		}
+		if files[j].name == "main" {
+			return true
+		}
+		return files[i].name < files[j].name
+	})
+
 	type parsedFile struct {
 		sf   *ast.SourceFile
 		path string
 	}
-
-	// Parse all files.
 	var pfiles []parsedFile
-	for _, path := range paths {
-		src, err := os.ReadFile(path)
+	for _, fe := range files {
+		src, err := os.ReadFile(fe.absPath)
 		if err != nil {
-			return "", fmt.Errorf("reading %s: %w", path, err)
+			return "", fmt.Errorf("reading %s: %w", fe.absPath, err)
 		}
 		p := parser.New(src)
 		sf, err := p.ParseFile()
 		if err != nil {
-			return "", fmt.Errorf("parse %s: %w", path, err)
+			return "", fmt.Errorf("parse %s: %w", fe.absPath, err)
 		}
-		pfiles = append(pfiles, parsedFile{sf: sf, path: path})
+		pfiles = append(pfiles, parsedFile{sf: sf, path: fe.absPath})
 	}
 
-	// Analyze all files with a single shared scope.
 	a := sema.NewAnalyzer()
 	for _, pf := range pfiles {
 		if err := a.AnalyzeFile(pf.sf); err != nil {
@@ -116,10 +196,9 @@ func compileFiles(paths []string) (string, error) {
 		}
 	}
 
-	// Lower all files and merge decls into one ir.File.
-	combined := &ir.File{PkgName: "main"}
+	combined := &ir.File{PkgName: pkgName}
 	for _, pf := range pfiles {
-		f := ir.Lower(pf.sf, a, "main")
+		f := ir.Lower(pf.sf, a, pkgName)
 		combined.Decls = append(combined.Decls, f.Decls...)
 		for _, imp := range f.Imports {
 			if !containsStr(combined.Imports, imp) {
@@ -140,16 +219,22 @@ func containsStr(ss []string, s string) bool {
 	return false
 }
 
-// writeGeneratedGo writes main.go and go.mod into genDir.
-func writeGeneratedGo(genDir, goSrc, projectDir string) error {
+// writeGeneratedGo writes all generated Go files and go.mod into genDir.
+// sources maps relative output path (e.g. "main.go", "house/front/front.go")
+// to Go source content.
+func writeGeneratedGo(genDir string, sources map[string]string, projectDir string) error {
 	if err := os.MkdirAll(genDir, 0o755); err != nil {
 		return fmt.Errorf("creating gen dir: %w", err)
 	}
 
-	// Write main.go.
-	mainPath := filepath.Join(genDir, "main.go")
-	if err := os.WriteFile(mainPath, []byte(goSrc), 0o644); err != nil {
-		return fmt.Errorf("writing main.go: %w", err)
+	for relPath, goSrc := range sources {
+		fullPath := filepath.Join(genDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			return fmt.Errorf("creating dir for %s: %w", relPath, err)
+		}
+		if err := os.WriteFile(fullPath, []byte(goSrc), 0o644); err != nil {
+			return fmt.Errorf("writing %s: %w", relPath, err)
+		}
 	}
 
 	// Find the yz compiler module root so generated code can reference yz/runtime/yzrt.
