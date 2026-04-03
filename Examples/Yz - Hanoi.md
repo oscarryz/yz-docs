@@ -1,6 +1,6 @@
 #example
 ```js
-hanoi: { 
+hanoi: {
     s [Int]()
     h [Int]()
     d [Int]()
@@ -10,18 +10,18 @@ hanoi: {
         h [Int]()
         d [Int]()
         n > 0 ? {
-            ha n - 1 s d h
-            move s d
-            ha n - 1 h s d
+            ha(n - 1, s, d, h)
+            move(s, d)
+            ha(n - 1, h, s, d)
         }
     }
-    ha s.len() s h d
+    ha(s.length(), s, h, d)
 }
-move: { 
+move: {
     from [Int]()
     to [Int]()
-    to << from.pop()      
+    to << from.pop()
 }
-hanoi [3 2 1] [] []
+hanoi([3, 2, 1], [], [])
 
 ```

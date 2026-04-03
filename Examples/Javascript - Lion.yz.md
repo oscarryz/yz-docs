@@ -2,7 +2,7 @@
 
 ```js
 Lion: {
-  food_consumed : Set()
+  food_consumed: Set()
 
   roar: {
     'roar'
@@ -16,24 +16,24 @@ Lion: {
     Array.of(food_consumed)
   }
 
-  validate: {foo String
+  validate: { food String
     reversed: food.split('').reverse().join('')
-    reverse == food ? {
-      error('palindromes are discusting!'
-    }
+    reversed == food ? {
+      error('palindromes are disgusting!')
+    }, { }
   }
 
   get_favorite_food: {
-    get_foods_consumed().filter { food String
-      food.lenght % 2 == 1
-    }
+    get_food_consumed().filter({ food String
+      food.length() % 2 == 1
+    })
   }
 }
 ```
 
-No braces ( `{}` )
+No braces ( `{}` ) — exploration of alternative syntax (not standard Yz):
 
-```js
+```
 Lion:
    consumed: Set()
 

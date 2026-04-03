@@ -12,13 +12,14 @@ From https://gowebexamples.com/static-files/
 
 
 ```js
-data: io.read '/tmp/something.txt'
+data: io.read('/tmp/something.txt')
 
 data.each({ byte Int
-    when_eq byte [
-        {'0xCAFEBABE'}:{init()}
-        {'0xDEADBEEF'}:{finish()}
-    ]
-}
+    match {
+        byte == '0xCAFEBABE' => init()
+    }, {
+        byte == '0xDEADBEEF' => finish()
+    }
+})
 
 ```

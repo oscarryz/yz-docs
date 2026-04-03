@@ -15,20 +15,20 @@ Calculate the sum of node values
 Examples:
   >> tree_sum(leaf)
   0
-  >> node4: BinTree{4}
-  >> tree_sum(BinTree{5, node4})
+  >> node4: BinTree(4)
+  >> tree_sum(BinTree(5, node4))
   9
 '`
-welse: when.else
 tree_sum: { t BinTree
-  when_eq t [
-    { leaf } : { 0 }
-    {welse}: { t.value + tree_sum(t.left) + tree_sum(t.right) }
-  ]
+  match {
+    t == leaf => 0
+  }, {
+    t.value + tree_sum(t.left) + tree_sum(t.right)
+  }
 }
 // also
-tree_sum: {t BinTree
-    t == leaf ? { 0 } {
+tree_sum: { t BinTree
+    t == leaf ? { 0 }, {
         t.value + tree_sum(t.left) + tree_sum(t.right)
     }
 }
@@ -37,10 +37,10 @@ tree_sum: {t BinTree
 tree_sum: {
     doc: 'Calculate the sum of node values'
     tests: {
-        assert tree_sum(leaf) == 0
-        node_4: BinTree{4}
-        node_5: BinTree{5 node_4}
-        assert tree_sum node_5  == 9
+        assert(tree_sum(leaf) == 0)
+        node_4: BinTree(4)
+        node_5: BinTree(5, node_4)
+        assert(tree_sum(node_5) == 9)
     }
     leaf: BinTree()
     BinTree: {
@@ -52,7 +52,7 @@ tree_sum: {
         t BinTree
         t == leaf ? {
             0
-        } {
+        }, {
             t.value + tree_sum(t.left) + tree_sum(t.right)
         }
     }
@@ -78,10 +78,10 @@ l2() == 2
 ```
 
 ```js
-[1 2 3].map{ n * n }      //[ 1 4 6]
-[1 2 3].filter { n >= 2 } //[2 3]
-[4 5 6].fold { sum Int n Int
+[1, 2, 3].map({ n Int; n * n })      //[ 1 4 6]
+[1, 2, 3].filter({ n Int; n >= 2 }) //[2 3]
+[4, 5, 6].fold({ sum Int; n Int
     sum + n
-}
+})
 // 15
 ```

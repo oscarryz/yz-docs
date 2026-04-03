@@ -10,13 +10,13 @@ node: {
     empty: Node {
         check: {0}
     }
-    Node:{
-        left  : empty
-        right : empty 
+    Node: {
+        left:  empty
+        right: empty
         check: {
-            check_left:  { check(left) } 
-            check_right: { check(right) } 
-            // execute in parallel 
+            check_left:  { check(left) }
+            check_right: { check(right) }
+            // execute in parallel
             check_left()
             check_right()
             // when done use the result
@@ -28,24 +28,24 @@ node: {
         depth: 0
         n == 0 ? {
             Node(empty, empty)
-        } {
+        }, {
             Node(create(n - 1), create(n - 1))
         }
-        
+
     }
 }
 main: {
     // min, max, and stretch depths
-    n: int.parse_int(os.args[1]).or_else({ 4 })
+    n: int.parse_int(os.args[1]).or({ 4 })
     min_depth: 4
-    max_depth: min_depth + 2 > n ? { min_depth + 2 } { n }
+    max_depth: min_depth + 2 > n ? { min_depth + 2 }, { n }
     stretch_depth: max_depth + 1
 
-    stretch_tree: node.create stretch_depth
+    stretch_tree: node.create(stretch_depth)
     print("stretch tree of depth `stretch_depth`\t check: `stretch_tree.check()`")
 
-    long_lived: node.create max_depth
-    
+    long_lived: node.create(max_depth)
+
     depth: min_depth
     while({ depth <= max_depth }, {
         iterations: 1 << max_depth - depth + min_depth

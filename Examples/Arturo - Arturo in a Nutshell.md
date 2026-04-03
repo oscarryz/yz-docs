@@ -6,12 +6,12 @@ https://arturo-lang.io/documentation/in-a-nutshell/
 // variables
 a1: 2
 a2: 3.14
-a4: Complex( 1, 2.0 ) // 1.0 + 2.0i
+a4: Complex(1, 2.0) // 1.0 + 2.0i
 
 // strings
 c1: 'this is a string'
 c2: `
-        this is a multilie string
+        this is a multiline string
         that is verbatim
     `
 // no characters, use string
@@ -21,10 +21,10 @@ ch: 'c' // still a string
 d: [1, 2, 3]
 
 // dictionaries
-e: ['name'   : 'John'
-    'surname': 'Doe'
-    'age'    : '34' // can't mix value types
-    'likes'  : `['pizza', 'spaguetti']`]
+e: ['name'   : 'John',
+    'surname': 'Doe',
+    'age'    : '34', // can't mix value types
+    'likes'  : ['pizza', 'spaghetti']]
 
 // blocks (behave like closures/functions)
 f: {
@@ -63,10 +63,10 @@ i2: false // std.false
 // constants
 //------------
 math.PI
-meth.EPSILON
+math.EPSILON
 
 //---------------------
-// Comparison operatos
+// Comparison operators
 //----------------------
 // equality
 1 == 1     // true
@@ -96,40 +96,39 @@ true  && false // false
 true  || false // true
 false || false // true
 
-(1 == 2) && {2 < 3} // false
+(1 == 2) && { 2 < 3 } // false
                     // the second block will not be evaluated
 
 // simple "if" statements
-2 > 1 ? { print('yes' }   // yes)
-3 != 2 ? { print('true!'} // true!)
+2 > 1 ? { print('yes') }   // yes
+3 != 2 ? { print('true!') } // true!
 
 // if / else statements
-2 > 3 ? { print('2 is greated than 3'},)
-{ print('2 is not greater then 3'} // 2 is ot greater than 3)
+2 > 3 ? { print('2 is greater than 3') }, { print('2 is not greater than 3') } // 2 is not greater than 3
 
 // "switch" statements
+match {
+   2 > 3 => print('2 is greater than 3')
+}, {
+   print('2 is not greater than 3') // 2 is not greater than 3
+}
 
-when [
-   {2 > 3}: { print('2 is greater than 3'})
-   {true}:{ print('2 is not greater than 3'} // 2 is not greater than 3)
-]
-
-a: 2 > 3 ? {'yes'}, {'no'} // a: 'no'
+a: 2 > 3 ? { 'yes' }, { 'no' } // a: 'no'
 
 // "loops"
-arr: [1 4 5 3]
+arr: [1, 4, 5, 3]
 arr.each({ x Int
     print('x = `x`')
-}
+})
 // x = 1
 // x = 4
 // x = 5
 // x = 3
 
 // with index
-arr.for { i Int, x Int
+arr.each_with_index({ i Int; x Int
     print('Item at position `i` => `x`')
-}
+})
 // item at position 0 => 1
 // item at position 1 => 4
 // item at position 2 => 5
@@ -137,35 +136,35 @@ arr.for { i Int, x Int
 
 
 // ranges
-1.to(3).do{ x Int
+1.to(3).each({ x Int
     print('`x`')
-}
+})
 // 1
 // 2
 // 3
 
-'a' .to 'c' .each({ s String
+'a'.to('c').each({ s String
     print(s)
-}
+})
 // a
 // b
 // c
 
 // looping through a dictionary
-dict: ['name': 'John' 'surname': 'Doe']
-dict.each({ key String, value String
+dict: ['name': 'John', 'surname': 'Doe']
+dict.each({ key String; value String
     print('`key` -> `value`')
-}
+})
 
 // name -> John
 // surname -> Doe
 
 //while loops
 i: 0
-while { 1 < 3 }, {
+while({ i < 3 }, {
     print('i = `i`')
     i = i + 1
-}
+})
 // i = 0
 // i = 1
 // i = 2
@@ -176,98 +175,96 @@ print(a.upper()) // THIS IS A STRING
 
 // concatenation
 a: 'Hello ' ++ 'World!'
-'hello'.split() // ['h' 'e' 'l' 'l' 'o']
-'hello world'.split(' ') // ['hello' 'world']
+'hello'.split() // ['h', 'e', 'l', 'l', 'o']
+'hello world'.split(' ') // ['hello', 'world']
 
 // conversion
 123.to_string() // "123"
 
-int.parse!("123") // 123
-int.parse("123") // std.option.Ok(123)
-int.parse(":(") // std.option.Err("...")
+int.parse_bang("123") // 123
+int.parse("123") // Option.Some(123)
+int.parse(":(") // Option.None()
 
 
-// string interpolation `
+// string interpolation
 x: 2
-print('x = `x`' // x = 2)
+print('x = `x`') // x = 2
 
 //--------
 // Blocks
 //--------
 
 // calculate block
-sth: {print('Hello world'})
+sth: { print('Hello world') }
 sth() // Hello world
 
 // array indexing
-arr: ['zero' 'one' 'two' 'three']
-arr[0]      // zero
-arr[arr.len()-1] // three
-arr[3]           // three
+arr: ['zero', 'one', 'two', 'three']
+arr[0]             // zero
+arr[arr.length()-1] // three
+arr[3]             // three
 
 x: 2
 arr[x]            // two
 arr[0] = 'nada'
-print('`arr`' // ['nada' 'one' 'two' 'three'])
+print('`arr`') // ['nada', 'one', 'two', 'three']
 
 // adding elements
-arr: [] String
-arr << 'one'
-arr << 'two'
-print(arr // ['one', 'two'])
-// also
-arr.add('one')
-arr.add('two')
+arr: [String]()
+arr.push('one')
+arr.push('two')
+print(arr) // ['one', 'two']
 
 // remove elements from array
-arr: ['one' 'two' 'three' 'four']
-arr.remove 'two'  // ['one', 'two', 'three', 'four']
-arr.remove_at(0)   // ['three', 'four']
+arr: ['one', 'two', 'three', 'four']
+arr.remove('two')    // ['one', 'three', 'four']
+arr.remove_at(0)     // ['three', 'four']
 
-// getting the size fo an array
-arr: ['one' 'two' 'three' 'four']
-print("`arr.len())`") // 4
+// getting the size of an array
+arr: ['one', 'two', 'three', 'four']
+print("`arr.length()`") // 4
 
 // getting a subarray
-arr: ['one' 'two' 'three' 'four']
-arr.subarray 0,1  // ['one', 'two']
-arr.contains 'one' // true
-arr.contains 'five' // false
+arr: ['one', 'two', 'three', 'four']
+arr.subarray(0, 1)   // ['one', 'two']
+arr.contains('one')  // true
+arr.contains('five') // false
 
 
 // sorting
-arr: [1 5 3 2 4]
+arr: [1, 5, 3, 2, 4]
 arr.sort() // [1,2,3,4,5]
-arr.sort { a Int, b Int, b - a} // descending order -> [5,4,3,2,1]
+arr.sort({ a Int; b Int; b - a }) // descending order -> [5,4,3,2,1]
 
 // mapping values
-1 .to 10 .each({x Int, 2 * x}
-Range(1,10).map{x Int, 2 * x} // [2,4,6,8,10,12,14,16,18,20]
+1.to(10).each({ x Int; 2 * x })
+1.to(10).map({ x Int; 2 * x }) // [2,4,6,8,10,12,14,16,18,20]
 
 n: [Int]()
-1.to 10 .each({ x Int, n << x }
-n.select { x Int, x % 2 == 0} // [2,4,6,8 10]
-n.filter { x Int, x % 2 == 0} // [1,3,5,7,9]
+1.to(10).each({ x Int; n.push(x) })
+n.select({ x Int; x % 2 == 0 }) // [2,4,6,8,10]
+n.filter({ x Int; x % 2 == 0 }) // [1,3,5,7,9]
 
 // misc operations
-arr: ['one' 'two' 'three' 'four']
+arr: ['one', 'two', 'three', 'four']
 arr.reverse() // ['four', 'three', 'two', 'one']
 
 //------------------
 // function / blocks
 //------------------
 
-f: {x Int, 2 * x }
+f: { x Int; 2 * x }
 f(10) // 20
 
 // returning a value
 g: { x Int
-    x < 2 ? { 0 } // finishes the block early
-    res: 0
-    0 .to x .each({ z Int
-        res = res + z
+    x < 2 ? { 0 }, { // finishes the block early with 0
+      res: 0
+      0.to(x).each({ z Int
+          res = res + z
+      })
+      res
     }
-    res
 }
 g(1) // 0
 g(3) // 6
@@ -283,20 +280,20 @@ Person: {
     print: {
         print('NAME: `name`, SURNAME: `surname`, AGE: `age`')
     }
-    compare: {other Person, age - other.age}
-    say_hello:{ print('Hello `ame`'})
+    compare: { other Person; age - other.age }
+    say_hello: { print('Hello `name`') }
 }
 // "constructor"
-new_person: {name String, surname String, age Int
-    Person( name.capitalize(), surname, age)
+new_person: { name String; surname String; age Int
+    Person(name.capitalize(), surname, age)
 }
 
 // create new instances of custom type
 a: Person('John', 'Doe', 34)
 b: Person(
-    name:'Jane'
-    surname:'Doe'
-    age:34
+    name: 'Jane'
+    surname: 'Doe'
+    age: 34
 )
 a.say_hello() // Hello John
 b.say_hello() // Hello Jane
@@ -305,14 +302,14 @@ b.say_hello() // Hello Jane
 print('First person name is `a.name`')
 print('Second person name is `b.name`')
 
-// modifing values
+// modifying values
 a.name = 'bob'
 a.say_hello() // Hello bob
 
 // verifying type
 std.info(a).type // Person
-std.is_a Person, a // true
-std.info(Person).type // #(String, String,Int)
+std.is_a(Person, a) // true
+std.info(Person).type // #(String, String, Int)
 
 a.print() // NAME: John, SURNAME: Doe, AGE: 34
 

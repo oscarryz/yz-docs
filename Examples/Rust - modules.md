@@ -4,22 +4,22 @@
 
 ```js
 // src/lib.yz
-front_of_house : {
-    hosting : {
+front_of_house: {
+    hosting: {
         add_to_waitlist: {}
 
         seat_at_table: {}
     }
 
-    serving : {
-        take_order:{}
+    serving: {
+        take_order: {}
 
-        serve_order:{}
+        serve_order: {}
 
         take_payment: {}
     }
 }
-eat_at_restaurant:{
+eat_at_restaurant: {
    front_of_house.hosting.add_to_waitlist()
    meal: back_of_house.summer_breakfast("Rye")
    meal.toast = "Wheat"
@@ -32,19 +32,19 @@ hosting: front_of_house.hosting
 
 customer: {
 
-   eat_at_restaurant2:{
+   eat_at_restaurant2: {
       hosting.add_to_waitlist()
    }
 }
 
-deliver_order:{
+deliver_order: {
 }
-back_of_house:{
-   Breakfast {
+back_of_house: {
+   Breakfast: {
       toast String
       seasonal_fruit String
    }
-   appetizer{
+   appetizer: {
        SOUP: {}
        SALAD: {}
     }
@@ -52,28 +52,26 @@ back_of_house:{
    summer_breakfast: {
           toast String
           Breakfast(
-              toast: toast
-            seasonal_fruit: "peaches"
+              toast: toast,
+              seasonal_fruit: "peaches"
           )
    }
 
 
-   fix_incorrect_order:{
+   fix_incorrect_order: {
       cook_order()
       deliver_order()
     }
-    cook_order:{}
+    cook_order: {}
 }
 
 
 //
-boh:{
-    // anenum macro could be used to declare variables
-    enum!(Appetizer
-          SOUP
-          SALAD)
+boh: {
+    // an enum macro could be used to declare variables
+    // enum!(Appetizer SOUP SALAD)
     // same as
-    Appetizer{}
+    Appetizer: {}
     SOUP: Appetizer()
     SALAD: Appetizer()
 }

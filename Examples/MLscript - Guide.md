@@ -7,28 +7,28 @@ https://ucs.mlscript.dev/  > MLscript Guide
 3.14159 // Decimal
 true // a variable that happens to be Boolean
 "this is a string"
-{ true,  false} // "tuples"
+{ true, false } // "tuples"
 
 ```
 
 ```js
 // Expressions can be bound to variables
-x : 1
-y : 2
-z : x + y // 3
+x: 1
+y: 2
+z: x + y // 3
 ```
 
 ```js
 // Functions can be defined with `{}`, parameters are variables
-id : { x T ; x }
+id: { x T; x }
 id("hello") // hello
-sum : { x Int; y Int ; x + y}
+sum: { x Int; y Int; x + y }
 sum(40, 2) // 42
 ```
 
 ```js
 // The types of functions are automatically inferred. But you can also specify the types explicitly. Type parameters are single upper case letter
-id #(x A; A) = {
+id #(x A, A) = {
   x A // #to-do we need to redefine here or not?
   x
 }
@@ -38,7 +38,7 @@ id #(x A; A) = {
 // "Classes" start with uppercase. For example, the following is a class definition for a simple `Point` class. It has two parameters `x` and `y` of type `Int`
 Point: { x Int; y Int }
 // variables are accesible for reading
-origin : Point(0, 0)
+origin: Point(0, 0)
 origin.x + origin.y // 0
 
 // We can also define classes with type parameters.
@@ -55,15 +55,15 @@ Pair #(first A, second B) = {
 ```
 
 ```js
-// Clases can be reused with `use`. Here is one of the definition of `Option` type in Yz, which is very common in provided examples.
+// Clases can be reused with `mix`. Here is one of the definition of `Option` type in Yz, which is very common in provided examples.
 Option: {
   T
 }
 Some: {
-  use Option
+  mix Option
 }
 None: {
-  use Option
+  mix Option
 }
 // But we can do without reusing code and provide "explicit named constructors"
 
@@ -77,12 +77,12 @@ x Option(String) // x is an Option of String
 y Option(String) // y is an Option of String
 //
 x = Option.Some("Hello") // use the Some constructor
-y : Option.None()  // Use the None constructor
+y: Option.None()  // Use the None constructor
 // check with x.Some or x.None that returns a boolean
-if x.Some , {
+x.Some ? {
   print("We've got a value `x.v`")
 }
-if x.None, {
+x.None ? {
   print("Trying to access would error `x.v`") // compilation error
 }
 // #to-do Finalize how the "explicit named constructors would work"
@@ -100,12 +100,12 @@ List: {
   Cons(head T, tail List(T))
   Nil()
 }
-Cons : List.Cons
-Nil : List.Nil
+Cons: List.Cons
+Nil: List.Nil
 Cons(0, Cons(1), Cons(2, Nil()))
 // To costruct list like other functional languages, we can define the concatenation opperator `++` by augmenting the `Int` type
 Int: {
-  ++ : {
+  ++: {
     x T
     xs List(T)
     Cons(x, xs)
@@ -119,7 +119,7 @@ Int: {
 // We can define many functions that operate on list. For example, we can define a function that sum all elements in a list
 sum: {
   xs List(T)
-  if xs.Nil , {
+  xs.Nil ? {
      0
   }, {
     // It wasn't Nil, which means it is Cons
@@ -134,12 +134,12 @@ A bit of discussion on how to add "extension" methods:
 ```js
 
 // This doesn't work, it is Rustesque made up syntax
-Int : { ... }
+Int: { ... }
 Hi: {
   sayHi #(String)
 }
 impl Hi for Int {
-  sayHi #(String) = {
+  sayHi #(String) {
     "My name is `self`"
   }
 }
@@ -151,8 +151,8 @@ one Hi = 1
 Hi: {
   sayHi #(String)
 }
-Int : {
-  sayHi #(String) = {
+Int: {
+  sayHi #(String) {
     "My name is `self`"
   }
 }

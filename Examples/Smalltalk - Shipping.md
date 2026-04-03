@@ -24,10 +24,10 @@
 cart: WAStoreCard()
 isolate({
   repeat: true
-  while {repeat}, {
+  while({ repeat }, {
     fill_cart()
     repeat = confirm_contents_of_cart()
-  }
+  })
 })
 isolate({
   shipping: get_shipping_address()
@@ -37,6 +37,6 @@ isolate({
     shipping
   }
   credit_card: get_payment_info()
-  ship_to(address: ship_point(billing), pay_with:credit_card)
+  ship_to(address: ship_point(billing), pay_with: credit_card)
 })
 ```

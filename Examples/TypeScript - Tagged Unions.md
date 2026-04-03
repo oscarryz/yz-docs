@@ -18,7 +18,7 @@ if (state.type === "success") {
 
 ```
 
-Would be: 
+Would be:
 
 ```js
 // With type variants
@@ -29,9 +29,9 @@ State: {
 }
 state State
 match {
-	Sucess() => println(state.value)
+	state.Success => println(state.value)
 }, {
-	Error() => println(state.message)
+	state.Error => println(state.message)
 }
 ```
 
@@ -41,14 +41,16 @@ State: {
     value Int
     message String
 }
-loading: State( type: 'loading')
-success: State( type: 'success')
-error: State( type: 'error')
+loading: State(type: 'loading')
+success: State(type: 'success')
+error: State(type: 'error')
 state State
 ...
-match
-    {state.type =='sucess' => print('{state.type}'},
-    {state.type =='error' => print('{state.message}'}
+match {
+    state.type == 'success' => print('`state.type`')
+}, {
+    state.type == 'error' => print('`state.message`')
+}
 
 ```
 
@@ -56,7 +58,7 @@ match
 // https://stackoverflow.com/questions/71948940/copying-a-static-variable-in-copy-constructor
 
 Park: {
-    tickets [T]()icket
+    tickets [Ticket]()
 }
 Ticket: {
     id Int
@@ -64,10 +66,10 @@ Ticket: {
 count Int
 new_ticket: {
     count = count + 1
-    Ticket: {count}
+    Ticket(count)
 }
 copy: {
     t Ticket
-    Ticket{t.id}
+    Ticket(t.id)
 }
 ```

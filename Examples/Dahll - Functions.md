@@ -8,16 +8,16 @@ https://dhall-lang.org/
 make_user: {
   user Text
   {
-    home: '/home/{user}'
-    private_key: '/{home}/.ssh/.id_ed25519'
-    public_key: '{private_key}.pub'
+    home: '/home/`user`'
+    private_key: '/`home`/.ssh/.id_ed25519'
+    public_key: '`private_key`.pub'
   }
 }
 
-print(to_json [)
-  make_user 'bill'
-  make_user 'jane'
-]
+print(to_json([
+  make_user('bill'),
+  make_user('jane')
+]))
 
 ```
 

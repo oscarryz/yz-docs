@@ -22,14 +22,14 @@ This counter is the "producer"
 counter: {
 	n: -1
 	{
-	    n < 100 ? {n = n + 1 }
+	    n < 100 ? { n = n + 1 }
 	    n < 100
 	    n
 	}
 
 }
 squarer: {
-	producer #(Int, Boolean)  //e.g. the counter
+	producer #(Int, Bool)  //e.g. the counter
 	consumer #(Int)
 
 	value Int
@@ -38,18 +38,18 @@ squarer: {
 	    value, open = producer()
 	}
 	// while calls a block `is_open`.. similar to
-	// while { is_open() } but better because it
+	// while({ is_open() }, { ... }) but better because it
 	// doesn't need to create an extra block
-	while is_open {
-		consumer (value * value)
-	}
+	while({ is_open() }, {
+		consumer(value * value)
+	})
 }
 printer: {
 	n Int
 	print('`n`')
 }
 main: {
-   squarer( counter() , printer )
+   squarer(counter(), printer)
 }
 ```
 
@@ -59,11 +59,11 @@ main: {
 // DOESNT_WORK
 // The counter takes a "channel" which is a block that receives an Int
 // it produces a number and sends it to the channel
-counter (out #(Int)) = {
+counter #(out #(Int)) {
 	1.to(100).each({
 		e Int
 		out(e) // send e to the channel
-	}
+	})
 }
 // The squarer takes a "channel" (a block that takes an int)
 // where to send the data and returns a block that expects an int;
@@ -72,12 +72,12 @@ counter (out #(Int)) = {
 squarer: {
 	out #(Int)
 	#(v Int) {
-		out( v * v )
+		out(v * v)
 	}
 }
 // The printer is a block that takes an Int and prints it
-printer #(n Int)  {
-    print(`n`)
+printer #(n Int, Unit) {
+    print(n)
 }
 main: {
 	producer(squarer(printer))
@@ -88,7 +88,7 @@ main: {
 //
 counter: {
 	out #(Int)
-	1.to(100).each({ e Int ; out(e) }
+	1.to(100).each({ e Int; out(e) })
 }
 squarer: {
 	in #(Int)
@@ -99,13 +99,13 @@ squarer: {
 printer: {
   in #(Int)
   v: in()
-  print(`v`)
+  print(v)
 }
 main: {
-    naturals : {n Int; n}
-    squares  : {n Int; n}
+    naturals: { n Int; n }
+    squares:  { n Int; n }
     counter(naturals) // ok
-    squarer(naturals squares) // no function found
+    squarer(naturals, squares) // no function found
     printer(squares)
 }
 

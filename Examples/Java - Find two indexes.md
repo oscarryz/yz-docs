@@ -63,19 +63,19 @@ calc: {
    list: [Int]()
    input.each({ i Int
        list << i
-   }
-   map: [Int]Int
+   })
+   map: [Int:Int]()
    result: [Int]()
    target: 7
-   list.each_item: { item Int; index Int
-       if map.contains(item) {
+   list.each({ item Int; index Int
+       map.contains(item) ? {
            result << map[item]
            result << index
            break
-       } {
-           map[target-n] = index
+       }, {
+           map[target - item] = index
        }
-   }
-   results
+   })
+   result
 }
 ```
