@@ -68,10 +68,16 @@ type MethodDecl struct {
 }
 
 // FieldSpec is one field in a struct with an optional initializer.
+// When Embedded is true, this field was created from a `mix` statement:
+//   - the Go struct body emits just the type name (Go embedding syntax)
+//   - EmbeddedFields lists the mixed-in type's own fields, used to generate
+//     the constructor's parameter list and the NewMixedType(...) call.
 type FieldSpec struct {
-	Name string
-	Type string // Go type string, e.g. "std.Int"
-	Init Expr   // may be nil (zero value)
+	Name           string
+	Type           string // Go type string, e.g. "std.Int"
+	Init           Expr   // may be nil (zero value)
+	Embedded       bool
+	EmbeddedFields []*FieldSpec // only set when Embedded=true
 }
 
 // ParamSpec is a function/method parameter.
