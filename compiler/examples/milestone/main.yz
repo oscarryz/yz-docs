@@ -1,0 +1,23 @@
+// First milestone: concurrent HTTP fetches + counter boc.
+// The two http.get calls run concurrently (each is a goroutine).
+// The counter tracks how many fetches were made.
+
+counter: {
+    count: 0
+    increment #() { count = count + 1 }
+    value #(Int) { count }
+}
+
+main: {
+    a: http.get("https://httpbin.org/get")
+    b: http.get("https://httpbin.org/uuid")
+
+    counter.increment()
+    counter.increment()
+
+    print("=== response A ===")
+    print(a)
+    print("=== response B ===")
+    print(b)
+    print("fetches: `counter.value()`")
+}
