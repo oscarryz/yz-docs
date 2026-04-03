@@ -12,33 +12,35 @@ map: std.collections.map
 'derive: [Show]'
 Group: {
   group_size Int
-  greoup_name String
+  group_name String
 }
 
-double_group #(Group, Group)
-double_group = { g Group,  Group(2 * g.size, g.name) }
+double_group #(Group, Group) {
+    g Group
+    Group(2 * g.size, g.name)
+}
 
-names [String]
-name = ['Sheldon' 'Leonard' 'Penny' 'Rajesh' 'Howard']
+names: ['Sheldon', 'Leonard', 'Penny', 'Rajesh', 'Howard']
 
-groups #([String])
-groups = { names.map(new_group) ++ groups.map(double_group) }
+groups #([String], [Group]) {
+    names.map(new_group) ++ groups.map(double_group)
+}
 
-new_group #(String, Group)
-new_group = {
+new_group #(String, Group) {
     name String
-     Groups(1, name)
+    Groups(1, name)
 }
 
-nth #(Int, [Group], String)
-nth = {
+nth #(Int, [Group], String) {
   n Int
   gs [Groups]
-  when [
-    {gs.is_empty()}: {strings.error}
-    {n < gs[n].size}: {gs[n].name}
-    {when.else}:{ nth (n - gs[n].size, gs.rest())
-  ]
+  match {
+    gs.is_empty()   => strings.error
+  }, {
+    n < gs[n].size  => gs[n].name
+  }, {
+    nth(n - gs[n].size, gs.rest())
+  }
 }
 
 ```

@@ -7,10 +7,10 @@ From: [Jevko.org](https://jevko.org/)
 ```js
   person: {
       first_name: 'John'
-      last_name : 'Smith'
-      is_alive  : true
-      age       : 27
-      address   : {
+      last_name:  'Smith'
+      is_alive:   true
+      age:        27
+      address: {
         street_address: '21 2nd Street'
         city: 'New York'
         state: 'NY'
@@ -19,14 +19,14 @@ From: [Jevko.org](https://jevko.org/)
       phone_numbers: [{
         type: 'Home'
         number: '212 555-1234'
-      } {
+      }, {
         type: 'Office'
         number: '646 555-4567'
       }]
       children: []
       spouse: no_one
   }
-  no_one: Person{}
+  no_one: Person()
 ```
 
 ## Configuration
@@ -43,8 +43,8 @@ database: {
   port: 143
   file: 'payroll.dat'
   select_columns: [
-    'name'
-    'address'
+    'name',
+    'address',
     'phone number'
   ]
 }
@@ -53,28 +53,28 @@ database: {
 ## Text markup
 
 ```js
-html:{
+html: {
   head: {
     title: 'This is a title'
   }
-  body:{
-    div:{
-      p:'Hello world'
+  body: {
+    div: {
+      p: 'Hello world'
       abbr: {
-          id:'anId'
-          class:'jargon'
-          style:'color:purple;'
-          title:'Hypertext Markup Language'
+          id: 'anId'
+          class: 'jargon'
+          style: 'color:purple;'
+          title: 'Hypertext Markup Language'
         'HTML'
       }
       a: {
-          href:'https://www.wikipedia.org'
+          href: 'https://www.wikipedia.org'
           'A link to the Wikipedia!'
       }
       p: {
           'O well'
           span: {
-              lang:'fr'
+              lang: 'fr'
               "c'est la vie"
           }
           'as they say in france'

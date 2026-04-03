@@ -10,42 +10,39 @@ https://leetcode.com/problems/equal-row-and-column-pairs/
 */
 equal_pairs: {
     grid [][Int]()
-    count : 0 
-    map: add_rows grid 
-    grid.each({ i Int v Int 
+    count: 0
+    map: add_rows(grid)
+    0.to(grid.length() - 1).each({ i Int
         count = count + search(map, grid, i)
-    }
-    0.to(len - 1 ).each({ i Int
-        count = count + search(map, grid, i)
-    }
+    })
     count
 }
 add_rows: {
     grid [][Int]()
-    map [Int:Int] = [:]
-    grid.each({ row [Int]() 
+    map: [[Int]: Int]()
+    grid.each({ row [Int]()
         h: hash(row)
         map[h] = map[h] + 1
-    }
+    })
     map
 }
 search: {
-    map [Int:Int]
+    map [[Int]: Int]
     grid [][Int]()
     i Int // column index
 
-    column: []
-    0.to( grid.len() -1 ).each({j Int 
-        column << grid[i][j]
-    }
-    map[hash(colum)]
+    column: [Int]()
+    0.to(grid.length() - 1).each({ j Int
+        column.push(grid[i][j])
+    })
+    map[hash(column)]
 }
-hash: { 
+hash: {
     a [Int]()
-    r : 31
-    a.each({ i Int 
+    r: 31
+    a.each({ i Int
         r = 31 * r + i
-    }
+    })
     r
 }
 

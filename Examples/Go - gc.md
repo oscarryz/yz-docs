@@ -24,7 +24,7 @@ Gc_tool_chain: {
 
         archive != '' ? {
             ofile = archive
-        } {
+        }, {
             out: '_go_.o'
             ofile = objdir + out
         }
@@ -67,25 +67,25 @@ Gc_tool_chain: {
         // so that it can give good error messages about forward declarations.
         // Exceptions: a few standard packages have forward declarations for
         // pieces supplied behind-the-scenes by package runtime.
-        ext_file: p.cgo_files.len()
-            + p.cfiles.len()
-            + p.cxxfiles.len()
-            + p.mfiles.len()
-            + p.ffiiles.len()
-            + p.sfiles.len()
-            + p.sysofiles.len()
-            + p.swigfiles.len()
-            + p.swigcxxfile.len()
-        p.standard ?  {
-            ["bytes"
-             "internal/poll"
-             "net"
-             "os"
-             "runtime/metrics"
-             "runtime/pprof"
-             "runtime/trace"
-             "sync"
-             "syscall"
+        ext_file: p.cgo_files.length()
+            + p.cfiles.length()
+            + p.cxxfiles.length()
+            + p.mfiles.length()
+            + p.ffiiles.length()
+            + p.sfiles.length()
+            + p.sysofiles.length()
+            + p.swigfiles.length()
+            + p.swigcxxfile.length()
+        p.standard ? {
+            ["bytes",
+             "internal/poll",
+             "net",
+             "os",
+             "runtime/metrics",
+             "runtime/pprof",
+             "runtime/trace",
+             "sync",
+             "syscall",
              "time"].contains(p.import_path) ? {
                   ext_files = ext_files + 1
               }
@@ -105,7 +105,7 @@ Gc_tool_chain: {
             default_gc_flags << '-dwarf=false'
 
         }
-        runtime_version.has_prefix "go1" && {os.args[0].contains 'go_bootstrap'} ? {
+        runtime_version.has_prefix("go1") && { os.args[0].contains('go_bootstrap') } ? {
             default_gc_flags << '-goversion'
             default_gc_flags << runtime_version
         }
@@ -120,12 +120,12 @@ Gc_tool_chain: {
             // because the compiler cannot eliminate enough write barriers.
             gcflags.remove('-N')
             i: 0
-            while { i < gcflags.len() } {
+            while({ i < gcflags.length() }, {
                 gcflags[i] == '-N' ? {
-                    gcflags = gcflags.sub_array(0 i) ++ gcflags.subarray(i+1)
+                    gcflags = gcflags.sub_array(0, i) ++ gcflags.subarray(i + 1)
                 }
                 i = i + 1
-            }
+            })
         }
     }
 }

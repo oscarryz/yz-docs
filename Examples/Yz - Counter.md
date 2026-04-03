@@ -1,8 +1,8 @@
 #example
 Actors and concurrency
 ```js
-Counter {
-    count: 0 
+Counter: {
+    count: 0
     inc: {
         count = count + 1
     }
@@ -13,11 +13,11 @@ main: {
     c.inc() // async
     c.inc() // async
     print('`c.count`' // async would probably print 0    )
-    
+
 }
 expected: {
     c: Counter()
-    wait:({
+    wait: ({
       c.inc()
       c.inc()
       done: true
@@ -31,7 +31,6 @@ complicated: {
    b: { c.inc() }
    d: { a() b() 1 } // same as in `expected`, executes both and wait until it finish, although a bit more unnecesarily complicated
    f: d() // wait for `d` to finish.
-   print('$c.count')
+   print('`c.count`')
 }
 ```
-    

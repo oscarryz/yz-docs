@@ -5,35 +5,25 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 ### Variables
 
 ```js
-    x : 3
-    y Float = 9.0
+    x: 3
+    y: 9.0
 
     s1: 'Hello world'
     s2: s1
 
     // Functions
     test: { x Int }
-    add: { x Float; y Float; r Float}
+    add: { x Decimal; y Decimal; r Decimal }
 
-    own_and_forget: { v List<String> }
-    print: { v List<String>}
-    change: {v List<String>}
-    //main:{}
-    main: {result Result<{}, std.io.Error>}
-
-    /*
-    foo(x) {
-        x > 0 ? x : x + 1
-    }
-    */
-    foo: {x Int x > 0 ? { x } {x + 1}}
+    own_and_forget: { v List(String) }
+    print: { v List(String) }
+    change: { v List(String) }
+    main: { result Result(Unit, std.io.Error) }
 
     foo: { x Int
-        x.greaterThan(0).ifTrue({
-            x
-        })
-        x + 1
+        x > 0 ? { x }, { x + 1 }
     }
+
     foo: { x Int
         x > 0 ? {
           x
@@ -41,17 +31,17 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
           x + 1
         }
     }
-    add: {x Float; y Float; r: Float}
+    add: { x Decimal; y Decimal; r: x + y }
     f: add
-    res: f(5 7)
-    f2 {Float Float Float} = add
+    res: f(5, 7)
+    f2 #(Decimal, Decimal, Decimal) = add
 
-    Color {Int Int Int}
+    Color: { Int; Int; Int }
     Nil: {}
     Foo: { text String }
-    foo: Foo {"Hi"}
-    foo2: Foo {text: "Hi"}
-    foo3: Foo {}
+    foo: Foo("Hi")
+    foo2: Foo(text: "Hi")
+    foo3: Foo()
     foo3.text = "Foo3"
 
     foo: {
@@ -59,12 +49,12 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
             self Foo
             text: "Hi"
             to_myself: {
-                print('{self.text}')
+                print('`self.text`')
             }
         }
         new: {
             s String
-            f: Foo{}
+            f: Foo()
             f.self = f
             f.text = s
             f
@@ -73,17 +63,6 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     a: foo.new("Nada")
     a.to_myself() // Nada
 
-    class Node {
-        Node self;
-        String data;
-        public String toString() {
-             self.data;
-        }
-    }
-    Node s = new Node();
-    s.self = s;
-    s.data = "hola";
-
     Node: {
         self Node
         data String
@@ -91,12 +70,12 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
             self.data
         }
     }
-    s: Node{}
+    s: Node()
     s.self = s
     s.data = 'Hola'
 
     HelloMacro: {
-        hello_macro {}
+        hello_macro: {}
     }
 
     Pancakes: {
@@ -107,64 +86,31 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
     listener: tcpListener.bind("1237.0.0.1:7878")
 
     listener.incoming().each({ stream Stream
-    }
-
-
-    some_expresion.case([
-        {print("1"})
-        {print("1"})
-        {print("1"})
-    ] {print("none"}))
-
-    "Extension method"
-    yz.lang.Number: {
-        case: {
-            alternative_blocks List<{}>
-            otherwise: {}
-
-                sef.greaterOrEqual(1)
-                .and({self.lowerEqual(alternative_blocks.size)})
-                .ifElse({
-                    alternative_blocks.at(self)()
-                },
-                {
-                    otherwise()
-                })
-        }
-    }
-    pattern_matching: {
-        conditions List<{Boolean}>
-    }
-
-    case: {
-        block {}
-    }
-    case {}
+    })
 
 
     // main.yz
     "Sorts the args descending order and greets them"
-    args: os.args.sort {a String; b String
+    args: os.args.sort({ a String; b String
         a <=> b
-    }
-    args .each({ s String
-        print('Hello {s}')
-    }
+    })
+    args.each({ s String
+        print('Hello `s`')
+    })
 
     correct: "Pass123"
     guess_password: {
         tries: 1
 
-        guess: input "What is the password?"
+        guess: input("What is the password?")
         guess == correct ? {
           print("That's correct")
-          return
-        }
-
-        tries >= 3 ? {
-          print("Too many attempts")
         }, {
-              guess_password tries + 1
+          tries >= 3 ? {
+            print("Too many attempts")
+          }, {
+            guess_password(tries + 1)
+          }
         }
     }
 
@@ -172,44 +118,37 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
 [[../Features/Replaced features/Private read only variables]]
 ```js
-// This is how smalltalk does it, not necessarily possible wiht yz
+// This is how smalltalk does it, not necessarily possible with yz
 BlockWithExit: {
-    exit  {}
-    block {}
+    exit: {}
+    block: {}
     on: {
-        a_block {}
+        a_block: {}
         block = a_block
     }
     value: {
-        exit: {return};
+        exit: { break }
         block()
-    }
-    exit: {
-        exit()
     }
 }
 // There's no block block but ok
 Block: {
     withExit: {
-        bwe : BlockWithExit{}
+        bwe: BlockWithExit()
         bwe.on(self)
     }
 }
 
-maxBeforeNil: {
-    collection List<Integer>
-    max:0
+max_before_nil: {
+    collection List(Int)
+    max: 0
     supplier: collection.read_stream()
-    loop: Block {
-        value: {
-            while({supplier.is_empty() == false}, {
-                v: suplier.next()
-                v == nil ? loop.exit()
-                max: max.max(v)
-            })
-        }.withExit()
-    }
-    loop()
+    while({ supplier.is_empty() == false }, {
+        v: supplier.next()
+        v == Option.None() ? { break }, { }
+        max = max.max(v)
+    })
+    max
 }
 `
 // Iterate an Int array and exit if value is null
@@ -217,16 +156,15 @@ maxBeforeNil: {
 yz>max_before_nan [1,2,3, core.int.NOT_A_NUMBER, 4, 5]
 >> 3
 `
-max_before_nan: {numbers [Int]()
-
-    max: {a Int; b Int; a > b ? {a}:{b}}
+max_before_nan: { numbers [Int]()
+    max: { a Int; b Int; a > b ? { a }, { b } }
     m: 0
     numbers.each({ n Int
         n == core.ints.NOT_A_NUMBER ? {
-            m
-        }
-        m = max m, n
-    }
+            break
+        }, { }
+        m = max(m, n)
+    })
 }
 ```
 
@@ -253,19 +191,16 @@ Early in smalltalk
         a > b ? { a }, { b }
     }
     gah: {
-        list List<T>
-        block: {t T}
+        list List(T)
+        block: { t T }
         list.is_empty() ? {
             return
-        }
+        }, { }
         t: list.head()
         block(t)
         gah(list.tail(), block)
     }
 
-    BlockClosure: {
-
-    }
     { 1 + 2 }() //-> 3
 
 ```

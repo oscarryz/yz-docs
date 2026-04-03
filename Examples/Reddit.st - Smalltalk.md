@@ -39,7 +39,7 @@ render_content_on: {
     html Html
     html.anchor.callback({ count = count + 1}, '++')
     html.space()
-    html.anchor.callback({ count + count -1 }, '--')
+    html.anchor.callback({ count = count - 1 }, '--')
 }
 
 ```

@@ -31,7 +31,6 @@ pub fn main() !void {
 ```
 
 ```js
-json: std.json
 payload: `
         "vals": {
             "testing": 1,
@@ -44,7 +43,7 @@ Configuration: {
    values: {
        'json:testing'
        tests Int
-       
+
        'json:production'
        prod Int
    }
@@ -54,14 +53,15 @@ Configuration: {
 }
 config: {
    stream: json.TokenStream(payload)
-   res : json.parse(Config,stream).or_fail!()
+   res: json.parse(Config, stream).or_fail!()
 }
 
 main: {
-    if config.res.values.prod > 50 {
+    config.res.values.prod > 50 ? {
         print_err("Only up to 50 supported")
-    }
+    }, { }
     print("up=`config.ut`")
 }
 ```
+
 

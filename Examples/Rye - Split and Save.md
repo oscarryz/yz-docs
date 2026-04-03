@@ -26,43 +26,33 @@ split_and_save: {
    apples Int
    people Int
 
-   apples.checked_div(people).and_then {
-     result Int
-     fs.write("apples.txt","`result`")
-     Ok(n)
-   }.or(
-      Err("Can't split to no people")
+   apples.checked_div(people).and_then({ result Int
+     fs.write("apples.txt", "`result`")
+     Result.Ok(result)
+   }).or(
+      Result.Err("Can't split to no people")
    )
 }
 split_and_save(10, 5) // returns Ok(2) and saves it to a file
 split_and_save(10, 0) // returns Err("Can't split to no people")
 // To handle it we can use `Result.or_else`
-split_and_save(10, 0).or_else { Ok(1) }
+split_and_save(10, 0).or_else({ Result.Ok(1) })
 
 // If we want to preserve the original error we can create a new one
 // with handle
-10.checked_div(0).map_err{e Err
-  Error("Custom message. Cause: `e`")
-}
+10.checked_div(0).map_err({ e Err
+  Result.Err("Custom message. Cause: `e`")
+})
 // Would print(Error("Custom message. Cause: Error(Divison by zero))")
 
 ```
 
 ```js
-/*
-Original idea of ifs
-if: <T> {
+// Proposal for an `if` helper boc (exploration)
+if: {
     cond Bool
-    true_block <T>{}
-    false_block: <T>{}
-    cond ? true_block false_block
-}
-*/
-// Latest
-if :{
-    cond Bool,
     then #(V)
-    else #(V))
-    cond ? then, else
+    else: #(V)
+    cond ? { then() }, { else() }
 }
 ```

@@ -8,7 +8,7 @@ Rgb: {
   g Decimal
   b Decimal
 }
-darken: {rgb Rgb
+darken: { rgb Rgb
   scale: 0.5
   Rgb(
     rgb.r * scale,
@@ -22,10 +22,10 @@ NAMED_COLORS: [
   'yellow': Rgb( 1.0, 1.0, 0.0 )
   'blue':   Rgb( 0.0, 0.0, 1.0 )
 ]
-names: ['red' 'yellow' 'blue']
-rgbs: names.map { name String; NAMED_COLORS[name] }
+names: ['red', 'yellow', 'blue']
+rgbs: names.map({ name String; NAMED_COLORS[name] })
 darks: rgbs.map(darken)
-names.len().times({ i Int
+0.to(names.length()).each({ i Int
   print('`names[i]` `rgbs[i]` `darks[i]`')
 })
 ```
@@ -46,18 +46,15 @@ named_colors: [
   'yellow': Yellow
   'blue': Blue
 ]
-names: ['red' 'yellow' 'blue']
-rbgs: names.map { s String
-  named_color[name]
-}
-darks: rbgs.map { rbg Rbg
+names: ['red', 'yellow', 'blue']
+rbgs: names.map({ s String
+  named_colors[s]
+})
+darks: rbgs.map({ rbg Rgb
   scale: 5.0
-  Rbg(r * scale, g * scale, b * scale)
-}
-1.to(names.len()).each({ i Int
+  Rgb(rbg.r * scale, rbg.g * scale, rbg.b * scale)
+})
+0.to(names.length()).each({ i Int
   print("`names[i]` `rbgs[i]` `darks[i]`")
-}
-
-
-
+})
 ```

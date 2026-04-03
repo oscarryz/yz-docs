@@ -75,9 +75,9 @@ main:{
 
 
 ```js
-ph: ['Mark' 'Russel' 'Rocky' 'Haris' 'Root']
+ph: ['Mark', 'Russel', 'Rocky', 'Haris', 'Root']
 hunger: 3
-thing = 100
+think: 100
 eat: 100
 
 dining_problem: {
@@ -85,7 +85,20 @@ dining_problem: {
     dominant_hand ?
     other_hand ?
 
-    r: random.int(len(ph))
-
+    print("`ph_name` Seated")
+    h: hunger
+    while({ h > 0 }, {
+        h = h - 1
+        print("`ph_name` Hungry")
+        dominant_hand.lock()
+        other_hand.lock()
+        print("`ph_name` Eating")
+        time.sleep(eat)
+        dominant_hand.unlock()
+        other_hand.unlock()
+        print("`ph_name` Thinking")
+        time.sleep(think)
+    })
+    print("`ph_name` Satisfied")
 }
 ```
