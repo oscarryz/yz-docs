@@ -538,6 +538,13 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 			gt := &GenericType{Name: e.Name}
 			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
 
+		case *ast.BocWithSig:
+			typ := a.analyzeBocWithSig(e)
+			if !fieldSet[e.Name.Name] {
+				fieldSet[e.Name.Name] = true
+				st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: typ})
+			}
+
 		case *ast.VariantDef:
 			a.analyzeVariantDef(e)
 

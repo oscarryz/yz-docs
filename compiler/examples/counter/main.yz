@@ -1,0 +1,20 @@
+counter: {
+    count: 0
+    increment: { count = count + 1 }
+    value:     { count }
+}
+
+greet #(name String) {
+    print("Hello, `name`!")
+}
+
+main: {
+    // Concurrent increments — each call runs in a goroutine.
+    // The BocGroup waits for all three before moving on.
+    counter.increment()
+    counter.increment()
+    counter.increment()
+
+    greet("Yz")
+    print("count: `counter.value()`")
+}
