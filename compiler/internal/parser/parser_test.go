@@ -705,15 +705,22 @@ func TestParseConditional(t *testing.T) {
 	// This is the special comma-continuation rule for multi-arg non-word methods.
 	sf := parse(t, `x == 0 ? { "zero" }, { "nonzero" }`)
 	n := stmt(t, sf, 0)
-	// Outer: BinaryExpr with op "?"
-	outer := asBinaryExpr(t, n.(ast.Expr))
-	if outer.Op != "?" {
-		t.Fatalf("outer op: got %q, want ?", outer.Op)
+	// Should parse as ConditionalExpr now.
+	cond, ok := n.(*ast.ConditionalExpr)
+	if !ok {
+		t.Fatalf("expected *ast.ConditionalExpr, got %T", n)
 	}
-	// Left: x == 0
-	inner := asBinaryExpr(t, outer.Left)
+	// Cond: x == 0
+	inner := asBinaryExpr(t, cond.Cond)
 	if inner.Op != "==" {
 		t.Errorf("inner op: got %q, want ==", inner.Op)
+	}
+	// TrueCase and FalseCase should be boc literals.
+	if _, ok := cond.TrueCase.(*ast.BocLiteral); !ok {
+		t.Errorf("TrueCase: expected *ast.BocLiteral, got %T", cond.TrueCase)
+	}
+	if _, ok := cond.FalseCase.(*ast.BocLiteral); !ok {
+		t.Errorf("FalseCase: expected *ast.BocLiteral, got %T", cond.FalseCase)
 	}
 }
 

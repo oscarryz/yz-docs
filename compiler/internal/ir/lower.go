@@ -242,6 +242,11 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 				if isLast {
 					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
 				}
+			} else if is, ok := l.tryLowerConditional(e); ok {
+				inner = append(inner, is)
+				if isLast {
+					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
+				}
 			} else {
 				expr := l.lowerExpr(e)
 				if isLast {
@@ -414,6 +419,9 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		if fs, ok := l.tryLowerWhile(e); ok {
 			return []Stmt{fs}
 		}
+		if is, ok := l.tryLowerConditional(e); ok {
+			return []Stmt{is}
+		}
 		return []Stmt{&ExprStmt{Expr: l.lowerExpr(e)}}
 	default:
 		return nil
@@ -525,6 +533,8 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		return l.lowerExpr(expr.Expr)
 	case *ast.BocLiteral:
 		return l.lowerBocLitExpr(expr)
+	case *ast.ConditionalExpr:
+		return l.lowerConditionalExpr(expr)
 	case *ast.ArrayLiteral:
 		return l.lowerArrayLit(expr)
 	case *ast.DictLiteral:
@@ -680,6 +690,41 @@ func (l *lowerer) tryLowerWhile(e ast.Expr) (Stmt, bool) {
 	}, true
 }
 
+// tryLowerConditional detects a ConditionalExpr and lowers it to an IfStmt.
+// Returns (stmt, true) on match.
+func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
+	cond, ok := e.(*ast.ConditionalExpr)
+	if !ok {
+		return nil, false
+	}
+	condExpr := l.lowerExpr(cond.Cond)
+	var thenStmts, elseStmts []Stmt
+	if b, ok := cond.TrueCase.(*ast.BocLiteral); ok {
+		thenStmts = l.lowerBocAsStmts(b)
+	} else {
+		thenStmts = []Stmt{&ExprStmt{Expr: l.lowerExpr(cond.TrueCase)}}
+	}
+	if b, ok := cond.FalseCase.(*ast.BocLiteral); ok {
+		elseStmts = l.lowerBocAsStmts(b)
+	} else {
+		elseStmts = []Stmt{&ExprStmt{Expr: l.lowerExpr(cond.FalseCase)}}
+	}
+	return &IfStmt{Cond: condExpr, Then: thenStmts, Else: elseStmts}, true
+}
+
+// lowerConditionalExpr lowers a ConditionalExpr used in expression position
+// by calling cond.Qm(trueCase, falseCase) on the Bool value.
+func (l *lowerer) lowerConditionalExpr(cond *ast.ConditionalExpr) Expr {
+	condExpr := l.lowerExpr(cond.Cond)
+	trueExpr := l.lowerExpr(cond.TrueCase)
+	falseExpr := l.lowerExpr(cond.FalseCase)
+	return &MethodCall{
+		Recv:   condExpr,
+		Method: "Qm",
+		Args:   []Expr{trueExpr, falseExpr},
+	}
+}
+
 // lowerBocAsExpr extracts and lowers the primary expression from a boc
 // literal, for use as a for-loop condition.
 func (l *lowerer) lowerBocAsExpr(b *ast.BocLiteral) Expr {
@@ -704,6 +749,8 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 		case ast.Expr:
 			if fs, ok := l.tryLowerWhile(e); ok {
 				stmts = append(stmts, fs)
+			} else if is, ok := l.tryLowerConditional(e); ok {
+				stmts = append(stmts, is)
 			} else {
 				stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
 			}
