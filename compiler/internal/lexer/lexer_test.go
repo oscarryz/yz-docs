@@ -222,6 +222,26 @@ func TestDoubleEqualsIsNonWord(t *testing.T) {
 	assertLiterals(t, "==", []string{"=="})
 }
 
+func TestNonWordContainingFatArrowSequence(t *testing.T) {
+	// '!=' followed by '>' with no space: '!=>' is one NON_WORD identifier, not '!=' + FAT_ARROW.
+	// Similarly '<=' + '>' = '<=>' is one NON_WORD.
+	// Only a standalone '=>' (not preceded by other non-word chars) is FAT_ARROW.
+	assertTypes(t, "!=>", []token.Type{token.NON_WORD})
+	assertLiterals(t, "!=>", []string{"!=>"})
+
+
+	assertTypes(t, "<=>", []token.Type{token.NON_WORD})
+	assertLiterals(t, "<=>", []string{"<=>"})
+
+	// But standalone '=>' is still FAT_ARROW.
+	assertTypes(t, "=>", []token.Type{token.FAT_ARROW})
+	assertLiterals(t, "=>", []string{"=>"})
+
+	// And '!= =>' (with space) is NON_WORD then FAT_ARROW.
+	assertTypes(t, "!= =>", []token.Type{token.NON_WORD, token.FAT_ARROW})
+	assertLiterals(t, "!= =>", []string{"!=", "=>"})
+}
+
 // -----------------------------------------------------------------------
 // Comments
 // -----------------------------------------------------------------------

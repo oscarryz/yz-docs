@@ -72,26 +72,3 @@ Commands:
   version        Print the compiler version`)
 }
 
-// cmdBuild compiles the Yz project in dir to a binary.
-func cmdBuild(dir string) error {
-	// TODO: implement lexer → parser → sema → ir → codegen → go build pipeline
-	fmt.Printf("yzc: building %s (not yet implemented)\n", dir)
-	return nil
-}
-
-// cmdRun compiles and runs the Yz project in dir.
-func cmdRun(dir string) error {
-	if err := cmdBuild(dir); err != nil {
-		return err
-	}
-	// TODO: execute the built binary
-	fmt.Println("yzc: run not yet implemented")
-	return nil
-}
-
-// cmdNew scaffolds a new Yz project directory.
-func cmdNew(name string) error {
-	// TODO: create project.yz, main.yz, etc.
-	fmt.Printf("yzc: creating project %q (not yet implemented)\n", name)
-	return nil
-}

@@ -379,13 +379,18 @@ func (l *Lexer) scanNonWord(startLine, startCol int) token.Token {
 	start := l.pos
 	for !l.atEnd() {
 		ch := l.peekRune()
-		// Stop at '=>' to avoid consuming the fat arrow as part of a non-word
+		// '=>' at the very start of the sequence is a FAT_ARROW delimiter, not a non-word.
+		// But '=' followed by '>' in the MIDDLE of a sequence (e.g. '!=>', '<=>') is part
+		// of the non-word identifier — consume both characters and continue.
 		if ch == '=' && l.peekRuneAt(1) == '>' {
-			// If we haven't consumed anything yet, this is handled by scanPunctOrNonWord
 			if l.pos == start {
+				// Nothing consumed yet: caller (scanPunctOrNonWord) handles this as FAT_ARROW.
 				break
 			}
-			break
+			// Mid-sequence: include '=' and '>' in the non-word.
+			l.advance() // consume '='
+			l.advance() // consume '>'
+			continue
 		}
 		if !isNonWordChar(ch) {
 			break
