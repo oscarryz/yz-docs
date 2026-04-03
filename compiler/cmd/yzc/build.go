@@ -102,10 +102,18 @@ func pkgNameFromDir(relDir string) string {
 	return parts[len(parts)-1]
 }
 
+// pkgExport holds the exported symbols of one compiled sub-package.
+type pkgExport struct {
+	relDir     string
+	pkgAlias   string
+	importPath string
+	exports    map[string]*sema.Symbol
+}
+
 // compileProject walks all .yz files, compiles each directory as a separate
 // Go package, and returns a map of relative output path → Go source.
-// Sub-packages are compiled before the root so their symbols are registered
-// first (cross-package resolution is Phase 2; for now each dir is independent).
+// Sub-packages are compiled before the root; their exports are registered in
+// the root's analyzer so FQN references (house.front.Host()) resolve correctly.
 func compileProject(srcRoot string) (map[string]string, error) {
 	entries, err := walkYzFiles(srcRoot)
 	if err != nil {
@@ -127,7 +135,6 @@ func compileProject(srcRoot string) (map[string]string, error) {
 		dirs = append(dirs, d)
 	}
 	sort.Slice(dirs, func(i, j int) bool {
-		// More path segments = deeper = first. Ties broken alphabetically.
 		di := strings.Count(dirs[i], "/")
 		dj := strings.Count(dirs[j], "/")
 		if di != dj {
@@ -136,28 +143,46 @@ func compileProject(srcRoot string) (map[string]string, error) {
 		return dirs[i] < dirs[j]
 	})
 
+	// Compile all non-root directories first; collect their exports.
+	var subExports []*pkgExport
 	result := map[string]string{}
 	for _, dir := range dirs {
-		goSrc, err := compilePackageDir(byDir[dir], dir)
+		if dir == "" {
+			continue // root compiled last
+		}
+		goSrc, exp, err := compilePackageDir(byDir[dir], dir, nil)
 		if err != nil {
 			return nil, err
 		}
+		subExports = append(subExports, exp)
 		pkgName := pkgNameFromDir(dir)
-		var outPath string
-		if dir == "" {
-			outPath = "main.go"
-		} else {
-			outPath = filepath.Join(filepath.FromSlash(dir), pkgName+".go")
-		}
+		outPath := filepath.Join(filepath.FromSlash(dir), pkgName+".go")
 		result[outPath] = goSrc
 	}
+
+	// Build a root analyzer pre-seeded with sub-package exports.
+	rootAnalyzer := sema.NewAnalyzer()
+	for _, exp := range subExports {
+		rootAnalyzer.RegisterPackage(exp.relDir, exp.pkgAlias, exp.importPath, exp.exports)
+	}
+
+	// Compile the root (main) package with the seeded analyzer.
+	if rootFiles, ok := byDir[""]; ok {
+		goSrc, _, err := compilePackageDir(rootFiles, "", rootAnalyzer)
+		if err != nil {
+			return nil, err
+		}
+		result["main.go"] = goSrc
+	}
+
 	return result, nil
 }
 
 // compilePackageDir compiles all .yz files in one directory into a single Go
-// source string. Within the directory, non-main files are analyzed first so
-// that main.yz (if present) can reference them.
-func compilePackageDir(files []fileEntry, relDir string) (string, error) {
+// source string and returns the exported symbols of the package.
+// If a is non-nil it is used as the analyzer (for the root package which has
+// pre-registered sub-package exports); otherwise a fresh analyzer is created.
+func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (string, *pkgExport, error) {
 	pkgName := pkgNameFromDir(relDir)
 
 	// Sort: main.yz last within each dir.
@@ -179,20 +204,22 @@ func compilePackageDir(files []fileEntry, relDir string) (string, error) {
 	for _, fe := range files {
 		src, err := os.ReadFile(fe.absPath)
 		if err != nil {
-			return "", fmt.Errorf("reading %s: %w", fe.absPath, err)
+			return "", nil, fmt.Errorf("reading %s: %w", fe.absPath, err)
 		}
 		p := parser.New(src)
 		sf, err := p.ParseFile()
 		if err != nil {
-			return "", fmt.Errorf("parse %s: %w", fe.absPath, err)
+			return "", nil, fmt.Errorf("parse %s: %w", fe.absPath, err)
 		}
 		pfiles = append(pfiles, parsedFile{sf: sf, path: fe.absPath})
 	}
 
-	a := sema.NewAnalyzer()
+	if a == nil {
+		a = sema.NewAnalyzer()
+	}
 	for _, pf := range pfiles {
 		if err := a.AnalyzeFile(pf.sf); err != nil {
-			return "", fmt.Errorf("sema %s: %w", pf.path, err)
+			return "", nil, fmt.Errorf("sema %s: %w", pf.path, err)
 		}
 	}
 
@@ -207,7 +234,16 @@ func compilePackageDir(files []fileEntry, relDir string) (string, error) {
 		}
 	}
 
-	return codegen.Generate(combined), nil
+	// Build the export record for this package (used by parent packages).
+	importPath := "yzapp/" + strings.ReplaceAll(relDir, string(filepath.Separator), "/")
+	exp := &pkgExport{
+		relDir:     relDir,
+		pkgAlias:   pkgName,
+		importPath: importPath,
+		exports:    a.ExportedSymbols(),
+	}
+
+	return codegen.Generate(combined), exp, nil
 }
 
 func containsStr(ss []string, s string) bool {
