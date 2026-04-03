@@ -145,6 +145,7 @@ func (l *lowerer) lowerSingletonBoc(name string, b *ast.BocLiteral) *SingletonDe
 
 // collectFieldNames returns the set of field names (non-boc ShortDecls and TypedDecls
 // without values) in the boc literal, for use in method body lowering.
+// MixStmt fields are also included so methods can reference them as self.field.
 func (l *lowerer) collectFieldNames(b *ast.BocLiteral) map[string]bool {
 	fields := map[string]bool{}
 	for _, elem := range b.Elements {
@@ -161,6 +162,19 @@ func (l *lowerer) collectFieldNames(b *ast.BocLiteral) map[string]bool {
 		case *ast.TypedDecl:
 			if e.Value == nil {
 				fields[e.Name.Name] = true
+			}
+		case *ast.MixStmt:
+			sym := l.analyzer.LookupInFile(e.Name.Name)
+			if sym == nil {
+				break
+			}
+			if mixedSt, ok := sym.Type.(*sema.StructType); ok {
+				for _, f := range mixedSt.Fields {
+					if _, isBoc := f.Type.(*sema.BocType); isBoc {
+						continue // method, not a data field
+					}
+					fields[f.Name] = true
+				}
 			}
 		}
 	}
@@ -329,6 +343,7 @@ func (l *lowerer) lowerAssignment(asgn *ast.Assignment) Stmt {
 
 func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 	sd := &StructDecl{Name: name}
+	fieldNames := l.collectFieldNames(b)
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
 		case *ast.TypedDecl:
@@ -339,6 +354,15 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 			}
 			sd.Fields = append(sd.Fields, &FieldSpec{Name: e.Name.Name, Type: typ, Init: init})
 		case *ast.ShortDecl:
+			if len(e.Names) == 1 && len(e.Values) == 1 {
+				inner, isInnerBoc := e.Values[0].(*ast.BocLiteral)
+				if isInnerBoc && !isUppercase(e.Names[0].Name) {
+					bocSemType := l.analyzer.ExprType(e)
+					m := l.lowerMethod(e.Names[0].Name, "*"+name, inner, fieldNames, bocSemType)
+					sd.Methods = append(sd.Methods, m)
+					continue
+				}
+			}
 			for i, n := range e.Names {
 				var initExpr Expr
 				if i < len(e.Values) {
@@ -358,6 +382,9 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 			}
 			var subFields []*FieldSpec
 			for _, f := range mixedSt.Fields {
+				if _, isBoc := f.Type.(*sema.BocType); isBoc {
+					continue // method, not a data field
+				}
 				subFields = append(subFields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
 			}
 			sd.Fields = append(sd.Fields, &FieldSpec{
