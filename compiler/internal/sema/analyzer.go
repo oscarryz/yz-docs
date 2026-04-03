@@ -538,6 +538,13 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		t = TypDecimal
 	case *ast.StringLit:
 		t = TypString
+	case *ast.InterpolatedStringExpr:
+		for _, part := range expr.Parts {
+			if part.IsExpr {
+				a.analyzeExpr(part.Expr)
+			}
+		}
+		t = TypString
 	case *ast.Ident:
 		t = a.analyzeIdent(expr)
 	case *ast.UnaryExpr:
