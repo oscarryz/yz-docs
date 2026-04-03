@@ -404,25 +404,20 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 func (l *lowerer) lowerMainBoc(b *ast.BocLiteral) *FuncDecl {
 	fn := &FuncDecl{Name: "main"}
 
-	// Separate boc-method-call ExprStmts from other statements.
-	// Boc calls are run concurrently through a BocGroup; the group is waited
-	// on before the remaining statements execute (structured concurrency).
-	var bocCalls []ast.Expr
-	var otherStmts []ast.Node
-	for _, elem := range b.Elements {
-		if expr, ok := elem.(ast.Expr); ok && l.isBocMethodCall(expr) {
-			bocCalls = append(bocCalls, expr)
-		} else {
-			otherStmts = append(otherStmts, elem)
-		}
-	}
+	// Process statements in order, flushing concurrent boc-call groups
+	// whenever a non-boc statement appears. This preserves ordering so that
+	// local variables declared before a boc call are visible inside it.
+	var pendingBocCalls []ast.Expr
+	bgIdx := 0
 
-	if len(bocCalls) > 0 {
-		const bgVar = "_bg"
-		// _bg := &std.BocGroup{}
+	flushGroup := func() {
+		if len(pendingBocCalls) == 0 {
+			return
+		}
+		bgVar := fmt.Sprintf("_bg%d", bgIdx)
+		bgIdx++
 		fn.Body = append(fn.Body, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
-		// _bg.Go(func() any { return call.Force() })
-		for _, call := range bocCalls {
+		for _, call := range pendingBocCalls {
 			callExpr := l.lowerExpr(call)
 			fn.Body = append(fn.Body, &ExprStmt{
 				Expr: &SpawnExpr{
@@ -431,13 +426,19 @@ func (l *lowerer) lowerMainBoc(b *ast.BocLiteral) *FuncDecl {
 				},
 			})
 		}
-		// _bg.Wait()
 		fn.Body = append(fn.Body, &WaitStmt{GroupVar: bgVar})
+		pendingBocCalls = nil
 	}
 
-	for _, elem := range otherStmts {
-		fn.Body = append(fn.Body, l.lowerMainStmt(elem)...)
+	for _, elem := range b.Elements {
+		if expr, ok := elem.(ast.Expr); ok && l.isBocMethodCall(expr) {
+			pendingBocCalls = append(pendingBocCalls, expr)
+		} else {
+			flushGroup()
+			fn.Body = append(fn.Body, l.lowerMainStmt(elem)...)
+		}
 	}
+	flushGroup()
 	return fn
 }
 
@@ -641,10 +642,14 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		return &MethodCall{Recv: fa.Object, Method: fa.Field, Args: args}
 	}
 
-	// BocWithSig functions already return *Thunk[T] — emit a plain call.
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		sym := l.analyzer.LookupInFile(id.Name)
 		if sym != nil {
+			// Struct type constructor call: Named("Alice") → NewNamed(args)
+			if _, isStruct := sym.Type.(*sema.StructType); isStruct {
+				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
+			}
+			// BocWithSig functions already return *Thunk[T] — emit a plain call.
 			if _, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
 				return &FuncCall{Func: callee, Args: args}
 			}
@@ -677,8 +682,13 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	if !ok {
 		return false
 	}
-	// Singleton boc method call: obj.method()
+	// Boc/struct method call: obj.method()
 	if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+		// Struct instance method call (n.hi() where n is *Named) → returns *Thunk.
+		if _, isStruct := l.analyzer.ExprType(mem.Object).(*sema.StructType); isStruct {
+			return true
+		}
+		// Singleton boc method call (counter.increment()) → returns *Thunk.
 		objIdent, ok := mem.Object.(*ast.Ident)
 		if !ok {
 			return false

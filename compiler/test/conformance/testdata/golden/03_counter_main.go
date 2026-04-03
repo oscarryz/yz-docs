@@ -24,13 +24,13 @@ var counter = &_counterBoc{
 }
 
 func main() {
-	_bg := &std.BocGroup{}
-	_bg.Go(func() any {
+	_bg0 := &std.BocGroup{}
+	_bg0.Go(func() any {
 		return counter.increment().Force()
 	})
-	_bg.Go(func() any {
+	_bg0.Go(func() any {
 		return counter.increment().Force()
 	})
-	_bg.Wait()
+	_bg0.Wait()
 	std.Print(counter.value().Force())
 }
