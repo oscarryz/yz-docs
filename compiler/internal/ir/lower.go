@@ -494,6 +494,8 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 	case *ast.StringLit:
 		// Strip surrounding quotes and unescape.
 		return &StringLit{Val: unquoteString(expr.Value)}
+	case *ast.InterpolatedStringExpr:
+		return l.lowerInterpString(expr)
 	case *ast.Ident:
 		if expr.Name == "true" {
 			return &BoolLit{Val: true}
@@ -742,6 +744,41 @@ func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
 	}
 	body := l.lowerBocBody(b, resultType)
 	return &ClosureExpr{ResultType: resultType, Body: body}
+}
+
+// lowerInterpString lowers an InterpolatedStringExpr to a chain of Plus calls:
+//   "Hello, `name`!" → std.NewString("Hello, ").Plus(std.NewString(std.Stringify(name))).Plus(std.NewString("!"))
+func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
+	var result Expr
+	for _, part := range e.Parts {
+		var node Expr
+		if part.IsExpr {
+			inner := l.lowerExpr(part.Expr)
+			// Force thunks (boc method calls return *Thunk[T]).
+			if l.isBocMethodCall(part.Expr) {
+				inner = &ForceExpr{Thunk: inner}
+			}
+			// std.NewString(std.Stringify(inner))
+			node = &FuncCall{
+				Func: &Ident{Name: "std.NewString"},
+				Args: []Expr{&FuncCall{
+					Func: &Ident{Name: "std.Stringify"},
+					Args: []Expr{inner},
+				}},
+			}
+		} else {
+			node = &StringLit{Val: unquoteString(`"` + part.Text + `"`)}
+		}
+		if result == nil {
+			result = node
+		} else {
+			result = &MethodCall{Recv: result, Method: "Plus", Args: []Expr{node}}
+		}
+	}
+	if result == nil {
+		result = &StringLit{Val: ""}
+	}
+	return result
 }
 
 func (l *lowerer) lowerArrayLit(arr *ast.ArrayLiteral) Expr {
