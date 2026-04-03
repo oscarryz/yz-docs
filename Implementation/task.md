@@ -52,9 +52,10 @@
 - [x] `match` expression (condition form)
 - [x] `mix` statement — Go embedding
 - [x] Multi-file projects — flat and subdirectory (cross-package FQN)
+- [x] Type-only BocWithSig — `Name #(params)` (no body): data params → struct (no constructor); all-boc params → Go interface (structural typing)
+- [x] Interface declaration — `Greeter #(greet #())` → Go interface; any boc with matching methods satisfies it automatically
+- [ ] Mixed type-only decl — `Name #(name String, greet #())` with both data and BocType params (deferred)
 - [ ] `BocWithSig` body-only form — `name #(params) = { body }` (body re-declares params)
-- [ ] Type-only BocWithSig — `Name #(params)` (no body) as struct declaration shorthand
-- [ ] Interface declaration — `Printable: #(to_string #(String))`
 - [ ] Access control enforcement — only `#()`-declared methods callable externally
 - [ ] Variant/discriminant match — `match expr { Variant.Case => body }`
 - [ ] Cross-package singleton method calls — `pkg.singletonVar.method()`
