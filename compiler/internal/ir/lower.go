@@ -237,11 +237,18 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 			}
 			inner = append(inner, &ReturnStmt{Value: val})
 		case ast.Expr:
-			expr := l.lowerExpr(e)
-			if isLast {
-				inner = append(inner, &ReturnStmt{Value: expr})
+			if fs, ok := l.tryLowerWhile(e); ok {
+				inner = append(inner, fs)
+				if isLast {
+					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
+				}
 			} else {
-				inner = append(inner, &ExprStmt{Expr: expr})
+				expr := l.lowerExpr(e)
+				if isLast {
+					inner = append(inner, &ReturnStmt{Value: expr})
+				} else {
+					inner = append(inner, &ExprStmt{Expr: expr})
+				}
 			}
 		default:
 			// Other statements — skip for now.
@@ -404,6 +411,9 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		}
 		return []Stmt{&ReturnStmt{Value: val}}
 	case ast.Expr:
+		if fs, ok := l.tryLowerWhile(e); ok {
+			return []Stmt{fs}
+		}
 		return []Stmt{&ExprStmt{Expr: l.lowerExpr(e)}}
 	default:
 		return nil
@@ -415,14 +425,55 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 // ---------------------------------------------------------------------------
 
 func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig, recvType string, parentFields map[string]bool) Decl {
-	// BocWithSig at top level without a receiver is an independent singleton.
-	// Full BocWithSig support (as methods with explicit signatures) will be
-	// expanded in Phase 5 codegen.
 	if bws.Body == nil {
 		return nil
 	}
-	// Treat as a singleton boc for now.
-	return l.lowerSingletonBoc(bws.Name.Name, bws.Body)
+	// Get the sema-inferred BocType (carries Params and Returns).
+	bocSemType := l.analyzer.ExprType(bws)
+	bt, _ := bocSemType.(*sema.BocType)
+
+	resultType := "std.Unit"
+	if bt != nil && len(bt.Returns) > 0 {
+		resultType = l.goType(bt.Returns[0])
+	}
+	thunkResult := "*std.Thunk[" + resultType + "]"
+
+	// Build Go params from the signature's input parameters.
+	var params []*ParamSpec
+	if bt != nil {
+		for _, p := range bt.Params {
+			if !p.IsReturn && p.Label != "" {
+				params = append(params, &ParamSpec{
+					Name: p.Label,
+					Type: l.goType(p.Type),
+				})
+			}
+		}
+	}
+
+	// Lower body as a boc (produces [ExprStmt{ThunkExpr}]).
+	// Params are regular Go variables — no receiver context needed.
+	prev := l.setReceiver("", nil)
+	bocBodyStmts := l.lowerBocBody(bws.Body, resultType)
+	l.restoreReceiver(prev)
+
+	// lowerBocBody returns [ExprStmt{ThunkExpr}]; promote to ReturnStmt.
+	var funcBody []Stmt
+	if len(bocBodyStmts) == 1 {
+		if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
+			funcBody = []Stmt{&ReturnStmt{Value: es.Expr}}
+		}
+	}
+	if funcBody == nil {
+		funcBody = bocBodyStmts
+	}
+
+	return &FuncDecl{
+		Name:    bws.Name.Name,
+		Params:  params,
+		Results: []string{thunkResult},
+		Body:    funcBody,
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -493,7 +544,6 @@ func (l *lowerer) lowerName(name string) Expr {
 // Builtins are emitted as direct calls (not goroutine-wrapped).
 var builtinGoName = map[string]string{
 	"print": "std.Print",
-	"while": "std.While",
 	"info":  "std.Info",
 }
 
@@ -524,6 +574,16 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		return &MethodCall{Recv: fa.Object, Method: fa.Field, Args: args}
 	}
 
+	// BocWithSig functions already return *Thunk[T] — emit a plain call.
+	if id, ok := c.Callee.(*ast.Ident); ok {
+		sym := l.analyzer.LookupInFile(id.Name)
+		if sym != nil {
+			if _, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
+				return &FuncCall{Func: callee, Args: args}
+			}
+		}
+	}
+
 	// Other boc identifier calls — goroutine-launched thunks.
 	calleeType := l.analyzer.ExprType(c.Callee)
 	if bt, ok := calleeType.(*sema.BocType); ok {
@@ -542,27 +602,37 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	return &FuncCall{Func: callee, Args: args}
 }
 
-// isBocMethodCall reports whether an AST expression is a call on a singleton
-// boc method (i.e. `counter.value()`) which returns a *Thunk in Go.
+// isBocMethodCall reports whether an AST expression is a call that returns a
+// *Thunk in Go — either a singleton boc method call (counter.value()) or a
+// direct BocWithSig function call (greet("Alice")).
 func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	c, ok := e.(*ast.CallExpr)
 	if !ok {
 		return false
 	}
-	mem, ok := c.Callee.(*ast.MemberExpr)
-	if !ok {
-		return false
+	// Singleton boc method call: obj.method()
+	if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+		objIdent, ok := mem.Object.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		sym := l.analyzer.LookupInFile(objIdent.Name)
+		if sym == nil {
+			return false
+		}
+		_, isBoc := sym.Type.(*sema.BocType)
+		return isBoc
 	}
-	objIdent, ok := mem.Object.(*ast.Ident)
-	if !ok {
-		return false
+	// Direct BocWithSig call: greet("Alice")
+	if id, ok := c.Callee.(*ast.Ident); ok {
+		sym := l.analyzer.LookupInFile(id.Name)
+		if sym != nil {
+			if _, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
+				return true
+			}
+		}
 	}
-	sym := l.analyzer.LookupInFile(objIdent.Name)
-	if sym == nil {
-		return false
-	}
-	_, isBoc := sym.Type.(*sema.BocType)
-	return isBoc
+	return false
 }
 
 // isSingletonBoc reports whether expr is an Ident that refers to a
@@ -578,6 +648,66 @@ func (l *lowerer) isSingletonBoc(expr Expr) bool {
 	}
 	_, isBoc := sym.Type.(*sema.BocType)
 	return isBoc
+}
+
+// tryLowerWhile detects a while({cond},{body}) call and lowers it to a
+// native ForStmt rather than a runtime call. Returns (stmt, true) on match.
+func (l *lowerer) tryLowerWhile(e ast.Expr) (Stmt, bool) {
+	call, ok := e.(*ast.CallExpr)
+	if !ok {
+		return nil, false
+	}
+	id, ok := call.Callee.(*ast.Ident)
+	if !ok || id.Name != "while" {
+		return nil, false
+	}
+	if len(call.Args) != 2 {
+		return nil, false
+	}
+	condBoc, ok := call.Args[0].Value.(*ast.BocLiteral)
+	if !ok {
+		return nil, false
+	}
+	bodyBoc, ok := call.Args[1].Value.(*ast.BocLiteral)
+	if !ok {
+		return nil, false
+	}
+	return &ForStmt{
+		Cond: l.lowerBocAsExpr(condBoc),
+		Body: l.lowerBocAsStmts(bodyBoc),
+	}, true
+}
+
+// lowerBocAsExpr extracts and lowers the primary expression from a boc
+// literal, for use as a for-loop condition.
+func (l *lowerer) lowerBocAsExpr(b *ast.BocLiteral) Expr {
+	for _, elem := range b.Elements {
+		if e, ok := elem.(ast.Expr); ok {
+			return l.lowerExpr(e)
+		}
+	}
+	return &BoolLit{Val: true} // fallback: infinite loop
+}
+
+// lowerBocAsStmts lowers boc elements as a flat list of statements without
+// goroutine wrapping. Used for while loop bodies.
+func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
+	var stmts []Stmt
+	for _, elem := range b.Elements {
+		switch e := elem.(type) {
+		case *ast.Assignment:
+			stmts = append(stmts, l.lowerAssignment(e))
+		case *ast.ShortDecl:
+			stmts = append(stmts, l.lowerBodyShortDecl(e, false, "std.Unit"))
+		case ast.Expr:
+			if fs, ok := l.tryLowerWhile(e); ok {
+				stmts = append(stmts, fs)
+			} else {
+				stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
+			}
+		}
+	}
+	return stmts
 }
 
 // lowerBuiltinCall emits a direct std.Xxx(...) call.
