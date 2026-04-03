@@ -256,6 +256,23 @@ type BocWithSig struct {
 
 func (e *BocWithSig) stmtNode() {}
 
+// InterpPart is one segment of an InterpolatedStringExpr.
+// Either a literal text fragment or an embedded expression.
+type InterpPart struct {
+	IsExpr bool
+	Text   string // raw text content (no outer quotes) for text parts
+	Expr   Expr   // non-nil for expression parts
+}
+
+// InterpolatedStringExpr is a string with backtick-embedded expressions:
+// `"Hello, `name`!"` desugars to a Plus chain at the IR level.
+type InterpolatedStringExpr struct {
+	Pos
+	Parts []InterpPart
+}
+
+func (e *InterpolatedStringExpr) exprNode() {}
+
 // ArrayLiteral is `[expr, expr, ...]` or the empty form `[Type]()`.
 type ArrayLiteral struct {
 	Pos

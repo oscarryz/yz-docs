@@ -476,6 +476,9 @@ func (p *Parser) parsePrimary() (ast.Expr, error) {
 
 	case token.STRING_LIT:
 		p.advance()
+		if segs := splitStringInterp(tok.Literal); segs != nil {
+			return p.buildInterpExpr(p.posOf(tok), segs)
+		}
 		return &ast.StringLit{Pos: p.posOf(tok), Value: tok.Literal}, nil
 
 	case token.IDENT, token.TYPE_IDENT, token.GENERIC_IDENT:
@@ -1133,6 +1136,96 @@ func (p *Parser) curPos() ast.Pos {
 
 func (p *Parser) posOf(tok token.Token) ast.Pos {
 	return ast.Pos{Line: tok.Line, Col: tok.Col}
+}
+
+// ---------------------------------------------------------------------------
+// String interpolation helpers
+// ---------------------------------------------------------------------------
+
+// interpSegment is one raw slice from splitting a STRING_LIT.
+type interpSegment struct {
+	isExpr  bool
+	content string // raw text (escape sequences intact) or expression source
+}
+
+// splitStringInterp splits a raw STRING_LIT token value (including outer quotes)
+// into alternating text and expression segments. Returns nil when there is no
+// backtick interpolation in the literal.
+func splitStringInterp(raw string) []interpSegment {
+	if len(raw) < 2 {
+		return nil
+	}
+	inner := raw[1 : len(raw)-1] // strip outer quotes
+
+	var parts []interpSegment
+	var cur strings.Builder
+	hasInterp := false
+	i := 0
+
+	for i < len(inner) {
+		ch := inner[i]
+
+		// Preserve escape sequences verbatim.
+		if ch == '\\' && i+1 < len(inner) {
+			cur.WriteByte(ch)
+			i++
+			cur.WriteByte(inner[i])
+			i++
+			continue
+		}
+
+		if ch == '`' {
+			hasInterp = true
+			// Flush accumulated text.
+			parts = append(parts, interpSegment{isExpr: false, content: cur.String()})
+			cur.Reset()
+			i++ // skip opening backtick
+			// Collect expression content up to the closing backtick.
+			for i < len(inner) && inner[i] != '`' {
+				cur.WriteByte(inner[i])
+				i++
+			}
+			parts = append(parts, interpSegment{isExpr: true, content: cur.String()})
+			cur.Reset()
+			if i < len(inner) {
+				i++ // skip closing backtick
+			}
+			continue
+		}
+
+		cur.WriteByte(ch)
+		i++
+	}
+
+	if !hasInterp {
+		return nil
+	}
+	// Flush trailing text (may be empty — kept so we don't miss it).
+	parts = append(parts, interpSegment{isExpr: false, content: cur.String()})
+	return parts
+}
+
+// buildInterpExpr converts raw interpSegments into an InterpolatedStringExpr node.
+// Expression segments are parsed using a sub-parser.
+func (p *Parser) buildInterpExpr(pos ast.Pos, segs []interpSegment) (*ast.InterpolatedStringExpr, error) {
+	node := &ast.InterpolatedStringExpr{Pos: pos}
+	for _, seg := range segs {
+		if seg.isExpr {
+			sub := New([]byte(seg.content))
+			e, err := sub.parseExpr()
+			if err != nil {
+				return nil, fmt.Errorf("string interpolation: %w", err)
+			}
+			node.Parts = append(node.Parts, ast.InterpPart{IsExpr: true, Expr: e})
+		} else {
+			// Skip empty text segments to keep the Part list minimal.
+			if seg.content == "" {
+				continue
+			}
+			node.Parts = append(node.Parts, ast.InterpPart{IsExpr: false, Text: seg.content})
+		}
+	}
+	return node, nil
 }
 
 func (p *Parser) errorf(format string, args ...any) *ParseError {

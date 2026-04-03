@@ -802,3 +802,55 @@ func TestParseConditionalExpression(t *testing.T) {
 		t.Fatalf("expected 3 arms, got %d", len(m.Arms))
 	}
 }
+
+// ---------------------------------------------------------------------------
+// String interpolation
+// ---------------------------------------------------------------------------
+
+func TestParseStringInterpolationBasic(t *testing.T) {
+	// "Hello, `name`!" should parse as InterpolatedStringExpr with two parts:
+	// text "Hello, ", expr name, text "!"
+	sf := parse(t, "x: \"Hello, `name`!\"")
+	d := asShortDecl(t, stmt(t, sf, 0))
+	interp, ok := d.Values[0].(*ast.InterpolatedStringExpr)
+	if !ok {
+		t.Fatalf("expected *ast.InterpolatedStringExpr, got %T", d.Values[0])
+	}
+	if len(interp.Parts) != 3 {
+		t.Fatalf("expected 3 parts, got %d", len(interp.Parts))
+	}
+	if interp.Parts[0].IsExpr || interp.Parts[0].Text != "Hello, " {
+		t.Errorf("part 0: want text 'Hello, ', got %+v", interp.Parts[0])
+	}
+	if !interp.Parts[1].IsExpr {
+		t.Errorf("part 1: want expr, got text %q", interp.Parts[1].Text)
+	}
+	if _, ok := interp.Parts[1].Expr.(*ast.Ident); !ok {
+		t.Errorf("part 1 expr: want *ast.Ident, got %T", interp.Parts[1].Expr)
+	}
+	if interp.Parts[2].IsExpr || interp.Parts[2].Text != "!" {
+		t.Errorf("part 2: want text '!', got %+v", interp.Parts[2])
+	}
+}
+
+func TestParseStringInterpolationExprOnly(t *testing.T) {
+	// "`x`" — only an expression, no surrounding text
+	sf := parse(t, "y: \"`x`\"")
+	d := asShortDecl(t, stmt(t, sf, 0))
+	interp, ok := d.Values[0].(*ast.InterpolatedStringExpr)
+	if !ok {
+		t.Fatalf("expected *ast.InterpolatedStringExpr, got %T", d.Values[0])
+	}
+	if len(interp.Parts) != 1 || !interp.Parts[0].IsExpr {
+		t.Fatalf("expected 1 expr part, got %+v", interp.Parts)
+	}
+}
+
+func TestParseStringNoInterpolation(t *testing.T) {
+	// Plain strings must stay as StringLit (no backticks)
+	sf := parse(t, `x: "hello"`)
+	d := asShortDecl(t, stmt(t, sf, 0))
+	if _, ok := d.Values[0].(*ast.StringLit); !ok {
+		t.Errorf("expected *ast.StringLit, got %T", d.Values[0])
+	}
+}
