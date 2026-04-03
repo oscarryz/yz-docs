@@ -1,0 +1,18 @@
+Greeter #(greet #())
+
+Person: {
+    name String
+    secret String
+    greet #() {
+        print(name)
+    }
+}
+
+greet_all #(g Greeter) {
+    g.greet()
+}
+
+main: {
+    p: Person("Alice", "my secret")
+    greet_all(p)
+}
