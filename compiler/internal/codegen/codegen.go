@@ -76,7 +76,11 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 	g.linef("type %s struct {", sd.Name)
 	g.level++
 	for _, f := range sd.Fields {
-		g.linef("%s %s", f.Name, f.Type)
+		if f.Embedded {
+			g.linef("%s", f.Name) // Go embedding: just the type name
+		} else {
+			g.linef("%s %s", f.Name, f.Type)
+		}
 	}
 	g.level--
 	g.line("}")
@@ -84,16 +88,31 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 
 	// Constructor (only when there are fields).
 	if len(sd.Fields) > 0 {
+		// Build param list: expand embedded sub-fields inline.
 		var params []string
 		for _, f := range sd.Fields {
-			params = append(params, f.Name+" "+f.Type)
+			if f.Embedded {
+				for _, sf := range f.EmbeddedFields {
+					params = append(params, sf.Name+" "+sf.Type)
+				}
+			} else {
+				params = append(params, f.Name+" "+f.Type)
+			}
 		}
 		g.linef("func New%s(%s) *%s {", sd.Name, strings.Join(params, ", "), sd.Name)
 		g.level++
 		g.linef("return &%s{", sd.Name)
 		g.level++
 		for _, f := range sd.Fields {
-			g.linef("%s: %s,", f.Name, f.Name)
+			if f.Embedded {
+				var subArgs []string
+				for _, sf := range f.EmbeddedFields {
+					subArgs = append(subArgs, sf.Name)
+				}
+				g.linef("%s: *New%s(%s),", f.Name, f.Name, strings.Join(subArgs, ", "))
+			} else {
+				g.linef("%s: %s,", f.Name, f.Name)
+			}
 		}
 		g.level--
 		g.line("}")

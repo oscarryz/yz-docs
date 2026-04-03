@@ -347,6 +347,24 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				typ := l.goType(l.analyzer.ExprType(l.valueAt(e.Values, i)))
 				sd.Fields = append(sd.Fields, &FieldSpec{Name: n.Name, Type: typ, Init: initExpr})
 			}
+		case *ast.MixStmt:
+			sym := l.analyzer.LookupInFile(e.Name.Name)
+			if sym == nil {
+				break
+			}
+			mixedSt, ok := sym.Type.(*sema.StructType)
+			if !ok {
+				break
+			}
+			var subFields []*FieldSpec
+			for _, f := range mixedSt.Fields {
+				subFields = append(subFields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+			}
+			sd.Fields = append(sd.Fields, &FieldSpec{
+				Name:           e.Name.Name,
+				Embedded:       true,
+				EmbeddedFields: subFields,
+			})
 		}
 	}
 	return sd
