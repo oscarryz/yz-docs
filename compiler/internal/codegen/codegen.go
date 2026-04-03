@@ -211,17 +211,7 @@ func (g *generator) emitStmt(s ir.Stmt) {
 		g.level--
 		g.line("}")
 	case *ir.IfStmt:
-		g.linef("if %s.GoBool() {", g.expr(st.Cond))
-		g.level++
-		g.emitStmts(st.Then)
-		g.level--
-		if len(st.Else) > 0 {
-			g.line("} else {")
-			g.level++
-			g.emitStmts(st.Else)
-			g.level--
-		}
-		g.line("}")
+		g.emitIfStmt(st)
 	case *ir.WaitStmt:
 		g.linef("%s.Wait()", st.GroupVar)
 	}
@@ -272,6 +262,8 @@ func (g *generator) expr(e ir.Expr) string {
 		return g.emitSpawn(ex)
 	case *ir.NewGroupExpr:
 		return "&std.BocGroup{}"
+	case *ir.MatchExpr:
+		return g.emitMatchIIFE(ex)
 	default:
 		return "/* ? */"
 	}
@@ -341,6 +333,122 @@ func (g *generator) emitSpawn(s *ir.SpawnExpr) string {
 	sb.WriteString(g.ind())
 	sb.WriteString("})")
 	return sb.String()
+}
+
+// emitIfStmt emits an if/else-if/else chain. When the else body is a single
+// nested IfStmt it is rendered as "} else if ..." for readability.
+func (g *generator) emitIfStmt(st *ir.IfStmt) {
+	g.linef("if %s.GoBool() {", g.expr(st.Cond))
+	g.level++
+	g.emitStmts(st.Then)
+	g.level--
+	g.emitElse(st.Else)
+}
+
+// emitElse emits the else portion of an if statement.
+// If the else is a single IfStmt, it chains as "} else if ...".
+func (g *generator) emitElse(elseStmts []ir.Stmt) {
+	if len(elseStmts) == 0 {
+		g.line("}")
+		return
+	}
+	if len(elseStmts) == 1 {
+		if nested, ok := elseStmts[0].(*ir.IfStmt); ok {
+			// BoolLit{true} cond means "always true" default arm — emit as plain else.
+			if bl, ok := nested.Cond.(*ir.BoolLit); ok && bl.Val {
+				g.line("} else {")
+				g.level++
+				g.emitStmts(nested.Then)
+				g.level--
+				g.line("}")
+				return
+			}
+			g.writef("%s} else if %s.GoBool() {\n", g.ind(), g.expr(nested.Cond))
+			g.level++
+			g.emitStmts(nested.Then)
+			g.level--
+			g.emitElse(nested.Else)
+			return
+		}
+	}
+	g.line("} else {")
+	g.level++
+	g.emitStmts(elseStmts)
+	g.level--
+	g.line("}")
+}
+
+// emitMatchIIFE emits a match expression as an immediately-invoked closure:
+//
+//	func() ResultType {
+//	    if arm[0].Cond.GoBool() { arm[0].Body... }
+//	    else if arm[1].Cond.GoBool() { arm[1].Body... }
+//	    else { arm[n].Body... }
+//	    return std.TheUnit // if no default
+//	}()
+func (g *generator) emitMatchIIFE(me *ir.MatchExpr) string {
+	var sb strings.Builder
+	sb.WriteString("func() ")
+	sb.WriteString(me.ResultType)
+	sb.WriteString(" {\n")
+
+	inner := g.sub(g.level + 1)
+	inner.emitMatchArms(me.Arms)
+
+	// If no default arm, emit a fallthrough return.
+	hasDefault := false
+	for _, arm := range me.Arms {
+		if arm.Cond == nil {
+			hasDefault = true
+			break
+		}
+	}
+	if !hasDefault {
+		inner.linef("return %s", zeroValueOf(me.ResultType))
+	}
+
+	sb.WriteString(inner.sb.String())
+	sb.WriteString(g.ind())
+	sb.WriteString("}()")
+	return sb.String()
+}
+
+// zeroValueOf returns a Go zero value expression for the given type string.
+func zeroValueOf(typ string) string {
+	switch typ {
+	case "std.Int":
+		return "std.NewInt(0)"
+	case "std.Decimal":
+		return "std.NewDecimal(0)"
+	case "std.String":
+		return `std.NewString("")`
+	case "std.Bool":
+		return "std.NewBool(false)"
+	default:
+		return "std.TheUnit"
+	}
+}
+
+// emitMatchArms emits the if/else if/else chain for match arms.
+func (g *generator) emitMatchArms(arms []*ir.MatchArm) {
+	first := true
+	for _, arm := range arms {
+		if arm.Cond == nil {
+			// Default arm — emit as else { body }
+			g.line("} else {")
+		} else if first {
+			g.linef("if %s.GoBool() {", g.expr(arm.Cond))
+			first = false
+		} else {
+			g.linef("} else if %s.GoBool() {", g.expr(arm.Cond))
+		}
+		g.level++
+		g.emitStmts(arm.Body)
+		g.level--
+	}
+	if len(arms) > 0 {
+		g.line("}")
+	}
 }
 
 // ---------------------------------------------------------------------------
