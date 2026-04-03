@@ -68,10 +68,63 @@ func (l *lowerer) lowerTopLevel(node ast.Node) Decl {
 	case *ast.ShortDecl:
 		return l.lowerTopShortDecl(n)
 	case *ast.BocWithSig:
+		// Uppercase name + no body → type-only declaration: emit struct without constructor.
+		if n.Body == nil && isUppercase(n.Name.Name) {
+			return l.lowerTypeOnlyDecl(n)
+		}
 		return l.lowerBocWithSig(n, "", nil)
 	default:
 		return nil
 	}
+}
+
+// lowerTypeOnlyDecl lowers `Name #(params)` (no body) into a Go struct
+// declaration without a constructor. The struct type exists so it can be used
+// as a parameter/variable type; instances cannot be created until a body is
+// attached (structural typing is enforced by sema).
+func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocWithSig) Decl {
+	semType := l.analyzer.ExprType(bws)
+	st, ok := semType.(*sema.StructType)
+	if !ok {
+		return nil
+	}
+	if st.IsInterface {
+		// All fields are BocTypes → emit a Go interface.
+		id := &InterfaceDecl{Name: bws.Name.Name}
+		for _, f := range st.Fields {
+			bt, _ := f.Type.(*sema.BocType)
+			resultType := "std.Unit"
+			if bt != nil && len(bt.Returns) == 1 {
+				resultType = l.goType(bt.Returns[0])
+			}
+			var params []*ParamSpec
+			if bt != nil {
+				for _, p := range bt.Params {
+					if !p.IsReturn && p.Label != "" {
+						params = append(params, &ParamSpec{
+							Name: p.Label,
+							Type: l.goType(p.Type),
+						})
+					}
+				}
+			}
+			id.Methods = append(id.Methods, &InterfaceMethod{
+				Name:       f.Name,
+				Params:     params,
+				ResultType: resultType,
+			})
+		}
+		return id
+	}
+	// Data fields only → emit a Go struct without constructor.
+	sd := &StructDecl{Name: bws.Name.Name, NoConstructor: true}
+	for _, f := range st.Fields {
+		sd.Fields = append(sd.Fields, &FieldSpec{
+			Name: f.Name,
+			Type: l.goType(f.Type),
+		})
+	}
+	return sd
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +343,11 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 			} else {
 				expr := l.lowerExpr(e)
 				if isLast {
+					// If the last expression is a boc method call it returns *Thunk[T],
+					// but the closure expects T — force the thunk.
+					if l.isBocMethodCall(e) {
+						expr = &ForceExpr{Thunk: expr}
+					}
 					inner = append(inner, &ReturnStmt{Value: expr})
 				} else {
 					inner = append(inner, &ExprStmt{Expr: expr})
@@ -1248,6 +1306,9 @@ func (l *lowerer) goType(t sema.Type) string {
 		return "*std.Thunk[any]"
 	case *sema.StructType:
 		if tt.Name != "" {
+			if tt.IsInterface {
+				return tt.Name // Go interfaces are already reference types
+			}
 			return "*" + tt.Name
 		}
 		return "any"

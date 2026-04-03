@@ -65,11 +65,28 @@ func (g *generator) emitDecl(d ir.Decl) {
 	switch decl := d.(type) {
 	case *ir.StructDecl:
 		g.emitStructDecl(decl)
+	case *ir.InterfaceDecl:
+		g.emitInterfaceDecl(decl)
 	case *ir.SingletonDecl:
 		g.emitSingletonDecl(decl)
 	case *ir.FuncDecl:
 		g.emitFuncDecl(decl)
 	}
+}
+
+func (g *generator) emitInterfaceDecl(id *ir.InterfaceDecl) {
+	g.linef("type %s interface {", id.Name)
+	g.level++
+	for _, m := range id.Methods {
+		var params []string
+		for _, p := range m.Params {
+			params = append(params, p.Name+" "+p.Type)
+		}
+		g.linef("%s(%s) *std.Thunk[%s]", m.Name, strings.Join(params, ", "), m.ResultType)
+	}
+	g.level--
+	g.line("}")
+	g.nl()
 }
 
 func (g *generator) emitStructDecl(sd *ir.StructDecl) {
@@ -86,8 +103,8 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 	g.line("}")
 	g.nl()
 
-	// Constructor (only when there are fields).
-	if len(sd.Fields) > 0 {
+	// Constructor (skipped for type-only declarations: Name #(params)).
+	if !sd.NoConstructor && len(sd.Fields) > 0 {
 		// Build param list: expand embedded sub-fields inline.
 		var params []string
 		for _, f := range sd.Fields {

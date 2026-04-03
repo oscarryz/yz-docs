@@ -1,0 +1,24 @@
+package main
+
+import std "yz/runtime/yzrt"
+
+type Greeter interface {
+	greet() *std.Thunk[std.Unit]
+}
+
+
+type Person struct {
+	name std.String
+}
+
+func NewPerson(name std.String) *Person {
+	return &Person{
+		name: name,
+	}
+}
+
+func (self *Person) greet() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		return std.Print(self.name)
+	})
+}
