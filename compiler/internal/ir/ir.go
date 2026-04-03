@@ -160,6 +160,7 @@ func (*ForceExpr) irExpr()   {}
 func (*ClosureExpr) irExpr() {}
 func (*SpawnExpr) irExpr()   {}
 func (*NewGroupExpr) irExpr(){}
+func (*MatchExpr) irExpr()   {}
 
 // Literal nodes — codegen boxes these into std.NewXxx(...) calls.
 type IntLit struct{ Val int64 }
@@ -227,3 +228,18 @@ type SpawnExpr struct {
 
 // NewGroupExpr creates a new BocGroup: &std.BocGroup{}.
 type NewGroupExpr struct{}
+
+// MatchExpr is a condition match lowered to an immediately-invoked closure
+// (IIFE) for expression position. Use tryLowerMatch to emit as an IfStmt
+// chain in statement position instead.
+type MatchExpr struct {
+	ResultType string
+	Arms       []*MatchArm
+}
+
+// MatchArm is one arm of a MatchExpr.
+// Cond nil means this is the default (else) branch.
+type MatchArm struct {
+	Cond Expr
+	Body []Stmt
+}

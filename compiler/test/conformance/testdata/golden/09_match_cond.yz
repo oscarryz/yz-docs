@@ -1,0 +1,13 @@
+main: {
+    score: 85
+    grade: match {
+        score >= 90 => "A"
+    }, {
+        score >= 80 => "B"
+    }, {
+        score >= 70 => "C"
+    }, {
+        "F"
+    }
+    print(grade)
+}

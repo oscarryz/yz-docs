@@ -247,6 +247,11 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 				if isLast {
 					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
 				}
+			} else if ms, ok := l.tryLowerMatch(e); ok {
+				inner = append(inner, ms)
+				if isLast {
+					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
+				}
 			} else {
 				expr := l.lowerExpr(e)
 				if isLast {
@@ -422,6 +427,9 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		if is, ok := l.tryLowerConditional(e); ok {
 			return []Stmt{is}
 		}
+		if ms, ok := l.tryLowerMatch(e); ok {
+			return []Stmt{ms}
+		}
 		return []Stmt{&ExprStmt{Expr: l.lowerExpr(e)}}
 	default:
 		return nil
@@ -535,6 +543,8 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		return l.lowerBocLitExpr(expr)
 	case *ast.ConditionalExpr:
 		return l.lowerConditionalExpr(expr)
+	case *ast.MatchExpr:
+		return l.lowerMatchExpr(expr)
 	case *ast.ArrayLiteral:
 		return l.lowerArrayLit(expr)
 	case *ast.DictLiteral:
@@ -725,6 +735,121 @@ func (l *lowerer) lowerConditionalExpr(cond *ast.ConditionalExpr) Expr {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Match expression lowering
+// ---------------------------------------------------------------------------
+
+// lowerMatchExpr lowers a MatchExpr for expression position (IIFE).
+func (l *lowerer) lowerMatchExpr(m *ast.MatchExpr) Expr {
+	semType := l.analyzer.ExprType(m)
+	resultType := l.goType(semType)
+
+	var arms []*MatchArm
+	for _, arm := range m.Arms {
+		var cond Expr
+		if arm.Condition != nil {
+			cond = l.lowerExpr(arm.Condition)
+		}
+		body := l.lowerMatchArmBody(arm.Body, resultType)
+		arms = append(arms, &MatchArm{Cond: cond, Body: body})
+	}
+	return &MatchExpr{ResultType: resultType, Arms: arms}
+}
+
+// tryLowerMatch detects a MatchExpr and lowers it to an IfStmt chain for
+// statement position. Returns (stmt, true) on match.
+// Arms are processed last-to-first to build a nested IfStmt chain where
+// each conditional arm's Else is the next arm (or the default body).
+func (l *lowerer) tryLowerMatch(e ast.Expr) (Stmt, bool) {
+	m, ok := e.(*ast.MatchExpr)
+	if !ok {
+		return nil, false
+	}
+	if len(m.Arms) == 0 {
+		return nil, false
+	}
+
+	// Build chain from last arm to first.
+	var pendingElse []Stmt // else body for the arm above
+	var topIf *IfStmt
+	for i := len(m.Arms) - 1; i >= 0; i-- {
+		arm := m.Arms[i]
+		body := l.lowerBocAsStmts2(arm.Body)
+		if arm.Condition == nil {
+			// Default arm — becomes the else body of the arm above.
+			pendingElse = body
+		} else {
+			cond := l.lowerExpr(arm.Condition)
+			st := &IfStmt{Cond: cond, Then: body, Else: pendingElse}
+			pendingElse = []Stmt{st}
+			topIf = st
+		}
+	}
+	if topIf == nil {
+		// All arms were default — just emit the body as statements directly.
+		// Wrap in a trivially true if so we still return a Stmt.
+		return &IfStmt{Cond: &BoolLit{Val: true}, Then: pendingElse}, true
+	}
+	return topIf, true
+}
+
+// lowerMatchArmBody lowers a match arm's body elements for expression-position
+// match (IIFE). The last expression becomes a ReturnStmt.
+func (l *lowerer) lowerMatchArmBody(elements []ast.Node, resultType string) []Stmt {
+	var stmts []Stmt
+	for i, elem := range elements {
+		isLast := i == len(elements)-1
+		switch e := elem.(type) {
+		case *ast.Assignment:
+			stmts = append(stmts, l.lowerAssignment(e))
+		case *ast.ShortDecl:
+			stmts = append(stmts, l.lowerBodyShortDecl(e, isLast, resultType))
+		case *ast.ReturnStmt:
+			var val Expr
+			if e.Value != nil {
+				val = l.lowerExpr(e.Value)
+			}
+			stmts = append(stmts, &ReturnStmt{Value: val})
+		case ast.Expr:
+			expr := l.lowerExpr(e)
+			if isLast {
+				stmts = append(stmts, &ReturnStmt{Value: expr})
+			} else {
+				stmts = append(stmts, &ExprStmt{Expr: expr})
+			}
+		}
+	}
+	if len(stmts) == 0 || !isReturnStmt(stmts[len(stmts)-1]) {
+		stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
+	}
+	return stmts
+}
+
+// lowerBocAsStmts2 lowers a slice of ast.Node elements (a match arm body) as
+// flat statements with no return-wrapping. Used for statement-position match.
+func (l *lowerer) lowerBocAsStmts2(elements []ast.Node) []Stmt {
+	var stmts []Stmt
+	for _, elem := range elements {
+		switch e := elem.(type) {
+		case *ast.Assignment:
+			stmts = append(stmts, l.lowerAssignment(e))
+		case *ast.ShortDecl:
+			stmts = append(stmts, l.lowerBodyShortDecl(e, false, "std.Unit"))
+		case ast.Expr:
+			if fs, ok := l.tryLowerWhile(e); ok {
+				stmts = append(stmts, fs)
+			} else if is, ok := l.tryLowerConditional(e); ok {
+				stmts = append(stmts, is)
+			} else if ms, ok := l.tryLowerMatch(e); ok {
+				stmts = append(stmts, ms)
+			} else {
+				stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
+			}
+		}
+	}
+	return stmts
+}
+
 // lowerBocAsExpr extracts and lowers the primary expression from a boc
 // literal, for use as a for-loop condition.
 func (l *lowerer) lowerBocAsExpr(b *ast.BocLiteral) Expr {
@@ -751,6 +876,8 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 				stmts = append(stmts, fs)
 			} else if is, ok := l.tryLowerConditional(e); ok {
 				stmts = append(stmts, is)
+			} else if ms, ok := l.tryLowerMatch(e); ok {
+				stmts = append(stmts, ms)
 			} else {
 				stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
 			}
