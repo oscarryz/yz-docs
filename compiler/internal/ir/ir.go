@@ -27,13 +27,18 @@ type Decl interface{ irDecl() }
 func (*StructDecl) irDecl()    {}
 func (*SingletonDecl) irDecl() {}
 func (*FuncDecl) irDecl()      {}
+func (*InterfaceDecl) irDecl() {}
 
 // StructDecl represents a user-defined Go struct type (from an uppercase Yz boc).
 // Each call to the type creates a new instance via the generated constructor.
+// When NoConstructor is true (type-only declaration: `Name #(params)`), the
+// struct type is emitted without a constructor — instances cannot be created
+// via `Name(args)` until a body is attached.
 type StructDecl struct {
-	Name    string
-	Fields  []*FieldSpec
-	Methods []*MethodDecl
+	Name          string
+	Fields        []*FieldSpec
+	Methods       []*MethodDecl
+	NoConstructor bool
 }
 
 // SingletonDecl represents a lowercase Yz boc — a single, persistent instance.
@@ -65,6 +70,20 @@ type MethodDecl struct {
 	Params   []*ParamSpec
 	Results  []string // Go type strings (usually one *std.Thunk[T])
 	Body     []Stmt
+}
+
+// InterfaceDecl represents a structural interface type (from `Name #(methods...)`
+// with no body, all params being BocTypes). Generates a Go interface.
+type InterfaceDecl struct {
+	Name    string
+	Methods []*InterfaceMethod
+}
+
+// InterfaceMethod is one method entry in a Go interface declaration.
+type InterfaceMethod struct {
+	Name       string
+	Params     []*ParamSpec
+	ResultType string // the T in *std.Thunk[T]
 }
 
 // FieldSpec is one field in a struct with an optional initializer.

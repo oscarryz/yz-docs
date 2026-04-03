@@ -1,0 +1,8 @@
+Greeter #(greet #())
+
+Person: {
+    name String
+    greet #() {
+        print(name)
+    }
+}

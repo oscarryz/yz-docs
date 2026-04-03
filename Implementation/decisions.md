@@ -75,3 +75,23 @@ Resolved progressively during planning sessions (2026-03-04 through 2026-04-03).
 |---|----------|------------|
 | 31 | Non-word method naming | Non-word method names are mapped to Go-safe identifiers using the **symbol name** of each character — not semantically meaningful names. Examples: `+` → `plus`, `++` → `plusplus`, `?` → `qm`, `==` → `eqeq`, `!=` → `neq`, `&&` → `ampamp`, `\|\|` → `pipepipe`, `<=` → `lteq`. This is mechanical, not interpretive. |
 | 32 | Build output directory | Generated `.go` files go to `target/gen/` inside the **project being compiled** (not the compiler directory). Binary goes to `target/bin/app`. The `target/` directory is added to `.gitignore` in `yzc new`-generated projects. |
+| 33 | Multi-file codegen target | **One Go package per directory.** Each source directory maps to a Go package in `target/gen/`. This is the natural Go expression of Yz's FQN namespace hierarchy. The `main` package is special (entry point). |
+| 34 | FQN → Go mapping | A boc's FQN maps to a Go package path. `house.front.Host` → Go package `yzapp/house/front`, type `Host`. Singleton bocs (e.g. `house.yz`) become package-level vars and functions in their Go package. UDTs (uppercase) become Go types with constructors. |
+| 35 | FQN reference in code | Cross-file references always use the **full FQN** (e.g. `house.front.Host()`). To use short names, `mix house.front` brings the contents of that namespace into scope so `Host()` works directly. |
+
+## `mix` Semantics
+
+| # | Decision | Resolution |
+|---|----------|------------|
+| 36 | Conflict rule | **Option A — strict:** any name conflict is a compilation error, whether between two `mix` statements or between a `mix` and the host's own definitions. There is no "host wins" override. |
+| 37 | Constructor composition | When a type boc mixes in another (`mix Named`), the host's constructor **calls the mixed-in constructor** (`NewNamed(...)`) and passes the relevant arguments. Mixed-in fields are included as parameters to the host constructor, in mix-declaration order before the host's own fields. |
+| 38 | Codegen via embedding | Mixed-in bocs are emitted as **Go embedded structs**. Fields and methods are promoted unqualified. The host struct body contains just the type name (no field name), and the constructor initializes it with `TypeName: *NewTypeName(...)`. |
+| 39 | Cross-file mix | `mix` of a type from another file uses the full FQN: `mix house.front.Named`. |
+
+## Control Flow
+
+| # | Decision | Resolution |
+|---|----------|------------|
+| 40 | Conditional expression | `cond ? { trueCase }, { falseCase }` is a `ConditionalExpr` node. In **statement position** it lowers to an `if/else` block. In **expression position** it lowers to a `Qm()` method call on the boolean value. |
+| 41 | Condition match | `match { cond => body }, { cond => body }, { default }` — in **expression position** lowers to an immediately-invoked closure (`func() T { if/else if/else }()`). In **statement position** lowers to a plain `if/else if/else` chain. |
+| 42 | Source paths | The default source path is `.` (project root). If explicit source paths are configured (e.g. `src/`, `lib/`, `vendor/`), then `.` is **not** included — the configured paths replace it, not supplement it. |

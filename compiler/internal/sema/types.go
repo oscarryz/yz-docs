@@ -145,9 +145,12 @@ type StructField struct {
 
 // StructType is the structural type of a user-defined boc or any named type.
 // Two StructTypes are compatible if one has at least all the fields of the other.
+// IsInterface is set for type-only declarations (`Name #(methods...)`) where all
+// params are BocTypes — these generate Go interfaces, not structs.
 type StructType struct {
-	Name   string        // may be empty for anonymous structural types
-	Fields []StructField // in declaration order
+	Name        string        // may be empty for anonymous structural types
+	Fields      []StructField // in declaration order
+	IsInterface bool          // true when declared as Name #(boc-params...) with no body
 }
 
 func (t *StructType) typeName() string {

@@ -420,6 +420,32 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 		}
 	}
 
+	// Uppercase name + no body → structural type declaration (interface-style).
+	// `Name #(name String, age Int)` registers Name as a StructType with those
+	// fields. No implementation is generated; any structurally compatible boc
+	// literal satisfies the type.
+	if bws.Body == nil && (bws.Name.TokType == token.TYPE_IDENT || bws.Name.TokType == token.GENERIC_IDENT) {
+		// If every input param is a BocType, this is an interface declaration.
+		allBoc := len(inputParams) > 0
+		for _, p := range inputParams {
+			if _, isBoc := p.Type.(*BocType); !isBoc {
+				allBoc = false
+				break
+			}
+		}
+		st := &StructType{Name: bws.Name.Name, IsInterface: allBoc}
+		for _, p := range inputParams {
+			if p.Label != "" {
+				st.Fields = append(st.Fields, StructField{Name: p.Label, Type: p.Type})
+			}
+		}
+		fqn := a.currentFQN(bws.Name.Name)
+		sym := &Symbol{Name: bws.Name.Name, Type: st, FQN: fqn, Node: bws}
+		a.define(sym)
+		a.setType(bws, st)
+		return st
+	}
+
 	var returns []Type
 	if bws.Body != nil {
 		prev := a.pushScope()
