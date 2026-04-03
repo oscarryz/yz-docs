@@ -1,0 +1,805 @@
+package sema
+
+import (
+	"fmt"
+	"strings"
+
+	"yz/internal/ast"
+	"yz/internal/token"
+)
+
+// ---------------------------------------------------------------------------
+// SemaError
+// ---------------------------------------------------------------------------
+
+// SemaError is a single semantic error with source location.
+type SemaError struct {
+	Msg  string
+	Line int
+	Col  int
+}
+
+func (e *SemaError) Error() string {
+	return fmt.Sprintf("sema error at L%d:C%d: %s", e.Line, e.Col, e.Msg)
+}
+
+// SemaErrors collects multiple errors and implements the error interface.
+type SemaErrors []*SemaError
+
+func (es SemaErrors) Error() string {
+	msgs := make([]string, len(es))
+	for i, e := range es {
+		msgs[i] = e.Error()
+	}
+	return strings.Join(msgs, "\n")
+}
+
+// ---------------------------------------------------------------------------
+// Analyzer
+// ---------------------------------------------------------------------------
+
+// Analyzer performs semantic analysis over one SourceFile.
+type Analyzer struct {
+	// types maps every ast.Node to its inferred/checked Type.
+	types map[ast.Node]Type
+
+	// fileScope is the top-level scope for the analyzed file.
+	fileScope *Scope
+
+	// currentScope is the active scope during traversal.
+	currentScope *Scope
+
+	// fqnPrefix is the dot-joined path to the current lexical position.
+	fqnPrefix string
+
+	// errors collected during analysis.
+	errors SemaErrors
+
+	// lastExpr is the most recently analyzed top-level node (for tests).
+	lastExpr ast.Node
+}
+
+// NewAnalyzer creates a fresh Analyzer with built-in symbols pre-loaded.
+func NewAnalyzer() *Analyzer {
+	builtin := newBuiltinScope()
+	file := newScope(builtin)
+	return &Analyzer{
+		types:        make(map[ast.Node]Type),
+		fileScope:    file,
+		currentScope: file,
+	}
+}
+
+// AnalyzeFile performs semantic analysis on the given SourceFile.
+func (a *Analyzer) AnalyzeFile(sf *ast.SourceFile) error {
+	for _, node := range sf.Stmts {
+		a.analyzeNode(node)
+		a.lastExpr = node
+	}
+	if len(a.errors) > 0 {
+		return a.errors
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Public result accessors
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) ExprType(n ast.Node) Type {
+	if n == nil {
+		return Unknown
+	}
+	if t, ok := a.types[n]; ok {
+		return t
+	}
+	return Unknown
+}
+
+func (a *Analyzer) LookupInFile(name string) *Symbol {
+	return a.fileScope.Lookup(name)
+}
+
+func (a *Analyzer) LastExpr() ast.Node { return a.lastExpr }
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) errorf(pos ast.Pos, format string, args ...any) {
+	a.errors = append(a.errors, &SemaError{
+		Msg:  fmt.Sprintf(format, args...),
+		Line: pos.Line,
+		Col:  pos.Col,
+	})
+}
+
+func (a *Analyzer) setType(n ast.Node, t Type) { a.types[n] = t }
+
+func (a *Analyzer) pushScope() *Scope {
+	s := newScope(a.currentScope)
+	prev := a.currentScope
+	a.currentScope = s
+	return prev
+}
+
+func (a *Analyzer) popScope(prev *Scope) { a.currentScope = prev }
+
+func (a *Analyzer) pushFQN(name string) string {
+	prev := a.fqnPrefix
+	if a.fqnPrefix == "" {
+		a.fqnPrefix = name
+	} else {
+		a.fqnPrefix = a.fqnPrefix + "." + name
+	}
+	return prev
+}
+
+func (a *Analyzer) popFQN(prev string) { a.fqnPrefix = prev }
+
+func (a *Analyzer) currentFQN(name string) string {
+	if a.fqnPrefix == "" {
+		return name
+	}
+	return a.fqnPrefix + "." + name
+}
+
+// define registers a symbol in the current scope and, when at file scope,
+// also in the file scope for external lookup.
+func (a *Analyzer) define(sym *Symbol) {
+	a.currentScope.Define(sym)
+	if a.currentScope == a.fileScope {
+		a.fileScope.Define(sym)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Node dispatch
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) analyzeNode(n ast.Node) Type {
+	switch node := n.(type) {
+	case *ast.ShortDecl:
+		return a.analyzeShortDecl(node)
+	case *ast.TypedDecl:
+		return a.analyzeTypedDecl(node)
+	case *ast.Assignment:
+		return a.analyzeAssignment(node)
+	case *ast.BocWithSig:
+		return a.analyzeBocWithSig(node)
+	case *ast.VariantDef:
+		return a.analyzeVariantDef(node)
+	case *ast.ReturnStmt:
+		var t Type = TypUnit
+		if node.Value != nil {
+			t = a.analyzeExpr(node.Value)
+		}
+		a.setType(node, t)
+		return t
+	case *ast.BreakStmt, *ast.ContinueStmt:
+		return TypUnit
+	case *ast.MixStmt:
+		return TypUnit // handled inside analyzeStructBoc
+	case *ast.InfoString:
+		return TypUnit
+	case ast.Expr:
+		return a.analyzeExpr(node)
+	default:
+		return Unknown
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Short declaration
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
+	// Special case: single name + BocLiteral value.
+	if len(d.Names) == 1 && len(d.Values) == 1 {
+		name := d.Names[0]
+		if bocLit, ok := d.Values[0].(*ast.BocLiteral); ok {
+			return a.analyzeBocDecl(name, bocLit, d)
+		}
+	}
+
+	// General case: analyze RHS then bind each name.
+	var valTypes []Type
+	for _, v := range d.Values {
+		valTypes = append(valTypes, a.analyzeExpr(v))
+	}
+	for i, name := range d.Names {
+		var typ Type = Unknown
+		if i < len(valTypes) {
+			typ = valTypes[i]
+		}
+		fqn := a.currentFQN(name.Name)
+		a.define(&Symbol{Name: name.Name, Type: typ, FQN: fqn, Node: d})
+	}
+	return TypUnit
+}
+
+// analyzeBocDecl handles `name: { ... }` for both lowercase (boc) and
+// uppercase (struct type) names.
+func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl ast.Node) Type {
+	fqn := a.currentFQN(name.Name)
+	prevFQN := a.pushFQN(name.Name)
+	prev := a.pushScope()
+
+	var typ Type
+	if name.TokType == token.TYPE_IDENT || name.TokType == token.GENERIC_IDENT {
+		// Uppercase (multi-char TYPE_IDENT or single-letter GENERIC_IDENT): struct type definition.
+		st := a.analyzeStructBoc(name.Name, bocLit)
+		typ = st
+	} else {
+		// Lowercase: boc definition.
+		bt := a.analyzeBocBody(bocLit.Elements)
+		params := a.collectParams(bocLit.Elements)
+		returns := bt
+		if len(returns) == 0 {
+			returns = []Type{TypUnit}
+		}
+		typ = &BocType{Params: params, Returns: returns}
+	}
+
+	a.popScope(prev)
+	a.popFQN(prevFQN)
+
+	sym := &Symbol{Name: name.Name, Type: typ, FQN: fqn, Node: decl}
+	a.define(sym)
+	a.setType(decl, typ)
+	return typ
+}
+
+// collectParams scans boc elements for uninitialized TypedDecls — these are
+// the boc's input parameters.
+func (a *Analyzer) collectParams(elements []ast.Node) []BocParam {
+	var params []BocParam
+	for _, elem := range elements {
+		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+			typ := a.resolveTypeExpr(td.Type)
+			params = append(params, BocParam{Label: td.Name.Name, Type: typ})
+		}
+	}
+	return params
+}
+
+// ---------------------------------------------------------------------------
+// Typed declaration
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) analyzeTypedDecl(d *ast.TypedDecl) Type {
+	typ := a.resolveTypeExpr(d.Type)
+	if d.Value != nil {
+		valTyp := a.analyzeExpr(d.Value)
+		if valTyp != Unknown && !valTyp.IsCompatibleWith(typ) {
+			a.errorf(d.Pos, "type mismatch: %v is not compatible with %v", valTyp, typ)
+		}
+	}
+	fqn := a.currentFQN(d.Name.Name)
+	a.define(&Symbol{Name: d.Name.Name, Type: typ, FQN: fqn, Node: d})
+	a.setType(d, typ)
+	return typ
+}
+
+// ---------------------------------------------------------------------------
+// Assignment
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
+	var valTypes []Type
+	for _, v := range asgn.Values {
+		valTypes = append(valTypes, a.analyzeExpr(v))
+	}
+	if asgn.Target != nil {
+		targetType := a.resolveTargetType(asgn.Target)
+		if len(valTypes) > 0 && targetType != Unknown {
+			if !valTypes[0].IsCompatibleWith(targetType) {
+				a.errorf(asgn.Pos, "assignment: %v is not compatible with %v", valTypes[0], targetType)
+			}
+		}
+	} else {
+		for i, name := range asgn.Names {
+			sym := a.currentScope.Lookup(name.Name)
+			if sym == nil {
+				a.errorf(name.Pos, "undefined: %s", name.Name)
+				continue
+			}
+			if i < len(valTypes) && sym.Type != Unknown {
+				if !valTypes[i].IsCompatibleWith(sym.Type) {
+					a.errorf(name.Pos, "assignment to %s: %v not compatible with %v",
+						name.Name, valTypes[i], sym.Type)
+				}
+			}
+		}
+	}
+	return TypUnit
+}
+
+func (a *Analyzer) resolveTargetType(target ast.Expr) Type {
+	switch t := target.(type) {
+	case *ast.Ident:
+		sym := a.currentScope.Lookup(t.Name)
+		if sym == nil {
+			a.errorf(t.Pos, "undefined: %s", t.Name)
+			return Unknown
+		}
+		return sym.Type
+	case *ast.MemberExpr:
+		objType := a.analyzeExpr(t.Object)
+		return a.fieldType(objType, t.Member.Name, t.Pos)
+	case *ast.IndexExpr:
+		objType := a.analyzeExpr(t.Object)
+		if at, ok := objType.(*ArrayType); ok {
+			return at.Elem
+		}
+		if dt, ok := objType.(*DictType); ok {
+			return dt.Val
+		}
+		return Unknown
+	}
+	return Unknown
+}
+
+// ---------------------------------------------------------------------------
+// BocWithSig
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
+	// Resolve all params from the signature.
+	allParams := a.resolveBocSigParams(bws.Sig)
+
+	// Separate input params from anonymous return-type entries.
+	var inputParams []BocParam
+	var explicitReturns []Type
+	for _, p := range allParams {
+		if p.IsReturn {
+			explicitReturns = append(explicitReturns, p.Type)
+		} else {
+			inputParams = append(inputParams, p)
+		}
+	}
+
+	var returns []Type
+	if bws.Body != nil {
+		prev := a.pushScope()
+		prevFQN := a.pushFQN(bws.Name.Name)
+		// Inject input params into body scope (BocWithSig special form).
+		for _, p := range inputParams {
+			a.currentScope.Define(&Symbol{Name: p.Label, Type: p.Type})
+		}
+		bodyReturns := a.analyzeBocBody(bws.Body.Elements)
+		a.popFQN(prevFQN)
+		a.popScope(prev)
+		returns = bodyReturns
+	}
+
+	// Explicit return types in the signature override inferred returns.
+	if len(explicitReturns) > 0 {
+		returns = explicitReturns
+	}
+	if len(returns) == 0 {
+		returns = []Type{TypUnit}
+	}
+
+	bocType := &BocType{Params: inputParams, Returns: returns}
+	fqn := a.currentFQN(bws.Name.Name)
+	sym := &Symbol{Name: bws.Name.Name, Type: bocType, FQN: fqn, Node: bws}
+	a.define(sym)
+	a.setType(bws, bocType)
+	return bocType
+}
+
+// resolveBocSigParams resolves the params of a BocTypeExpr signature.
+func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr) []BocParam {
+	var params []BocParam
+	for _, p := range sig.Params {
+		if p.Variant != nil {
+			continue
+		}
+		var typ Type
+		if p.Type != nil {
+			typ = a.resolveTypeExpr(p.Type)
+		}
+		isReturn := p.Label == "" && typ != nil
+		params = append(params, BocParam{
+			Label:      p.Label,
+			Type:       typ,
+			HasDefault: p.Default != nil,
+			IsReturn:   isReturn,
+		})
+	}
+	return params
+}
+
+// ---------------------------------------------------------------------------
+// Boc body analysis
+// ---------------------------------------------------------------------------
+
+// analyzeBocBody analyzes elements of a boc body and returns the types of
+// the trailing expression(s) — these are the boc's return values.
+func (a *Analyzer) analyzeBocBody(elements []ast.Node) []Type {
+	var lastExprTypes []Type
+	for _, elem := range elements {
+		t := a.analyzeNode(elem)
+		switch elem.(type) {
+		case ast.Expr:
+			lastExprTypes = []Type{t}
+		case *ast.ReturnStmt:
+			lastExprTypes = []Type{t}
+		default:
+			// Statements don't contribute to return type.
+			lastExprTypes = nil
+		}
+	}
+	return lastExprTypes
+}
+
+// ---------------------------------------------------------------------------
+// Struct type analysis (uppercase boc)
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType {
+	st := &StructType{Name: name}
+	fieldSet := make(map[string]bool)
+
+	for _, elem := range b.Elements {
+		switch e := elem.(type) {
+		case *ast.TypedDecl:
+			typ := a.analyzeTypedDecl(e)
+			if fieldSet[e.Name.Name] {
+				a.errorf(e.Pos, "duplicate field %q in %s", e.Name.Name, name)
+				continue
+			}
+			fieldSet[e.Name.Name] = true
+			st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: typ})
+
+		case *ast.ShortDecl:
+			for i, n := range e.Names {
+				var typ Type
+				if i < len(e.Values) {
+					typ = a.analyzeExpr(e.Values[i])
+				}
+				if fieldSet[n.Name] {
+					a.errorf(e.Pos, "duplicate field %q in %s", n.Name, name)
+					continue
+				}
+				fieldSet[n.Name] = true
+				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: typ})
+				a.currentScope.Define(&Symbol{Name: n.Name, Type: typ, Node: e})
+			}
+
+		case *ast.MixStmt:
+			a.applyMix(e, st, fieldSet, name)
+
+		case *ast.Ident:
+			// Generic type param declaration (T, E inside type boc body).
+			// Register as GenericType in current scope.
+			gt := &GenericType{Name: e.Name}
+			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
+
+		case *ast.VariantDef:
+			a.analyzeVariantDef(e)
+
+		default:
+			a.analyzeNode(elem)
+		}
+	}
+	return st
+}
+
+func (a *Analyzer) applyMix(ms *ast.MixStmt, st *StructType, fieldSet map[string]bool, hostName string) {
+	mixedSym := a.currentScope.Lookup(ms.Name.Name)
+	if mixedSym == nil {
+		a.errorf(ms.Name.Pos, "undefined: %s", ms.Name.Name)
+		return
+	}
+	mixedSt, ok := mixedSym.Type.(*StructType)
+	if !ok {
+		a.errorf(ms.Name.Pos, "mix: %s is not a struct type", ms.Name.Name)
+		return
+	}
+	for _, f := range mixedSt.Fields {
+		if fieldSet[f.Name] {
+			a.errorf(ms.Pos, "mix conflict: field %q already defined (mix of %s into %s)",
+				f.Name, ms.Name.Name, hostName)
+			continue
+		}
+		fieldSet[f.Name] = true
+		st.Fields = append(st.Fields, f)
+		a.currentScope.Define(&Symbol{Name: f.Name, Type: f.Type})
+	}
+}
+
+func (a *Analyzer) analyzeVariantDef(v *ast.VariantDef) Type {
+	var fields []StructField
+	for _, p := range v.Params {
+		if p.Label != "" && p.Type != nil {
+			fields = append(fields, StructField{Name: p.Label, Type: a.resolveTypeExpr(p.Type)})
+		}
+	}
+	variantType := &StructType{Name: v.Name, Fields: fields}
+	a.currentScope.Define(&Symbol{Name: v.Name, Type: variantType, Node: v})
+	return variantType
+}
+
+// ---------------------------------------------------------------------------
+// Expression analysis
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
+	if e == nil {
+		return Unknown
+	}
+	var t Type
+	switch expr := e.(type) {
+	case *ast.IntLit:
+		t = TypInt
+	case *ast.DecimalLit:
+		t = TypDecimal
+	case *ast.StringLit:
+		t = TypString
+	case *ast.Ident:
+		t = a.analyzeIdent(expr)
+	case *ast.UnaryExpr:
+		t = a.analyzeUnary(expr)
+	case *ast.BinaryExpr:
+		t = a.analyzeBinary(expr)
+	case *ast.CallExpr:
+		t = a.analyzeCall(expr)
+	case *ast.MemberExpr:
+		t = a.analyzeMember(expr)
+	case *ast.IndexExpr:
+		t = a.analyzeIndex(expr)
+	case *ast.GroupExpr:
+		t = a.analyzeExpr(expr.Expr)
+	case *ast.BocLiteral:
+		prev := a.pushScope()
+		bodyReturns := a.analyzeBocBody(expr.Elements)
+		params := a.collectParams(expr.Elements)
+		a.popScope(prev)
+		if len(bodyReturns) == 0 {
+			bodyReturns = []Type{TypUnit}
+		}
+		t = &BocType{Params: params, Returns: bodyReturns}
+	case *ast.ArrayLiteral:
+		t = a.analyzeArrayLiteral(expr)
+	case *ast.DictLiteral:
+		t = a.analyzeDictLiteral(expr)
+	case *ast.MatchExpr:
+		t = a.analyzeMatch(expr)
+	case *ast.InfoString:
+		t = TypUnit
+	default:
+		t = Unknown
+	}
+	a.setType(e, t)
+	return t
+}
+
+func (a *Analyzer) analyzeIdent(id *ast.Ident) Type {
+	sym := a.currentScope.Lookup(id.Name)
+	if sym == nil {
+		a.errorf(id.Pos, "undefined: %s", id.Name)
+		return Unknown
+	}
+	return sym.Type
+}
+
+func (a *Analyzer) analyzeUnary(u *ast.UnaryExpr) Type {
+	operandType := a.analyzeExpr(u.Operand)
+	switch operandType {
+	case TypInt:
+		return TypInt
+	case TypDecimal:
+		return TypDecimal
+	case Unknown:
+		return Unknown
+	default:
+		a.errorf(u.Pos, "unary '-' not defined for type %v", operandType)
+		return Unknown
+	}
+}
+
+func (a *Analyzer) analyzeBinary(b *ast.BinaryExpr) Type {
+	leftType := a.analyzeExpr(b.Left)
+	a.analyzeExpr(b.Right)
+	methodName := NonWordMethodName(b.Op)
+	return a.methodReturnType(leftType, methodName, b.Pos)
+}
+
+func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
+	calleeType := a.analyzeExpr(c.Callee)
+	for _, arg := range c.Args {
+		a.analyzeExpr(arg.Value)
+	}
+	switch bt := calleeType.(type) {
+	case *BocType:
+		switch len(bt.Returns) {
+		case 0:
+			return TypUnit
+		case 1:
+			return bt.Returns[0]
+		default:
+			return Unknown // multi-return
+		}
+	case *StructType:
+		return bt // constructor call
+	case *BuiltinType:
+		return bt // direct type value used as function
+	}
+	return Unknown
+}
+
+func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
+	objType := a.analyzeExpr(m.Object)
+	return a.fieldType(objType, m.Member.Name, m.Pos)
+}
+
+func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
+	switch ot := objType.(type) {
+	case *StructType:
+		for _, f := range ot.Fields {
+			if f.Name == fieldName {
+				return f.Type
+			}
+		}
+		a.errorf(pos, "type %v has no field %q", objType, fieldName)
+		return Unknown
+	case *BuiltinType:
+		if methods, ok := builtinMethods[ot.name]; ok {
+			if ret, ok := methods[fieldName]; ok {
+				return ret
+			}
+		}
+		a.errorf(pos, "type %v has no method %q", objType, fieldName)
+		return Unknown
+	case *BocType:
+		// Accessing a method defined inside a boc — look up in scope.
+		sym := a.currentScope.Lookup(fieldName)
+		if sym != nil {
+			return sym.Type
+		}
+		return Unknown
+	case *UnknownType:
+		return Unknown
+	default:
+		return Unknown
+	}
+}
+
+func (a *Analyzer) analyzeIndex(idx *ast.IndexExpr) Type {
+	objType := a.analyzeExpr(idx.Object)
+	a.analyzeExpr(idx.Index)
+	switch ot := objType.(type) {
+	case *ArrayType:
+		return ot.Elem
+	case *DictType:
+		return ot.Val
+	}
+	return Unknown
+}
+
+func (a *Analyzer) analyzeArrayLiteral(arr *ast.ArrayLiteral) Type {
+	if arr.ElemType != nil {
+		return &ArrayType{Elem: a.resolveTypeExpr(arr.ElemType)}
+	}
+	var elemType Type = Unknown
+	for _, el := range arr.Elements {
+		t := a.analyzeExpr(el)
+		if elemType == Unknown {
+			elemType = t
+		}
+	}
+	return &ArrayType{Elem: elemType}
+}
+
+func (a *Analyzer) analyzeDictLiteral(d *ast.DictLiteral) Type {
+	if d.KeyType != nil {
+		return &DictType{
+			Key: a.resolveTypeExpr(d.KeyType),
+			Val: a.resolveTypeExpr(d.ValType),
+		}
+	}
+	var keyType, valType Type = Unknown, Unknown
+	for _, entry := range d.Entries {
+		k := a.analyzeExpr(entry.Key)
+		v := a.analyzeExpr(entry.Value)
+		if keyType == Unknown {
+			keyType = k
+		}
+		if valType == Unknown {
+			valType = v
+		}
+	}
+	return &DictType{Key: keyType, Val: valType}
+}
+
+func (a *Analyzer) analyzeMatch(m *ast.MatchExpr) Type {
+	if m.Subject != nil {
+		a.analyzeExpr(m.Subject)
+	}
+	var returnType Type = Unknown
+	for _, arm := range m.Arms {
+		if arm.Condition != nil {
+			a.analyzeExpr(arm.Condition)
+		}
+		var armType Type = TypUnit
+		prev := a.pushScope()
+		for _, elem := range arm.Body {
+			t := a.analyzeNode(elem)
+			if _, ok := elem.(ast.Expr); ok {
+				armType = t
+			}
+		}
+		a.popScope(prev)
+		if returnType == Unknown {
+			returnType = armType
+		}
+	}
+	return returnType
+}
+
+// ---------------------------------------------------------------------------
+// Type resolution
+// ---------------------------------------------------------------------------
+
+func (a *Analyzer) resolveTypeExpr(te ast.TypeExpr) Type {
+	if te == nil {
+		return Unknown
+	}
+	switch t := te.(type) {
+	case *ast.SimpleTypeExpr:
+		sym := a.currentScope.Lookup(t.Name)
+		if sym != nil {
+			return sym.Type
+		}
+		a.errorf(t.Pos, "undefined type: %s", t.Name)
+		return Unknown
+	case *ast.ArrayTypeExpr:
+		return &ArrayType{Elem: a.resolveTypeExpr(t.ElemType)}
+	case *ast.DictTypeExpr:
+		return &DictType{
+			Key: a.resolveTypeExpr(t.KeyType),
+			Val: a.resolveTypeExpr(t.ValType),
+		}
+	case *ast.BocTypeExpr:
+		params := a.resolveBocSigParams(t)
+		var inputParams []BocParam
+		var returns []Type
+		for _, p := range params {
+			if p.IsReturn {
+				returns = append(returns, p.Type)
+			} else {
+				inputParams = append(inputParams, p)
+			}
+		}
+		return &BocType{Params: inputParams, Returns: returns}
+	}
+	return Unknown
+}
+
+func (a *Analyzer) methodReturnType(receiverType Type, methodName string, pos ast.Pos) Type {
+	switch rt := receiverType.(type) {
+	case *BuiltinType:
+		if methods, ok := builtinMethods[rt.name]; ok {
+			if ret, ok := methods[methodName]; ok {
+				return ret
+			}
+		}
+		return Unknown
+	case *StructType:
+		for _, f := range rt.Fields {
+			if f.Name == methodName {
+				if bt, ok := f.Type.(*BocType); ok && len(bt.Returns) == 1 {
+					return bt.Returns[0]
+				}
+				return f.Type
+			}
+		}
+		return Unknown
+	case *UnknownType, *GenericType:
+		return Unknown
+	default:
+		return Unknown
+	}
+}
