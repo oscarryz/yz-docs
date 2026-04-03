@@ -266,7 +266,140 @@ func TestLowerTypedDeclField(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// 08 — Receiver name in methods
+// 08 — while loop lowers to ForStmt (not a builtin call)
+// ---------------------------------------------------------------------------
+
+func TestLowerWhileToForStmt(t *testing.T) {
+	f := lower(t, `main: {
+    n: 0
+    while({n < 3}, {n = n + 1})
+}`)
+	fn := f.Decls[0].(*FuncDecl)
+	// Expect: DeclStmt(n), ForStmt
+	var forStmt *ForStmt
+	for _, s := range fn.Body {
+		if fs, ok := s.(*ForStmt); ok {
+			forStmt = fs
+		}
+	}
+	if forStmt == nil {
+		t.Fatalf("no ForStmt found in main body; stmts: %v", fn.Body)
+	}
+	// Cond must be a MethodCall (n.Lt(...))
+	if _, ok := forStmt.Cond.(*MethodCall); !ok {
+		t.Errorf("ForStmt.Cond: want *MethodCall, got %T", forStmt.Cond)
+	}
+	// Body must contain an AssignStmt
+	if len(forStmt.Body) == 0 {
+		t.Fatal("ForStmt.Body is empty")
+	}
+	if _, ok := forStmt.Body[0].(*AssignStmt); !ok {
+		t.Errorf("ForStmt.Body[0]: want *AssignStmt, got %T", forStmt.Body[0])
+	}
+}
+
+func TestLowerWhileInMethodBody(t *testing.T) {
+	f := lower(t, `counter: {
+    count: 0
+    run: { while({count < 5}, {count = count + 1}) }
+}`)
+	sd := f.Decls[0].(*SingletonDecl)
+	m := sd.Methods[0]
+	// Method body is a single ThunkExpr statement.
+	if len(m.Body) != 1 {
+		t.Fatalf("method body len: want 1, got %d", len(m.Body))
+	}
+	thunkStmt, ok := m.Body[0].(*ExprStmt)
+	if !ok {
+		t.Fatalf("method body[0]: want *ExprStmt, got %T", m.Body[0])
+	}
+	thunk, ok := thunkStmt.Expr.(*ThunkExpr)
+	if !ok {
+		t.Fatalf("ExprStmt.Expr: want *ThunkExpr, got %T", thunkStmt.Expr)
+	}
+	// ThunkExpr body: ForStmt + ReturnStmt(Unit)
+	var hasFor bool
+	for _, s := range thunk.Body {
+		if _, ok := s.(*ForStmt); ok {
+			hasFor = true
+		}
+	}
+	if !hasFor {
+		t.Errorf("ThunkExpr body has no ForStmt; body: %v", thunk.Body)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 09 — BocWithSig becomes FuncDecl with params and *Thunk return
+// ---------------------------------------------------------------------------
+
+func TestLowerBocWithSigFuncDecl(t *testing.T) {
+	f := lower(t, `greet #(name String) {
+    print(name)
+}`)
+	if len(f.Decls) != 1 {
+		t.Fatalf("want 1 decl, got %d", len(f.Decls))
+	}
+	fn, ok := f.Decls[0].(*FuncDecl)
+	if !ok {
+		t.Fatalf("want *FuncDecl, got %T", f.Decls[0])
+	}
+	if fn.Name != "greet" {
+		t.Errorf("func name: got %q, want greet", fn.Name)
+	}
+	if len(fn.Params) != 1 || fn.Params[0].Name != "name" || fn.Params[0].Type != "std.String" {
+		t.Errorf("params: got %v", fn.Params)
+	}
+	if len(fn.Results) != 1 || fn.Results[0] != "*std.Thunk[std.Unit]" {
+		t.Errorf("results: got %v, want [*std.Thunk[std.Unit]]", fn.Results)
+	}
+	// Body must be ReturnStmt{ThunkExpr}
+	if len(fn.Body) != 1 {
+		t.Fatalf("body len: want 1, got %d", len(fn.Body))
+	}
+	rs, ok := fn.Body[0].(*ReturnStmt)
+	if !ok {
+		t.Fatalf("body[0]: want *ReturnStmt, got %T", fn.Body[0])
+	}
+	if _, ok := rs.Value.(*ThunkExpr); !ok {
+		t.Errorf("ReturnStmt.Value: want *ThunkExpr, got %T", rs.Value)
+	}
+}
+
+func TestLowerBocWithSigCallInMain(t *testing.T) {
+	f := lower(t, `greet #(name String) {
+    print(name)
+}
+main: {
+    greet("Alice")
+}`)
+	// Two decls: FuncDecl(greet) + FuncDecl(main)
+	if len(f.Decls) != 2 {
+		t.Fatalf("want 2 decls, got %d", len(f.Decls))
+	}
+	mainFn, ok := f.Decls[1].(*FuncDecl)
+	if !ok {
+		t.Fatalf("decls[1]: want *FuncDecl, got %T", f.Decls[1])
+	}
+	if mainFn.Name != "main" {
+		t.Fatalf("decls[1] name: got %q, want main", mainFn.Name)
+	}
+	// main body: DeclStmt(_bg), ExprStmt(SpawnExpr), WaitStmt
+	var hasSpawn bool
+	for _, s := range mainFn.Body {
+		if es, ok := s.(*ExprStmt); ok {
+			if _, ok := es.Expr.(*SpawnExpr); ok {
+				hasSpawn = true
+			}
+		}
+	}
+	if !hasSpawn {
+		t.Errorf("main body has no SpawnExpr; body: %v", mainFn.Body)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 10 — Receiver name in methods
 // ---------------------------------------------------------------------------
 
 func TestLowerMethodReceiverName(t *testing.T) {
