@@ -18,7 +18,7 @@ import (
 // Lower converts an analyzed source file into an IR File.
 // pkgName is the Go package name to emit (usually "main" for the entry file).
 func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
-	l := &lowerer{analyzer: a}
+	l := &lowerer{analyzer: a, thunkVars: make(map[string]bool)}
 	return l.lowerFile(sf, pkgName)
 }
 
@@ -33,6 +33,11 @@ type lowerer struct {
 	// When lowering a method body, these describe the receiver.
 	recvName   string
 	recvFields map[string]bool // fields accessible via receiver
+
+	// thunkVars tracks local variables that hold *Thunk[T] values (declared
+	// via a: bocCall(...)). When referenced as plain values, these are
+	// auto-forced to make the Yz "a is the value" semantics transparent.
+	thunkVars map[string]bool
 }
 
 // ---------------------------------------------------------------------------
@@ -538,7 +543,14 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 			}
 			typ := ""
 			if i < len(e.Values) {
-				typ = l.goType(l.analyzer.ExprType(e.Values[i]))
+				val := e.Values[i]
+				if l.isBocMethodCall(val) {
+					// RHS is a boc call — variable holds *Thunk[T].
+					// Use := inference and mark for auto-forcing on use.
+					l.thunkVars[n.Name] = true
+				} else {
+					typ = l.goType(l.analyzer.ExprType(val))
+				}
 			}
 			stmts = append(stmts, &DeclStmt{Name: n.Name, Type: typ, Init: initExpr})
 		}
@@ -688,7 +700,11 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		if expr.Name == "false" {
 			return &BoolLit{Val: false}
 		}
-		return l.lowerName(expr.Name)
+		name := l.lowerName(expr.Name)
+		if l.thunkVars[expr.Name] {
+			return &ForceExpr{Thunk: name}
+		}
+		return name
 	case *ast.UnaryExpr:
 		operand := l.lowerExpr(expr.Operand)
 		return &MethodCall{Recv: operand, Method: "Neg", Args: nil}
@@ -736,6 +752,14 @@ func (l *lowerer) lowerName(name string) Expr {
 var builtinGoName = map[string]string{
 	"print": "std.Print",
 	"info":  "std.Info",
+}
+
+// builtinSingleton maps a Yz built-in singleton name to its Go runtime
+// receiver expression (e.g. "http" → "std.Http"). Method calls on these
+// singletons are emitted as MethodCall with the runtime receiver and a
+// Go-exported method name (first letter uppercased).
+var builtinSingleton = map[string]string{
+	"http": "std.Http",
 }
 
 // ---------------------------------------------------------------------------
@@ -845,6 +869,20 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	var args []Expr
 	for _, arg := range c.Args {
 		args = append(args, l.lowerExpr(arg.Value))
+	}
+
+	// Check for built-in singleton method calls: http.get("url") → std.Http.Get(url).
+	// The runtime method already returns *Thunk[T], so no extra wrapping is needed.
+	if fa, ok := callee.(*FieldAccess); ok {
+		if recv, isIdent := fa.Object.(*Ident); isIdent {
+			if goRef, isSingleton := builtinSingleton[recv.Name]; isSingleton {
+				method := fa.Field
+				if len(method) > 0 {
+					method = strings.ToUpper(method[:1]) + method[1:]
+				}
+				return &MethodCall{Recv: &Ident{Name: goRef}, Method: method, Args: args}
+			}
+		}
 	}
 
 	// For a field-access callee like counter.increment or counter.value():

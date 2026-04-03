@@ -202,5 +202,21 @@ func newBuiltinScope() *Scope {
 		Returns: []Type{Unknown},
 	}})
 
+	// http — built-in singleton backed by runtime/yzrt.Http.
+	// Methods: get #(uri String) String, post #(uri String, body String) String.
+	s.Define(&Symbol{Name: "http", Type: &StructType{
+		Name: "_httpBoc",
+		Fields: []StructField{
+			{Name: "get", Type: &BocType{
+				Params:  []BocParam{{Label: "uri", Type: TypString}},
+				Returns: []Type{TypString},
+			}},
+			{Name: "post", Type: &BocType{
+				Params:  []BocParam{{Label: "uri", Type: TypString}, {Label: "body", Type: TypString}},
+				Returns: []Type{TypString},
+			}},
+		},
+	}})
+
 	return s
 }
