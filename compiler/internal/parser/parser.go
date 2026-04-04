@@ -900,6 +900,7 @@ func (p *Parser) parseBocTypeExpr() (*ast.BocTypeExpr, error) {
 // Forms:
 //
 //	ident TypeExpr [= expr]    — named param
+//	ident : expr               — ShortDecl param (type inferred from default)
 //	TypeExpr                   — anonymous param (return type)
 //	TYPE_IDENT ( params )      — variant constructor param
 func (p *Parser) parseBocParam() (*ast.BocParam, error) {
@@ -923,10 +924,21 @@ func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 		return &ast.BocParam{Pos: pos, Type: typ}, nil
 	}
 
-	// Named param: ident TypeExpr [= expr]
+	// Named param: ident TypeExpr [= expr]  OR  ShortDecl param: ident : expr
 	if p.at(token.IDENT) {
 		label := p.cur().Literal
 		p.advance()
+
+		// ShortDecl-style param: name : expr  (type inferred from default value)
+		if p.at(token.COLON) {
+			p.advance() // consume ':'
+			def, err := p.parseExpr()
+			if err != nil {
+				return nil, err
+			}
+			return &ast.BocParam{Pos: pos, Label: label, Default: def}, nil
+		}
+
 		typ, err := p.parseTypeExpr()
 		if err != nil {
 			return nil, err

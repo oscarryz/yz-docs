@@ -539,6 +539,9 @@ func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr, bodyOnly bool) []Bo
 		var typ Type
 		if p.Type != nil {
 			typ = a.resolveTypeExpr(p.Type)
+		} else if p.Default != nil {
+			// ShortDecl-style param (name : expr): infer type from default value.
+			typ = a.analyzeExpr(p.Default)
 		}
 		// In body-only form, all params are inputs; otherwise unlabeled = return.
 		isReturn := !bodyOnly && p.Label == "" && typ != nil

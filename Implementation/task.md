@@ -70,7 +70,7 @@
 
 ## BocWithSig Body-Only — Deferred
 - [x] Default values in params — `#(name String = "hello")` — injected at call sites; golden test 21
-- [ ] `ShortDecl` as param — `{ name : "default" }` (inferred-type param with default)
+- [x] `ShortDecl` as param — `name : "default"` in sig — type inferred from default; golden test 22
 - [ ] Generic type vars in sig — `#(T)`, `#(items Option(T))`
 - [ ] Uninstantiated generics — `Option(T)` as a param type
 - [ ] Declare-only then assign-later — `greet #(String)` … `greet = { a String; … }`
