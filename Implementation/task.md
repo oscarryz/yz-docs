@@ -55,10 +55,16 @@
 - [x] `http` built-in singleton — `http.get(uri)`, `http.post(uri, body)`
 - [x] First milestone — concurrent HTTP fetch + counter (`examples/milestone/`)
 
+## Language Features — Implemented (continued)
+- [x] Variant/discriminant sum types — `Pet: { Cat(...), Dog(...) }` with per-variant constructors
+- [x] Discriminant match — `match expr { Cat => body }, { Dog => body }` → Go switch
+- [x] Cross-package singleton method calls — `pkg.singleton.method()`
+- [x] `yzc run` — compile + execute in one step
+- [x] `http` built-in singleton — `http.get(uri)`, `http.post(uri, body)`
+- [x] thunk transparency — `a: boc.call()` auto-forced on use
+
 ## Language Features — Not Yet Implemented
 - [ ] Mixed type-only decl — `Name #(name String, greet #())` both data + BocType params (deferred)
 - [ ] `BocWithSig` body-only form — `name #(params) = { body }` (body re-declares params)
-- [ ] Variant/discriminant match — `match expr { Variant.Case => body }`
-- [ ] Cross-package singleton method calls — `pkg.singletonVar.method()`
-- [ ] Error reporting — useful sema errors with line/col
-- [ ] `yzc run` — compile + execute in one step
+- [ ] Error tests — programs that should fail with specific errors
+- [x] Error reporting — Rust-style diagnostics with source context and caret underlines
