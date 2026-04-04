@@ -17,6 +17,7 @@ type SemaError struct {
 	Msg  string
 	Line int
 	Col  int
+	Len  int // byte length to underline (0 → 1 caret)
 }
 
 func (e *SemaError) Error() string {
@@ -172,6 +173,15 @@ func (a *Analyzer) errorf(pos ast.Pos, format string, args ...any) {
 		Msg:  fmt.Sprintf(format, args...),
 		Line: pos.Line,
 		Col:  pos.Col,
+	})
+}
+
+func (a *Analyzer) errorfLen(pos ast.Pos, length int, format string, args ...any) {
+	a.errors = append(a.errors, &SemaError{
+		Msg:  fmt.Sprintf(format, args...),
+		Line: pos.Line,
+		Col:  pos.Col,
+		Len:  length,
 	})
 }
 
@@ -399,7 +409,7 @@ func (a *Analyzer) resolveTargetType(target ast.Expr) Type {
 	case *ast.Ident:
 		sym := a.currentScope.Lookup(t.Name)
 		if sym == nil {
-			a.errorf(t.Pos, "undefined: %s", t.Name)
+			a.errorfLen(t.Pos, len(t.Name), "undefined: %s", t.Name)
 			return Unknown
 		}
 		return sym.Type
@@ -626,7 +636,7 @@ func (a *Analyzer) collectVariantCase(v *ast.VariantDef) VariantCase {
 func (a *Analyzer) applyMix(ms *ast.MixStmt, st *StructType, fieldSet map[string]bool, hostName string) {
 	mixedSym := a.currentScope.Lookup(ms.Name.Name)
 	if mixedSym == nil {
-		a.errorf(ms.Name.Pos, "undefined: %s", ms.Name.Name)
+		a.errorfLen(ms.Name.Pos, len(ms.Name.Name), "undefined: %s", ms.Name.Name)
 		return
 	}
 	mixedSt, ok := mixedSym.Type.(*StructType)
@@ -722,7 +732,7 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 func (a *Analyzer) analyzeIdent(id *ast.Ident) Type {
 	sym := a.currentScope.Lookup(id.Name)
 	if sym == nil {
-		a.errorf(id.Pos, "undefined: %s", id.Name)
+		a.errorfLen(id.Pos, len(id.Name), "undefined: %s", id.Name)
 		return Unknown
 	}
 	return sym.Type
@@ -906,7 +916,7 @@ func (a *Analyzer) resolveTypeExpr(te ast.TypeExpr) Type {
 		if sym != nil {
 			return sym.Type
 		}
-		a.errorf(t.Pos, "undefined type: %s", t.Name)
+		a.errorfLen(t.Pos, len(t.Name), "undefined type: %s", t.Name)
 		return Unknown
 	case *ast.ArrayTypeExpr:
 		return &ArrayType{Elem: a.resolveTypeExpr(t.ElemType)}
