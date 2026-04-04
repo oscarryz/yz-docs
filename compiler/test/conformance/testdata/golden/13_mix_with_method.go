@@ -12,7 +12,7 @@ func NewNamed(name std.String) *Named {
 	}
 }
 
-func (self *Named) hi() *std.Thunk[std.Unit] {
+func (self *Named) Hi() *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
 		return std.Print(self.name)
 	})

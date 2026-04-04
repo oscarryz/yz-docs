@@ -41,22 +41,24 @@
 - [x] `runtime/yzrt/yzrt_test.go` — tests passing
 
 ## Phase 7 — Integration & Testing
-- [ ] `compiler/test/conformance/` — .yz + .expected pairs, run via `go test`
-- [ ] Golden tests — .yz → expected .go output comparison
+- [x] `compiler/test/conformance/` — golden tests, 18 passing
+- [x] `compiler/examples/` — counter, milestone (concurrent fetch + counter)
 - [ ] Error tests — programs that should fail with specific errors
-- [ ] `compiler/examples/` — counter, concurrent fetch, etc.
 
-## Language Features — Not Yet Implemented
+## Language Features — Implemented
 - [x] `while` loop
 - [x] `BocWithSig` — top-level functions and methods inside singleton/struct bocs
 - [x] `match` expression (condition form)
 - [x] `mix` statement — Go embedding
 - [x] Multi-file projects — flat and subdirectory (cross-package FQN)
-- [x] Type-only BocWithSig — `Name #(params)` (no body): data params → struct (no constructor); all-boc params → Go interface (structural typing)
-- [x] Interface declaration — `Greeter #(greet #())` → Go interface; any boc with matching methods satisfies it automatically
-- [ ] Mixed type-only decl — `Name #(name String, greet #())` with both data and BocType params (deferred)
+- [x] Type-only BocWithSig — `Name #(params)`: data params → struct (no constructor); all-boc params → Go interface (structural typing)
+- [x] `http` built-in singleton — `http.get(uri)`, `http.post(uri, body)`
+- [x] First milestone — concurrent HTTP fetch + counter (`examples/milestone/`)
+
+## Language Features — Not Yet Implemented
+- [ ] Mixed type-only decl — `Name #(name String, greet #())` both data + BocType params (deferred)
 - [ ] `BocWithSig` body-only form — `name #(params) = { body }` (body re-declares params)
-- [ ] Access control enforcement — only `#()`-declared methods callable externally
 - [ ] Variant/discriminant match — `match expr { Variant.Case => body }`
 - [ ] Cross-package singleton method calls — `pkg.singletonVar.method()`
-- [ ] Examples directory (first milestone concurrent program)
+- [ ] Error reporting — useful sema errors with line/col
+- [ ] `yzc run` — compile + execute in one step

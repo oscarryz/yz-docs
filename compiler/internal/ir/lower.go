@@ -175,7 +175,7 @@ func (l *lowerer) lowerSimpleTopDecl(name string, val ast.Expr) Decl {
 
 func (l *lowerer) lowerSingletonBoc(name string, b *ast.BocLiteral) *SingletonDecl {
 	typeName := "_" + name + "Boc"
-	sd := &SingletonDecl{TypeName: typeName, VarName: name}
+	sd := &SingletonDecl{TypeName: typeName, VarName: capitalize(name)}
 
 	// Collect field names so methods can detect field access.
 	fieldNames := l.collectFieldNames(b)
@@ -291,7 +291,7 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 	return &MethodDecl{
 		RecvType: recvType,
 		RecvName: "self",
-		Name:     name,
+		Name:     capitalize(name),
 		Params:   params,
 		Results:  []string{thunkResult},
 		Body:     body,
@@ -614,7 +614,7 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 	return &MethodDecl{
 		RecvType: recvType,
 		RecvName: "self",
-		Name:     bws.Name.Name,
+		Name:     capitalize(bws.Name.Name),
 		Params:   params,
 		Results:  []string{"*std.Thunk[" + resultType + "]"},
 		Body:     body,
@@ -740,9 +740,17 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 }
 
 // lowerName resolves an identifier: if it's a receiver field, emit self.field.
+// Singleton boc vars are capitalized so they are exported for cross-package access.
 func (l *lowerer) lowerName(name string) Expr {
 	if l.recvName != "" && l.recvFields[name] {
 		return &FieldAccess{Object: &Ident{Name: l.recvName}, Field: name}
+	}
+	// Capitalize singleton boc var references.
+	sym := l.analyzer.LookupInFile(name)
+	if sym != nil {
+		if _, isBoc := sym.Type.(*sema.BocType); isBoc {
+			return &Ident{Name: capitalize(name)}
+		}
 	}
 	return &Ident{Name: name}
 }
@@ -852,12 +860,50 @@ func (l *lowerer) resolveExprToNamespace(expr ast.Expr) *sema.NamespaceType {
 	return nil
 }
 
+// tryLowerCrossPackageSingletonMethod detects and lowers calls of the form
+// pkg.singleton.method(args) → pkg.Singleton.Method(args).
+// The singleton must be exported from the package as a BocType symbol.
+func (l *lowerer) tryLowerCrossPackageSingletonMethod(c *ast.CallExpr) (Expr, bool) {
+	outer, ok := c.Callee.(*ast.MemberExpr)
+	if !ok {
+		return nil, false
+	}
+	inner, ok := outer.Object.(*ast.MemberExpr)
+	if !ok {
+		return nil, false
+	}
+	pkg := l.resolveExprToPackage(inner.Object)
+	if pkg == nil {
+		return nil, false
+	}
+	singletonName := inner.Member.Name
+	exportedSym, ok := pkg.Exports[singletonName]
+	if !ok {
+		return nil, false
+	}
+	if _, isBoc := exportedSym.Type.(*sema.BocType); !isBoc {
+		return nil, false
+	}
+	var args []Expr
+	for _, arg := range c.Args {
+		args = append(args, l.lowerExpr(arg.Value))
+	}
+	l.addImport(pkg.ImportPath)
+	recv := &FieldAccess{Object: &Ident{Name: pkg.PkgAlias}, Field: capitalize(singletonName)}
+	return &MethodCall{Recv: recv, Method: capitalize(outer.Member.Name), Args: args}, true
+}
+
 func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	// Check for known builtins first — they emit as direct std.Xxx calls.
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		if goName, isBuiltin := builtinGoName[id.Name]; isBuiltin {
 			return l.lowerBuiltinCall(goName, c)
 		}
+	}
+
+	// Cross-package singleton method call: pkg.counter.increment() → pkg.Counter.Increment()
+	if result, ok := l.tryLowerCrossPackageSingletonMethod(c); ok {
+		return result
 	}
 
 	// Cross-package FQN call: house.front.Host("Alice") → front.NewHost(...)
@@ -888,14 +934,9 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	// For a field-access callee like counter.increment or counter.value():
 	// the method itself already wraps its body in std.Go and returns *Thunk[T].
 	// We just emit the direct MethodCall — no extra wrapping needed.
+	// User-defined method names are capitalized to be exported (cross-package safe).
 	if fa, ok := callee.(*FieldAccess); ok {
-		calleeType := l.analyzer.ExprType(c.Callee)
-		if _, isBocType := calleeType.(*sema.BocType); isBocType || l.isSingletonBoc(fa.Object) {
-			// Boc method call: emit as MethodCall; result is *Thunk[T].
-			return &MethodCall{Recv: fa.Object, Method: fa.Field, Args: args}
-		}
-		// Plain struct field/method access.
-		return &MethodCall{Recv: fa.Object, Method: fa.Field, Args: args}
+		return &MethodCall{Recv: fa.Object, Method: capitalize(fa.Field), Args: args}
 	}
 
 	if id, ok := c.Callee.(*ast.Ident); ok {
@@ -940,6 +981,16 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	}
 	// Boc/struct method call: obj.method()
 	if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+		// Cross-package singleton method call: pkg.singleton.method()
+		if innerMem, ok := mem.Object.(*ast.MemberExpr); ok {
+			if pkg := l.resolveExprToPackage(innerMem.Object); pkg != nil {
+				if exportedSym, ok := pkg.Exports[innerMem.Member.Name]; ok {
+					if _, isBoc := exportedSym.Type.(*sema.BocType); isBoc {
+						return true
+					}
+				}
+			}
+		}
 		// Struct instance method call (n.hi() where n is *Named) → returns *Thunk.
 		if _, isStruct := l.analyzer.ExprType(mem.Object).(*sema.StructType); isStruct {
 			return true
@@ -1415,6 +1466,15 @@ func isUppercase(name string) bool {
 		return false
 	}
 	return unicode.IsUpper(rune(name[0]))
+}
+
+// capitalize uppercases the first letter of name, leaving the rest unchanged.
+// Used to produce exported Go identifiers from Yz (lowercase-first) names.
+func capitalize(name string) string {
+	if name == "" {
+		return name
+	}
+	return strings.ToUpper(name[:1]) + name[1:]
 }
 
 func (l *lowerer) valueAt(vals []ast.Expr, i int) ast.Expr {
