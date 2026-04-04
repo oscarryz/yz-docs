@@ -121,15 +121,82 @@ func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocWithSig) Decl {
 		}
 		return id
 	}
-	// Data fields only → emit a Go struct without constructor.
-	sd := &StructDecl{Name: bws.Name.Name, NoConstructor: true}
+	// Mixed or data-only: separate data fields from BocType fields.
+	var dataFields, bocFields []sema.StructField
 	for _, f := range st.Fields {
-		sd.Fields = append(sd.Fields, &FieldSpec{
-			Name: f.Name,
-			Type: l.goType(f.Type),
-		})
+		if _, isBoc := f.Type.(*sema.BocType); isBoc {
+			bocFields = append(bocFields, f)
+		} else {
+			dataFields = append(dataFields, f)
+		}
+	}
+
+	// Data fields only (no BocType params) → plain struct, no constructor.
+	if len(bocFields) == 0 {
+		sd := &StructDecl{Name: bws.Name.Name, NoConstructor: true}
+		for _, f := range dataFields {
+			sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+		}
+		return sd
+	}
+
+	// Mixed: data fields + BocType fields → struct with constructor + method wrappers.
+	sd := &StructDecl{Name: bws.Name.Name}
+	for _, f := range dataFields {
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+	}
+	for _, f := range bocFields {
+		bt := f.Type.(*sema.BocType)
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.bocFuncType(bt)})
+		sd.Methods = append(sd.Methods, l.bocFieldMethod(bws.Name.Name, f.Name, bt))
 	}
 	return sd
+}
+
+// bocFuncType returns the Go function type string for a BocType field.
+// e.g. BocType{Params:[], Returns:[Unit]} → "func() *std.Thunk[std.Unit]"
+func (l *lowerer) bocFuncType(bt *sema.BocType) string {
+	var paramTypes []string
+	for _, p := range bt.Params {
+		if !p.IsReturn {
+			paramTypes = append(paramTypes, l.goType(p.Type))
+		}
+	}
+	resultType := "std.Unit"
+	if len(bt.Returns) > 0 {
+		resultType = l.goType(bt.Returns[0])
+	}
+	return fmt.Sprintf("func(%s) *std.Thunk[%s]", strings.Join(paramTypes, ", "), resultType)
+}
+
+// bocFieldMethod generates a method wrapper that delegates to a function field.
+// e.g. field "greet" → func (self *Name) Greet() *std.Thunk[std.Unit] { return self.greet() }
+func (l *lowerer) bocFieldMethod(typeName, fieldName string, bt *sema.BocType) *MethodDecl {
+	var params []*ParamSpec
+	var args []Expr
+	for _, p := range bt.Params {
+		if !p.IsReturn && p.Label != "" {
+			params = append(params, &ParamSpec{Name: p.Label, Type: l.goType(p.Type)})
+			args = append(args, &Ident{Name: p.Label})
+		}
+	}
+	resultType := "std.Unit"
+	if len(bt.Returns) > 0 {
+		resultType = l.goType(bt.Returns[0])
+	}
+	return &MethodDecl{
+		RecvType: "*" + typeName,
+		RecvName: "self",
+		Name:     capitalize(fieldName),
+		Params:   params,
+		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Body: []Stmt{
+			&ReturnStmt{Value: &FuncCall{
+				Func: &FieldAccess{Object: &Ident{Name: "self"}, Field: fieldName},
+				Args: args,
+			}},
+		},
+	}
 }
 
 // ---------------------------------------------------------------------------
