@@ -1,0 +1,8 @@
+greet #(name String) = {
+    last String
+    print(last)
+}
+
+main: {
+    greet("Alice")
+}
