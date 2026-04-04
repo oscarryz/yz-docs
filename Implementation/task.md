@@ -69,8 +69,11 @@
 - [x] Error reporting — Rust-style diagnostics with source context and caret underlines
 
 ## BocWithSig Body-Only — Deferred
-- [ ] Default values in params — `#(name String = "hello")` / `{ name String = "yz" }`
+- [x] Default values in params — `#(name String = "hello")` — injected at call sites; golden test 21
 - [ ] `ShortDecl` as param — `{ name : "default" }` (inferred-type param with default)
 - [ ] Generic type vars in sig — `#(T)`, `#(items Option(T))`
 - [ ] Uninstantiated generics — `Option(T)` as a param type
 - [ ] Declare-only then assign-later — `greet #(String)` … `greet = { a String; … }`
+
+## Language Features — Not Yet Implemented
+- [ ] Multiline strings — `"""..."""` or backtick form for multi-line string literals

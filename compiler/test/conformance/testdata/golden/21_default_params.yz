@@ -1,0 +1,9 @@
+// Default parameter values: caller may omit args with defaults.
+// greet() uses "Alice"; greet("Bob") overrides with "Bob".
+greet #(name String = "Alice") {
+    print(name)
+}
+main: {
+    greet()
+    greet("Bob")
+}
