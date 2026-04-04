@@ -1,0 +1,19 @@
+// Body-only form: `name #(params) = { body }` — body redeclares params.
+// All sig params are inputs; unnamed params accept any body name.
+
+// Named param — body must use same name.
+greet #(name String) = {
+    name String
+    print(name)
+}
+
+// Anonymous param — body may use any name.
+shout #(String) = {
+    msg String
+    print(msg)
+}
+
+main: {
+    greet("Alice")
+    shout("hello")
+}
