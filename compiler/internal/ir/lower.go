@@ -1652,17 +1652,31 @@ func (l *lowerer) lowerArrayLit(arr *ast.ArrayLiteral) Expr {
 }
 
 func (l *lowerer) lowerDictLit(d *ast.DictLiteral) Expr {
-	// Emit std.NewDict[K,V]().Set(k,v).Set(k,v)... chain.
-	// For simplicity, represent as a FuncCall "std.NewDict" with alternating k,v args.
-	// The codegen will expand this into Set calls.
-	var args []Expr
+	// Determine key and value Go types from the sema type.
+	keyType, valType := "any", "any"
+	if dt, ok := l.analyzer.ExprType(d).(*sema.DictType); ok {
+		keyType = l.goType(dt.Key)
+		valType = l.goType(dt.Val)
+	} else if d.KeyType != nil {
+		// Empty-type form [K:V]() — use the explicit type expressions.
+		keyType = l.goTypeFromTypeExpr(d.KeyType)
+		valType = l.goTypeFromTypeExpr(d.ValType)
+	}
+
+	// Base: std.NewDict[K, V]()
+	var result Expr = &FuncCall{
+		Func: &Ident{Name: "std.NewDict[" + keyType + ", " + valType + "]"},
+	}
+
+	// Chain .Set(k, v) for each entry.
 	for _, entry := range d.Entries {
-		args = append(args, l.lowerExpr(entry.Key), l.lowerExpr(entry.Value))
+		result = &MethodCall{
+			Recv:   result,
+			Method: "Set",
+			Args:   []Expr{l.lowerExpr(entry.Key), l.lowerExpr(entry.Value)},
+		}
 	}
-	return &FuncCall{
-		Func: &Ident{Name: "std.NewDictLit"},
-		Args: args,
-	}
+	return result
 }
 
 // ---------------------------------------------------------------------------
