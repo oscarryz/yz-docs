@@ -64,7 +64,7 @@
 - [x] thunk transparency — `a: boc.call()` auto-forced on use
 
 ## Language Features — Not Yet Implemented
-- [ ] Mixed type-only decl — `Name #(name String, greet #())` both data + BocType params (deferred)
+- [x] Mixed type-only decl — `Name #(name String, greet #())` → struct with data fields + function-typed fields + method wrappers
 - [x] `BocWithSig` body-only form — `name #(params) = { body }` — named and anonymous param matching
 - [x] Error reporting — Rust-style diagnostics with source context and caret underlines
 
