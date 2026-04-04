@@ -122,7 +122,7 @@ func TestGenerateSingletonStructType(t *testing.T) {
 	contains(t, got,
 		"type _counterBoc struct",
 		"count std.Int",
-		"var counter = &_counterBoc{",
+		"var Counter = &_counterBoc{",
 		"count: std.NewInt(0)",
 	)
 }
@@ -137,7 +137,7 @@ func TestGenerateMethodThunk(t *testing.T) {
     value: { count }
 }`)
 	contains(t, got,
-		"func (self *_counterBoc) value()",
+		"func (self *_counterBoc) Value()",
 		"*std.Thunk[std.Int]",
 		"return std.Go(func() std.Int {",
 		"return self.count",
@@ -150,7 +150,7 @@ func TestGenerateIncrementMethod(t *testing.T) {
     increment: { count = count + 1 }
 }`)
 	contains(t, got,
-		"func (self *_counterBoc) increment()",
+		"func (self *_counterBoc) Increment()",
 		"std.Go(func() std.Unit {",
 		"self.count = self.count.Plus(std.NewInt(1))",
 	)
@@ -227,9 +227,9 @@ main: {
 	contains(t, got,
 		"_bg0 := &std.BocGroup{}",
 		"_bg0.Go(func() any {",
-		"counter.increment().Force()",
+		"Counter.Increment().Force()",
 		"_bg0.Wait()",
-		"std.Print(counter.value().Force())",
+		"std.Print(Counter.Value().Force())",
 	)
 }
 
@@ -246,9 +246,9 @@ func TestGenerateCounterProgram(t *testing.T) {
 	contains(t, got,
 		"package main",
 		"type _counterBoc struct",
-		"func (self *_counterBoc) increment()",
-		"func (self *_counterBoc) value()",
-		"var counter = &_counterBoc{",
+		"func (self *_counterBoc) Increment()",
+		"func (self *_counterBoc) Value()",
+		"var Counter = &_counterBoc{",
 	)
 }
 

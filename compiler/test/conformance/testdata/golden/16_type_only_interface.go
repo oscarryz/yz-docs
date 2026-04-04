@@ -17,7 +17,7 @@ func NewPerson(name std.String) *Person {
 	}
 }
 
-func (self *Person) greet() *std.Thunk[std.Unit] {
+func (self *Person) Greet() *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
 		return std.Print(self.name)
 	})

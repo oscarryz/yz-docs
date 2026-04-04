@@ -19,7 +19,7 @@ func NewPerson(name std.String, secret std.String) *Person {
 	}
 }
 
-func (self *Person) greet() *std.Thunk[std.Unit] {
+func (self *Person) Greet() *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
 		return std.Print(self.name)
 	})
@@ -27,7 +27,7 @@ func (self *Person) greet() *std.Thunk[std.Unit] {
 
 func greet_all(g Greeter) *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
-		return g.greet().Force()
+		return g.Greet().Force()
 	})
 }
 
@@ -35,7 +35,7 @@ func main() {
 	var p *Person = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
 	_bg0 := &std.BocGroup{}
 	_bg0.Go(func() any {
-		return greet_all(p).Force()
+		return Greet_all(p).Force()
 	})
 	_bg0.Wait()
 }

@@ -1,0 +1,6 @@
+ledger: {
+    balance: 0
+    deposit #(amount Int) { balance = balance + amount }
+    withdraw #(amount Int) { balance = balance - amount }
+    total #(Int) { balance }
+}

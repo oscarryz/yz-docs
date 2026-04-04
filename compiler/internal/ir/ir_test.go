@@ -89,8 +89,8 @@ func TestLowerSingletonBoc(t *testing.T) {
 	if !ok {
 		t.Fatalf("want *SingletonDecl, got %T", f.Decls[0])
 	}
-	if outer.VarName != "counter" {
-		t.Errorf("VarName: got %q, want counter", outer.VarName)
+	if outer.VarName != "Counter" {
+		t.Errorf("VarName: got %q, want Counter", outer.VarName)
 	}
 	if outer.TypeName != "_counterBoc" {
 		t.Errorf("TypeName: got %q, want _counterBoc", outer.TypeName)
@@ -118,7 +118,7 @@ func TestLowerSingletonWithMethods(t *testing.T) {
 	for _, m := range outer.Methods {
 		names[m.Name] = true
 	}
-	if !names["increment"] || !names["value"] {
+	if !names["Increment"] || !names["Value"] {
 		t.Errorf("method names: %v", names)
 	}
 }
@@ -166,7 +166,7 @@ func TestLowerBinaryExprToMethodCall(t *testing.T) {
 	// Find the "next" method
 	var nextMethod *MethodDecl
 	for _, m := range outer.Methods {
-		if m.Name == "next" {
+		if m.Name == "Next" {
 			nextMethod = m
 		}
 	}
@@ -214,7 +214,7 @@ func TestLowerMethodReturnsThunk(t *testing.T) {
 	outer := f.Decls[0].(*SingletonDecl)
 	var valueMethod *MethodDecl
 	for _, m := range outer.Methods {
-		if m.Name == "value" {
+		if m.Name == "Value" {
 			valueMethod = m
 		}
 	}

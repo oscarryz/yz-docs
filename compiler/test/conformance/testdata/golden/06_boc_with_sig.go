@@ -11,10 +11,10 @@ func greet(name std.String) *std.Thunk[std.Unit] {
 func main() {
 	_bg0 := &std.BocGroup{}
 	_bg0.Go(func() any {
-		return greet(std.NewString("Alice")).Force()
+		return Greet(std.NewString("Alice")).Force()
 	})
 	_bg0.Go(func() any {
-		return greet(std.NewString("Bob")).Force()
+		return Greet(std.NewString("Bob")).Force()
 	})
 	_bg0.Wait()
 }
