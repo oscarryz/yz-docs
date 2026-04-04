@@ -1,0 +1,12 @@
+// Generic variant: Option type.
+Option: {
+    V
+    Some(value V)
+    None()
+}
+main: {
+    x: Some("hello")
+    match x
+        { Some => print(x.value) },
+        { None => print("nothing") }
+}

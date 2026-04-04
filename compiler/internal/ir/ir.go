@@ -36,6 +36,7 @@ func (*InterfaceDecl) irDecl() {}
 // via `Name(args)` until a body is attached.
 // When IsVariant is true, the struct is a sum/discriminant type: codegen emits
 // a discriminant enum, flat merged struct, and per-variant constructors.
+// TypeParams holds formal type parameter names for generic variant types (e.g., ["V"]).
 type StructDecl struct {
 	Name          string
 	Fields        []*FieldSpec
@@ -43,6 +44,7 @@ type StructDecl struct {
 	NoConstructor bool
 	IsVariant     bool
 	Variants      []*IRVariantCase
+	TypeParams    []string // formal type params for generic variants (e.g., ["V"])
 }
 
 // IRVariantCase is one constructor arm of a variant struct.

@@ -71,6 +71,7 @@
 ## BocWithSig Body-Only — Deferred
 - [x] Default values in params — `#(name String = "hello")` — injected at call sites; golden test 21
 - [x] `ShortDecl` as param — `name : "default"` in sig — type inferred from default; golden test 22
+- [x] Generic variant types — `Option: { V; Some(value V); None() }` with `[V any]` on struct and constructors; discriminant match works; golden test 25
 - [ ] Generic type vars in sig — `#(T)`, `#(items Option(T))`
 - [ ] Uninstantiated generics — `Option(T)` as a param type
 - [x] Declare-only then assign-later — `greet #(name String)` then `greet = { name String; … }` → FuncDecl; golden test 23
