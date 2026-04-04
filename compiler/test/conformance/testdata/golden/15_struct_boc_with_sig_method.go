@@ -12,13 +12,13 @@ func NewPerson(name std.String) *Person {
 	}
 }
 
-func (self *Person) greet() *std.Thunk[std.Unit] {
+func (self *Person) Greet() *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
 		return std.Print(self.name)
 	})
 }
 
-func (self *Person) label() *std.Thunk[std.String] {
+func (self *Person) Label() *std.Thunk[std.String] {
 	return std.Go(func() std.String {
 		return self.name
 	})

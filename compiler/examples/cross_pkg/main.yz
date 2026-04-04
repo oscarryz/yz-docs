@@ -1,0 +1,6 @@
+main: {
+    ledger.ledger.deposit(100)
+    ledger.ledger.deposit(50)
+    ledger.ledger.withdraw(30)
+    print("balance: `ledger.ledger.total()`")
+}
