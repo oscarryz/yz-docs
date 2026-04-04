@@ -79,5 +79,5 @@
 - [x] Multiline strings — strings span lines naturally; `"` or `'` closes on any line (lexer handles `\n` inside string literals)
 
 ## Known Bugs
-- [ ] Dict literals — lowerer emits `std.NewDictLit` which doesn't exist in runtime; should chain `std.NewDict[K,V]().Set(k,v)...`
-- [ ] Array literals — `std.NewArray(...)` may not exist in runtime; needs verification
+- [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
+- [x] Array literals — already worked via variadic `std.NewArray(...)`; golden test 24

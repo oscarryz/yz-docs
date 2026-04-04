@@ -1,0 +1,7 @@
+// Array and dict literals.
+main: {
+    nums: [1, 2, 3]
+    scores: ["alice": 10, "bob": 20]
+    print(nums[0])
+    print(scores["alice"])
+}
