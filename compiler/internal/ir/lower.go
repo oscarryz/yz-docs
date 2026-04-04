@@ -78,8 +78,77 @@ func (l *lowerer) lowerTopLevel(node ast.Node) Decl {
 			return l.lowerTypeOnlyDecl(n)
 		}
 		return l.lowerBocWithSig(n, "", nil)
+	case *ast.Assignment:
+		return l.lowerTopAssignment(n)
 	default:
 		return nil
+	}
+}
+
+// lowerTopAssignment handles the declare-then-assign pattern at top level:
+//
+//	greet #(name String)       ← declares greet as a BocType (no body)
+//	greet = { name String; … } ← assigns the body, emitted as a FuncDecl
+//
+// Only Assignment nodes whose target is a known BocType symbol and whose
+// value is a BocLiteral are lowered; all others are silently ignored.
+func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
+	if asgn.Target == nil || len(asgn.Values) != 1 {
+		return nil
+	}
+	id, ok := asgn.Target.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	bocLit, ok := asgn.Values[0].(*ast.BocLiteral)
+	if !ok {
+		return nil
+	}
+	sym := l.analyzer.LookupInFile(id.Name)
+	if sym == nil {
+		return nil
+	}
+	bt, ok := sym.Type.(*sema.BocType)
+	if !ok {
+		return nil
+	}
+
+	resultType := "std.Unit"
+	if len(bt.Returns) > 0 {
+		resultType = l.goType(bt.Returns[0])
+	}
+	thunkResult := "*std.Thunk[" + resultType + "]"
+
+	// Collect params from the body's leading TypedDecls (same as lowerMethod).
+	var params []*ParamSpec
+	for _, elem := range bocLit.Elements {
+		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+			params = append(params, &ParamSpec{
+				Name: td.Name.Name,
+				Type: l.goTypeFromTypeExpr(td.Type),
+			})
+		}
+	}
+
+	prev := l.setReceiver("", nil)
+	bocBodyStmts := l.lowerBocBody(bocLit, resultType)
+	l.restoreReceiver(prev)
+
+	var funcBody []Stmt
+	if len(bocBodyStmts) == 1 {
+		if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
+			funcBody = []Stmt{&ReturnStmt{Value: es.Expr}}
+		}
+	}
+	if funcBody == nil {
+		funcBody = bocBodyStmts
+	}
+
+	return &FuncDecl{
+		Name:    id.Name,
+		Params:  params,
+		Results: []string{thunkResult},
+		Body:    funcBody,
 	}
 }
 

@@ -73,7 +73,11 @@
 - [x] `ShortDecl` as param — `name : "default"` in sig — type inferred from default; golden test 22
 - [ ] Generic type vars in sig — `#(T)`, `#(items Option(T))`
 - [ ] Uninstantiated generics — `Option(T)` as a param type
-- [ ] Declare-only then assign-later — `greet #(String)` … `greet = { a String; … }`
+- [x] Declare-only then assign-later — `greet #(name String)` then `greet = { name String; … }` → FuncDecl; golden test 23
 
 ## Language Features — Already Implemented (discovered)
 - [x] Multiline strings — strings span lines naturally; `"` or `'` closes on any line (lexer handles `\n` inside string literals)
+
+## Known Bugs
+- [ ] Dict literals — lowerer emits `std.NewDictLit` which doesn't exist in runtime; should chain `std.NewDict[K,V]().Set(k,v)...`
+- [ ] Array literals — `std.NewArray(...)` may not exist in runtime; needs verification
