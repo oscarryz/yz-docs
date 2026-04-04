@@ -13,10 +13,11 @@ import (
 
 // Symbol is a named entity in a scope.
 type Symbol struct {
-	Name string
-	Type Type
-	FQN  string   // fully-qualified name (empty for locals without a global FQN)
-	Node ast.Node // declaration site; nil for built-ins
+	Name           string
+	Type           Type
+	FQN            string   // fully-qualified name (empty for locals without a global FQN)
+	Node           ast.Node // declaration site; nil for built-ins
+	ParentTypeName string   // non-empty for variant constructors (e.g. "Pet" for Cat/Dog)
 }
 
 // ---------------------------------------------------------------------------

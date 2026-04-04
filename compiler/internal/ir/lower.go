@@ -340,10 +340,12 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 				if isLast {
 					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
 				}
-			} else if ms, ok := l.tryLowerMatch(e); ok {
-				inner = append(inner, ms)
-				if isLast {
-					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
+			} else if !isLast {
+				// Match in non-last position: lower as statement (no return value needed).
+				if ms, ok := l.tryLowerMatch(e); ok {
+					inner = append(inner, ms)
+				} else {
+					inner = append(inner, &ExprStmt{Expr: l.lowerExpr(e)})
 				}
 			} else {
 				expr := l.lowerExpr(e)
@@ -426,6 +428,11 @@ func (l *lowerer) lowerAssignment(asgn *ast.Assignment) Stmt {
 // ---------------------------------------------------------------------------
 
 func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
+	// Detect variant (sum) type: body consists entirely of VariantDef elements.
+	if l.isVariantBoc(b) {
+		return l.lowerVariantBoc(name, b)
+	}
+
 	sd := &StructDecl{Name: name}
 	fieldNames := l.collectFieldNames(b)
 	for _, elem := range b.Elements {
@@ -483,6 +490,53 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				sd.Methods = append(sd.Methods, m)
 			}
 		}
+	}
+	return sd
+}
+
+// ---------------------------------------------------------------------------
+// Variant (sum) type boc
+// ---------------------------------------------------------------------------
+
+// isVariantBoc returns true when all non-empty elements in a boc body are
+// VariantDefs — indicating a sum type declaration.
+func (l *lowerer) isVariantBoc(b *ast.BocLiteral) bool {
+	hasVariant := false
+	for _, elem := range b.Elements {
+		if _, ok := elem.(*ast.VariantDef); ok {
+			hasVariant = true
+		} else {
+			return false // mixed with non-variant content
+		}
+	}
+	return hasVariant
+}
+
+// lowerVariantBoc lowers `Pet: { Cat(name String), Dog(name String) }` into a
+// StructDecl with IsVariant=true, a merged flat field list, and one
+// IRVariantCase per constructor.
+func (l *lowerer) lowerVariantBoc(name string, b *ast.BocLiteral) *StructDecl {
+	sd := &StructDecl{Name: name, IsVariant: true}
+	fieldSet := map[string]bool{}
+
+	for _, elem := range b.Elements {
+		vd, ok := elem.(*ast.VariantDef)
+		if !ok {
+			continue
+		}
+		vc := &IRVariantCase{Name: vd.Name}
+		for _, p := range vd.Params {
+			if p.Label == "" || p.Type == nil {
+				continue
+			}
+			typ := l.goTypeFromTypeExpr(p.Type)
+			vc.Fields = append(vc.Fields, &FieldSpec{Name: p.Label, Type: typ})
+			if !fieldSet[p.Label] {
+				fieldSet[p.Label] = true
+				sd.Fields = append(sd.Fields, &FieldSpec{Name: p.Label, Type: typ})
+			}
+		}
+		sd.Variants = append(sd.Variants, vc)
 	}
 	return sd
 }
@@ -741,15 +795,18 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 
 // lowerName resolves an identifier: if it's a receiver field, emit self.field.
 // Singleton boc vars are capitalized so they are exported for cross-package access.
+// BocWithSig functions remain lowercase (they become Go functions, not vars).
 func (l *lowerer) lowerName(name string) Expr {
 	if l.recvName != "" && l.recvFields[name] {
 		return &FieldAccess{Object: &Ident{Name: l.recvName}, Field: name}
 	}
-	// Capitalize singleton boc var references.
+	// Capitalize singleton boc var references, but NOT BocWithSig functions.
 	sym := l.analyzer.LookupInFile(name)
 	if sym != nil {
 		if _, isBoc := sym.Type.(*sema.BocType); isBoc {
-			return &Ident{Name: capitalize(name)}
+			if _, isBWS := sym.Node.(*ast.BocWithSig); !isBWS {
+				return &Ident{Name: capitalize(name)}
+			}
 		}
 	}
 	return &Ident{Name: name}
@@ -942,6 +999,10 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		sym := l.analyzer.LookupInFile(id.Name)
 		if sym != nil {
+			// Variant constructor call: Cat("Whiskers", 9) → NewPetCat(...)
+			if sym.ParentTypeName != "" {
+				return &FuncCall{Func: &Ident{Name: "New" + sym.ParentTypeName + id.Name}, Args: args}
+			}
 			// Struct type constructor call: Named("Alice") → NewNamed(args)
 			if _, isStruct := sym.Type.(*sema.StructType); isStruct {
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
@@ -1103,6 +1164,13 @@ func (l *lowerer) lowerConditionalExpr(cond *ast.ConditionalExpr) Expr {
 
 // lowerMatchExpr lowers a MatchExpr for expression position (IIFE).
 func (l *lowerer) lowerMatchExpr(m *ast.MatchExpr) Expr {
+	// Discriminant match in expression position → SwitchExpr IIFE.
+	if m.Subject != nil {
+		if sw, ok := l.tryLowerDiscriminantMatchExpr(m); ok {
+			return sw
+		}
+	}
+
 	semType := l.analyzer.ExprType(m)
 	resultType := l.goType(semType)
 
@@ -1118,10 +1186,9 @@ func (l *lowerer) lowerMatchExpr(m *ast.MatchExpr) Expr {
 	return &MatchExpr{ResultType: resultType, Arms: arms}
 }
 
-// tryLowerMatch detects a MatchExpr and lowers it to an IfStmt chain for
-// statement position. Returns (stmt, true) on match.
-// Arms are processed last-to-first to build a nested IfStmt chain where
-// each conditional arm's Else is the next arm (or the default body).
+// tryLowerMatch detects a MatchExpr and lowers it to a statement.
+// Discriminant match (Subject != nil) → SwitchStmt.
+// Condition match (Subject == nil) → IfStmt chain.
 func (l *lowerer) tryLowerMatch(e ast.Expr) (Stmt, bool) {
 	m, ok := e.(*ast.MatchExpr)
 	if !ok {
@@ -1129,6 +1196,13 @@ func (l *lowerer) tryLowerMatch(e ast.Expr) (Stmt, bool) {
 	}
 	if len(m.Arms) == 0 {
 		return nil, false
+	}
+
+	// Discriminant match: `match expr { Variant => body }`
+	if m.Subject != nil {
+		if sw, ok := l.tryLowerDiscriminantMatch(m); ok {
+			return sw, true
+		}
 	}
 
 	// Build chain from last arm to first.
@@ -1153,6 +1227,91 @@ func (l *lowerer) tryLowerMatch(e ast.Expr) (Stmt, bool) {
 		return &IfStmt{Cond: &BoolLit{Val: true}, Then: pendingElse}, true
 	}
 	return topIf, true
+}
+
+// ---------------------------------------------------------------------------
+// Discriminant (variant) match lowering
+// ---------------------------------------------------------------------------
+
+// tryLowerDiscriminantMatch lowers `match subject { Variant => body }` to
+// a SwitchStmt. Returns (stmt, true) when all arms have TYPE_IDENT conditions
+// and the subject is a variant struct type.
+func (l *lowerer) tryLowerDiscriminantMatch(m *ast.MatchExpr) (Stmt, bool) {
+	typeName, ok := l.variantDiscriminantType(m.Subject)
+	if !ok {
+		return nil, false
+	}
+	subject := l.lowerExpr(m.Subject)
+	sw := &SwitchStmt{Subject: subject, TypeName: typeName}
+	for _, arm := range m.Arms {
+		variantName, ok := l.armVariantName(arm)
+		if !ok {
+			return nil, false
+		}
+		constName := "_" + l.variantStructName(m.Subject) + variantName
+		body := l.lowerBocAsStmts2(arm.Body)
+		sw.Cases = append(sw.Cases, &SwitchCase{ConstName: constName, Body: body})
+	}
+	return sw, true
+}
+
+// tryLowerDiscriminantMatchExpr lowers discriminant match in expression position.
+func (l *lowerer) tryLowerDiscriminantMatchExpr(m *ast.MatchExpr) (Expr, bool) {
+	typeName, ok := l.variantDiscriminantType(m.Subject)
+	if !ok {
+		return nil, false
+	}
+	subject := l.lowerExpr(m.Subject)
+	semType := l.analyzer.ExprType(m)
+	resultType := l.goType(semType)
+	sw := &SwitchExpr{Subject: subject, ResultType: resultType}
+	_ = typeName
+	for _, arm := range m.Arms {
+		variantName, ok := l.armVariantName(arm)
+		if !ok {
+			return nil, false
+		}
+		constName := "_" + l.variantStructName(m.Subject) + variantName
+		body := l.lowerMatchArmBody(arm.Body, resultType)
+		sw.Cases = append(sw.Cases, &SwitchCase{ConstName: constName, Body: body})
+	}
+	return sw, true
+}
+
+// variantDiscriminantType returns the Go discriminant type name for the subject
+// expression (e.g. "_PetVariant") if the subject is a variant struct, else "".
+func (l *lowerer) variantDiscriminantType(subject ast.Expr) (string, bool) {
+	semType := l.analyzer.ExprType(subject)
+	st, ok := semType.(*sema.StructType)
+	if !ok || !st.IsVariant || st.Name == "" {
+		return "", false
+	}
+	return "_" + st.Name + "Variant", true
+}
+
+// variantStructName returns the struct name from a subject expression.
+func (l *lowerer) variantStructName(subject ast.Expr) string {
+	semType := l.analyzer.ExprType(subject)
+	if st, ok := semType.(*sema.StructType); ok {
+		return st.Name
+	}
+	return ""
+}
+
+// armVariantName extracts the variant name from a match arm condition.
+// The condition must be a TYPE_IDENT (e.g. Cat, Dog).
+func (l *lowerer) armVariantName(arm *ast.ConditionalBoc) (string, bool) {
+	if arm.Condition == nil {
+		return "", false
+	}
+	id, ok := arm.Condition.(*ast.Ident)
+	if !ok {
+		return "", false
+	}
+	if id.TokType != token.TYPE_IDENT {
+		return "", false
+	}
+	return id.Name, true
 }
 
 // lowerMatchArmBody lowers a match arm's body elements for expression-position

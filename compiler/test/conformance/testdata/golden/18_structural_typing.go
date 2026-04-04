@@ -35,7 +35,7 @@ func main() {
 	var p *Person = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
 	_bg0 := &std.BocGroup{}
 	_bg0.Go(func() any {
-		return Greet_all(p).Force()
+		return greet_all(p).Force()
 	})
 	_bg0.Wait()
 }

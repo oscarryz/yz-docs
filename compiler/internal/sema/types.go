@@ -143,14 +143,25 @@ type StructField struct {
 	Type Type
 }
 
+// VariantCase is one constructor in a sum type (variant type).
+// For `Pet: { Cat(name String, lives Int), Dog(name String, years Int) }`,
+// there are two VariantCases: Cat and Dog.
+type VariantCase struct {
+	Name   string
+	Fields []StructField
+}
+
 // StructType is the structural type of a user-defined boc or any named type.
 // Two StructTypes are compatible if one has at least all the fields of the other.
 // IsInterface is set for type-only declarations (`Name #(methods...)`) where all
 // params are BocTypes — these generate Go interfaces, not structs.
+// IsVariant is set for sum types: `Pet: { Cat(...), Dog(...) }`.
 type StructType struct {
 	Name        string        // may be empty for anonymous structural types
-	Fields      []StructField // in declaration order
+	Fields      []StructField // in declaration order (merged across all variants)
 	IsInterface bool          // true when declared as Name #(boc-params...) with no body
+	IsVariant   bool          // true for sum/variant types
+	Variants    []VariantCase // variant constructors (only when IsVariant=true)
 }
 
 func (t *StructType) typeName() string {
