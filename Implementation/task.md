@@ -75,5 +75,5 @@
 - [ ] Uninstantiated generics — `Option(T)` as a param type
 - [ ] Declare-only then assign-later — `greet #(String)` … `greet = { a String; … }`
 
-## Language Features — Not Yet Implemented
-- [ ] Multiline strings — `"""..."""` or backtick form for multi-line string literals
+## Language Features — Already Implemented (discovered)
+- [x] Multiline strings — strings span lines naturally; `"` or `'` closes on any line (lexer handles `\n` inside string literals)
