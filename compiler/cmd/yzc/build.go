@@ -11,6 +11,7 @@ import (
 
 	"yz/internal/ast"
 	"yz/internal/codegen"
+	"yz/internal/diagnostic"
 	"yz/internal/ir"
 	"yz/internal/parser"
 	"yz/internal/sema"
@@ -199,6 +200,7 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (stri
 	type parsedFile struct {
 		sf   *ast.SourceFile
 		path string
+		src  []byte
 	}
 	var pfiles []parsedFile
 	for _, fe := range files {
@@ -207,11 +209,15 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (stri
 			return "", nil, fmt.Errorf("reading %s: %w", fe.absPath, err)
 		}
 		p := parser.New(src)
-		sf, err := p.ParseFile()
-		if err != nil {
-			return "", nil, fmt.Errorf("parse %s: %w", fe.absPath, err)
+		sf, parseErr := p.ParseFile()
+		if parseErr != nil {
+			if pe, ok := parseErr.(*parser.ParseError); ok {
+				fmt.Fprint(os.Stderr, diagnostic.Format(src, fe.absPath, pe.Line, pe.Col, pe.Len, pe.Msg))
+				return "", nil, fmt.Errorf("parse error in %s", fe.absPath)
+			}
+			return "", nil, fmt.Errorf("parse %s: %w", fe.absPath, parseErr)
 		}
-		pfiles = append(pfiles, parsedFile{sf: sf, path: fe.absPath})
+		pfiles = append(pfiles, parsedFile{sf: sf, path: fe.absPath, src: src})
 	}
 
 	if a == nil {
@@ -219,6 +225,12 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (stri
 	}
 	for _, pf := range pfiles {
 		if err := a.AnalyzeFile(pf.sf); err != nil {
+			if ses, ok := err.(sema.SemaErrors); ok {
+				for _, se := range ses {
+					fmt.Fprint(os.Stderr, diagnostic.Format(pf.src, pf.path, se.Line, se.Col, se.Len, se.Msg))
+				}
+				return "", nil, fmt.Errorf("semantic errors in %s", pf.path)
+			}
 			return "", nil, fmt.Errorf("sema %s: %w", pf.path, err)
 		}
 	}

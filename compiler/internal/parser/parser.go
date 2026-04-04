@@ -25,6 +25,7 @@ type ParseError struct {
 	Msg  string
 	Line int
 	Col  int
+	Len  int // byte length of the offending token (0 → 1 caret)
 }
 
 func (e *ParseError) Error() string {
@@ -1247,5 +1248,6 @@ func (p *Parser) errorf(format string, args ...any) *ParseError {
 		Msg:  fmt.Sprintf(strings.TrimSpace(format), args...),
 		Line: tok.Line,
 		Col:  tok.Col,
+		Len:  len(tok.Literal),
 	}
 }
