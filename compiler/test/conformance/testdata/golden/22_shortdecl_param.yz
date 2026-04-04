@@ -1,0 +1,9 @@
+// ShortDecl-style param: name : defaultExpr — type inferred from default.
+// greet #(name: "Alice") infers name as String with default "Alice".
+greet #(name: "Alice") {
+    print(name)
+}
+main: {
+    greet()
+    greet("Bob")
+}
