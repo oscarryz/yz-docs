@@ -1,0 +1,10 @@
+greet #(name String) {
+    print(name)
+}
+
+Host: {
+    mix greet
+}
+
+main: {
+}

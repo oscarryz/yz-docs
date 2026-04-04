@@ -1,0 +1,7 @@
+greet #(name Nope) {
+    print(name)
+}
+
+main: {
+    greet("Alice")
+}
