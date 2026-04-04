@@ -1,0 +1,6 @@
+// Mixed type-only decl: data params + BocType params.
+// Generates a Go struct with data fields, function-typed fields, and method wrappers.
+Named #(name String, greet #())
+
+main: {
+}
