@@ -90,6 +90,12 @@ func (g *generator) emitInterfaceDecl(id *ir.InterfaceDecl) {
 }
 
 func (g *generator) emitStructDecl(sd *ir.StructDecl) {
+	// Variant (sum) type: emit discriminant enum + flat struct + per-variant constructors.
+	if sd.IsVariant {
+		g.emitVariantDecl(sd)
+		return
+	}
+
 	g.linef("type %s struct {", sd.Name)
 	g.level++
 	for _, f := range sd.Fields {
@@ -250,6 +256,8 @@ func (g *generator) emitStmt(s ir.Stmt) {
 		g.emitIfStmt(st)
 	case *ir.WaitStmt:
 		g.linef("%s.Wait()", st.GroupVar)
+	case *ir.SwitchStmt:
+		g.emitSwitchStmt(st)
 	}
 }
 
@@ -300,6 +308,8 @@ func (g *generator) expr(e ir.Expr) string {
 		return "&std.BocGroup{}"
 	case *ir.MatchExpr:
 		return g.emitMatchIIFE(ex)
+	case *ir.SwitchExpr:
+		return g.emitSwitchIIFE(ex)
 	default:
 		return "/* ? */"
 	}
@@ -485,6 +495,109 @@ func (g *generator) emitMatchArms(arms []*ir.MatchArm) {
 	if len(arms) > 0 {
 		g.line("}")
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Variant (sum) type emission
+// ---------------------------------------------------------------------------
+
+// emitVariantDecl emits a Go sum type: discriminant enum, flat struct, and
+// per-variant constructors. For `Pet: { Cat(name String), Dog(name String) }`:
+//
+//	type _PetVariant int
+//	const ( _PetCat _PetVariant = iota; _PetDog )
+//	type Pet struct { _variant _PetVariant; name std.String; ... }
+//	func NewPetCat(name std.String) *Pet { return &Pet{_variant: _PetCat, ...} }
+func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
+	discType := "_" + sd.Name + "Variant"
+
+	// Discriminant enum type.
+	g.linef("type %s int", discType)
+	g.nl()
+
+	// Constants block.
+	g.line("const (")
+	g.level++
+	for i, vc := range sd.Variants {
+		constName := "_" + sd.Name + vc.Name
+		if i == 0 {
+			g.linef("%s %s = iota", constName, discType)
+		} else {
+			g.linef("%s", constName)
+		}
+	}
+	g.level--
+	g.line(")")
+	g.nl()
+
+	// Flat struct.
+	g.linef("type %s struct {", sd.Name)
+	g.level++
+	g.linef("_variant %s", discType)
+	for _, f := range sd.Fields {
+		g.linef("%s %s", f.Name, f.Type)
+	}
+	g.level--
+	g.line("}")
+	g.nl()
+
+	// Per-variant constructors.
+	for _, vc := range sd.Variants {
+		constName := "_" + sd.Name + vc.Name
+		var params []string
+		for _, f := range vc.Fields {
+			params = append(params, f.Name+" "+f.Type)
+		}
+		g.linef("func New%s%s(%s) *%s {", sd.Name, vc.Name, strings.Join(params, ", "), sd.Name)
+		g.level++
+		g.linef("return &%s{", sd.Name)
+		g.level++
+		g.linef("_variant: %s,", constName)
+		for _, f := range vc.Fields {
+			g.linef("%s: %s,", f.Name, f.Name)
+		}
+		g.level--
+		g.line("}")
+		g.level--
+		g.line("}")
+		g.nl()
+	}
+}
+
+// emitSwitchStmt emits a Go switch on the discriminant field.
+func (g *generator) emitSwitchStmt(sw *ir.SwitchStmt) {
+	g.linef("switch %s._variant {", g.expr(sw.Subject))
+	for _, c := range sw.Cases {
+		g.linef("case %s:", c.ConstName)
+		g.level++
+		g.emitStmts(c.Body)
+		g.level--
+	}
+	g.line("}")
+}
+
+// emitSwitchIIFE emits a discriminant match as an immediately-invoked closure.
+func (g *generator) emitSwitchIIFE(sw *ir.SwitchExpr) string {
+	var sb strings.Builder
+	sb.WriteString("func() ")
+	sb.WriteString(sw.ResultType)
+	sb.WriteString(" {\n")
+
+	inner := g.sub(g.level + 1)
+	inner.linef("switch %s._variant {", inner.expr(sw.Subject))
+	for _, c := range sw.Cases {
+		inner.linef("case %s:", c.ConstName)
+		inner.level++
+		inner.emitBodyStmts(c.Body, true)
+		inner.level--
+	}
+	inner.line("}")
+	inner.linef("return %s", zeroValueOf(sw.ResultType))
+
+	sb.WriteString(inner.sb.String())
+	sb.WriteString(g.ind())
+	sb.WriteString("}()")
+	return sb.String()
 }
 
 // ---------------------------------------------------------------------------

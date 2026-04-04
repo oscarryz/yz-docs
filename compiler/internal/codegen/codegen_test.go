@@ -293,3 +293,47 @@ func TestFQNNestedNamespace(t *testing.T) {
 		`front.NewHost(std.NewString("Alice"))`,
 	)
 }
+
+// ---------------------------------------------------------------------------
+// 12 — Variant (sum) type declaration
+// ---------------------------------------------------------------------------
+
+func TestGenerateVariantDecl(t *testing.T) {
+	got := gen(t, `Pet: {
+    Cat(name String, lives Int),
+    Dog(name String, years Int),
+}`)
+	contains(t, got,
+		"type _PetVariant int",
+		"_PetCat _PetVariant = iota",
+		"_PetDog",
+		"type Pet struct {",
+		"_variant _PetVariant",
+		"name std.String",
+		"lives std.Int",
+		"years std.Int",
+		"func NewPetCat(name std.String, lives std.Int) *Pet {",
+		"_variant: _PetCat",
+		"func NewPetDog(name std.String, years std.Int) *Pet {",
+		"_variant: _PetDog",
+	)
+}
+
+func TestGenerateVariantMatchStmt(t *testing.T) {
+	got := gen(t, `Pet: {
+    Cat(name String, lives Int),
+    Dog(name String, years Int),
+}
+main: {
+    p: Cat("Whiskers", 9)
+    match p
+        { Cat => print("cat") },
+        { Dog => print("dog") }
+}`)
+	contains(t, got,
+		"NewPetCat(",
+		"switch p._variant {",
+		"case _PetCat:",
+		"case _PetDog:",
+	)
+}
