@@ -65,5 +65,5 @@
 
 ## Language Features — Not Yet Implemented
 - [ ] Mixed type-only decl — `Name #(name String, greet #())` both data + BocType params (deferred)
-- [ ] `BocWithSig` body-only form — `name #(params) = { body }` (body re-declares params)
+- [x] `BocWithSig` body-only form — `name #(params) = { body }` — named and anonymous param matching; deferred: defaults, ShortDecl params, generic type vars, declare-then-assign
 - [x] Error reporting — Rust-style diagnostics with source context and caret underlines

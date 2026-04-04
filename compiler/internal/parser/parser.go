@@ -318,23 +318,25 @@ func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
 	}
 
 	var body *ast.BocLiteral
+	var bodyOnly bool
 	switch p.cur().Type {
 	case token.LBRACE:
-		// `name #(params) { body }` — params available in body without redecl
+		// `name #(params) { body }` — params auto-scoped into body
 		body, err = p.parseBocLiteral()
 		if err != nil {
 			return nil, err
 		}
 	case token.ASSIGN:
 		p.advance()
-		// `name #(params) = { body }` — body must re-declare params
+		// `name #(params) = { body }` — body redeclares its own params
 		body, err = p.parseBocLiteral()
 		if err != nil {
 			return nil, err
 		}
+		bodyOnly = true
 	}
 
-	return &ast.BocWithSig{Pos: pos, Name: name, Sig: sig, Body: body}, nil
+	return &ast.BocWithSig{Pos: pos, Name: name, Sig: sig, Body: body, BodyOnly: bodyOnly}, nil
 }
 
 // parseInfoStringAndDecl parses an info string and attaches it to the next decl.

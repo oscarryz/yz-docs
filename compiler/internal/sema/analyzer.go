@@ -435,7 +435,8 @@ func (a *Analyzer) resolveTargetType(target ast.Expr) Type {
 
 func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 	// Resolve all params from the signature.
-	allParams := a.resolveBocSigParams(bws.Sig)
+	// In body-only form (= { body }), all params are inputs (no isReturn logic).
+	allParams := a.resolveBocSigParams(bws.Sig, bws.BodyOnly)
 
 	// Separate input params from anonymous return-type entries.
 	var inputParams []BocParam
@@ -478,14 +479,36 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 	if bws.Body != nil {
 		prev := a.pushScope()
 		prevFQN := a.pushFQN(bws.Name.Name)
-		// Inject input params into body scope (BocWithSig special form).
-		for _, p := range inputParams {
-			a.currentScope.Define(&Symbol{Name: p.Label, Type: p.Type})
+		if bws.BodyOnly {
+			// Body-only form: extract named params from body's initial TypedDecls.
+			// The body redeclares its own params; sig provides types (and names
+			// when labeled) for validation.
+			bodyParams, n := a.extractBodyParams(bws.Body.Elements, inputParams)
+			if bodyParams != nil {
+				inputParams = bodyParams
+			}
+			for _, p := range inputParams {
+				if p.Label != "" {
+					a.currentScope.Define(&Symbol{Name: p.Label, Type: p.Type})
+				}
+			}
+			// Analyze body starting after the param declarations.
+			bodyElems := bws.Body.Elements
+			if n > 0 && n <= len(bodyElems) {
+				bodyElems = bodyElems[n:]
+			}
+			returns = a.analyzeBocBody(bodyElems)
+		} else {
+			// Shorthand form: inject params from sig directly into body scope.
+			for _, p := range inputParams {
+				if p.Label != "" {
+					a.currentScope.Define(&Symbol{Name: p.Label, Type: p.Type})
+				}
+			}
+			returns = a.analyzeBocBody(bws.Body.Elements)
 		}
-		bodyReturns := a.analyzeBocBody(bws.Body.Elements)
 		a.popFQN(prevFQN)
 		a.popScope(prev)
-		returns = bodyReturns
 	}
 
 	// Explicit return types in the signature override inferred returns.
@@ -505,7 +528,9 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 }
 
 // resolveBocSigParams resolves the params of a BocTypeExpr signature.
-func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr) []BocParam {
+// When bodyOnly is true (the `= { body }` form), all params are treated as
+// inputs: unlabeled types are anonymous inputs, not return-type annotations.
+func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr, bodyOnly bool) []BocParam {
 	var params []BocParam
 	for _, p := range sig.Params {
 		if p.Variant != nil {
@@ -515,7 +540,8 @@ func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr) []BocParam {
 		if p.Type != nil {
 			typ = a.resolveTypeExpr(p.Type)
 		}
-		isReturn := p.Label == "" && typ != nil
+		// In body-only form, all params are inputs; otherwise unlabeled = return.
+		isReturn := !bodyOnly && p.Label == "" && typ != nil
 		params = append(params, BocParam{
 			Label:      p.Label,
 			Type:       typ,
@@ -524,6 +550,58 @@ func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr) []BocParam {
 		})
 	}
 	return params
+}
+
+// extractBodyParams reads the first len(sigParams) body elements as parameter
+// declarations (TypedDecl). For each:
+//   - If the sig param has a label, the body TypedDecl name must match.
+//   - If the sig param is unlabeled, any name is accepted.
+//   - Types must be compatible.
+//
+// Returns the matched params (names taken from the body) and the count
+// consumed, or (nil, 0) if an error was reported.
+func (a *Analyzer) extractBodyParams(elements []ast.Node, sigParams []BocParam) ([]BocParam, int) {
+	n := len(sigParams)
+	if n == 0 {
+		return nil, 0
+	}
+	if n > len(elements) {
+		pos := ast.Pos{Line: 1, Col: 1}
+		if len(elements) > 0 {
+			pos = elements[0].Position()
+		}
+		a.errorf(pos, "body has only %d statement(s) but signature expects %d param(s)", len(elements), n)
+		return nil, 0
+	}
+	result := make([]BocParam, n)
+	for i, sp := range sigParams {
+		elem := elements[i]
+		td, ok := elem.(*ast.TypedDecl)
+		if !ok {
+			a.errorf(elem.Position(), "expected parameter declaration (name Type), got %T", elem)
+			return nil, 0
+		}
+		bodyType := a.resolveTypeExpr(td.Type)
+		// Name check: if sig param is named, body must use the same name.
+		if sp.Label != "" && td.Name.Name != sp.Label {
+			a.errorfLen(td.Name.Pos, len(td.Name.Name),
+				"param name mismatch: body declares %q but signature requires %q",
+				td.Name.Name, sp.Label)
+			return nil, 0
+		}
+		// Type check.
+		if !bodyType.IsCompatibleWith(sp.Type) {
+			a.errorf(td.Position(),
+				"param type mismatch: body has %v, signature expects %v", bodyType, sp.Type)
+			return nil, 0
+		}
+		result[i] = BocParam{
+			Label:      td.Name.Name,
+			Type:       bodyType,
+			HasDefault: td.Value != nil,
+		}
+	}
+	return result, n
 }
 
 // ---------------------------------------------------------------------------
@@ -926,7 +1004,7 @@ func (a *Analyzer) resolveTypeExpr(te ast.TypeExpr) Type {
 			Val: a.resolveTypeExpr(t.ValType),
 		}
 	case *ast.BocTypeExpr:
-		params := a.resolveBocSigParams(t)
+		params := a.resolveBocSigParams(t, false)
 		var inputParams []BocParam
 		var returns []Type
 		for _, p := range params {

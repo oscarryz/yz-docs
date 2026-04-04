@@ -243,15 +243,22 @@ type BocLiteral struct {
 
 func (e *BocLiteral) exprNode() {}
 
-// BocWithSig is the special `name #(params) { body }` form.
-// It is syntactic sugar for a TypedDecl + BocLiteral assignment where the
-// params declared in the signature are directly available inside the body.
-// The sema phase resolves parameter scope; the parser just captures both.
+// BocWithSig is `name #(params) [body]` in two forms:
+//
+//   - Shorthand: `name #(params) { body }` — params auto-scoped into body;
+//     unlabeled types at the end of the param list are return-type annotations.
+//
+//   - Body-only: `name #(params) = { body }` — body redeclares its own params
+//     as the first N TypedDecl statements; ALL sig params are inputs (none are
+//     return-type annotations); return type is inferred from body's last expr.
+//
+// The sema phase enforces the matching rules; the parser just captures both.
 type BocWithSig struct {
 	Pos
-	Name   *Ident
-	Sig    *BocTypeExpr
-	Body   *BocLiteral // nil if signature-only declaration (no body)
+	Name     *Ident
+	Sig      *BocTypeExpr
+	Body     *BocLiteral // nil if signature-only declaration (no body)
+	BodyOnly bool        // true when `= { body }` form (body redeclares params)
 }
 
 func (e *BocWithSig) stmtNode() {}
