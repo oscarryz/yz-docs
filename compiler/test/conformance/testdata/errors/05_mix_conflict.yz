@@ -1,0 +1,11 @@
+Named: {
+    name: "default"
+}
+
+Host: {
+    mix Named
+    name: "override"
+}
+
+main: {
+}

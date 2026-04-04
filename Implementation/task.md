@@ -43,7 +43,7 @@
 ## Phase 7 — Integration & Testing
 - [x] `compiler/test/conformance/` — golden tests, 18 passing
 - [x] `compiler/examples/` — counter, milestone (concurrent fetch + counter)
-- [ ] Error tests — programs that should fail with specific errors
+- [x] Error tests — 7 cases: parse errors, undefined variable/type, mix undefined/conflict/not-struct
 
 ## Language Features — Implemented
 - [x] `while` loop
@@ -66,5 +66,4 @@
 ## Language Features — Not Yet Implemented
 - [ ] Mixed type-only decl — `Name #(name String, greet #())` both data + BocType params (deferred)
 - [ ] `BocWithSig` body-only form — `name #(params) = { body }` (body re-declares params)
-- [ ] Error tests — programs that should fail with specific errors
 - [x] Error reporting — Rust-style diagnostics with source context and caret underlines
