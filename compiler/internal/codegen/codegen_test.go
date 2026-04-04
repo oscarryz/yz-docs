@@ -337,3 +337,41 @@ main: {
 		"case _PetDog:",
 	)
 }
+
+// 13 — Generic variant type (e.g., Option[V])
+// ---------------------------------------------------------------------------
+
+func TestGenerateGenericVariantDecl(t *testing.T) {
+	got := gen(t, `Option: {
+    V
+    Some(value V)
+    None()
+}`)
+	contains(t, got,
+		"type _OptionVariant int",
+		"type Option[V any] struct {",
+		"value V",
+		"func NewOptionSome[V any](value V) *Option[V] {",
+		"func NewOptionNone[V any]() *Option[V] {",
+	)
+}
+
+func TestGenerateGenericVariantMatch(t *testing.T) {
+	got := gen(t, `Option: {
+    V
+    Some(value V)
+    None()
+}
+main: {
+    x: Some("hello")
+    match x
+        { Some => print(x.value) },
+        { None => print("nothing") }
+}`)
+	contains(t, got,
+		"x := NewOptionSome(",
+		"switch x._variant {",
+		"case _OptionSome:",
+		"case _OptionNone:",
+	)
+}

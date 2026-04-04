@@ -156,12 +156,14 @@ type VariantCase struct {
 // IsInterface is set for type-only declarations (`Name #(methods...)`) where all
 // params are BocTypes — these generate Go interfaces, not structs.
 // IsVariant is set for sum types: `Pet: { Cat(...), Dog(...) }`.
+// TypeParams holds formal type parameter names for generic types (e.g., ["V"] for Option[V]).
 type StructType struct {
 	Name        string        // may be empty for anonymous structural types
 	Fields      []StructField // in declaration order (merged across all variants)
 	IsInterface bool          // true when declared as Name #(boc-params...) with no body
 	IsVariant   bool          // true for sum/variant types
 	Variants    []VariantCase // variant constructors (only when IsVariant=true)
+	TypeParams  []string      // formal type parameter names (non-nil for generic types)
 }
 
 func (t *StructType) typeName() string {

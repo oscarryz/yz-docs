@@ -660,12 +660,15 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 // ---------------------------------------------------------------------------
 
 // isVariantBoc returns true when all non-empty elements in a boc body are
-// VariantDefs — indicating a sum type declaration.
+// VariantDefs or generic type param idents — indicating a sum type declaration.
 func (l *lowerer) isVariantBoc(b *ast.BocLiteral) bool {
 	hasVariant := false
 	for _, elem := range b.Elements {
 		if _, ok := elem.(*ast.VariantDef); ok {
 			hasVariant = true
+		} else if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
+			// Generic type parameter (e.g., V in Option: { V; Some(value V); None() })
+			continue
 		} else {
 			return false // mixed with non-variant content
 		}
@@ -681,6 +684,11 @@ func (l *lowerer) lowerVariantBoc(name string, b *ast.BocLiteral) *StructDecl {
 	fieldSet := map[string]bool{}
 
 	for _, elem := range b.Elements {
+		// Collect generic type params (e.g., V in Option: { V; Some(value V); ... }).
+		if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
+			sd.TypeParams = append(sd.TypeParams, id.Name)
+			continue
+		}
 		vd, ok := elem.(*ast.VariantDef)
 		if !ok {
 			continue
@@ -764,7 +772,11 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 					// Use := inference and mark for auto-forcing on use.
 					l.thunkVars[n.Name] = true
 				} else {
-					typ = l.goType(l.analyzer.ExprType(val))
+					semTyp := l.analyzer.ExprType(val)
+					// Generic struct types use := inference; Go resolves the type args.
+					if st, ok := semTyp.(*sema.StructType); !ok || len(st.TypeParams) == 0 {
+						typ = l.goType(semTyp)
+					}
 				}
 			}
 			stmts = append(stmts, &DeclStmt{Name: n.Name, Type: typ, Init: initExpr})
@@ -1758,6 +1770,9 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 	}
 	switch t := te.(type) {
 	case *ast.SimpleTypeExpr:
+		if t.TokType == token.GENERIC_IDENT {
+			return t.Name // generic type param (e.g., V) — no pointer
+		}
 		switch t.Name {
 		case "Int":
 			return "std.Int"

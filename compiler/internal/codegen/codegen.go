@@ -511,7 +511,20 @@ func (g *generator) emitMatchArms(arms []*ir.MatchArm) {
 func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
 	discType := "_" + sd.Name + "Variant"
 
-	// Discriminant enum type.
+	// Build type parameter strings for generic variants.
+	// typeConstraints: "[V any]" for declarations; typeArgs: "[V]" for references.
+	typeConstraints := ""
+	typeArgs := ""
+	if len(sd.TypeParams) > 0 {
+		var constraints []string
+		for _, tp := range sd.TypeParams {
+			constraints = append(constraints, tp+" any")
+		}
+		typeConstraints = "[" + strings.Join(constraints, ", ") + "]"
+		typeArgs = "[" + strings.Join(sd.TypeParams, ", ") + "]"
+	}
+
+	// Discriminant enum type (no type params — it's just an int alias).
 	g.linef("type %s int", discType)
 	g.nl()
 
@@ -530,8 +543,8 @@ func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
 	g.line(")")
 	g.nl()
 
-	// Flat struct.
-	g.linef("type %s struct {", sd.Name)
+	// Flat struct (with optional type params).
+	g.linef("type %s%s struct {", sd.Name, typeConstraints)
 	g.level++
 	g.linef("_variant %s", discType)
 	for _, f := range sd.Fields {
@@ -541,16 +554,16 @@ func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
 	g.line("}")
 	g.nl()
 
-	// Per-variant constructors.
+	// Per-variant constructors (with optional type params).
 	for _, vc := range sd.Variants {
 		constName := "_" + sd.Name + vc.Name
 		var params []string
 		for _, f := range vc.Fields {
 			params = append(params, f.Name+" "+f.Type)
 		}
-		g.linef("func New%s%s(%s) *%s {", sd.Name, vc.Name, strings.Join(params, ", "), sd.Name)
+		g.linef("func New%s%s%s(%s) *%s%s {", sd.Name, vc.Name, typeConstraints, strings.Join(params, ", "), sd.Name, typeArgs)
 		g.level++
-		g.linef("return &%s{", sd.Name)
+		g.linef("return &%s%s{", sd.Name, typeArgs)
 		g.level++
 		g.linef("_variant: %s,", constName)
 		for _, f := range vc.Fields {

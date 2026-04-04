@@ -669,7 +669,10 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 
 		case *ast.Ident:
 			// Generic type param declaration (T, E inside type boc body).
-			// Register as GenericType in current scope.
+			// Register as GenericType in current scope and record on the struct.
+			if e.TokType == token.GENERIC_IDENT {
+				st.TypeParams = append(st.TypeParams, e.Name)
+			}
 			gt := &GenericType{Name: e.Name}
 			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
 
