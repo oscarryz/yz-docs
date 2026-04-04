@@ -1,0 +1,11 @@
+// Declare-only then assign-later: signature declared first, body assigned separately.
+greet #(name String)
+
+greet = { name String
+    print(name)
+}
+
+main: {
+    greet("Alice")
+    greet("Bob")
+}
