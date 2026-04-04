@@ -701,6 +701,9 @@ func (p *Parser) parseMatch() (*ast.MatchExpr, error) {
 		}
 	}
 
+	// Skip any semicolons (ASI) between subject and the arm list.
+	p.skipSemis()
+
 	arms, err := p.parseConditionalBocList()
 	if err != nil {
 		return nil, err

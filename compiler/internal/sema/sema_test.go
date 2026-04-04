@@ -489,3 +489,70 @@ func TestCounterProgram(t *testing.T) {
 		t.Fatalf("counter: got %T, want *BocType", sym.Type)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// 15 — Variant (sum) types
+// ---------------------------------------------------------------------------
+
+func TestVariantTypeDecl(t *testing.T) {
+	a := mustAnalyze(t, `Pet: {
+    Cat(name String, lives Int),
+    Dog(name String, years Int),
+}`)
+	sym := a.LookupInFile("Pet")
+	if sym == nil {
+		t.Fatal("'Pet' not found")
+	}
+	st, ok := sym.Type.(*StructType)
+	if !ok {
+		t.Fatalf("Pet: got %T, want *StructType", sym.Type)
+	}
+	if !st.IsVariant {
+		t.Error("Pet.IsVariant: want true")
+	}
+	if len(st.Variants) != 2 {
+		t.Fatalf("variants: want 2, got %d", len(st.Variants))
+	}
+	if st.Variants[0].Name != "Cat" {
+		t.Errorf("variants[0].Name: got %q, want Cat", st.Variants[0].Name)
+	}
+	if st.Variants[1].Name != "Dog" {
+		t.Errorf("variants[1].Name: got %q, want Dog", st.Variants[1].Name)
+	}
+	// Merged flat fields: name (shared), lives, years
+	if len(st.Fields) != 3 {
+		t.Errorf("merged fields: want 3, got %d: %+v", len(st.Fields), st.Fields)
+	}
+}
+
+func TestVariantConstructorRegistered(t *testing.T) {
+	a := mustAnalyze(t, `Pet: {
+    Cat(name String, lives Int),
+    Dog(name String, years Int),
+}`)
+	catSym := a.LookupInFile("Cat")
+	if catSym == nil {
+		t.Fatal("'Cat' constructor not registered")
+	}
+	bt, ok := catSym.Type.(*BocType)
+	if !ok {
+		t.Fatalf("Cat: got %T, want *BocType", catSym.Type)
+	}
+	if len(bt.Params) != 2 {
+		t.Fatalf("Cat params: want 2, got %d", len(bt.Params))
+	}
+	if bt.Params[0].Label != "name" || bt.Params[1].Label != "lives" {
+		t.Errorf("Cat param names: got %q %q", bt.Params[0].Label, bt.Params[1].Label)
+	}
+	// Return type is the parent StructType (Pet).
+	if len(bt.Returns) != 1 {
+		t.Fatalf("Cat returns: want 1, got %d", len(bt.Returns))
+	}
+	retSt, ok := bt.Returns[0].(*StructType)
+	if !ok {
+		t.Fatalf("Cat return: got %T, want *StructType", bt.Returns[0])
+	}
+	if retSt.Name != "Pet" {
+		t.Errorf("Cat return name: got %q, want Pet", retSt.Name)
+	}
+}

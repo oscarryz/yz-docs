@@ -34,11 +34,21 @@ func (*InterfaceDecl) irDecl() {}
 // When NoConstructor is true (type-only declaration: `Name #(params)`), the
 // struct type is emitted without a constructor — instances cannot be created
 // via `Name(args)` until a body is attached.
+// When IsVariant is true, the struct is a sum/discriminant type: codegen emits
+// a discriminant enum, flat merged struct, and per-variant constructors.
 type StructDecl struct {
 	Name          string
 	Fields        []*FieldSpec
 	Methods       []*MethodDecl
 	NoConstructor bool
+	IsVariant     bool
+	Variants      []*IRVariantCase
+}
+
+// IRVariantCase is one constructor arm of a variant struct.
+type IRVariantCase struct {
+	Name   string       // e.g. "Cat"
+	Fields []*FieldSpec // fields belonging to this variant (with types)
 }
 
 // SingletonDecl represents a lowercase Yz boc — a single, persistent instance.
@@ -112,13 +122,14 @@ type ParamSpec struct {
 // Stmt is any IR statement.
 type Stmt interface{ irStmt() }
 
-func (*DeclStmt) irStmt()   {}
-func (*AssignStmt) irStmt() {}
-func (*ReturnStmt) irStmt() {}
-func (*ExprStmt) irStmt()   {}
-func (*ForStmt) irStmt()    {}
-func (*IfStmt) irStmt()     {}
-func (*WaitStmt) irStmt()   {}
+func (*DeclStmt) irStmt()    {}
+func (*AssignStmt) irStmt()  {}
+func (*ReturnStmt) irStmt()  {}
+func (*ExprStmt) irStmt()    {}
+func (*ForStmt) irStmt()     {}
+func (*IfStmt) irStmt()      {}
+func (*WaitStmt) irStmt()    {}
+func (*SwitchStmt) irStmt()  {}
 
 // DeclStmt declares a local variable.
 // If Type is empty, codegen uses `:=` (Go type inference).
@@ -163,6 +174,20 @@ type WaitStmt struct {
 	GroupVar string // local *std.BocGroup var name
 }
 
+// SwitchStmt is a discriminant match lowered to a Go switch statement.
+// Subject is the variable being matched; TypeName is the Go discriminant enum type.
+type SwitchStmt struct {
+	Subject  Expr
+	TypeName string // e.g. "_PetVariant" (used in switch subject._variant)
+	Cases    []*SwitchCase
+}
+
+// SwitchCase is one case arm of a SwitchStmt.
+type SwitchCase struct {
+	ConstName string // e.g. "_PetCat"
+	Body      []Stmt
+}
+
 // ---------------------------------------------------------------------------
 // Expressions
 // ---------------------------------------------------------------------------
@@ -185,7 +210,8 @@ func (*ForceExpr) irExpr()   {}
 func (*ClosureExpr) irExpr() {}
 func (*SpawnExpr) irExpr()   {}
 func (*NewGroupExpr) irExpr(){}
-func (*MatchExpr) irExpr()   {}
+func (*MatchExpr) irExpr()    {}
+func (*SwitchExpr) irExpr()   {}
 
 // Literal nodes — codegen boxes these into std.NewXxx(...) calls.
 type IntLit struct{ Val int64 }
@@ -267,4 +293,11 @@ type MatchExpr struct {
 type MatchArm struct {
 	Cond Expr
 	Body []Stmt
+}
+
+// SwitchExpr is a discriminant match in expression position (emitted as an IIFE).
+type SwitchExpr struct {
+	Subject    Expr
+	ResultType string
+	Cases      []*SwitchCase
 }

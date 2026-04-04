@@ -307,6 +307,24 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 
 	sym := &Symbol{Name: name.Name, Type: typ, FQN: fqn, Node: decl}
 	a.define(sym)
+
+	// Register variant constructors in the outer scope so they can be called.
+	if st, ok := typ.(*StructType); ok && st.IsVariant {
+		for i := range st.Variants {
+			vc := &st.Variants[i]
+			params := make([]BocParam, len(vc.Fields))
+			for j, f := range vc.Fields {
+				params[j] = BocParam{Label: f.Name, Type: f.Type}
+			}
+			a.define(&Symbol{
+				Name:           vc.Name,
+				Type:           &BocType{Params: params, Returns: []Type{st}},
+				Node:           decl,
+				ParentTypeName: st.Name,
+			})
+		}
+	}
+
 	a.setType(decl, typ)
 	return typ
 }
@@ -572,13 +590,37 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 			}
 
 		case *ast.VariantDef:
-			a.analyzeVariantDef(e)
+			vc := a.collectVariantCase(e)
+			st.IsVariant = true
+			st.Variants = append(st.Variants, vc)
+			// Merge variant fields into the parent flat struct (deduplicated).
+			for _, f := range vc.Fields {
+				if !fieldSet[f.Name] {
+					fieldSet[f.Name] = true
+					st.Fields = append(st.Fields, f)
+					a.currentScope.Define(&Symbol{Name: f.Name, Type: f.Type})
+				}
+			}
 
 		default:
 			a.analyzeNode(elem)
 		}
 	}
 	return st
+}
+
+// collectVariantCase resolves a VariantDef into a VariantCase for the parent struct.
+func (a *Analyzer) collectVariantCase(v *ast.VariantDef) VariantCase {
+	vc := VariantCase{Name: v.Name}
+	for _, p := range v.Params {
+		if p.Label != "" && p.Type != nil {
+			vc.Fields = append(vc.Fields, StructField{
+				Name: p.Label,
+				Type: a.resolveTypeExpr(p.Type),
+			})
+		}
+	}
+	return vc
 }
 
 func (a *Analyzer) applyMix(ms *ast.MixStmt, st *StructType, fieldSet map[string]bool, hostName string) {
@@ -605,13 +647,8 @@ func (a *Analyzer) applyMix(ms *ast.MixStmt, st *StructType, fieldSet map[string
 }
 
 func (a *Analyzer) analyzeVariantDef(v *ast.VariantDef) Type {
-	var fields []StructField
-	for _, p := range v.Params {
-		if p.Label != "" && p.Type != nil {
-			fields = append(fields, StructField{Name: p.Label, Type: a.resolveTypeExpr(p.Type)})
-		}
-	}
-	variantType := &StructType{Name: v.Name, Fields: fields}
+	vc := a.collectVariantCase(v)
+	variantType := &StructType{Name: v.Name, Fields: vc.Fields}
 	a.currentScope.Define(&Symbol{Name: v.Name, Type: variantType, Node: v})
 	return variantType
 }

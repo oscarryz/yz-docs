@@ -1,0 +1,17 @@
+Pet: {
+    Cat(name String, lives Int),
+    Dog(name String, years Int),
+}
+
+describe #(pet Pet, String) {
+    match pet
+        { Cat => "cat `pet.name` has `pet.lives` lives" },
+        { Dog => "dog `pet.name` is `pet.years` years old" }
+}
+
+main: {
+    whiskers: Cat("Whiskers", 9)
+    rex: Dog("Rex", 3)
+    print(describe(whiskers))
+    print(describe(rex))
+}
