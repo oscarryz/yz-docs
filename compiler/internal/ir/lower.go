@@ -199,6 +199,31 @@ func (l *lowerer) bocFieldMethod(typeName, fieldName string, bt *sema.BocType) *
 	}
 }
 
+// fillDefaults fills in lowered default expressions for omitted optional params
+// in a BocWithSig call. sigParams is the raw AST param list from the signature.
+// loweredArgs is the already-lowered positional args from the call site.
+// Any trailing params that have a Default expression are filled in automatically.
+func (l *lowerer) fillDefaults(loweredArgs []Expr, sigParams []*ast.BocParam) []Expr {
+	// Collect named input params (same filter as lowerBocWithSig).
+	var inputs []*ast.BocParam
+	for _, p := range sigParams {
+		if p.Variant == nil && p.Label != "" {
+			inputs = append(inputs, p)
+		}
+	}
+	if len(loweredArgs) >= len(inputs) {
+		return loweredArgs // all args already provided
+	}
+	result := make([]Expr, len(inputs))
+	copy(result, loweredArgs)
+	for i := len(loweredArgs); i < len(inputs); i++ {
+		if inputs[i].Default != nil {
+			result[i] = l.lowerExpr(inputs[i].Default)
+		}
+	}
+	return result
+}
+
 // ---------------------------------------------------------------------------
 // Top-level ShortDecl dispatch
 // ---------------------------------------------------------------------------
@@ -1075,7 +1100,9 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
 			// BocWithSig functions already return *Thunk[T] — emit a plain call.
-			if _, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
+			// Inject default argument values for any omitted optional params.
+			if bws, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
+				args = l.fillDefaults(args, bws.Sig.Params)
 				return &FuncCall{Func: callee, Args: args}
 			}
 		}
