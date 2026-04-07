@@ -1,0 +1,6 @@
+// HOF map: transform each element via a boc literal; result type inferred by Go.
+main: {
+    list: [1, 2, 3]
+    doubled: list.map({ item Int; item * 2 })
+    doubled.each({ item Int; print(item) })
+}

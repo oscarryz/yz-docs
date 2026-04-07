@@ -555,7 +555,7 @@ func (l *lowerer) lowerBodyShortDecl(d *ast.ShortDecl, isLast bool, resultType s
 		name := d.Names[0]
 		val := d.Values[0]
 		expr := l.lowerExpr(val)
-		typ := l.goType(l.analyzer.ExprType(val))
+		typ := l.goTypeForVar(l.analyzer.ExprType(val))
 		if isLast {
 			// Last expr in body: declare AND return if it's an expression.
 			// But if it's a boc, make it a method.
@@ -778,11 +778,7 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 					// Use := inference and mark for auto-forcing on use.
 					l.thunkVars[n.Name] = true
 				} else {
-					semTyp := l.analyzer.ExprType(val)
-					// Generic struct types use := inference; Go resolves the type args.
-					if st, ok := semTyp.(*sema.StructType); !ok || len(st.TypeParams) == 0 {
-						typ = l.goType(semTyp)
-					}
+					typ = l.goTypeForVar(l.analyzer.ExprType(val))
 				}
 			}
 			stmts = append(stmts, &DeclStmt{Name: n.Name, Type: typ, Init: initExpr})
@@ -1144,6 +1140,19 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	// Cross-package FQN call: house.front.Host("Alice") → front.NewHost(...)
 	if result, ok := l.tryLowerFQNCall(c); ok {
 		return result
+	}
+
+	// array.map(boc) → std.ArrayMap(array, closure).
+	// Go methods cannot introduce new type params, so Map must be a package-level function.
+	if mem, ok := c.Callee.(*ast.MemberExpr); ok && mem.Member.Name == "map" {
+		if _, isArray := l.analyzer.ExprType(mem.Object).(*sema.ArrayType); isArray {
+			recv := l.lowerExpr(mem.Object)
+			mapArgs := []Expr{recv}
+			for _, arg := range c.Args {
+				mapArgs = append(mapArgs, l.lowerExpr(arg.Value))
+			}
+			return &FuncCall{Func: &Ident{Name: "std.ArrayMap"}, Args: mapArgs}
+		}
 	}
 
 	callee := l.lowerExpr(c.Callee)
@@ -1629,7 +1638,7 @@ func (l *lowerer) lowerBuiltinCall(goName string, c *ast.CallExpr) Expr {
 }
 
 func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
-	// Extract TypedDecl params (nil-value TypedDecls at the start of the body).
+	// Extract TypedDecl params (nil-value TypedDecls in the body).
 	var params []*ParamSpec
 	for _, elem := range b.Elements {
 		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
@@ -1639,7 +1648,6 @@ func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
 			})
 		}
 	}
-	// Determine result type from sema.
 	semType := l.analyzer.ExprType(b)
 	resultType := "std.Unit"
 	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
@@ -1944,6 +1952,22 @@ func (l *lowerer) goType(t sema.Type) string {
 		return "any"
 	}
 	return "any"
+}
+
+// goTypeForVar returns the Go type string for a variable declaration.
+// Returns "" (triggering := inference) when the type cannot be expressed
+// precisely — e.g. an ArrayType whose element type is unknown (map result),
+// or a generic struct whose type args are resolved by Go.
+func (l *lowerer) goTypeForVar(t sema.Type) string {
+	if at, ok := t.(*sema.ArrayType); ok {
+		if _, isUnknown := at.Elem.(*sema.UnknownType); isUnknown {
+			return ""
+		}
+	}
+	if st, ok := t.(*sema.StructType); ok && len(st.TypeParams) > 0 {
+		return ""
+	}
+	return l.goType(t)
 }
 
 // goTypeFromTypeExpr converts an ast.TypeExpr to a Go type string.
