@@ -47,6 +47,34 @@ func (a Array[T]) GoSlice() []T { return a.elems }
 
 func (a Array[T]) String() string { return fmt.Sprintf("%v", a.elems) }
 
+// Filter returns a new Array containing only elements for which fn returns Bool true.
+func (a Array[T]) Filter(fn func(T) Bool) Array[T] {
+	var result []T
+	for _, v := range a.elems {
+		if fn(v).val {
+			result = append(result, v)
+		}
+	}
+	return Array[T]{elems: result}
+}
+
+// Each calls fn for every element in the array.
+func (a Array[T]) Each(fn func(T) Unit) {
+	for _, v := range a.elems {
+		fn(v)
+	}
+}
+
+// ArrayMap applies fn to each element of a and returns a new Array of results.
+// It is a package-level function because Go methods cannot introduce new type parameters.
+func ArrayMap[T, U any](a Array[T], fn func(T) U) Array[U] {
+	result := make([]U, len(a.elems))
+	for i, v := range a.elems {
+		result[i] = fn(v)
+	}
+	return Array[U]{elems: result}
+}
+
 // ---------------------------------------------------------------------------
 // Dict[K, V]
 // ---------------------------------------------------------------------------
