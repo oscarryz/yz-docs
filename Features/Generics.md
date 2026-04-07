@@ -67,11 +67,76 @@ match x
     { None => print("nothing") }
 ```
 
+## Generic methods
+
+Methods defined inside a generic type receive `self` as a pointer to the parameterized type:
+
+```yz
+Container: {
+    T
+    value T
+    get #(T) {
+        value
+    }
+}
+
+c: Container(42)
+print(c.get())    // prints 42
+```
+
+The compiler emits `func (self *Container[T]) Get() *std.Thunk[T]` with the correct type parameter on the receiver.
+
+## Constraint inference
+
+The compiler **automatically infers** what operations a type parameter T must support by scanning how T-typed values are used inside method bodies. This happens without any syntax — you never write `T: Comparable` or `where T:`.
+
+When you call a method or use an operator on a T-typed value:
+
+```yz
+Ordered: {
+    T
+    value T
+    is_less #(other T, Bool) {
+        value < other    // ← compiler records: T must support < (lt method)
+    }
+}
+```
+
+The compiler records: **T requires `lt`**.
+
+At every constructor call site the compiler checks that the concrete type satisfies **all** inferred requirements and reports every missing method at once:
+
+```
+error: type constraint violation for Ordered:
+Item is missing methods required by T:
+  lt [used in Ordered.is_less]
+  to_string [used in Ordered.describe]
+```
+
+This is **Option 4** behaviour — all violations reported together, not one at a time after repeated fix-compile cycles.
+
+### Success: constraint satisfied
+
+```yz
+o: Ordered(42)      // T=Int; Int has lt → OK, no error
+```
+
+### Failure: constraint violated
+
+```yz
+Item: {
+    name String     // no lt method
+}
+
+o: Ordered(Item("x"))   // compile error: Item is missing lt
+```
+
 ## Deferred / not yet implemented
 
 - **`Box(String)` as a type-only constructor** — `word: Box(String)` to create a Box[String] without providing a value yet, then `word.value = "hello"` later. This requires passing a type as a constructor argument, which has no equivalent in mainstream languages and is complex to implement.
 - **Implicit type parameters** — `Box: { value T }` where `T` is used in a field but not declared. This would cause an "undefined type: T" error currently.
-- **Named constraints** — `T Comparable` or `T Printable`; currently all type params emit `[T any]`.
+- **Named constraints** — `T Comparable` or `T Printable`; constraint inference is automatic (no syntax needed).
 - **Multiple type parameters in BocWithSig** — `#(key K, value V)`.
+- **Go constraint generation** — currently the compiler emits `[T any]` in Go even when constraints are inferred. Go will separately reject method calls on `T any` at its own type-check phase. A future step will translate inferred Yz constraints into Go interface constraints (`[T interface{ Lt(T) std.Bool }]`).
 
 #answered

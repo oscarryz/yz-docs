@@ -58,6 +58,15 @@ type Analyzer struct {
 
 	// lastExpr is the most recently analyzed top-level node (for tests).
 	lastExpr ast.Node
+
+	// activeConstraints collects inferred method requirements on generic type
+	// params while analyzing a generic struct body. Non-nil only during that
+	// analysis; maps type-param name (e.g. "T") → list of constraints.
+	activeConstraints map[string][]*GenericConstraint
+
+	// activeContext is "StructName.methodName" for constraint attribution.
+	// Updated before each BocWithSig method body is analyzed.
+	activeContext string
 }
 
 // NewAnalyzer creates a fresh Analyzer with built-in symbols pre-loaded.
@@ -638,6 +647,23 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 	st := &StructType{Name: name}
 	fieldSet := make(map[string]bool)
 
+	// Pre-scan: detect whether this is a generic struct so we can activate
+	// constraint collection before processing method bodies.
+	isGeneric := false
+	for _, elem := range b.Elements {
+		if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
+			isGeneric = true
+			break
+		}
+	}
+
+	// Save outer constraint state and activate fresh collection for generic structs.
+	prevConstraints := a.activeConstraints
+	prevContext := a.activeContext
+	if isGeneric {
+		a.activeConstraints = make(map[string][]*GenericConstraint)
+	}
+
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
 		case *ast.TypedDecl:
@@ -677,6 +703,11 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
 
 		case *ast.BocWithSig:
+			// Set the constraint attribution context before analyzing the method body
+			// so that any T-method calls recorded during analysis are tagged correctly.
+			if a.activeConstraints != nil {
+				a.activeContext = name + "." + e.Name.Name
+			}
 			typ := a.analyzeBocWithSig(e)
 			if !fieldSet[e.Name.Name] {
 				fieldSet[e.Name.Name] = true
@@ -700,6 +731,16 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 			a.analyzeNode(elem)
 		}
 	}
+
+	// Freeze the inferred constraints into the struct type and restore outer state.
+	if isGeneric {
+		if len(a.activeConstraints) > 0 {
+			st.TypeConstraints = a.activeConstraints
+		}
+		a.activeConstraints = prevConstraints
+		a.activeContext = prevContext
+	}
+
 	return st
 }
 
@@ -841,13 +882,50 @@ func (a *Analyzer) analyzeBinary(b *ast.BinaryExpr) Type {
 	leftType := a.analyzeExpr(b.Left)
 	a.analyzeExpr(b.Right)
 	methodName := NonWordMethodName(b.Op)
+	// When inside a generic struct body, a binary operator on a T-typed value
+	// reveals that T must support that operator's method (e.g. == → eqeq).
+	if gt, ok := leftType.(*GenericType); ok && a.activeConstraints != nil {
+		a.activeConstraints[gt.Name] = append(a.activeConstraints[gt.Name], &GenericConstraint{
+			TypeParam:  gt.Name,
+			MethodName: methodName,
+			Line:       b.Pos.Line,
+			Col:        b.Pos.Col,
+			Context:    a.activeContext,
+		})
+	}
 	return a.methodReturnType(leftType, methodName, b.Pos)
 }
 
 func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
+	// When inside a generic struct body, intercept method calls on T-typed values.
+	// These calls reveal what methods the type parameter T must support (constraints).
+	if a.activeConstraints != nil {
+		if memExpr, ok := c.Callee.(*ast.MemberExpr); ok {
+			objType := a.analyzeExpr(memExpr.Object)
+			if gt, ok := objType.(*GenericType); ok {
+				a.activeConstraints[gt.Name] = append(a.activeConstraints[gt.Name], &GenericConstraint{
+					TypeParam:  gt.Name,
+					MethodName: memExpr.Member.Name,
+					Line:       memExpr.Member.Pos.Line,
+					Col:        memExpr.Member.Pos.Col,
+					Context:    a.activeContext,
+				})
+				// Analyze args for their side-effects (scope bindings, nested analysis).
+				for _, arg := range c.Args {
+					a.analyzeExpr(arg.Value)
+				}
+				// Tag the callee and call as producing Unknown so downstream analysis continues.
+				a.setType(c.Callee, &BocType{Returns: []Type{Unknown}})
+				return Unknown
+			}
+		}
+	}
+
 	calleeType := a.analyzeExpr(c.Callee)
+	// Collect arg types — needed for generic constraint checking at instantiation.
+	var argTypes []Type
 	for _, arg := range c.Args {
-		a.analyzeExpr(arg.Value)
+		argTypes = append(argTypes, a.analyzeExpr(arg.Value))
 	}
 	switch bt := calleeType.(type) {
 	case *BocType:
@@ -860,6 +938,11 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 			return Unknown // multi-return
 		}
 	case *StructType:
+		// At a generic struct constructor call, verify that the concrete type(s)
+		// bound to each type param satisfy all inferred constraints.
+		if len(bt.TypeParams) > 0 && len(bt.TypeConstraints) > 0 {
+			a.checkGenericConstraints(c.Callee.Position(), bt, argTypes)
+		}
 		return bt // constructor call
 	case *BuiltinType:
 		return bt // direct type value used as function
@@ -1070,4 +1153,86 @@ func (a *Analyzer) methodReturnType(receiverType Type, methodName string, pos as
 	default:
 		return Unknown
 	}
+}
+
+// checkGenericConstraints verifies that the concrete types bound to generic type
+// params at a constructor call site satisfy all inferred constraints.
+// It reports ALL missing methods in a single error, not one at a time.
+func (a *Analyzer) checkGenericConstraints(callPos ast.Pos, st *StructType, argTypes []Type) {
+	// Build typeParam → concreteType bindings by pairing constructor args with
+	// data fields (skipping BocType fields, which are not constructor parameters).
+	bindings := make(map[string]Type)
+	argIdx := 0
+	for _, field := range st.Fields {
+		if _, isBoc := field.Type.(*BocType); isBoc {
+			continue // method fields are not constructor params
+		}
+		if argIdx >= len(argTypes) {
+			break
+		}
+		if gt, ok := field.Type.(*GenericType); ok {
+			if _, alreadyBound := bindings[gt.Name]; !alreadyBound {
+				bindings[gt.Name] = argTypes[argIdx]
+			}
+		}
+		argIdx++
+	}
+
+	// For each type param with constraints, check that the concrete type has
+	// all required methods.
+	var violations []string
+	for _, typeParam := range st.TypeParams { // iterate in declaration order for determinism
+		constraints, hasConstraints := st.TypeConstraints[typeParam]
+		if !hasConstraints {
+			continue
+		}
+		concreteType, bound := bindings[typeParam]
+		if !bound {
+			continue // can't check if we don't know the concrete type
+		}
+		// Collect missing methods, deduplicating by name.
+		seen := make(map[string]bool)
+		var missing []string
+		for _, c := range constraints {
+			if seen[c.MethodName] {
+				continue
+			}
+			seen[c.MethodName] = true
+			if !a.typeHasMethod(concreteType, c.MethodName) {
+				missing = append(missing, fmt.Sprintf("  %s [used in %s]", c.MethodName, c.Context))
+			}
+		}
+		if len(missing) > 0 {
+			violations = append(violations, fmt.Sprintf(
+				"%s is missing methods required by %s:\n%s",
+				concreteType.typeName(), typeParam, strings.Join(missing, "\n")))
+		}
+	}
+
+	if len(violations) > 0 {
+		a.errorf(callPos, "type constraint violation for %s:\n%s",
+			st.Name, strings.Join(violations, "\n"))
+	}
+}
+
+// typeHasMethod reports whether typ exposes a method or field named methodName.
+func (a *Analyzer) typeHasMethod(typ Type, methodName string) bool {
+	switch t := typ.(type) {
+	case *StructType:
+		for _, f := range t.Fields {
+			if f.Name == methodName {
+				return true
+			}
+		}
+		return false
+	case *BuiltinType:
+		if methods, ok := builtinMethods[t.name]; ok {
+			_, has := methods[methodName]
+			return has
+		}
+		return false
+	case *GenericType, *UnknownType:
+		return true // can't check; assume satisfied to avoid cascading errors
+	}
+	return false
 }

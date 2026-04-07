@@ -1,0 +1,16 @@
+// Generic struct with a method: receiver emitted as *Container[T].
+// The get method just returns value (no T-method calls, so T is unconstrained).
+Container: {
+    T
+    value T
+    get #(T) {
+        value
+    }
+}
+
+main: {
+    c: Container(42)
+    s: Container("hello")
+    print(c.get())
+    print(s.get())
+}
