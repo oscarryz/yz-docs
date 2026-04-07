@@ -907,6 +907,23 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 			return exp.Type
 		}
 		return Unknown
+	case *ArrayType:
+		// HOF methods and indexed access on arrays.
+		switch fieldName {
+		case "filter":
+			return &BocType{Returns: []Type{ot}}
+		case "each":
+			return &BocType{Returns: []Type{TypUnit}}
+		case "map":
+			return &BocType{Returns: []Type{&ArrayType{Elem: Unknown}}}
+		case "length":
+			return &BocType{Returns: []Type{TypInt}}
+		case "at":
+			return &BocType{Returns: []Type{ot.Elem}}
+		case "append":
+			return &BocType{Returns: []Type{ot}}
+		}
+		return Unknown // extensible — no error for unknown array methods
 	case *UnknownType:
 		return Unknown
 	default:

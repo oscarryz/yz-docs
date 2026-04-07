@@ -72,12 +72,23 @@
 - [x] Default values in params — `#(name String = "hello")` — injected at call sites; golden test 21
 - [x] `ShortDecl` as param — `name : "default"` in sig — type inferred from default; golden test 22
 - [x] Generic variant types — `Option: { V; Some(value V); None() }` with `[V any]` on struct and constructors; discriminant match works; golden test 25
-- [ ] Generic type vars in sig — `#(T)`, `#(items Option(T))`
-- [ ] Uninstantiated generics — `Option(T)` as a param type
+- [x] Generic type vars in sig — `identity #(value V, V)` → `func identity[V any](value V) *Thunk[V]`; golden test 26
+- [x] Uninstantiated generics — `Option(String)` → `*Option[std.String]` in type positions
 - [x] Declare-only then assign-later — `greet #(name String)` then `greet = { name String; … }` → FuncDecl; golden test 23
 
 ## Language Features — Already Implemented (discovered)
 - [x] Multiline strings — strings span lines naturally; `"` or `'` closes on any line (lexer handles `\n` inside string literals)
+
+## Language Features — Implemented (continued)
+- [x] HOF / closures as arguments — `list.filter({ item Int; item > 10 })` — sync closures with typed params; `Array.Filter`, `Array.Each`, `ArrayMap`; golden test 27
+
+## Generics — Future Work
+- [ ] HOF: `list.map({ item Int; item * 2 })` — requires `std.ArrayMap` special-case in lowerer; `lowerCall` detects `.map(boc)` on ArrayType → emits `std.ArrayMap(recv, closure)`
+- [ ] Generic constraints (named) — `T Comparable` or `T Ordered` — emit `[T Comparable]` instead of `[T any]`
+- [ ] Generic constraint inference — infer constraint from usage (e.g., if `t.size()` is called, T must have `size #() Int`)
+- [ ] Multiple type params — `#(key K, value V)` → `[K any, V any]`
+- [ ] Generic structs (non-variant) — `Box: { T; value T }` → `type Box[T any] struct { value T }`
+- [ ] Optional parens for non-word method calls — `list.filter { block }` without `()`; binary form `foo ++ { block }` works once ClosureExpr has params
 
 ## Known Bugs
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
