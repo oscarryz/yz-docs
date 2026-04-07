@@ -1,0 +1,9 @@
+// Generic struct: Box[T] — non-variant data container.
+Box: {
+    T
+    value T
+}
+main: {
+    b: Box(42)
+    print(b.value)
+}
