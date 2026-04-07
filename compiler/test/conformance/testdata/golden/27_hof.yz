@@ -1,0 +1,6 @@
+// HOF: higher-order functions — passing boc literals as callbacks to array methods.
+main: {
+    list: [1, 2, 3, 10, 20]
+    filtered: list.filter({ item Int; item > 10 })
+    filtered.each({ item Int; print(item) })
+}

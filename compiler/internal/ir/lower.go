@@ -1326,15 +1326,33 @@ func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
 }
 
 // lowerConditionalExpr lowers a ConditionalExpr used in expression position
-// by calling cond.Qm(trueCase, falseCase) on the Bool value.
+// as an immediately-invoked closure (IIFE) with an if/else inside.
 func (l *lowerer) lowerConditionalExpr(cond *ast.ConditionalExpr) Expr {
+	// Determine result type from the true-case boc.
+	semType := l.analyzer.ExprType(cond.TrueCase)
+	resultType := "std.Unit"
+	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
+		resultType = l.goType(bt.Returns[0])
+	}
+
 	condExpr := l.lowerExpr(cond.Cond)
-	trueExpr := l.lowerExpr(cond.TrueCase)
-	falseExpr := l.lowerExpr(cond.FalseCase)
-	return &MethodCall{
-		Recv:   condExpr,
-		Method: "Qm",
-		Args:   []Expr{trueExpr, falseExpr},
+
+	var trueBody []Stmt
+	if tc, ok := cond.TrueCase.(*ast.BocLiteral); ok {
+		trueBody = l.lowerMatchArmBody(tc.Elements, resultType)
+	}
+
+	var falseBody []Stmt
+	if fc, ok := cond.FalseCase.(*ast.BocLiteral); ok {
+		falseBody = l.lowerMatchArmBody(fc.Elements, resultType)
+	}
+
+	return &MatchExpr{
+		ResultType: resultType,
+		Arms: []*MatchArm{
+			{Cond: condExpr, Body: trueBody},
+			{Cond: nil, Body: falseBody},
+		},
 	}
 }
 
@@ -1611,14 +1629,82 @@ func (l *lowerer) lowerBuiltinCall(goName string, c *ast.CallExpr) Expr {
 }
 
 func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
-	// An anonymous boc literal used as an expression — emit as a closure.
+	// Extract TypedDecl params (nil-value TypedDecls at the start of the body).
+	var params []*ParamSpec
+	for _, elem := range b.Elements {
+		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+			params = append(params, &ParamSpec{
+				Name: td.Name.Name,
+				Type: l.goTypeFromTypeExpr(td.Type),
+			})
+		}
+	}
+	// Determine result type from sema.
 	semType := l.analyzer.ExprType(b)
 	resultType := "std.Unit"
 	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
 		resultType = l.goType(bt.Returns[0])
 	}
-	body := l.lowerBocBody(b, resultType)
-	return &ClosureExpr{ResultType: resultType, Body: body}
+	body := l.lowerClosureBody(b.Elements, resultType)
+	return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
+}
+
+// lowerClosureBody lowers boc elements as a synchronous closure body.
+// Unlike lowerBocBody, it does NOT wrap in a ThunkExpr.
+// TypedDecl with nil Value (params) are skipped — already captured in ClosureExpr.Params.
+func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stmt {
+	var stmts []Stmt
+	for i, elem := range elements {
+		isLast := i == len(elements)-1
+		switch e := elem.(type) {
+		case *ast.TypedDecl:
+			if e.Value == nil {
+				continue // param — already in ClosureExpr.Params
+			}
+			stmts = append(stmts, &DeclStmt{
+				Name: e.Name.Name,
+				Init: l.lowerExpr(e.Value),
+			})
+		case *ast.ShortDecl:
+			stmts = append(stmts, l.lowerBodyShortDecl(e, isLast, resultType))
+		case *ast.Assignment:
+			stmts = append(stmts, l.lowerAssignment(e))
+		case *ast.ReturnStmt:
+			var val Expr
+			if e.Value != nil {
+				val = l.lowerExpr(e.Value)
+			}
+			stmts = append(stmts, &ReturnStmt{Value: val})
+		case ast.Expr:
+			if fs, ok := l.tryLowerWhile(e); ok {
+				stmts = append(stmts, fs)
+				if isLast {
+					stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
+				}
+			} else if is, ok := l.tryLowerConditional(e); ok {
+				stmts = append(stmts, is)
+				if isLast {
+					stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
+				}
+			} else if isLast {
+				expr := l.lowerExpr(e)
+				if l.isBocMethodCall(e) {
+					expr = &ForceExpr{Thunk: expr}
+				}
+				stmts = append(stmts, &ReturnStmt{Value: expr})
+			} else {
+				if ms, ok := l.tryLowerMatch(e); ok {
+					stmts = append(stmts, ms)
+				} else {
+					stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
+				}
+			}
+		}
+	}
+	if len(stmts) == 0 || !isReturnStmt(stmts[len(stmts)-1]) {
+		stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
+	}
+	return stmts
 }
 
 // lowerInterpString lowers an InterpolatedStringExpr to a chain of Plus calls:
