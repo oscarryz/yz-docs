@@ -83,7 +83,7 @@
 - [x] HOF / closures as arguments — `list.filter({ item Int; item > 10 })` — sync closures with typed params; `Array.Filter`, `Array.Each`, `ArrayMap`; golden test 27
 
 ## Generics — Future Work
-- [ ] HOF: `list.map({ item Int; item * 2 })` — requires `std.ArrayMap` special-case in lowerer; `lowerCall` detects `.map(boc)` on ArrayType → emits `std.ArrayMap(recv, closure)`
+- [x] HOF: `list.map({ item Int; item * 2 })` — `lowerCall` detects `.map(boc)` on ArrayType → emits `std.ArrayMap(recv, closure)`; result type inferred via `:=`; golden test 28
 - [ ] Generic constraints (named) — `T Comparable` or `T Ordered` — emit `[T Comparable]` instead of `[T any]`
 - [ ] Generic constraint inference — infer constraint from usage (e.g., if `t.size()` is called, T must have `size #() Int`)
 - [ ] Multiple type params — `#(key K, value V)` → `[K any, V any]`
