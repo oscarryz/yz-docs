@@ -1,0 +1,11 @@
+// Typed declaration with explicit generic type annotation: box Box(String) = Box("hello")
+Box: {
+    T
+    value T
+}
+main: {
+    b: Box(42)              // short decl — T inferred from value
+    s Box(String) = Box("hello")   // typed decl — T explicit in annotation
+    print(b.value)
+    print(s.value)
+}

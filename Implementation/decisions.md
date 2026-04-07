@@ -88,6 +88,15 @@ Resolved progressively during planning sessions (2026-03-04 through 2026-04-03).
 | 38 | Codegen via embedding | Mixed-in bocs are emitted as **Go embedded structs**. Fields and methods are promoted unqualified. The host struct body contains just the type name (no field name), and the constructor initializes it with `TypeName: *NewTypeName(...)`. |
 | 39 | Cross-file mix | `mix` of a type from another file uses the full FQN: `mix house.front.Named`. |
 
+## Generics
+
+| # | Decision | Resolution |
+|---|----------|------------|
+| 43 | Generic type parameter declaration | Type parameters (T, V, K, etc.) are **always declared explicitly** as bare uppercase single-letter identifiers in the struct body, before fields that reference them. This mirrors Go `[T any]`, Rust `<T>`, Java `<T>`, and Scala `[T]`. Using a single-letter type name in a field type without declaring it is an "undefined type" error. Implicit type params (no explicit declaration) are not supported. |
+| 44 | Generic type construction | The type argument is **inferred from constructor arguments**: `Box(42)` → `Box[Int]`, `Box("hello")` → `Box[String]`. No explicit type argument at the call site is needed. This matches how Go, Rust, and Scala handle generic function/constructor calls. |
+| 45 | Generic type annotation at use site | To annotate a variable's type explicitly, use `TypeName(TypeArg)` in type position: `s Box(String) = Box("hello")`. The `()` syntax in a type annotation position means "parameterized with", analogous to `Box<String>` or `Box[String]` in other languages. This is distinct from a constructor call in expression position. |
+| 46 | Deferred generic forms | `Box(String)` as a type-only constructor (create an empty Box[String] without a value, then set fields later) is deferred — it requires passing a type as a runtime constructor argument, which has no parallel in mainstream languages and is complex to lower to Go. |
+
 ## Control Flow
 
 | # | Decision | Resolution |

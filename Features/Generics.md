@@ -1,85 +1,77 @@
 #feature
-A single uppercase letter will mean the data type is generic:
 
-```js
+A single uppercase letter declares a **generic type parameter**. Yz follows the same convention as Go, Rust, Java, and Scala: type parameters are always declared explicitly in the type body.
+
+## Declaring a generic type
+
+Type parameters are declared as bare uppercase single-letter identifiers inside the type's body, before the fields that use them:
+
+```yz
 Box: {
-	data T // T is generic
+    T          // T is a type parameter — not a field
+    value T    // field whose type is T
 }
-word : Box('hello') // `T` is ~~bound~~ instantiated to String
-s String = word.data  // ok
-// i Int = word.data // compilation error
-
-number: Box(1) // 'T' is bound to Int
-i Int = number.data // ok 
-// s String = number.data // compilation error 
-
 ```
 
-It can usually be inferred when assigning values, like `Box('hello')` above, but sometimes 
-we don't want/can create the instance with values, in that case a lonely type can be set and then in the declaration be defined. 
+The bare `T` line declares `T` as a type parameter. Any field after it can use `T` as its type.
 
+> **Why explicit declaration?** Requiring the bare `T` line (rather than inferring T from field types) is consistent with every mainstream language and avoids surprising behaviour. The compiler needs to know which single-letter identifiers are type parameters vs concrete types.
 
-```js
-Box : {
-	T // box is generic 
-	data T // we might not want to pass this when building it
-}
-//word: Box() // compilation error, what's the value of T
-word: Box(String) // initializes T to string
-word.data = 'hello' // ok
+## Construction — type inferred from value
 
-// in declarations: 
-a_number Box(Int) // a number will be initalized to a Box of int
-a_generic_box Box(T) // the `a_generic_box` will be initialized to something in the future
-a_generic_box = Box(Bool) // 
+When constructing a generic type, the type argument is **inferred from the constructor arguments**:
 
-````
-
-
-The generic data for a variable can be used in other elements of the block like internal variables. 
-The actual type of the generic is preserved
-```js
-
-Node : {
-	data T
-	left Node(T) = optional.empty()
-	right Node(T) = optiona.empty()
-}
-
-int_root: Node(1)
-int_root.left = Node(2)
-int_root.right = Node(3)
-
-s_root: Node('hi')
-s_root.left = Node('left')
-// compilation error
-// s_root.right = Node(1) 
+```yz
+b: Box(42)         // T inferred as Int
+s: Box("hello")    // T inferred as String
 ```
 
-```js
-create_array: { 
-	T
-	[T]()
-}
-a [Int] = create_array(Int) 
+This is equivalent to Go's `NewBox(42)` with type inference.
+
+## Typed variable declaration
+
+When you want to name the type explicitly — for documentation, for an uninitialized variable, or to constrain later assignment — use a typed declaration:
+
+```yz
+s Box(String) = Box("hello")    // T is explicitly String
 ```
 
-The generics are flexible and allow to use any method from the given type, the compiler will verify the argument / assignment matches the methods used 
+`Box(String)` in the type-annotation position means "a Box parameterized with String", the same way `Box<String>` means in Java/Rust or `Box[String]` in Go/Scala. The `()` syntax is Yz's notation for type arguments.
 
-```js
-say_hi: {
-  data T
-  print("Hello `data.name()`)
+## Multiple type parameters
+
+```yz
+Pair: {
+    K, V       // two type parameters
+    key K
+    value V
 }
-thing: {
-  name : {"thing"}
-}
-blah: {}
-say_hi(thing) // works, prints "Hello thing"
-say_hi(blah) // doesn't compile: blah #() doesn't have a name #(String) method
+
+p: Pair("name", 42)   // K = String, V = Int
 ```
 
+## Generic variant types
 
+Variant (sum) types follow the same rules:
 
+```yz
+Option: {
+    V
+    Some(value V)
+    None()
+}
 
-#answered  
+x: Some("hello")    // V = String
+match x
+    { Some => print(x.value) },
+    { None => print("nothing") }
+```
+
+## Deferred / not yet implemented
+
+- **`Box(String)` as a type-only constructor** — `word: Box(String)` to create a Box[String] without providing a value yet, then `word.value = "hello"` later. This requires passing a type as a constructor argument, which has no equivalent in mainstream languages and is complex to implement.
+- **Implicit type parameters** — `Box: { value T }` where `T` is used in a field but not declared. This would cause an "undefined type: T" error currently.
+- **Named constraints** — `T Comparable` or `T Printable`; currently all type params emit `[T any]`.
+- **Multiple type parameters in BocWithSig** — `#(key K, value V)`.
+
+#answered
