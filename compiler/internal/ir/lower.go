@@ -768,6 +768,13 @@ func (l *lowerer) lowerMainBoc(b *ast.BocLiteral) *FuncDecl {
 
 func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 	switch e := node.(type) {
+	case *ast.TypedDecl:
+		if e.Value == nil {
+			return nil // parameter-style declaration without init — skip
+		}
+		expr := l.lowerExpr(e.Value)
+		typ := l.goTypeFromTypeExpr(e.Type)
+		return []Stmt{&DeclStmt{Name: e.Name.Name, Type: typ, Init: expr}}
 	case *ast.ShortDecl:
 		var stmts []Stmt
 		for i, n := range e.Names {

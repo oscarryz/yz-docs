@@ -265,41 +265,53 @@ e.id             // OK — e is still Employee
 
 ## 4.7 Generic Types
 
-Yz uses **single uppercase letters** as generic type parameters.
+Yz uses **single uppercase letters** as generic type parameters, following the same convention as Go, Rust, Java, and Scala.
 
 ### Declaration
 
+Type parameters are always **declared explicitly** in the type body as bare uppercase identifiers, before the fields that reference them:
+
 ```yz
 Box: {
-    T
+    T          // T is a type parameter — not a field
+    value T    // field whose type is T
+}
+```
+
+A bare single-letter uppercase identifier on its own line declares a type parameter. This is required — using a single-letter type name in a field without declaring it first is an error:
+
+```yz
+// WRONG — T not declared, causes "undefined type: T"
+Bad: {
     value T
 }
 ```
 
-`T` is a type parameter. It is **not** a field — it appears alone without a following type or default value.
+This explicit-declaration rule is consistent with every mainstream statically-typed language and avoids ambiguity about which identifiers are type parameters vs concrete type names.
 
-### Instantiation
+### Instantiation by Inference
 
-Generic types are resolved at the **use site** by inference:
+Generic types are resolved at the **use site** by inferring the type argument from the constructor arguments:
 
 ```yz
 b: Box(42)          // T inferred as Int
 s: Box("hello")     // T inferred as String
 ```
 
+### Typed Variable Declaration
+
+To declare a variable with an explicit type annotation, use `TypeName(TypeArg)` in type position:
+
+```yz
+s Box(String) = Box("hello")    // explicit: s is a Box[String]
+b Box(Int) = Box(42)            // explicit: b is a Box[Int]
+```
+
+`Box(String)` in a type-annotation position means "Box parameterized with String" — analogous to `Box<String>` in Java/Rust or `Box[String]` in Go/Scala. This is distinct from `Box("hello")` in expression position, which is a constructor call.
+
 ### Generic Constraints
 
 Yz does **not** have explicit constraint syntax (e.g., `T: Comparable`). Instead, constraints are checked structurally at use sites — if a generic type's methods use `==` on `T`, then `T` must be a type that has `==` (which is all types).
-
-```yz
-contains #(list [T], item T, Bool) {
-    list.each({ element T
-        (element == item) ? { return true }, { }
-    })
-    false
-}
-// T must support ==, which all types do
-```
 
 For more specific constraints, use a named structural type:
 
