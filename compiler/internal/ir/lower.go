@@ -601,6 +601,22 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 	}
 
 	sd := &StructDecl{Name: name}
+
+	// Pre-scan for generic type params so we can build the correct receiver type
+	// before processing method bodies (type params must be declared before fields
+	// that use them, so this pre-scan sees all params before any method is lowered).
+	for _, elem := range b.Elements {
+		if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
+			sd.TypeParams = append(sd.TypeParams, id.Name)
+		}
+	}
+
+	// Receiver type: "*Name" for plain structs, "*Name[T, V, ...]" for generics.
+	recvType := "*" + name
+	if len(sd.TypeParams) > 0 {
+		recvType = "*" + name + "[" + strings.Join(sd.TypeParams, ", ") + "]"
+	}
+
 	fieldNames := l.collectFieldNames(b)
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
@@ -616,7 +632,7 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				inner, isInnerBoc := e.Values[0].(*ast.BocLiteral)
 				if isInnerBoc && !isUppercase(e.Names[0].Name) {
 					bocSemType := l.analyzer.ExprType(e)
-					m := l.lowerMethod(e.Names[0].Name, "*"+name, inner, fieldNames, bocSemType)
+					m := l.lowerMethod(e.Names[0].Name, recvType, inner, fieldNames, bocSemType)
 					sd.Methods = append(sd.Methods, m)
 					continue
 				}
@@ -652,13 +668,11 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 			})
 
 		case *ast.Ident:
-			if e.TokType == token.GENERIC_IDENT {
-				sd.TypeParams = append(sd.TypeParams, e.Name)
-			}
+			// TypeParams already pre-populated above; nothing else to do here.
 
 		case *ast.BocWithSig:
 			if e.Body != nil {
-				m := l.lowerBocWithSigAsMethod(e, "*"+name, fieldNames)
+				m := l.lowerBocWithSigAsMethod(e, recvType, fieldNames)
 				sd.Methods = append(sd.Methods, m)
 			}
 		}

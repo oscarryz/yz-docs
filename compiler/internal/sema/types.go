@@ -157,13 +157,15 @@ type VariantCase struct {
 // params are BocTypes — these generate Go interfaces, not structs.
 // IsVariant is set for sum types: `Pet: { Cat(...), Dog(...) }`.
 // TypeParams holds formal type parameter names for generic types (e.g., ["V"] for Option[V]).
+// TypeConstraints maps each type param to the methods inferred as required on it.
 type StructType struct {
-	Name        string        // may be empty for anonymous structural types
-	Fields      []StructField // in declaration order (merged across all variants)
-	IsInterface bool          // true when declared as Name #(boc-params...) with no body
-	IsVariant   bool          // true for sum/variant types
-	Variants    []VariantCase // variant constructors (only when IsVariant=true)
-	TypeParams  []string      // formal type parameter names (non-nil for generic types)
+	Name            string                          // may be empty for anonymous structural types
+	Fields          []StructField                   // in declaration order (merged across all variants)
+	IsInterface     bool                            // true when declared as Name #(boc-params...) with no body
+	IsVariant       bool                            // true for sum/variant types
+	Variants        []VariantCase                   // variant constructors (only when IsVariant=true)
+	TypeParams      []string                        // formal type parameter names (non-nil for generic types)
+	TypeConstraints map[string][]*GenericConstraint // typeParam → inferred method requirements
 }
 
 func (t *StructType) typeName() string {
@@ -265,6 +267,21 @@ func (t *DictType) IsCompatibleWith(target Type) bool {
 }
 
 func (t *DictType) String() string { return t.typeName() }
+
+// ---------------------------------------------------------------------------
+// Generic constraints
+// ---------------------------------------------------------------------------
+
+// GenericConstraint records one method required on a generic type parameter.
+// These are inferred by analyzing how T-typed values are used inside the bodies
+// of methods defined on a generic type.
+type GenericConstraint struct {
+	TypeParam  string // which type param needs this (e.g. "T")
+	MethodName string // required method name (e.g. "to_string", "eqeq")
+	Line       int    // source line where this call appears in the generic body
+	Col        int    // source column
+	Context    string // "StructName.methodName" — which method requires this
+}
 
 // ---------------------------------------------------------------------------
 // Generic type parameter

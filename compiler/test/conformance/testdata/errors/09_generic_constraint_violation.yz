@@ -1,0 +1,17 @@
+// Item has no to_string method — violates the constraint inferred for T in Wrapper.
+Item: {
+    name String
+}
+
+Wrapper: {
+    T
+    value T
+    describe #(String) {
+        value.to_string()
+    }
+}
+
+main: {
+    w: Wrapper(Item("hello"))
+    print(w.describe())
+}

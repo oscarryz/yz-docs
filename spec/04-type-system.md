@@ -309,24 +309,45 @@ b Box(Int) = Box(42)            // explicit: b is a Box[Int]
 
 `Box(String)` in a type-annotation position means "Box parameterized with String" — analogous to `Box<String>` in Java/Rust or `Box[String]` in Go/Scala. This is distinct from `Box("hello")` in expression position, which is a constructor call.
 
-### Generic Constraints
+### Generic Constraints — Inferred Automatically
 
-Yz does **not** have explicit constraint syntax (e.g., `T: Comparable`). Instead, constraints are checked structurally at use sites — if a generic type's methods use `==` on `T`, then `T` must be a type that has `==` (which is all types).
+Yz does **not** have explicit constraint syntax (e.g., `T: Comparable`). Instead, the compiler **infers constraints** by scanning how T-typed values are used inside the generic type's method bodies.
 
-For more specific constraints, use a named structural type:
+When a method calls a method or applies an operator to a T-typed value, the compiler records that T must support that operation:
 
 ```yz
-Printable: {
-    to_string #(String)
+Ordered: {
+    T
+    value T
+    is_less #(other T, Bool) {
+        value < other    // compiler infers: T must support < (lt)
+    }
 }
-
-print_all #(items [Printable]) {
-    items.each({ item Printable
-        print(item.to_string())
-    })
-}
-// Any type with a to_string() method is structurally compatible with Printable
 ```
+
+At every constructor call site, the compiler checks that the concrete type satisfies **all** inferred requirements. If any are missing, **all** violations are reported at once:
+
+```
+error: type constraint violation for Ordered:
+Item is missing methods required by T:
+  lt [used in Ordered.is_less]
+```
+
+A type that satisfies the constraint compiles without error:
+
+```yz
+o: Ordered(42)           // OK: Int has lt
+o2: Ordered("hello")     // OK: String has lt (lexicographic)
+```
+
+A type that is missing the required method is rejected at the constructor call site:
+
+```yz
+Item: { name String }
+o: Ordered(Item("x"))    // compile error: Item missing lt
+```
+
+No annotation is required on the type definition. Constraints emerge naturally from usage.
 
 ### Multiple Type Parameters
 

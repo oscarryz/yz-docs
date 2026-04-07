@@ -84,8 +84,8 @@
 
 ## Generics — Future Work
 - [x] HOF: `list.map({ item Int; item * 2 })` — `lowerCall` detects `.map(boc)` on ArrayType → emits `std.ArrayMap(recv, closure)`; result type inferred via `:=`; golden test 28
-- [ ] Generic constraints (named) — `T Comparable` or `T Ordered` — emit `[T Comparable]` instead of `[T any]`
-- [ ] Generic constraint inference — infer constraint from usage (e.g., if `t.size()` is called, T must have `size #() Int`)
+- [x] Generic constraint inference (Option 4) — sema scans method bodies for T-method calls; records constraints; checks all at instantiation; reports all missing methods at once; error test 09; golden test 31 (generic method receiver)
+- [ ] Go constraint generation — translate inferred Yz constraints into Go interface constraints (`[T interface{ Lt(T) std.Bool }]`) so generated Go also type-checks method bodies
 - [ ] Multiple type params — `#(key K, value V)` → `[K any, V any]`
 - [x] Generic structs (non-variant) — `Box: { T; value T }` → `type Box[T any] struct { value T }`; golden test 29
 - [x] Typed generic declaration — `b Box(String) = Box("hello")` → `var b *Box[std.String] = NewBox(...)`; golden test 30; TypedDecl in lowerMainStmt
