@@ -996,6 +996,10 @@ func (a *Analyzer) resolveTypeExpr(te ast.TypeExpr) Type {
 	}
 	switch t := te.(type) {
 	case *ast.SimpleTypeExpr:
+		// Single-letter uppercase: always a generic type parameter, never a scope lookup.
+		if t.TokType == token.GENERIC_IDENT {
+			return &GenericType{Name: t.Name}
+		}
 		sym := a.currentScope.Lookup(t.Name)
 		if sym != nil {
 			return sym.Type
