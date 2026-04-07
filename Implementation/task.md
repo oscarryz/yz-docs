@@ -87,7 +87,7 @@
 - [ ] Generic constraints (named) — `T Comparable` or `T Ordered` — emit `[T Comparable]` instead of `[T any]`
 - [ ] Generic constraint inference — infer constraint from usage (e.g., if `t.size()` is called, T must have `size #() Int`)
 - [ ] Multiple type params — `#(key K, value V)` → `[K any, V any]`
-- [ ] Generic structs (non-variant) — `Box: { T; value T }` → `type Box[T any] struct { value T }`
+- [x] Generic structs (non-variant) — `Box: { T; value T }` → `type Box[T any] struct { value T }`; golden test 29
 - [ ] Optional parens for non-word method calls — `list.filter { block }` without `()`; binary form `foo ++ { block }` works once ClosureExpr has params
 
 ## Known Bugs

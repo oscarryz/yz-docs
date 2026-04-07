@@ -651,6 +651,11 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				EmbeddedFields: subFields,
 			})
 
+		case *ast.Ident:
+			if e.TokType == token.GENERIC_IDENT {
+				sd.TypeParams = append(sd.TypeParams, e.Name)
+			}
+
 		case *ast.BocWithSig:
 			if e.Body != nil {
 				m := l.lowerBocWithSigAsMethod(e, "*"+name, fieldNames)
