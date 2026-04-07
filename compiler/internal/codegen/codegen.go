@@ -96,7 +96,20 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 		return
 	}
 
-	g.linef("type %s struct {", sd.Name)
+	// Build type parameter strings for generic structs.
+	// typeConstraints: "[T any]" for declarations; typeArgs: "[T]" for references.
+	typeConstraints := ""
+	typeArgs := ""
+	if len(sd.TypeParams) > 0 {
+		var constraints []string
+		for _, tp := range sd.TypeParams {
+			constraints = append(constraints, tp+" any")
+		}
+		typeConstraints = "[" + strings.Join(constraints, ", ") + "]"
+		typeArgs = "[" + strings.Join(sd.TypeParams, ", ") + "]"
+	}
+
+	g.linef("type %s%s struct {", sd.Name, typeConstraints)
 	g.level++
 	for _, f := range sd.Fields {
 		if f.Embedded {
@@ -122,9 +135,9 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 				params = append(params, f.Name+" "+f.Type)
 			}
 		}
-		g.linef("func New%s(%s) *%s {", sd.Name, strings.Join(params, ", "), sd.Name)
+		g.linef("func New%s%s(%s) *%s%s {", sd.Name, typeConstraints, strings.Join(params, ", "), sd.Name, typeArgs)
 		g.level++
-		g.linef("return &%s{", sd.Name)
+		g.linef("return &%s%s{", sd.Name, typeArgs)
 		g.level++
 		for _, f := range sd.Fields {
 			if f.Embedded {
