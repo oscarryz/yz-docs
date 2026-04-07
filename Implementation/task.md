@@ -88,6 +88,7 @@
 - [ ] Generic constraint inference — infer constraint from usage (e.g., if `t.size()` is called, T must have `size #() Int`)
 - [ ] Multiple type params — `#(key K, value V)` → `[K any, V any]`
 - [x] Generic structs (non-variant) — `Box: { T; value T }` → `type Box[T any] struct { value T }`; golden test 29
+- [x] Typed generic declaration — `b Box(String) = Box("hello")` → `var b *Box[std.String] = NewBox(...)`; golden test 30; TypedDecl in lowerMainStmt
 - [ ] Optional parens for non-word method calls — `list.filter { block }` without `()`; binary form `foo ++ { block }` works once ClosureExpr has params
 
 ## Known Bugs
