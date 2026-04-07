@@ -67,11 +67,13 @@ type SingletonDecl struct {
 
 // FuncDecl is a standalone Go function (used for the main entry point and
 // top-level helpers).
+// TypeParams holds formal type parameter names for generic functions (e.g., ["V"] for [V any]).
 type FuncDecl struct {
-	Name    string
-	Params  []*ParamSpec
-	Results []string // Go type strings
-	Body    []Stmt
+	Name       string
+	TypeParams []string // formal type params; non-nil emits [V any, ...] constraint list
+	Params     []*ParamSpec
+	Results    []string // Go type strings
+	Body       []Stmt
 }
 
 // MethodDecl is a Go method attached to a struct.

@@ -113,8 +113,13 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 		return nil
 	}
 
+	// Use AST sig for return type to preserve generic TypeArgs; also collect type params.
+	var typeParams []string
 	resultType := "std.Unit"
-	if len(bt.Returns) > 0 {
+	if bws, ok := sym.Node.(*ast.BocWithSig); ok {
+		resultType = l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
+		typeParams = collectSigTypeParams(bws.Sig)
+	} else if len(bt.Returns) > 0 {
 		resultType = l.goType(bt.Returns[0])
 	}
 	thunkResult := "*std.Thunk[" + resultType + "]"
@@ -145,10 +150,11 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	}
 
 	return &FuncDecl{
-		Name:    id.Name,
-		Params:  params,
-		Results: []string{thunkResult},
-		Body:    funcBody,
+		Name:       id.Name,
+		TypeParams: typeParams,
+		Params:     params,
+		Results:    []string{thunkResult},
+		Body:       funcBody,
 	}
 }
 
@@ -817,22 +823,12 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
 
-	resultType := "std.Unit"
-	if bt != nil && len(bt.Returns) > 0 {
-		resultType = l.goType(bt.Returns[0])
-	}
+	// Use AST sig for return type to preserve generic TypeArgs.
+	// Methods are always in shorthand form (BodyOnly=false).
+	resultType := l.getResultTypeFromSig(bws.Sig, bt, false)
 
-	var params []*ParamSpec
-	if bt != nil {
-		for _, p := range bt.Params {
-			if !p.IsReturn && p.Label != "" {
-				params = append(params, &ParamSpec{
-					Name: p.Label,
-					Type: l.goType(p.Type),
-				})
-			}
-		}
-	}
+	// Build params using sema for ordering/filtering, AST types for generic TypeArgs.
+	params := l.sigParams(bws.Sig, bt)
 
 	prev := l.setReceiver("self", parentFields)
 	body := l.lowerBocBody(bws.Body, resultType)
@@ -856,23 +852,31 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig, recvType string, parentFi
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
 
-	resultType := "std.Unit"
-	if bt != nil && len(bt.Returns) > 0 {
-		resultType = l.goType(bt.Returns[0])
-	}
+	// Use AST sig for return type to preserve generic TypeArgs (e.g. Option(V)).
+	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
 	thunkResult := "*std.Thunk[" + resultType + "]"
 
-	// Build Go params from the signature's input parameters.
+	// Collect generic type params from the sig (e.g. V in #(value V, V)).
+	typeParams := collectSigTypeParams(bws.Sig)
+
+	// Build Go params from the sig (shorthand) or body leading TypedDecls (body-only).
 	var params []*ParamSpec
-	if bt != nil {
-		for _, p := range bt.Params {
-			if !p.IsReturn && p.Label != "" {
-				params = append(params, &ParamSpec{
-					Name: p.Label,
-					Type: l.goType(p.Type),
-				})
+	if bws.BodyOnly && bws.Body != nil {
+		// Body-only form (`name #(sig) = { body }`): body redeclares params as TypedDecls.
+		for _, elem := range bws.Body.Elements {
+			td, ok := elem.(*ast.TypedDecl)
+			if !ok || td.Value != nil {
+				break
 			}
+			params = append(params, &ParamSpec{
+				Name: td.Name.Name,
+				Type: l.goTypeFromTypeExpr(td.Type),
+			})
 		}
+	} else {
+		// Shorthand form (`name #(sig) { body }`): use sema params for ordering/filtering
+		// but prefer AST types (which preserve generic TypeArgs like Option(V)).
+		params = l.sigParams(bws.Sig, bt)
 	}
 
 	// Lower body as a boc (produces [ExprStmt{ThunkExpr}]).
@@ -893,10 +897,11 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig, recvType string, parentFi
 	}
 
 	return &FuncDecl{
-		Name:    bws.Name.Name,
-		Params:  params,
-		Results: []string{thunkResult},
-		Body:    funcBody,
+		Name:       bws.Name.Name,
+		TypeParams: typeParams,
+		Params:     params,
+		Results:    []string{thunkResult},
+		Body:       funcBody,
 	}
 }
 
@@ -1713,6 +1718,98 @@ func (l *lowerer) restoreReceiver(prev receiverState) {
 }
 
 // ---------------------------------------------------------------------------
+// Generic type-param helpers
+// ---------------------------------------------------------------------------
+
+// sigParams builds the Go parameter list for a BocWithSig (shorthand or method form).
+// It uses sema BocType for ordering and filtering (handles shortdecl/default params
+// that have no explicit AST type), but prefers AST type expressions when they carry
+// generic TypeArgs (e.g. Option(V) → *Option[V]).
+func (l *lowerer) sigParams(sig *ast.BocTypeExpr, bt *sema.BocType) []*ParamSpec {
+	// Index AST params by label for fast lookup.
+	astParamByLabel := map[string]ast.TypeExpr{}
+	if sig != nil {
+		for _, p := range sig.Params {
+			if p.Label != "" && p.Type != nil {
+				astParamByLabel[p.Label] = p.Type
+			}
+		}
+	}
+	var params []*ParamSpec
+	if bt != nil {
+		for _, p := range bt.Params {
+			if p.IsReturn || p.Label == "" {
+				continue
+			}
+			goTyp := l.goType(p.Type) // default: sema-resolved type
+			if astTE, ok := astParamByLabel[p.Label]; ok {
+				goTyp = l.goTypeFromTypeExpr(astTE) // prefer AST (preserves TypeArgs)
+			}
+			params = append(params, &ParamSpec{Name: p.Label, Type: goTyp})
+		}
+	}
+	return params
+}
+
+// collectSigTypeParams scans a BocTypeExpr's param type expressions and
+// returns the names of all GENERIC_IDENTs (single-letter type params) used.
+// Order is the order of first appearance; duplicates are deduplicated.
+func collectSigTypeParams(sig *ast.BocTypeExpr) []string {
+	if sig == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var result []string
+	for _, p := range sig.Params {
+		if p.Type != nil {
+			collectGenericIdentsFromType(p.Type, seen, &result)
+		}
+	}
+	return result
+}
+
+// collectGenericIdentsFromType recursively collects GENERIC_IDENT names from a TypeExpr.
+func collectGenericIdentsFromType(te ast.TypeExpr, seen map[string]bool, result *[]string) {
+	if te == nil {
+		return
+	}
+	switch t := te.(type) {
+	case *ast.SimpleTypeExpr:
+		if t.TokType == token.GENERIC_IDENT && !seen[t.Name] {
+			seen[t.Name] = true
+			*result = append(*result, t.Name)
+		}
+		for _, arg := range t.TypeArgs {
+			collectGenericIdentsFromType(arg, seen, result)
+		}
+	case *ast.ArrayTypeExpr:
+		collectGenericIdentsFromType(t.ElemType, seen, result)
+	case *ast.DictTypeExpr:
+		collectGenericIdentsFromType(t.KeyType, seen, result)
+		collectGenericIdentsFromType(t.ValType, seen, result)
+	}
+}
+
+// getResultTypeFromSig extracts the return Go type string from a BocWithSig.
+// It prefers the explicit return type annotation in the AST sig (which preserves
+// generic TypeArgs) over the sema-inferred return type.
+// bodyOnly must be true for the `name #(sig) = { body }` form, where ALL sig
+// params are inputs and there are no return-type annotations.
+func (l *lowerer) getResultTypeFromSig(sig *ast.BocTypeExpr, bt *sema.BocType, bodyOnly bool) string {
+	if sig != nil && !bodyOnly {
+		for _, p := range sig.Params {
+			if p.Label == "" && p.Type != nil {
+				return l.goTypeFromTypeExpr(p.Type)
+			}
+		}
+	}
+	if bt != nil && len(bt.Returns) > 0 {
+		return l.goType(bt.Returns[0])
+	}
+	return "std.Unit"
+}
+
+// ---------------------------------------------------------------------------
 // Type helpers
 // ---------------------------------------------------------------------------
 
@@ -1773,6 +1870,14 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 		if t.TokType == token.GENERIC_IDENT {
 			return t.Name // generic type param (e.g., V) — no pointer
 		}
+		// Generic application: Option(T) → *Option[T], Option(String) → *Option[std.String]
+		if len(t.TypeArgs) > 0 {
+			var args []string
+			for _, arg := range t.TypeArgs {
+				args = append(args, l.goTypeFromTypeExpr(arg))
+			}
+			return "*" + t.Name + "[" + strings.Join(args, ", ") + "]"
+		}
 		switch t.Name {
 		case "Int":
 			return "std.Int"
@@ -1785,6 +1890,13 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 		case "Unit":
 			return "std.Unit"
 		default:
+			// Go interfaces are already reference types — no pointer needed.
+			sym := l.analyzer.LookupInFile(t.Name)
+			if sym != nil {
+				if st, ok := sym.Type.(*sema.StructType); ok && st.IsInterface {
+					return t.Name
+				}
+			}
 			return "*" + t.Name
 		}
 	case *ast.ArrayTypeExpr:

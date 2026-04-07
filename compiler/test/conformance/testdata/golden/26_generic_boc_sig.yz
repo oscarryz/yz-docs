@@ -1,0 +1,9 @@
+// Generic BocWithSig: identity function using type variable V.
+identity #(value V, V) {
+    value
+}
+
+main: {
+    x: identity("hello")
+    print(x)
+}

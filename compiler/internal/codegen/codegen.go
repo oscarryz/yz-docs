@@ -193,7 +193,8 @@ func (g *generator) emitMethodDecl(md *ir.MethodDecl) {
 func (g *generator) emitFuncDecl(fd *ir.FuncDecl) {
 	params := joinParams(fd.Params)
 	result := formatResults(fd.Results)
-	g.linef("func %s(%s)%s {", fd.Name, params, result)
+	typeParams := formatTypeParams(fd.TypeParams)
+	g.linef("func %s%s(%s)%s {", fd.Name, typeParams, params, result)
 	g.level++
 	g.emitStmts(fd.Body)
 	g.level--
@@ -623,6 +624,17 @@ func joinParams(params []*ir.ParamSpec) string {
 		parts[i] = p.Name + " " + p.Type
 	}
 	return strings.Join(parts, ", ")
+}
+
+func formatTypeParams(tps []string) string {
+	if len(tps) == 0 {
+		return ""
+	}
+	constraints := make([]string, len(tps))
+	for i, tp := range tps {
+		constraints[i] = tp + " any"
+	}
+	return "[" + strings.Join(constraints, ", ") + "]"
 }
 
 func formatResults(results []string) string {
