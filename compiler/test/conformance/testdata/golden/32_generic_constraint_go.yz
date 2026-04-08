@@ -1,0 +1,15 @@
+// Generic struct whose method calls to_string() on T.
+// The compiler infers T must satisfy interface{ ToStr() std.String }
+// and emits that as a proper Go type constraint (not just "any").
+Wrapper: {
+    T
+    value T
+    describe #(String) {
+        value.to_string()
+    }
+}
+
+main: {
+    w: Wrapper("hello")
+    print(w.describe())
+}

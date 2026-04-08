@@ -617,6 +617,27 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 		recvType = "*" + name + "[" + strings.Join(sd.TypeParams, ", ") + "]"
 	}
 
+	// Populate Go interface constraints from sema TypeConstraints.
+	// For each generic type param, collect the Go interface method signatures
+	// inferred from how T-typed values are used inside the struct's method bodies.
+	if len(sd.TypeParams) > 0 {
+		if sym := l.analyzer.LookupInFile(name); sym != nil {
+			if st, ok := sym.Type.(*sema.StructType); ok && len(st.TypeConstraints) > 0 {
+				for _, tp := range sd.TypeParams {
+					if constraints, has := st.TypeConstraints[tp]; has {
+						sigs := constraintGoSigs(constraints, tp)
+						if len(sigs) > 0 {
+							if sd.TypeConstraints == nil {
+								sd.TypeConstraints = make(map[string][]string)
+							}
+							sd.TypeConstraints[tp] = sigs
+						}
+					}
+				}
+			}
+		}
+	}
+
 	fieldNames := l.collectFieldNames(b)
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
@@ -1019,6 +1040,66 @@ var builtinGoName = map[string]string{
 	"info":  "std.Info",
 }
 
+// yzMethodToGoName maps Yz method names that differ from a simple capitalize to
+// their actual yzrt Go method names. Only methods whose Go name is NOT just
+// capitalize(yzName) need an entry here.
+var yzMethodToGoName = map[string]string{
+	"to_string": "ToStr",
+}
+
+// lowerMethodName converts a Yz method name to the exported Go method name that
+// the yzrt package uses. Falls back to capitalize for names with no special mapping.
+func lowerMethodName(yzName string) string {
+	if goName, ok := yzMethodToGoName[yzName]; ok {
+		return goName
+	}
+	return capitalize(yzName)
+}
+
+// builtinConstraintSig maps Yz method names to Go interface method signature
+// templates. "$T" is replaced with the actual type param name at emission time.
+// Signatures match the raw yzrt method signatures (yzrt uses plain values, not
+// *Thunk wrappers, since Thunk wrapping is added by the lowerer at call sites).
+var builtinConstraintSig = map[string]string{
+	"to_string": "ToStr() std.String",
+	"length":    "Length() std.Int",
+	"plus":      "Plus($T) $T",
+	"minus":     "Minus($T) $T",
+	"star":      "Star($T) $T",
+	"slash":     "Slash($T) $T",
+	"percent":   "Percent($T) $T",
+	"lt":        "Lt($T) std.Bool",
+	"gt":        "Gt($T) std.Bool",
+	"lteq":      "Lteq($T) std.Bool",
+	"gteq":      "Gteq($T) std.Bool",
+	"eqeq":      "Eqeq($T) std.Bool",
+	"neq":       "Neq($T) std.Bool",
+	"ampamp":    "Ampamp($T) std.Bool",
+	"pipepipe":  "Pipepipe($T) std.Bool",
+}
+
+// constraintGoSigs converts a slice of GenericConstraints for one type param into
+// Go interface method signature strings. Only builtin methods with known signatures
+// are emitted; user-defined method constraints are skipped (left as "any").
+// Duplicates are suppressed; order follows declaration order in constraints.
+func constraintGoSigs(constraints []*sema.GenericConstraint, typeParam string) []string {
+	seen := map[string]bool{}
+	var result []string
+	for _, c := range constraints {
+		sig, ok := builtinConstraintSig[c.MethodName]
+		if !ok {
+			continue // user-defined or unknown method — skip
+		}
+		sig = strings.ReplaceAll(sig, "$T", typeParam)
+		if seen[sig] {
+			continue
+		}
+		seen[sig] = true
+		result = append(result, sig)
+	}
+	return result
+}
+
 // builtinSingleton maps a Yz built-in singleton name to its Go runtime
 // receiver expression (e.g. "http" → "std.Http"). Method calls on these
 // singletons are emitted as MethodCall with the runtime receiver and a
@@ -1204,9 +1285,9 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	// For a field-access callee like counter.increment or counter.value():
 	// the method itself already wraps its body in std.Go and returns *Thunk[T].
 	// We just emit the direct MethodCall — no extra wrapping needed.
-	// User-defined method names are capitalized to be exported (cross-package safe).
+	// Method names are translated via lowerMethodName (handles to_string → ToStr etc.).
 	if fa, ok := callee.(*FieldAccess); ok {
-		return &MethodCall{Recv: fa.Object, Method: capitalize(fa.Field), Args: args}
+		return &MethodCall{Recv: fa.Object, Method: lowerMethodName(fa.Field), Args: args}
 	}
 
 	if id, ok := c.Callee.(*ast.Ident); ok {
