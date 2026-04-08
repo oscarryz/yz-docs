@@ -137,6 +137,3 @@ o: Ordered(Item("x"))   // compile error: Item is missing lt
 - **Implicit type parameters** — `Box: { value T }` where `T` is used in a field but not declared. This would cause an "undefined type: T" error currently.
 - **Named constraints** — `T Comparable` or `T Printable`; constraint inference is automatic (no syntax needed).
 - **Multiple type parameters in BocWithSig** — `#(key K, value V)`.
-- **Go constraint generation** — currently the compiler emits `[T any]` in Go even when constraints are inferred. Go will separately reject method calls on `T any` at its own type-check phase. A future step will translate inferred Yz constraints into Go interface constraints (`[T interface{ Lt(T) std.Bool }]`).
-
-#answered

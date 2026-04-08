@@ -466,7 +466,7 @@ printable: {
 Person: {
    name String
    print : {
-     println("My name is `name`")
+     print("My name is `name`")
    }
 }
 printable(Person("Yz"))
@@ -730,9 +730,9 @@ f #(Bool) {
 r: f() 
 // the method `?` decides between two bocs
 r  ? {
-   println("it was true")
+   print("it was true")
 }, {
-   println("it was false")
+   print("it was false")
 }
 ```
 
@@ -747,7 +747,7 @@ f #(Option(String)) {
 }
 
 // the `or` method returns the value or an alternative
-println(o.or("bye"))
+print(o.or("bye"))
 ```
 
 ### Match expressions
@@ -940,7 +940,7 @@ To retrieve it use the `std.info` block and pass the element
 
 ```javascript
 info: std.info(say_hello)
-println(info.text)  // Prints the classics "Hello, World!"... etc.etc
+print(info.text)  // Prints the classics "Hello, World!"... etc.etc
 info.tests()     // Runs the tests
 info.version     // 1.0
 info.examples()  // run the examples 

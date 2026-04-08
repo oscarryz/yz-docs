@@ -78,7 +78,7 @@ variable: 1
 m: math // alias for math module
 http: net.http // you can use http now directly
 
-print('Hello world')
+print("Hello world")
 
 beyond_hello()
 beyond_hello: {
@@ -86,7 +86,7 @@ beyond_hello: {
     x = 3 // var assignment
     y: 4  // Short declaration with type infer, declare and assign
     sum, prod: learn_multiple(x, y) // take the last two variables "returned"
-    println("sum: `sum` prod: `prod`") // simple output
+    print("sum: `sum` prod: `prod`") // simple output
     learn_types() // < y minutes, learn more!
 }
 
@@ -130,7 +130,7 @@ learn_types: {
     a5: [3, 1, 5, 10, 100] // Array initialized with 5 elements
     a4_copy: Array.copy(a4)
     a4_copy[0] = 25
-    print('`a4_copy[0] == a4[0]`') // false
+    print("`a4_copy[0] == a4[0]`") // false
 
     s3: [4, 5, 9]
     s4: Array.new_size([Int](), 4)
@@ -149,7 +149,7 @@ expensive_computation: {
 }
 learn_flow_control: {
     true ? {
-        print('told ya')
+        print("told ya")
     }, { }
     false ? {
         // pout

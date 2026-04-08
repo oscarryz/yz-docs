@@ -68,7 +68,7 @@ Inside the configuration  is structured:
 
 File: `./restaurant.yz`
 
-```javascript
+```yz
  version: '0.1.0'
  entry: 'main.yz'
  src_path: ['./src/' './vendor/' './lib/']
@@ -81,7 +81,7 @@ Our app `restaurant` functionality would be as follows:  A restaurant opens the 
 
 To add a dependency use `yz install printer`, the dependency will be added to the dependency section
 
-```js
+```yz
 dependencies: [
      printer: {version: "1.0.0"   url: 'https://example.org/print.git'} 
 ]
@@ -93,7 +93,7 @@ Usually in the restaurant industry the restaurant is know as the house, and has 
 
 The following is the filesystem for this project:
 
-```
+```yz
 restaurant/
     restaurant.yz
     src/
@@ -111,7 +111,7 @@ restaurant/
 
 Our configuration has the `main.yz` as entry point, and `src` among the source path, thus the main entry point is  `src/main.yz`
 
-```javascript
+```yz
 // src/main.yz creates an implicit `main` block see filesystem resolution below
 host: house.front.Host()
 host.open_doors()
@@ -124,7 +124,7 @@ The rest of the app follows:
 
 File: `src/house.yz`
 
-```javascript
+```yz
 
 // src/house.yz
 facade: {
@@ -143,12 +143,12 @@ main_door: facade.Door()
 ```
 
 File: `src/house/front/Host.yz`
-```javascript
+```yz
 // src/house/front/Host.yz
 menu String
 open_doors: {
     printer: printer.Printer()
-    menu = printer.print "Menu: Toast\nFruit\nCoffee" 
+    menu = printer.print("Menu: Toast\nFruit\nCoffee")
     main_door.open() // Can access house.front.main_door directly because it's defined inside house.front block
 }
 
@@ -157,7 +157,7 @@ open_doors: {
 The dependency `printer` was downloaded to the `vendor` directory which is listed in the `src_path` making it available for compilation. To re-download execute `yzc update`
 
 File: `./vendor/printer.yz`
-```javascript
+```yz
 // vendor/printer.yz
 print: {
     text String
