@@ -1,0 +1,11 @@
+// Unary minus on variables: -x negates the value.
+// a - -b is subtraction of a negated value.
+main: {
+    x: 5
+    neg_x: -x
+    print(neg_x)
+    a: 10
+    b: 3
+    result: a - -b
+    print(result)
+}
