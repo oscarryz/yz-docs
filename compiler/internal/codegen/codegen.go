@@ -97,15 +97,19 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 	}
 
 	// Build type parameter strings for generic structs.
-	// typeConstraints: "[T any]" for declarations; typeArgs: "[T]" for references.
+	// typeConstraints: "[T any]" or "[T interface{...}]" for declarations; typeArgs: "[T]" for references.
 	typeConstraints := ""
 	typeArgs := ""
 	if len(sd.TypeParams) > 0 {
-		var constraints []string
+		var constraintParts []string
 		for _, tp := range sd.TypeParams {
-			constraints = append(constraints, tp+" any")
+			if sigs, ok := sd.TypeConstraints[tp]; ok && len(sigs) > 0 {
+				constraintParts = append(constraintParts, tp+" interface{ "+strings.Join(sigs, "; ")+" }")
+			} else {
+				constraintParts = append(constraintParts, tp+" any")
+			}
 		}
-		typeConstraints = "[" + strings.Join(constraints, ", ") + "]"
+		typeConstraints = "[" + strings.Join(constraintParts, ", ") + "]"
 		typeArgs = "[" + strings.Join(sd.TypeParams, ", ") + "]"
 	}
 
@@ -526,15 +530,19 @@ func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
 	discType := "_" + sd.Name + "Variant"
 
 	// Build type parameter strings for generic variants.
-	// typeConstraints: "[V any]" for declarations; typeArgs: "[V]" for references.
+	// typeConstraints: "[V any]" or "[V interface{...}]" for declarations; typeArgs: "[V]" for references.
 	typeConstraints := ""
 	typeArgs := ""
 	if len(sd.TypeParams) > 0 {
-		var constraints []string
+		var constraintParts []string
 		for _, tp := range sd.TypeParams {
-			constraints = append(constraints, tp+" any")
+			if sigs, ok := sd.TypeConstraints[tp]; ok && len(sigs) > 0 {
+				constraintParts = append(constraintParts, tp+" interface{ "+strings.Join(sigs, "; ")+" }")
+			} else {
+				constraintParts = append(constraintParts, tp+" any")
+			}
 		}
-		typeConstraints = "[" + strings.Join(constraints, ", ") + "]"
+		typeConstraints = "[" + strings.Join(constraintParts, ", ") + "]"
 		typeArgs = "[" + strings.Join(sd.TypeParams, ", ") + "]"
 	}
 
