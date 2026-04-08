@@ -95,3 +95,31 @@
 ## Known Bugs
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
 - [x] Array literals — already worked via variadic `std.NewArray(...)`; golden test 24
+
+## Documentation Gaps — Features Documented but Not Yet Implemented
+
+These are documented in the language spec/features and need compiler implementation:
+
+- [ ] **`break` / `continue` / `return` in loops** — spec defines these keywords; lexer/parser may tokenize them but lowerer/codegen don't emit them yet. Needed for `while` loops, `each` callbacks, and early exit from bocs.
+
+- [ ] **Range iteration** — `1.to(10).each({ i Int; ... })` — `Range.Each` exists in yzrt and `Int.To` returns a `Range`, but the lowerer doesn't recognize `.each(closure)` on a Range value (only on Array). Need HOF lowering for Range receivers.
+
+- [ ] **Named arguments in constructor calls** — `Person(name: "Alice", age: 30)` — parser likely handles labeled args but lowerer may not reorder them to match struct field order. Add golden test.
+
+- [ ] **Multiple return values** — `x, y = swap(x, y)` — multiple assignment on LHS is documented; not in any golden test. Requires parser and lowerer support for multi-assign statements.
+
+- [ ] **Array append via `<<`** — `a << item` as sugar for `a.Append(item)` via non-word method invocation. `Array.Append` exists in yzrt. Need a golden test and lowerer to emit the `Append` call.
+
+- [ ] **Option/Result method chaining** — `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })` — documented in error-handling features. Requires implementing `or_else`, `and_then`, `or` methods on the Option/Result types in yzrt, plus lowerer support for chained calls on variant types.
+
+- [ ] **Info strings** — `` `"doc string"` `` before a declaration; retrievable via `info(var).text` at runtime. The lexer captures info strings as AST nodes, and `yzrt.Info()` exists, but codegen doesn't attach info strings to declarations or emit `Info()` calls. See `Features/Info strings.md`.
+
+- [ ] **`to_str()` method on user types** — examples use `n.to_string()` but yzrt uses `ToStr()` (mapped from `to_str()`). Ensure the compiler correctly maps `to_str()` calls on user-defined types; update examples to use `to_str()` not `to_string()`.
+
+- [ ] **Spawn / explicit async** — `spawn { ... }` for explicit goroutine creation, distinct from the implicit async of every boc call. Not yet in any golden test.
+
+- [ ] **String concatenation with `+`** — `"hello" + " " + "world"` — `String.Plus` exists in yzrt; need a golden test to confirm the codegen path works end-to-end.
+
+- [ ] **Dict Optional access** — `d[key]` should return `Option(V)` per spec; currently returns `V` directly (panics on missing key via `At()`). Needs yzrt change + codegen update.
+
+- [ ] **Bool methods `&&` / `||`** — `Bool.Ampamp` and `Bool.Pipepipe` exist in yzrt; confirm they are wired through the operator lowering path (codegen for `&&`/`||` binary expressions). Add golden test.

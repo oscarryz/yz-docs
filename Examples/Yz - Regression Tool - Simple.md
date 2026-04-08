@@ -111,22 +111,22 @@ regression_tester: RegressionTester()
 Logger: {  
     info: {  
         message String  
-        println("`colors.blue`[INFO]`colors.reset` `message`")  
+        print("`colors.blue`[INFO]`colors.reset` `message`")  
     }  
       
     success: {  
         message String  
-        println("`colors.green`[SUCCESS]`colors.reset` `message`")  
+        print("`colors.green`[SUCCESS]`colors.reset` `message`")  
     }  
       
     warning: {  
         message String  
-        println("`colors.yellow`[WARNING]`colors.reset` `message`")  
+        print("`colors.yellow`[WARNING]`colors.reset` `message`")  
     }  
       
     error: {  
         message String  
-        println("`colors.red`[ERROR]`colors.reset` `message`")  
+        print("`colors.red`[ERROR]`colors.reset` `message`")  
     }  
 }  
   
@@ -181,8 +181,8 @@ CommandExecutor: {
     // Execute Go tests  
     run_go_tests: {  
         logger.info("Step 1: Running Go tests...")  
-        println("Command: go test ./...")  
-        println()  
+        print("Command: go test ./...")  
+        print()  
           
         // In real implementation: exec.Command("go", "test", "./...")  
         logger.success("All Go tests passed!")  
@@ -197,8 +197,8 @@ CommandExecutor: {
         tests_passed ? {  
             logger.info("Step 2: Building compiler...")  
             compiler_path: "`project_root`/bin/yzc"  
-            println("Command: go build -o `compiler_path` ./cmd/yzc")  
-            println()  
+            print("Command: go build -o `compiler_path` ./cmd/yzc")  
+            print()  
               
             // In real implementation: exec.Command("go", "build", "-o", compiler_path, "./cmd/yzc")  
             logger.success("Compiler built successfully!")  
@@ -438,53 +438,53 @@ RegressionTester: {
     // Print header  
     print_header: {  
         project_root String  
-        println("==================================================")  
-        println("           Yz Compiler Regression Test")  
-        println("==================================================")  
-        println("Project Root: `project_root`")  
-        println("Date: Mon Jan 15 14:30:45 PST 2024")  
-        println("==================================================")  
-        println()  
+        print("==================================================")  
+        print("           Yz Compiler Regression Test")  
+        print("==================================================")  
+        print("Project Root: `project_root`")  
+        print("Date: Mon Jan 15 14:30:45 PST 2024")  
+        print("==================================================")  
+        print()  
     }  
       
     // Print footer with summary  
     print_footer: {  
         results TestResults  
-        println()  
-        println("==================================================")  
-        println("                Test Summary")  
-        println("==================================================")  
+        print()  
+        print("==================================================")  
+        print("                Test Summary")  
+        print("==================================================")  
           
         results.go_tests_passed ? {  
-            println("✅ Go Tests: PASSED")  
+            print("✅ Go Tests: PASSED")  
         }, {
-            println("❌ Go Tests: FAILED")  
+            print("❌ Go Tests: FAILED")  
         }  
           
-        println()  
-        println("📊 Regression Test Results:")  
-        println("   Files moved from failing → passing: `results.failing_to_passing`")  
-        println("   Files moved from passing → regressed: `results.passing_to_regressed`")  
-        println("   Files moved from regressed → passing: `results.regressed_to_passing`")  
-        println("   Files still failing: `results.still_failing`")  
-        println("   Files still passing: `results.still_passing`")  
-        println("   Files still regressed: `results.still_regressed`")  
-        println("   Total files tested: `results.total_files_tested`")  
+        print()  
+        print("📊 Regression Test Results:")  
+        print("   Files moved from failing → passing: `results.failing_to_passing`")  
+        print("   Files moved from passing → regressed: `results.passing_to_regressed`")  
+        print("   Files moved from regressed → passing: `results.regressed_to_passing`")  
+        print("   Files still failing: `results.still_failing`")  
+        print("   Files still passing: `results.still_passing`")  
+        print("   Files still regressed: `results.still_regressed`")  
+        print("   Total files tested: `results.total_files_tested`")  
           
         results.output_mismatches > 0 ? {
-            println("   Files with output mismatches: `results.output_mismatches`")
+            print("   Files with output mismatches: `results.output_mismatches`")
         }, { }
 
         results.missing_expected_output > 0 ? {
-            println("   Files missing expected output: `results.missing_expected_output`")
+            print("   Files missing expected output: `results.missing_expected_output`")
         }, { }
 
         results.regression_detected ? {
-            println()
-            println("`colors.red` REGRESSION DETECTED: `results.passing_to_regressed` previously passing test(s) now regressed!`colors.reset`")
+            print()
+            print("`colors.red` REGRESSION DETECTED: `results.passing_to_regressed` previously passing test(s) now regressed!`colors.reset`")
         }, { }
           
-        println("==================================================")  
+        print("==================================================")  
     }  
       
     // Run file tests  
@@ -493,7 +493,7 @@ RegressionTester: {
         results TestResults  
           
         logger.info("Step 3: Running regression tests...")  
-        println()  
+        print()  
           
         // Ensure directories exist  
         file_system.ensure_directory(config.failing_dir)  
@@ -567,32 +567,32 @@ RegressionTester: {
                 job.source_dir == "failing" ? {  
                     print("  [failing] `item_name`... ")  
                     test_result.output_matched ? {  
-                        println("✓ SUCCESS (moving to passing)")  
+                        print("✓ SUCCESS (moving to passing)")  
                         files_to_move.push(FileMove(job.file_path, "`config.passing_dir`/`item_name`"))
                         results.failing_to_passing = results.failing_to_passing + 1  
                     }, {
-                        println("✗ FAILED (staying in failing) - `test_result.error_message`")  
+                        print("✗ FAILED (staying in failing) - `test_result.error_message`")  
                         results.still_failing = results.still_failing + 1  
                     }  
                 }, {
                     job.source_dir == "regressed" ? {  
                         print("  [regressed] `item_name`... ")  
                         test_result.output_matched ? {  
-                            println("✓ SUCCESS (moving to passing) `colors.green`- FIXED!`colors.reset`")  
+                            print("✓ SUCCESS (moving to passing) `colors.green`- FIXED!`colors.reset`")  
                             files_to_move.push(FileMove(job.file_path, "`config.passing_dir`/`item_name`"))
                             results.regressed_to_passing = results.regressed_to_passing + 1  
                         }, {
-                            println("✗ FAILED (staying in regressed) - `test_result.error_message`")  
+                            print("✗ FAILED (staying in regressed) - `test_result.error_message`")  
                             results.still_regressed = results.still_regressed + 1  
                         }  
                     }, {
                         // passing directory  
                         print("  [passing] `item_name`... ")  
                         test_result.output_matched ? {  
-                            println("✓ SUCCESS (staying in passing)")  
+                            print("✓ SUCCESS (staying in passing)")  
                             results.still_passing = results.still_passing + 1  
                         }, {
-                            println("✗ FAILED (moving to regressed) `colors.red`- REGRESSION!`colors.reset`")  
+                            print("✗ FAILED (moving to regressed) `colors.red`- REGRESSION!`colors.reset`")  
                             files_to_move.push(FileMove(job.file_path, "`config.regressed_dir`/`item_name`"))
                             results.passing_to_regressed = results.passing_to_regressed + 1  
                             results.regression_detected = true  
@@ -605,7 +605,7 @@ RegressionTester: {
               
             // Move files  
             files_to_move.length() > 0 ? {
-                println()
+                print()
                 logger.info("Moving `files_to_move.length()` files...")
                 files_to_move.each({ move FileMove
                     file_system.move_file(move.src, move.dst)

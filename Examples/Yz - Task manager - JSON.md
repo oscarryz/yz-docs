@@ -38,7 +38,7 @@ get_all_tasks #(Result([Task], Error)) {
             .or({
                 e Error
                 // Handle JSON parse failure (e.g., file corruption) by recovering
-                println("Warning: Could not deserialize JSON (File corrupted?). Starting fresh.")
+                print("Warning: Could not deserialize JSON (File corrupted?). Starting fresh.")
                 Result.Ok([Task]()) // Return an OK Result with an empty Task list
             })
         })
@@ -51,7 +51,7 @@ get_all_tasks #(Result([Task], Error)) {
     .or({
         e Error
         // This is primarily the File Open failure (file not found).
-		println("JSON file (`TASK_FILE`) not found. Creating a new list.")
+		print("JSON file (`TASK_FILE`) not found. Creating a new list.")
         // Return an OK Result with an empty Task list on file access error
         Result.Ok([Task]())
 	})
@@ -92,7 +92,7 @@ add_task #(task_description String, Unit) {
                 f File
                 // 6. Write the JSON string to the file
                 f.write(json_string)
-                println("Task added and saved to JSON: `task_description`")
+                print("Task added and saved to JSON: `task_description`")
             })
             .or({
                 e Error
@@ -119,9 +119,9 @@ view_tasks #(Unit) {
 
         // Conditional check using the new syntax
         tasks.length() == 0 ? {
-            println("Your task list is empty!")
+            print("Your task list is empty!")
         }, {
-            println("\n--- Current Tasks ---")
+            print("\n--- Current Tasks ---")
             tasks.each({
                 index Int
                 task Task // 'task' is now a Task object
@@ -130,15 +130,15 @@ view_tasks #(Unit) {
                 status: task.done ? { "[DONE]" }, { "[PENDING]" }
 
                 // Accessing struct properties using dot notation
-                println("`index`. `status` `task.description` (Created: `task.created_at`)")
+                print("`index`. `status` `task.description` (Created: `task.created_at`)")
             })
-            println("---------------------\n")
+            print("---------------------\n")
         }
     })
 }
 
 // ---- Example Usage
-println("--- Running Task Manager Demo (JSON Persistence) ---")
+print("--- Running Task Manager Demo (JSON Persistence) ---")
 
 // A. Add a few task using `add_task` function
 add_task("Buy groceries for the week")
