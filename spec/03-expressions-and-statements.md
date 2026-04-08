@@ -126,6 +126,20 @@ person.greet()           // Member method call
 1.to(10)                 // Method on literal
 ```
 
+### Trailing-Block Syntax
+
+When the sole argument to a method is a block literal, the parentheses can be omitted — write the block directly after the member access on the same line:
+
+```yz
+list.filter({ item Int; item > 10 })   // explicit parens
+list.filter { item Int; item > 10 }    // trailing block — same meaning
+```
+
+Rules:
+- The `{` must be on the **same line** as the method name (a preceding newline causes ASI to insert a semicolon, making the block a new statement).
+- Only applies after a **member access** (`receiver.method`). Free function calls still require parentheses.
+- The block is the **only** argument in this form; multi-argument calls require parentheses.
+
 ### Conditional Expression
 
 The `?` method on `Bool` selects between two bocs:

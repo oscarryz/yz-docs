@@ -1053,7 +1053,16 @@ func lowerMethodName(yzName string) string {
 	if goName, ok := yzMethodToGoName[yzName]; ok {
 		return goName
 	}
-	return capitalize(yzName)
+	// Convert snake_case to PascalCase: has_prefix → HasPrefix, to_upper → ToUpper.
+	parts := strings.Split(yzName, "_")
+	var b strings.Builder
+	for _, p := range parts {
+		if p == "" {
+			continue
+		}
+		b.WriteString(strings.ToUpper(p[:1]) + p[1:])
+	}
+	return b.String()
 }
 
 // builtinConstraintSig maps Yz method names to Go interface method signature

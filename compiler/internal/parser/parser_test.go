@@ -861,3 +861,64 @@ func TestParseStringNoInterpolation(t *testing.T) {
 		t.Errorf("expected *ast.StringLit, got %T", d.Values[0])
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Trailing-block syntax
+// ---------------------------------------------------------------------------
+
+func TestParseTrailingBlock(t *testing.T) {
+	// list.filter { block } must parse identically to list.filter({ block })
+	sf := parse(t, "list.filter { item Int }")
+	c := asCallExpr(t, stmt(t, sf, 0))
+	m, ok := c.Callee.(*ast.MemberExpr)
+	if !ok {
+		t.Fatalf("callee: expected MemberExpr, got %T", c.Callee)
+	}
+	if m.Member.Name != "filter" {
+		t.Errorf("method: got %q, want filter", m.Member.Name)
+	}
+	if len(c.Args) != 1 {
+		t.Fatalf("expected 1 arg, got %d", len(c.Args))
+	}
+	if _, ok := c.Args[0].Value.(*ast.BocLiteral); !ok {
+		t.Errorf("arg 0: expected *ast.BocLiteral, got %T", c.Args[0].Value)
+	}
+}
+
+func TestParseTrailingBlockChained(t *testing.T) {
+	// list.filter { ... }.each { ... } — same line: both are trailing-block calls
+	sf := parse(t, "list.filter { item Int }.each { item Int }")
+	outer := asCallExpr(t, stmt(t, sf, 0))
+	m, ok := outer.Callee.(*ast.MemberExpr)
+	if !ok {
+		t.Fatalf("outer callee: expected MemberExpr, got %T", outer.Callee)
+	}
+	if m.Member.Name != "each" {
+		t.Errorf("outer method: got %q, want each", m.Member.Name)
+	}
+	inner := asCallExpr(t, m.Object)
+	im, ok := inner.Callee.(*ast.MemberExpr)
+	if !ok {
+		t.Fatalf("inner callee: expected MemberExpr, got %T", inner.Callee)
+	}
+	if im.Member.Name != "filter" {
+		t.Errorf("inner method: got %q, want filter", im.Member.Name)
+	}
+}
+
+func TestParseTrailingBlockNewlineSeparates(t *testing.T) {
+	// { on a new line after member access should NOT become a trailing-block call —
+	// ASI inserts a semicolon so the block becomes a separate statement.
+	sf := parse(t, "list.filter\n{ item Int }")
+	if len(sf.Stmts) != 2 {
+		t.Fatalf("expected 2 statements (MemberExpr + BocLiteral), got %d", len(sf.Stmts))
+	}
+	// first stmt: list.filter as a bare MemberExpr expression
+	if _, ok := sf.Stmts[0].(*ast.MemberExpr); !ok {
+		t.Errorf("stmt 0: expected *ast.MemberExpr, got %T", sf.Stmts[0])
+	}
+	// second stmt: standalone boc literal
+	if _, ok := sf.Stmts[1].(*ast.BocLiteral); !ok {
+		t.Errorf("stmt 1: expected *ast.BocLiteral, got %T", sf.Stmts[1])
+	}
+}

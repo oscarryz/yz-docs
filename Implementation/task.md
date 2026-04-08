@@ -89,7 +89,7 @@
 - [x] Multiple type params — `#(key K, value V)` → `[K any, V any]`; Pair[K,V] struct + makePair[K,V] function; parser fix: TYPE_IDENT'(' only parsed as VariantDef in type boc bodies (inTypeBoc flag); golden test 33
 - [x] Generic structs (non-variant) — `Box: { T; value T }` → `type Box[T any] struct { value T }`; golden test 29
 - [x] Typed generic declaration — `b Box(String) = Box("hello")` → `var b *Box[std.String] = NewBox(...)`; golden test 30; TypedDecl in lowerMainStmt
-- [ ] Optional parens for non-word method calls — `list.filter { block }` without `()`; binary form `foo ++ { block }` works once ClosureExpr has params
+- [x] Optional parens for trailing-block calls — `list.filter { block }` without `()`; in `parsePostfix`, LBRACE after MemberExpr → CallExpr with BocLiteral arg; golden test 34
 
 ## Known Bugs
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24

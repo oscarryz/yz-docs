@@ -17,12 +17,13 @@
 11. [Concurrency](#concurrency)
 12. [Error Handling](#error-handling)
 13. [Control Flow](#control-flow)
-14. [Non-Word Method Invocation](#non-word-method-invocation)
-15. [Info Strings](#info-strings)
-16. [Code Organization](#code-organization)
-17. [Examples](#examples)
-18. [Reserved Words and Symbols](#reserved-words-and-symbols)
-19. [Design Philosophy](#design-philosophy)
+14. [Trailing Block Syntax](#trailing-block-syntax)
+15. [Non-Word Method Invocation](#non-word-method-invocation)
+16. [Info Strings](#info-strings)
+17. [Code Organization](#code-organization)
+18. [Examples](#examples)
+19. [Reserved Words and Symbols](#reserved-words-and-symbols)
+20. [Design Philosophy](#design-philosophy)
 
 ## Quick Example
 
@@ -849,6 +850,23 @@ match {
 	print("`n`")
 }
 ```
+
+## Trailing Block Syntax
+
+When the only argument to a method is a block literal, the parentheses can be omitted. Write the block directly after the method name on the same line:
+
+```javascript
+// Both are identical
+list.filter({ item Int; item > 10 })
+list.filter { item Int; item > 10 }
+
+// Chaining
+[1, 2, 3, 10, 20]
+    .filter { n Int; n > 5 }
+    .each   { n Int; print(n) }
+```
+
+The `{` must appear on the same line as the method name (a newline causes ASI to insert a semicolon, and the block becomes a separate statement).
 
 ## Non-Word Method Invocation
 

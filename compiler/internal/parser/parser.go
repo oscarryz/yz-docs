@@ -493,6 +493,21 @@ func (p *Parser) parsePostfix() (ast.Expr, error) {
 			}
 			base = &ast.IndexExpr{Pos: pos, Object: base, Index: idx}
 
+		case token.LBRACE:
+			// Trailing-block call: `expr.method { block }` (parens optional).
+			// Only allowed when the current base is a MemberExpr and the `{`
+			// is on the same line (no ASI was inserted before it).
+			if _, ok := base.(*ast.MemberExpr); ok {
+				pos := p.curPos()
+				block, err := p.parseBocLiteral()
+				if err != nil {
+					return nil, err
+				}
+				base = &ast.CallExpr{Pos: pos, Callee: base, Args: []*ast.Argument{{Pos: pos, Value: block}}}
+			} else {
+				return base, nil
+			}
+
 		default:
 			return base, nil
 		}
