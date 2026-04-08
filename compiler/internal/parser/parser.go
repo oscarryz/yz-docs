@@ -34,8 +34,10 @@ func (e *ParseError) Error() string {
 
 // Parser holds the state for parsing one source file.
 type Parser struct {
-	tokens []token.Token
-	pos    int // index into tokens
+	tokens    []token.Token
+	pos       int  // index into tokens
+	inTypeBoc bool // true while parsing the direct body of an uppercase boc (type boc)
+	                // used to gate variant-def recognition in parseBocElement
 }
 
 // New creates a Parser for the given source bytes.
@@ -264,6 +266,20 @@ func (p *Parser) finishShortDecl(lhs ast.Expr) (*ast.ShortDecl, error) {
 		return nil, p.errorf("left side of ':' must be an identifier")
 	}
 	p.advance() // consume ':'
+
+	// For uppercase declarations whose value is a boc literal (e.g. `Pet: { ... }`),
+	// mark the boc as a type boc so parseBocElement can recognise variant defs.
+	if id.TokType == token.TYPE_IDENT && p.at(token.LBRACE) {
+		prev := p.inTypeBoc
+		p.inTypeBoc = true
+		values, err := p.parseExprList()
+		p.inTypeBoc = prev
+		if err != nil {
+			return nil, err
+		}
+		return &ast.ShortDecl{Pos: pos, Names: []*ast.Ident{id}, Values: values}, nil
+	}
+
 	values, err := p.parseExprList()
 	if err != nil {
 		return nil, err
@@ -317,6 +333,12 @@ func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
 		return nil, err
 	}
 
+	// BocWithSig bodies are always value bocs (function/method bodies), never
+	// type bocs. Reset inTypeBoc so parseBocElement does not route constructor
+	// calls like Pair(a, b) to parseVariantDef inside method bodies.
+	prevInTypeBoc := p.inTypeBoc
+	p.inTypeBoc = false
+
 	var body *ast.BocLiteral
 	var bodyOnly bool
 	switch p.cur().Type {
@@ -324,6 +346,7 @@ func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
 		// `name #(params) { body }` — params auto-scoped into body
 		body, err = p.parseBocLiteral()
 		if err != nil {
+			p.inTypeBoc = prevInTypeBoc
 			return nil, err
 		}
 	case token.ASSIGN:
@@ -331,10 +354,12 @@ func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
 		// `name #(params) = { body }` — body redeclares its own params
 		body, err = p.parseBocLiteral()
 		if err != nil {
+			p.inTypeBoc = prevInTypeBoc
 			return nil, err
 		}
 		bodyOnly = true
 	}
+	p.inTypeBoc = prevInTypeBoc
 
 	return &ast.BocWithSig{Pos: pos, Name: name, Sig: sig, Body: body, BodyOnly: bodyOnly}, nil
 }
@@ -556,9 +581,11 @@ func (p *Parser) parseBocLiteral() (*ast.BocLiteral, error) {
 
 // parseBocElement parses one element inside a boc: Declaration | Assignment |
 // KeywordStmt | Expression | VariantDef.
+// Variant defs (TYPE_IDENT '(' typed-params ')') are only recognised inside
+// type bocs (inTypeBoc == true). In value bocs (function/method bodies),
+// TYPE_IDENT '(' is a constructor call and must go through parseStatement.
 func (p *Parser) parseBocElement() (ast.Node, error) {
-	// VariantDef inside a type boc: TYPE_IDENT '(' params ')'
-	if p.at(token.TYPE_IDENT) && p.peekIs(token.LPAREN) {
+	if p.inTypeBoc && p.at(token.TYPE_IDENT) && p.peekIs(token.LPAREN) {
 		return p.parseVariantDef()
 	}
 	return p.parseStatement()
