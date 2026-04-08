@@ -2044,6 +2044,9 @@ func (l *lowerer) goType(t sema.Type) string {
 			if tt.IsInterface {
 				return tt.Name // Go interfaces are already reference types
 			}
+			if len(tt.TypeParams) > 0 {
+				return "*" + tt.Name + "[" + strings.Join(tt.TypeParams, ", ") + "]"
+			}
 			return "*" + tt.Name
 		}
 		return "any"
@@ -2110,8 +2113,15 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 			// Go interfaces are already reference types — no pointer needed.
 			sym := l.analyzer.LookupInFile(t.Name)
 			if sym != nil {
-				if st, ok := sym.Type.(*sema.StructType); ok && st.IsInterface {
-					return t.Name
+				if st, ok := sym.Type.(*sema.StructType); ok {
+					if st.IsInterface {
+						return t.Name
+					}
+					// Generic struct with no explicit type args: the struct's own
+					// type params are in scope (e.g. Pair in swap[K,V] → *Pair[K,V]).
+					if len(st.TypeParams) > 0 {
+						return "*" + t.Name + "[" + strings.Join(st.TypeParams, ", ") + "]"
+					}
 				}
 			}
 			return "*" + t.Name
