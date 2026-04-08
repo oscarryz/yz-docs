@@ -999,8 +999,12 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 			return &BocType{Returns: []Type{TypUnit}}
 		case "map":
 			return &BocType{Returns: []Type{&ArrayType{Elem: Unknown}}}
+		case "any", "all":
+			return &BocType{Returns: []Type{TypBool}}
 		case "length":
 			return &BocType{Returns: []Type{TypInt}}
+		case "is_empty":
+			return &BocType{Returns: []Type{TypBool}}
 		case "at":
 			return &BocType{Returns: []Type{ot.Elem}}
 		case "append":

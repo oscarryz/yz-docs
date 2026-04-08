@@ -1,0 +1,7 @@
+// Trailing-block syntax: method call with boc literal argument without parens.
+// list.filter { block } is equivalent to list.filter({ block }).
+main: {
+    list: [1, 2, 3, 10, 20]
+    filtered: list.filter { item Int; item > 10 }
+    filtered.each { item Int; print(item) }
+}

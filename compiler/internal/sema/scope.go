@@ -67,39 +67,52 @@ func (s *Scope) LookupLocal(name string) *Symbol {
 // Non-word method names use the symbol-name convention (plus, qm, eqeq, etc.).
 var builtinMethods = map[string]map[string]Type{
 	"Int": {
-		"plus":    TypInt,     // +
-		"minus":   TypInt,     // -
-		"star":    TypInt,     // *
-		"slash":   TypInt,     // /
-		"percent": TypInt,     // %
-		"lt":      TypBool,    // <
-		"gt":      TypBool,    // >
-		"lteq":    TypBool,    // <=
-		"gteq":    TypBool,    // >=
-		"eqeq":    TypBool,    // ==
-		"neq":     TypBool,    // !=
-		"to":      &StructType{Name: "Range"}, // 1.to(10) → Range
+		"plus":      TypInt,   // +
+		"minus":     TypInt,   // -
+		"star":      TypInt,   // *
+		"slash":     TypInt,   // /
+		"percent":   TypInt,   // %
+		"lt":        TypBool,  // <
+		"gt":        TypBool,  // >
+		"lteq":      TypBool,  // <=
+		"gteq":      TypBool,  // >=
+		"eqeq":      TypBool,  // ==
+		"neq":       TypBool,  // !=
+		"abs":       TypInt,
+		"to":        &StructType{Name: "Range"}, // 1.to(10) → Range
 		"to_string": TypString,
 	},
 	"Decimal": {
-		"plus":    TypDecimal,
-		"minus":   TypDecimal,
-		"star":    TypDecimal,
-		"slash":   TypDecimal,
-		"lt":      TypBool,
-		"gt":      TypBool,
-		"lteq":    TypBool,
-		"gteq":    TypBool,
-		"eqeq":    TypBool,
-		"neq":     TypBool,
+		"plus":      TypDecimal,
+		"minus":     TypDecimal,
+		"star":      TypDecimal,
+		"slash":     TypDecimal,
+		"lt":        TypBool,
+		"gt":        TypBool,
+		"lteq":      TypBool,
+		"gteq":      TypBool,
+		"eqeq":      TypBool,
+		"neq":       TypBool,
+		"abs":       TypDecimal,
+		"pow":       TypDecimal,
 		"to_string": TypString,
 	},
 	"String": {
-		"plus":    TypString,   // + (concatenation)
-		"eqeq":    TypBool,
-		"neq":     TypBool,
-		"length":  TypInt,
-		"to_string": TypString,
+		"plus":       TypString, // + (concatenation)
+		"eqeq":       TypBool,
+		"neq":        TypBool,
+		"lt":         TypBool,   // <
+		"gt":         TypBool,   // >
+		"lteq":       TypBool,   // <=
+		"gteq":       TypBool,   // >=
+		"length":     TypInt,
+		"contains":   TypBool,
+		"has_prefix": TypBool,
+		"has_suffix": TypBool,
+		"to_upper":   TypString,
+		"to_lower":   TypString,
+		"trim":       TypString,
+		"to_string":  TypString,
 	},
 	"Bool": {
 		"ampamp":    TypBool,  // &&
@@ -107,6 +120,7 @@ var builtinMethods = map[string]map[string]Type{
 		"qm":        Unknown,  // ? — return type depends on boc args; resolved later
 		"eqeq":      TypBool,
 		"neq":       TypBool,
+		"to_string": TypString,
 	},
 }
 

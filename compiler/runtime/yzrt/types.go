@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
+	"unicode"
 )
 
 // ---------------------------------------------------------------------------
@@ -42,6 +44,14 @@ func (i Int) Gteq(other Int) Bool { return Bool{i.val >= other.val} }
 func (i Int) Eqeq(other Int) Bool { return Bool{i.val == other.val} }
 func (i Int) Neq(other Int) Bool  { return Bool{i.val != other.val} }
 
+// Abs returns the absolute value of i.
+func (i Int) Abs() Int {
+	if i.val < 0 {
+		return Int{-i.val}
+	}
+	return i
+}
+
 // To produces a half-open range [i, end).
 func (i Int) To(end Int) Range { return Range{from: i.val, to: end.val} }
 
@@ -72,7 +82,12 @@ func (d Decimal) Slash(other Decimal) Decimal { return Decimal{d.val / other.val
 // Unary negation
 func (d Decimal) Neg() Decimal { return Decimal{-d.val} }
 
-// Power (extra utility)
+// Abs returns the absolute value of d.
+func (d Decimal) Abs() Decimal {
+	return Decimal{math.Abs(d.val)}
+}
+
+// Pow raises d to the power of exp.
 func (d Decimal) Pow(exp Decimal) Decimal { return Decimal{math.Pow(d.val, exp.val)} }
 
 // Comparison
@@ -109,9 +124,35 @@ func (s String) Plus(other String) String { return String{s.val + other.val} }
 // Comparison
 func (s String) Eqeq(other String) Bool { return Bool{s.val == other.val} }
 func (s String) Neq(other String) Bool  { return Bool{s.val != other.val} }
+func (s String) Lt(other String) Bool   { return Bool{s.val < other.val} }
+func (s String) Gt(other String) Bool   { return Bool{s.val > other.val} }
+func (s String) Lteq(other String) Bool { return Bool{s.val <= other.val} }
+func (s String) Gteq(other String) Bool { return Bool{s.val >= other.val} }
 
 // Length returns the number of Unicode code points.
 func (s String) Length() Int { return Int{int64(len([]rune(s.val)))} }
+
+// Contains reports whether sub is within s.
+func (s String) Contains(sub String) Bool { return Bool{strings.Contains(s.val, sub.val)} }
+
+// HasPrefix reports whether s begins with prefix.
+func (s String) HasPrefix(prefix String) Bool { return Bool{strings.HasPrefix(s.val, prefix.val)} }
+
+// HasSuffix reports whether s ends with suffix.
+func (s String) HasSuffix(suffix String) Bool { return Bool{strings.HasSuffix(s.val, suffix.val)} }
+
+// ToUpper returns s with all letters mapped to upper case.
+func (s String) ToUpper() String {
+	return String{strings.Map(unicode.ToUpper, s.val)}
+}
+
+// ToLower returns s with all letters mapped to lower case.
+func (s String) ToLower() String {
+	return String{strings.Map(unicode.ToLower, s.val)}
+}
+
+// Trim returns s with leading and trailing white space removed.
+func (s String) Trim() String { return String{strings.TrimSpace(s.val)} }
 
 // ToStr returns the string itself.
 func (s String) ToStr() String { return s }
