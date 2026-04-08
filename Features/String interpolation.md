@@ -1,22 +1,34 @@
-#feature
-Use backtick  \`  for string interpolation like you would in markdown 
+# String Interpolation
 
-```javascript
-s: 'world'
-hw: 'hello `s`'
-x: '1 + 2 : `1 + 2`'
+Embed any expression inside a string using backticks:
+
+```yz
+name: "Alice"
+age: 30
+print("Hello, `name`!")          // Hello, Alice!
+print("Age: `age`, next: `age + 1`")  // Age: 30, next: 31
 ```
 
-## Semantics
+Interpolation works inside both single- and double-quoted strings.
 
-**Prefer string interpolation over concatenation**: Instead of using `+` for string concatenation, use backtick interpolation for better readability and type safety.
+## Any expression is valid
 
-```javascript
-// ❌ Avoid string concatenation
-println("User: " + user.name + " Age: " + user.age)
+```yz
+x: 5
+print("x squared: `x * x`")     // x squared: 25
 
-// ✅ Use string interpolation
-println("User: `user.name` Age: `user.age`")
+p: Person("Bob", 25)
+print("Greeting: `p.name`")     // Greeting: Bob
 ```
 
-String interpolation automatically handles type conversion and is more readable. The `+` operator should be reserved for arithmetic operations, not string building.
+## Prefer interpolation over concatenation
+
+```yz
+// preferred
+print("User: `user.name`, age: `user.age`")
+
+// avoid
+print("User: " + user.name + ", age: " + user.age.to_str())
+```
+
+Interpolation handles type conversion automatically — no need to call `to_str()` on numeric values.

@@ -6,24 +6,23 @@
 */
 
 `
-   Counter is a block that has a variable count of type Int
-   and a variable increment of type block that takes nothing and returns nothing
+   Counter is a block that has a variable count of type Int,
+   an increment method that increases count by 1,
+   and a value method that returns the current count.
 `
 Counter: {
-   counter: 0
-   increment: {
-      counter = counter + 1
-   }
+    count: 0
+    increment: {
+        count = count + 1
+    }
+    value: { count }
 }
+
 main: {
     c: Counter()
-    print("c.count = `c.count`")
+    print("c.value = `c.value()`")
     c.increment()
-    c.count > 10 ? {
-          break
-    }, {
-      continue
-    }
-    0
+    c.increment()
+    print("after two increments: `c.value()`")
 }
 ```

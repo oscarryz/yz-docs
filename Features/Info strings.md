@@ -1,70 +1,68 @@
-#feature
-Information Strings. You can add a string before any element and will be available by calling  `std.info(element)` 
+# Info Strings
 
-This text will be available as the `text` property of the returned block: 
-```javascript
+An info string is a string literal placed **before** a declaration. It attaches documentation metadata to the declaration, retrievable at runtime via `info(element)`.
 
-`A message`
-message: 'Hello'
-info(message).text // A message
+```yz
+"A message"
+message: "Hello"
+
+info(message).text  // "A message"
 ```
 
-You can add blocks there too, these block don't need to be valid yz code, but different tools might require them to be. e.g. `yz test` will require the `tests` variable 
-to be valid or a serialization tool would require a valid string etc.
+Info strings use regular string delimiters (`'` or `"`). They are compiled alongside the element they describe.
 
-Example, the following block, has a info string, describing the block, what are the variables the block has, what tests can execute, version and author
-```javascript
-`
-Prints the classics "Hello, World!" program to the screen
+## Inline info strings
+
+Any element can have its own info string:
+
+```yz
+"Prints a personalized greeting"
+say_hello: {
+  "What message to display"
+  what: "Hello"
+
+  "The recipient name"
+  who: "World"
+
+  print("`what`, `who`!")
+}
+```
+
+## Structured info strings
+
+Info strings can contain structured data (interpreted by tooling):
+
+```yz
+"
+Prints the classic Hello, World! program.
 
 variables: {
-  what String = 'Hello' // what message to display
-  who  String = 'World' // what to say
+  what String = 'Hello'
+  who  String = 'World'
 }
 
 tests: {
-  assert say_hello()            == "Hello, World!"                   // Uses defauls      
-  assert say_hello 'Hola'       == "Hola, World!"                    // Overrides first variable 'what'
-  assert say_hello who: 'there' == "Hello, there!"                   // Explicitly overrides variable 'who'
-  assert say_hello who: 'home' what: 'Welcome'  == "Welcome, home!"  // "Named parameters"
+  assert say_hello() == 'Hello, World!'
+  assert say_hello('Hola') == 'Hola, World!'
+  assert say_hello(who: 'there') == 'Hello, there!'
 }
 version: 1.0
 author: 'Yz developers'
-
-As you can see, this text right here (and the one at the begining) are not
-valid programs while the other variables are. 
-`
+"
 say_hello: {
-   // Any element can can an info string
-  'What message to display'
-  what: 'Hello' 
-
-   // Can have validation info
-   // Or serialization info
-  `
-   validation: "\w*"
-   json_field: 'xyz'
-  `
-  who:  'World' 
-  // COuld be also used as running examples
-  // that will be validated with yzc test  
-  `
-  Example: print 'Hello' 'world'
-  Output: Hello, world!
-  `
-  print '{what}, {who}!'
+  what: "Hello"
+  who: "World"
+  print("`what`, `who`!")
 }
 ```
 
-To retrieve it use the `std.info` block and pass the element
+## Retrieving info at runtime
 
-```javascript
-info: std.info say_hello
-print info.text  // Prints the classics "Hello, World!"... etc.etc
-info.tests()     // Runs the tests
-info.version     // 1.0
-info.examples()  // run the examples 
-
+```yz
+i: info(say_hello)
+print(i.text)    // prints the info string text
+i.tests()        // runs the test examples
+i.version        // 1.0
 ```
-To have this information available the info string is compiled along with the element
 
+Info strings are a foundation for self-documenting code, doctest-style testing, and serialization annotations — all without a separate documentation language.

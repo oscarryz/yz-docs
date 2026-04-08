@@ -2,51 +2,81 @@
 
 Variables are declared with an identifier followed by a type identifier or type signature.
 
-e.g. 
-```js
-// declares a variable `msg` of type String
+```yz
+// Declares a variable `msg` of type String
 msg String
 
-// declares a variable `salute` of type block that returns a String
+// Declares a variable `salute` of type "boc returning String"
 salute #(String)
 ```
 
-Variables can be initialized with `=`
+## Initialization
 
-```js
-// declares and intializes `msg` with value "Hi"
+Variables can be initialized with `=`:
+
+```yz
+// Declares and initializes `msg` with value "Hi"
 msg String = "Hi"
 
-// declared and intializes `salute` with a boc value
-salute #() = {
-   "Hello world"
+// Declares and initializes `salute` with a boc value
+salute #(String) = {
+    "Hello world"
 }
 ```
 
-The shorthand `:` can also be used to declare and initilize the variable inferring the type from 
-the value 
+The shorthand `:` declares and initializes a variable, inferring the type from the value:
 
-
-```js
-msg : "Hi"
+```yz
+msg: "Hi"
 salute: {
-   "Hello world"
+    "Hello world"
 }
 ```
 
-For easy of use bocs can also declare the type and add a block next to with with the implementation
+## Boc signature shorthand
 
-```js
-greet #(msg String, to_whom String,String) {
-   "`msg` `to_whom`"
+A boc variable can declare its type signature and body together in one statement:
+
+```yz
+greet #(msg String, to_whom String, String) {
+    "`msg` `to_whom`"
 }
 ```
-Variables can also have a generic type: 
 
-```js
-generic T
+Here the trailing `String` (unlabeled) is the return type; the labeled entries are inputs.
+
+## Variables as parameters
+
+Inside a boc, a typed declaration with no default value is a **required parameter** — it must be provided when the boc is invoked:
+
+```yz
+add: {
+    a Int     // required parameter
+    b Int     // required parameter
+    a + b
+}
+
+result: add(3, 4)   // → 7
 ```
 
-See: 
-[Signatures + Literals duplication](../Questions/solved/Signatures%20+%20Literals%20duplication.md)
-[Generics](./Generics.md)
+A declaration with a default value is an optional parameter:
+
+```yz
+greet: {
+    name String = "World"   // optional, defaults to "World"
+    "Hello, `name`!"
+}
+
+greet()           // → "Hello, World!"
+greet("Alice")    // → "Hello, Alice!"
+```
+
+## Generic type variables
+
+Variables can carry a generic type parameter:
+
+```yz
+item T   // T is a generic type variable
+```
+
+See [Generics](./Generics.md)

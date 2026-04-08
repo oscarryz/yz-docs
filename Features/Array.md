@@ -1,65 +1,94 @@
 #feature
-Array
 
-```js
-// Jul 19 2024
-// Type
-[Type]
-// e.g.
-// declaration
+Arrays are ordered, homogeneous collections. The type of an array whose elements are `T` is written `[T]`.
+
+## Declaration
+
+```yz
+// Declare an array variable
 a [Int]
-// initialization
-a = [1, 2, 3]
 
-// decl + init
+// Declare and initialize with a literal
 a [Int] = [1, 2, 3]
 
-// short declr + init
-a : [1, 2, 3]
+// Short declaration (type inferred)
+a: [1, 2, 3]
 
-// emtpy decl + init
-a [Int] = [Int]() // Is an empty array
-// short declr + init
-a : [Int]() // empty array of ints 
-
-// Generic
-a [T] = [1, 2, 3]
-a : [T]()
+// Empty array
+a: [Int]()
 ```
 
-```javascript
-// Type
-array [Int]
-// init
-array = [Int]()
+## Literal syntax
 
-//short decl + init 
-array: [Int]() // identical to the init 
-// or 
-array: [T]() // no type specified yet until first usage
-array << 1 // now type is []Int
+Array literals use square brackets with comma-separated elements:
+
+```yz
+nums: [1, 2, 3]
+words: ["hello", "world"]
 ```
 
-Example
+## Indexed access
 
-```javascript
-a [String]// a is declared as an array of strings
-a = [String]() // a initialized as an empty array of strings
-a << 'Hello' // or a.add 'Hello' // with non-word medthod invocation ()
-print(a[0]) // access element 0 of the array
+```yz
+nums: [10, 20, 30]
+print(nums[0])   // 10
 
-```
-Also to consider
-
-```javascript
-a [String] // array of strings
+nums[0] = 99
+print(nums[0])   // 99
 ```
 
-Literal: elements are separated by comma
+## Append
 
-```javascript
-a: ['Hello', 'World']
-a[0] = "Hola"
-print(a[0]) // prints Hola
+Use the `<<` non-word method to append an element:
+
+```yz
+a: [Int]()
+a << 1
+a << 2
+print(a[0])   // 1
 ```
 
+## Length
+
+```yz
+a: [1, 2, 3]
+print(a.length())   // 3
+```
+
+## Higher-order methods
+
+### filter
+
+Returns a new array containing only the elements for which the boc returns true:
+
+```yz
+nums: [1, 2, 3, 10, 20]
+big: nums.filter({ item Int; item > 10 })
+// big = [20]
+```
+
+Trailing-block syntax works too:
+
+```yz
+big: nums.filter { item Int; item > 10 }
+```
+
+### each
+
+Iterates over every element, calling the boc with each one:
+
+```yz
+nums: [1, 2, 3]
+nums.each({ item Int; print(item) })
+```
+
+### map
+
+Returns a new array by applying the boc to every element:
+
+```yz
+nums: [1, 2, 3]
+doubled: nums.map({ item Int; item * 2 })
+doubled.each({ item Int; print(item) })
+// prints 2, 4, 6
+```

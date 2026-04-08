@@ -49,10 +49,10 @@ Status: {
 
 classify_status #(status Status, Unit) {
   match status
-    { Success => print("Sucessful response (2xx): `status.code`") },
+    { Success => print("Successful response (2xx): `status.code`") },
     { Warning => print("Redirection (3xx): `status.code`") },
     { Error   => print("Error ocurred: `status.mgs`(`status.code`)") },
-    { println("Other status") },
+    { print("Other status") },
 }
 ```
 
