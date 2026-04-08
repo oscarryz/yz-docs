@@ -1,0 +1,19 @@
+// Multiple type params in a generic struct and a generic function.
+// Pair[K, V] stores two values of different types.
+// makePair[K any, V any] constructs one from two arguments.
+Pair: {
+    K
+    V
+    first K
+    second V
+}
+
+makePair #(a K, b V, Pair) {
+    Pair(a, b)
+}
+
+main: {
+    p: makePair(42, "hello")
+    print(p.first)
+    print(p.second)
+}
