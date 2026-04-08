@@ -37,14 +37,18 @@ func (*InterfaceDecl) irDecl() {}
 // When IsVariant is true, the struct is a sum/discriminant type: codegen emits
 // a discriminant enum, flat merged struct, and per-variant constructors.
 // TypeParams holds formal type parameter names for generic variant types (e.g., ["V"]).
+// TypeConstraints maps each type param to Go interface method signature strings
+// inferred from usage inside generic method bodies (e.g., ["ToStr() std.String"]).
+// When non-nil, codegen emits [T interface{ ... }] instead of [T any].
 type StructDecl struct {
-	Name          string
-	Fields        []*FieldSpec
-	Methods       []*MethodDecl
-	NoConstructor bool
-	IsVariant     bool
-	Variants      []*IRVariantCase
-	TypeParams    []string // formal type params for generic variants (e.g., ["V"])
+	Name            string
+	Fields          []*FieldSpec
+	Methods         []*MethodDecl
+	NoConstructor   bool
+	IsVariant       bool
+	Variants        []*IRVariantCase
+	TypeParams      []string            // formal type params for generic variants (e.g., ["V"])
+	TypeConstraints map[string][]string // typeParam → Go interface method signature strings
 }
 
 // IRVariantCase is one constructor arm of a variant struct.
