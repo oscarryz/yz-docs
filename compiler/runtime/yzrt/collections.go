@@ -65,6 +65,29 @@ func (a Array[T]) Each(fn func(T) Unit) {
 	}
 }
 
+// Any reports whether fn returns true for at least one element.
+func (a Array[T]) Any(fn func(T) Bool) Bool {
+	for _, v := range a.elems {
+		if fn(v).val {
+			return Bool{true}
+		}
+	}
+	return Bool{false}
+}
+
+// All reports whether fn returns true for every element.
+func (a Array[T]) All(fn func(T) Bool) Bool {
+	for _, v := range a.elems {
+		if !fn(v).val {
+			return Bool{false}
+		}
+	}
+	return Bool{true}
+}
+
+// IsEmpty reports whether the array has no elements.
+func (a Array[T]) IsEmpty() Bool { return Bool{len(a.elems) == 0} }
+
 // ArrayMap applies fn to each element of a and returns a new Array of results.
 // It is a package-level function because Go methods cannot introduce new type parameters.
 func ArrayMap[T, U any](a Array[T], fn func(T) U) Array[U] {
