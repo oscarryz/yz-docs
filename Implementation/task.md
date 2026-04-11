@@ -112,14 +112,12 @@ These are documented in the language spec/features and need compiler implementat
 
 - [ ] **Option/Result method chaining** — `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })` — documented in error-handling features. Requires implementing `or_else`, `and_then`, `or` methods on the Option/Result types in yzrt, plus lowerer support for chained calls on variant types.
 
-- [ ] **Info strings** — `` `"doc string"` `` before a declaration; retrievable via `info(var).text` at runtime. The lexer captures info strings as AST nodes, and `yzrt.Info()` exists, but codegen doesn't attach info strings to declarations or emit `Info()` calls. See `Features/Info strings.md`.
-
 - [ ] **`to_str()` method on user types** — examples use `n.to_string()` but yzrt uses `ToStr()` (mapped from `to_str()`). Ensure the compiler correctly maps `to_str()` calls on user-defined types; update examples to use `to_str()` not `to_string()`.
 
-- [ ] **Spawn / explicit async** — `spawn { ... }` for explicit goroutine creation, distinct from the implicit async of every boc call. Not yet in any golden test.
-
-- [ ] **String concatenation with `+`** — `"hello" + " " + "world"` — `String.Plus` exists in yzrt; need a golden test to confirm the codegen path works end-to-end.
+- [ ] **String concatenation with `++`** — `"hello" ++ " " ++ "world"` — `String.Plus` exists in yzrt; need a golden test to confirm the codegen path works end-to-end.
 
 - [ ] **Dict Optional access** — `d[key]` should return `Option(V)` per spec; currently returns `V` directly (panics on missing key via `At()`). Needs yzrt change + codegen update.
 
 - [ ] **Bool methods `&&` / `||`** — `Bool.Ampamp` and `Bool.Pipepipe` exist in yzrt; confirm they are wired through the operator lowering path (codegen for `&&`/`||` binary expressions). Add golden test.
+ 
+- [ ] **Info strings** — `` `"doc string"` `` before a declaration; retrievable via `info(var).text` at runtime. The lexer captures info strings as AST nodes, and `yzrt.Info()` exists, but codegen doesn't attach info strings to declarations or emit `Info()` calls. See `Features/Info strings.md`.
