@@ -121,3 +121,8 @@ These are documented in the language spec/features and need compiler implementat
 - [ ] **Bool methods `&&` / `||`** — `Bool.Ampamp` and `Bool.Pipepipe` exist in yzrt; confirm they are wired through the operator lowering path (codegen for `&&`/`||` binary expressions). Add golden test.
  
 - [ ] **Info strings** — `` `"doc string"` `` before a declaration; retrievable via `info(var).text` at runtime. The lexer captures info strings as AST nodes, and `yzrt.Info()` exists, but codegen doesn't attach info strings to declarations or emit `Info()` calls. See `Features/Info strings.md`.
+
+- [ ] **Explicit type on boc-flavored declarations** — two related cases in `TypedDecl`:
+  1. `c String = http.get(url)` — RHS is a boc call returning `*Thunk[String]`; lowerer must detect `isBocMethodCall` and use inferred `:=` + `thunkVars` (same as `ShortDecl`), not emit `var c std.String = ...` which mismatches the thunk type.
+  2. `foo #(String) = { "hello" }` — RHS is a boc literal; should behave identically to `foo: { "hello" }` (i.e., `ShortDecl` with a boc literal). The declared boc type (`#(String)`) is the Yz type; codegen should treat it the same way.
+  Both cases: the Yz type annotation is correct and visible to the programmer; the thunk/goroutine wrapping remains invisible.
