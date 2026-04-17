@@ -122,7 +122,5 @@ These are documented in the language spec/features and need compiler implementat
  
 - [ ] **Info strings** — `` `"doc string"` `` before a declaration; retrievable via `info(var).text` at runtime. The lexer captures info strings as AST nodes, and `yzrt.Info()` exists, but codegen doesn't attach info strings to declarations or emit `Info()` calls. See `Features/Info strings.md`.
 
-- [ ] **Explicit type on boc-flavored declarations** — two related cases in `TypedDecl`:
-  1. `c String = http.get(url)` — RHS is a boc call returning `*Thunk[String]`; lowerer must detect `isBocMethodCall` and use inferred `:=` + `thunkVars` (same as `ShortDecl`), not emit `var c std.String = ...` which mismatches the thunk type.
-  2. `foo #(String) = { "hello" }` — RHS is a boc literal; should behave identically to `foo: { "hello" }` (i.e., `ShortDecl` with a boc literal). The declared boc type (`#(String)`) is the Yz type; codegen should treat it the same way.
-  Both cases: the Yz type annotation is correct and visible to the programmer; the thunk/goroutine wrapping remains invisible.
+- [x] **Explicit type on boc-call declarations** — `c String = http.get(url)`: fixed in `lowerMainStmt`, `lowerBocBody`, and `lowerClosureBody` — detect `isBocMethodCall` on the TypedDecl value and use inferred `:=` + `thunkVars`, same as `ShortDecl`; golden test 36.
+- [ ] **Explicit boc-type on boc-literal declarations** — `foo #(String) = { "hello" }` — parser already consumes `= { body }` as the body-only BocWithSig form, so this never reaches `TypedDecl` in the lowerer. Needs parser-level disambiguation to support assigning a boc literal to a named variable with an explicit boc type.
