@@ -1,0 +1,10 @@
+// Local boc variable with explicit boc-type annotation.
+// Both forms produce identical generated code.
+// `foo #(String) = { "hello" }` — body-only form, no input params → shorthand fallback
+// `bar #(String) { "world" }` — shorthand form, String = return type
+main: {
+    foo #(String) = { "hello" }
+    bar #(String) { "world" }
+    print(foo())
+    print(bar())
+}
