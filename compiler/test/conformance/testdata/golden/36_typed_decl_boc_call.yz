@@ -1,0 +1,8 @@
+// Explicit type annotation on boc-call declarations.
+// The declared type is the value type (String); the thunk is invisible.
+main: {
+    a: http.get("https://httpbin.org/get")
+    b String = http.get("https://httpbin.org/uuid")
+    print(a)
+    print(b)
+}

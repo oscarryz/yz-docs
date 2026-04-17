@@ -477,10 +477,13 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 			if e.Value == nil {
 				continue // param — already collected
 			}
-			inner = append(inner, &DeclStmt{
-				Name: e.Name.Name,
-				Init: l.lowerExpr(e.Value),
-			})
+			expr := l.lowerExpr(e.Value)
+			if l.isBocMethodCall(e.Value) {
+				l.thunkVars[e.Name.Name] = true
+				inner = append(inner, &DeclStmt{Name: e.Name.Name, Type: "", Init: expr})
+			} else {
+				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: expr})
+			}
 		case *ast.ShortDecl:
 			if isLast && len(e.Names) == 1 && len(e.Values) == 1 {
 				// Last short decl in body — could be an expression-result.
@@ -808,6 +811,13 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 			return nil // parameter-style declaration without init — skip
 		}
 		expr := l.lowerExpr(e.Value)
+		if l.isBocMethodCall(e.Value) {
+			// RHS is a boc call — variable holds *Thunk[T] at runtime.
+			// Use := inference and mark for auto-forcing on use.
+			// The declared Yz type (e.g. String) is correct; the thunk is invisible to the user.
+			l.thunkVars[e.Name.Name] = true
+			return []Stmt{&DeclStmt{Name: e.Name.Name, Type: "", Init: expr}}
+		}
 		typ := l.goTypeFromTypeExpr(e.Type)
 		return []Stmt{&DeclStmt{Name: e.Name.Name, Type: typ, Init: expr}}
 	case *ast.ShortDecl:
@@ -1786,10 +1796,13 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 			if e.Value == nil {
 				continue // param — already in ClosureExpr.Params
 			}
-			stmts = append(stmts, &DeclStmt{
-				Name: e.Name.Name,
-				Init: l.lowerExpr(e.Value),
-			})
+			expr := l.lowerExpr(e.Value)
+			if l.isBocMethodCall(e.Value) {
+				l.thunkVars[e.Name.Name] = true
+				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, Type: "", Init: expr})
+			} else {
+				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, Init: expr})
+			}
 		case *ast.ShortDecl:
 			stmts = append(stmts, l.lowerBodyShortDecl(e, isLast, resultType))
 		case *ast.Assignment:
