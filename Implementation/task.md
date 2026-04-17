@@ -96,6 +96,14 @@
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
 - [x] Array literals — already worked via variadic `std.NewArray(...)`; golden test 24
 
+- [ ] **Assigning a Unit-returning boc to a variable** — `a : foo()` where `foo` returns nothing (Unit) should be a sema error, analogous to Go's `x := f()` where `f` returns nothing. Detect in sema: if a `ShortDecl` or `TypedDecl` RHS resolves to a boc call whose return type is `Unit`, report an error. Add an error golden test.
+
+- [ ] **Top-level boc callable as function** — `foo: { time.sleep(1); "done" }` at the top level is currently lowered as a singleton struct (`*_fooBoc`), which is not callable. When a top-level boc has a body that returns a value and is invoked as `foo()`, it should be lowered as a Go function instead. Fixing this also fixes the fire-and-forget issue for that code path, since the body would go through `lowerBocBody` (which uses `BocGroup` + `Wait` for standalone thunk calls) rather than `lowerClosureBody`. Needs sema and lowerer changes; add a golden test.
+
+- [ ] **Standalone thunk calls inside closure bodies not forced** — `time.sleep(1)` as an expression statement inside a local boc (closure body) is emitted as a raw `std.Time.Sleep(...)` call with no `.Force()` or `BocGroup` wrapping. The goroutine fires but nothing waits for it, so the sleep is effectively skipped. Fix: in `lowerClosureBody`, detect standalone ExprStmt calls that return a thunk (via `isBocMethodCall`) and emit `.Force()` on the result (or wrap in a `BocGroup` + `Wait()` like `lowerMainBoc` does). Add a golden test.
+
+- [ ] **Unused variables in generated Go** — Yz allows unused variables but Go does not. Fix: after lowering all statements in a scope (main boc, method body), scan the emitted IR for declared variable names (`DeclStmt.Name`) that never appear as `Ident` references in subsequent IR nodes. Append `_ = varName` (`AssignStmt` with blank target) for each unused name. Applies to `lowerMainBoc`, `lowerBocBody`, and `lowerClosureBody`. No change to sema or parser; pure IR post-processing. Add a golden test with a declared-but-unused variable.
+
 ## Documentation Gaps — Features Documented but Not Yet Implemented
 
 These are documented in the language spec/features and need compiler implementation:
