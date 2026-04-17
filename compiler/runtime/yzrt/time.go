@@ -13,3 +13,11 @@ func (t *_timeBoc) Now() *Thunk[String] {
 		return NewString(gtime.Now().Format(gtime.RFC3339))
 	})
 }
+
+// Sleep waits for the specified number of seconds.
+func (t *_timeBoc) Sleep(seconds Int) *Thunk[Unit] {
+	return Go(func() Unit {
+		gtime.Sleep(gtime.Duration(seconds.GoInt()) * gtime.Second)
+		return TheUnit
+	})
+}
