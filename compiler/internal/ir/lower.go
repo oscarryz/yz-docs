@@ -18,7 +18,7 @@ import (
 // Lower converts an analyzed source file into an IR File.
 // pkgName is the Go package name to emit (usually "main" for the entry file).
 func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
-	l := &lowerer{analyzer: a, thunkVars: make(map[string]bool)}
+	l := &lowerer{analyzer: a, thunkVars: make(map[string]bool), localBocVars: make(map[string]bool)}
 	return l.lowerFile(sf, pkgName)
 }
 
@@ -38,6 +38,13 @@ type lowerer struct {
 	// via a: bocCall(...)). When referenced as plain values, these are
 	// auto-forced to make the Yz "a is the value" semantics transparent.
 	thunkVars map[string]bool
+
+	// localBocVars tracks local function-literal variables declared via
+	// BocWithSig inside a boc body (e.g. `foo #(String) { "hello" }`).
+	// Their generated function literal already returns *Thunk[T], so calling
+	// foo() must NOT be wrapped in an extra ThunkExpr — just emit foo()
+	// directly and let the caller force it.
+	localBocVars map[string]bool
 }
 
 // ---------------------------------------------------------------------------
@@ -473,6 +480,8 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 	for i, elem := range elems {
 		isLast := i == len(elems)-1
 		switch e := elem.(type) {
+		case *ast.BocWithSig:
+			inner = append(inner, l.lowerBocWithSigAsLocal(e)...)
 		case *ast.TypedDecl:
 			if e.Value == nil {
 				continue // param — already collected
@@ -806,6 +815,9 @@ func (l *lowerer) lowerMainBoc(b *ast.BocLiteral) *FuncDecl {
 
 func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 	switch e := node.(type) {
+	case *ast.BocWithSig:
+		// Local boc variable: `foo #(String) { "hello" }` or `foo #(String) = { "hello" }`.
+		return l.lowerBocWithSigAsLocal(e)
 	case *ast.TypedDecl:
 		if e.Value == nil {
 			return nil // parameter-style declaration without init — skip
@@ -956,6 +968,57 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig, recvType string, parentFi
 		Results:    []string{thunkResult},
 		Body:       funcBody,
 	}
+}
+
+// lowerBocWithSigAsLocal lowers a BocWithSig that appears inside a boc body
+// (main or a method) as a local function variable. The variable holds a
+// function literal that returns *Thunk[T], so calling foo() is async just
+// like calling a top-level BocWithSig.
+func (l *lowerer) lowerBocWithSigAsLocal(bws *ast.BocWithSig) []Stmt {
+	if bws.Body == nil {
+		return nil
+	}
+	bocSemType := l.analyzer.ExprType(bws)
+	bt, _ := bocSemType.(*sema.BocType)
+	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
+	thunkResult := "*std.Thunk[" + resultType + "]"
+
+	// Collect input params from sig (shorthand) or body leading TypedDecls (body-only).
+	var params []*ParamSpec
+	if bws.BodyOnly && bws.Body != nil {
+		for _, elem := range bws.Body.Elements {
+			td, ok := elem.(*ast.TypedDecl)
+			if !ok || td.Value != nil {
+				break
+			}
+			params = append(params, &ParamSpec{
+				Name: td.Name.Name,
+				Type: l.goTypeFromTypeExpr(td.Type),
+			})
+		}
+	} else {
+		params = l.sigParams(bws.Sig, bt)
+	}
+
+	// Lower body as a boc body — produces [ExprStmt{ThunkExpr}].
+	prev := l.setReceiver("", nil)
+	bocBodyStmts := l.lowerBocBody(bws.Body, resultType)
+	l.restoreReceiver(prev)
+
+	// Promote ExprStmt{ThunkExpr} → ReturnStmt{ThunkExpr}.
+	var closureBody []Stmt
+	if len(bocBodyStmts) == 1 {
+		if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
+			closureBody = []Stmt{&ReturnStmt{Value: es.Expr}}
+		}
+	}
+	if closureBody == nil {
+		closureBody = bocBodyStmts
+	}
+
+	l.localBocVars[bws.Name.Name] = true
+	init := &ClosureExpr{Params: params, ResultType: thunkResult, Body: closureBody}
+	return []Stmt{&DeclStmt{Name: bws.Name.Name, Type: "", Init: init}}
 }
 
 // ---------------------------------------------------------------------------
@@ -1330,6 +1393,13 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		}
 	}
 
+	// Local BocWithSig function literal — already returns *Thunk[T], emit direct call.
+	if id, ok := c.Callee.(*ast.Ident); ok {
+		if l.localBocVars[id.Name] {
+			return &FuncCall{Func: callee, Args: args}
+		}
+	}
+
 	// Other boc identifier calls — goroutine-launched thunks.
 	calleeType := l.analyzer.ExprType(c.Callee)
 	if bt, ok := calleeType.(*sema.BocType); ok {
@@ -1386,6 +1456,9 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	}
 	// Direct BocWithSig call: greet("Alice")
 	if id, ok := c.Callee.(*ast.Ident); ok {
+		if l.localBocVars[id.Name] {
+			return true
+		}
 		sym := l.analyzer.LookupInFile(id.Name)
 		if sym != nil {
 			if _, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
