@@ -495,6 +495,36 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 			bodyParams, n := a.extractBodyParams(bws.Body.Elements, inputParams)
 			if bodyParams != nil {
 				inputParams = bodyParams
+			} else if n == 0 && len(inputParams) > 0 {
+				// Body has no TypedDecl params. Decide based on whether sig params are labeled.
+				allAnonymous := true
+				for _, p := range inputParams {
+					if p.Label != "" {
+						allAnonymous = false
+						break
+					}
+				}
+				if allAnonymous {
+					// All sig params are anonymous types — re-interpret as shorthand form:
+					// trailing unlabeled type = return type, no input params.
+					// This makes `foo #(String) = { "hello" }` identical to `foo #(String) { "hello" }`.
+					shorthandParams := a.resolveBocSigParams(bws.Sig, false)
+					inputParams = nil
+					explicitReturns = nil
+					for _, p := range shorthandParams {
+						if p.IsReturn {
+							explicitReturns = append(explicitReturns, p.Type)
+						} else {
+							inputParams = append(inputParams, p)
+						}
+					}
+				} else {
+					// Labeled params must be redeclared in body — report the original error.
+					if len(bws.Body.Elements) > 0 {
+						a.errorf(bws.Body.Elements[0].Position(),
+							"expected parameter declaration (name Type), got %T", bws.Body.Elements[0])
+					}
+				}
 			}
 			for _, p := range inputParams {
 				if p.Label != "" {
@@ -590,7 +620,7 @@ func (a *Analyzer) extractBodyParams(elements []ast.Node, sigParams []BocParam) 
 		elem := elements[i]
 		td, ok := elem.(*ast.TypedDecl)
 		if !ok {
-			a.errorf(elem.Position(), "expected parameter declaration (name Type), got %T", elem)
+			// Body element is not a TypedDecl — no params found; caller handles fallback.
 			return nil, 0
 		}
 		bodyType := a.resolveTypeExpr(td.Type)
