@@ -83,6 +83,40 @@ divide #(a Int, b Int, Int, Error) {
 }
 ```
 
+### Stateful vs. Stateless Bocs
+
+The presence of `#(...)` in a boc declaration determines its execution model:
+
+- **Body form** `foo: { field T; ... }` — stateful actor. Fields persist between calls. Concurrent calls are serialized through the boc's actor queue. `foo.field` is accessible from outside.
+- **BocWithSig form** `foo #(param T, ...) { ... }` — stateless function. Parameters are local to each call. Concurrent calls run in parallel. `foo.param` does not exist between calls.
+
+This distinction also applies to boc types used as HOF parameters (see §4.3.1).
+
+### 4.3.1 Named vs. Anonymous Params in Boc Types
+
+When a boc type is used as a parameter type, the named/anonymous distinction declares what the callee will do with it:
+
+| Signature type | What callee expects | Who satisfies it |
+|---|---|---|
+| `#(String, Int)` | Only callability — `func("x")` | Both stateful and stateless bocs |
+| `#(name String, Int)` | Field access + callability — `person.name` | Only stateful bocs |
+
+```yz
+// Anonymous: only calls func — stateless or stateful both work
+map #(func #(String, Int)) { ... }
+map(#(item String, Int) { item.length() })   // stateless ✓
+map({ item String; item.length() })          // stateful ✓
+
+// Named: accesses person.name — must be stateful
+greet #(person #(name String, Int)) {
+    println(person.name)   // requires persistent field
+}
+greet({ name: "Alice"; name.length() })      // stateful ✓
+greet(#(name String, Int) { name.length() }) // stateless — ERROR: no .name field
+```
+
+A stateful boc satisfies both forms (wider capability). A stateless boc satisfies only the anonymous form.
+
 ### Synthetic Signature
 
 When no explicit signature is given, the compiler creates a **synthetic signature** from all the boc's internal variables:
