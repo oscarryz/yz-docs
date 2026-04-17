@@ -1115,6 +1115,7 @@ func constraintGoSigs(constraints []*sema.GenericConstraint, typeParam string) [
 // Go-exported method name (first letter uppercased).
 var builtinSingleton = map[string]string{
 	"http": "std.Http",
+	"time": "std.Time",
 }
 
 // ---------------------------------------------------------------------------

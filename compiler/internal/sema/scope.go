@@ -233,5 +233,17 @@ func newBuiltinScope() *Scope {
 		},
 	}})
 
+	// time — built-in singleton backed by runtime/yzrt.Time.
+	// Methods: now #() String.
+	s.Define(&Symbol{Name: "time", Type: &StructType{
+		Name: "_timeBoc",
+		Fields: []StructField{
+			{Name: "now", Type: &BocType{
+				Params:  nil,
+				Returns: []Type{TypString},
+			}},
+		},
+	}})
+
 	return s
 }
