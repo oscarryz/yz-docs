@@ -31,19 +31,29 @@ counter: {
 
 ### 2. Instantiation / Invocation
 
-- **Uppercase bocs** (types) → each call creates a new instance
-- **Lowercase bocs** → execute the boc body; share state on re-invocation
+There are three distinct boc forms with different execution semantics:
+
+| Form | Name | Semantics |
+|---|---|---|
+| `Foo: { field T; ... }` | Uppercase, body | Type — each call creates a new independent instance |
+| `foo: { field T; ... }` | Lowercase, body | Singleton actor — shared state, calls serialize |
+| `foo #(param T, ...) { ... }` | Any case, with `#(...)` | Stateless function — each call is an independent goroutine, calls parallel |
 
 ```yz
 Person: { name String; age Int }
-
-p1: Person("Alice", 30)   // New instance
-p2: Person("Bob", 25)     // Another new instance — independent
+p1: Person("Alice", 30)   // New instance — independent of p2
+p2: Person("Bob", 25)     // Another new instance
 
 greet: { name String; print("Hi, `name`!") }
-greet("Alice")             // Executes greet
-greet("Bob")               // Executes greet again (same boc)
+greet("Alice")             // Executes greet singleton (serialized if concurrent)
+greet("Bob")               // Also executes greet singleton
+
+hi #(name String) { print("Hi, `name`!") }
+hi("Alice")                // Independent goroutine — parallel-safe
+hi("Bob")                  // Another independent goroutine
 ```
+
+The key distinction: **body-form bocs** (with or without uppercase) are actors whose fields persist. **BocWithSig-form bocs** (with `#(...)`) are stateless — parameters are local to each call, no persistent state, `hi.name` does not exist. See §4.3 for how this affects type compatibility when bocs are passed as arguments.
 
 ### 3. Completion
 

@@ -92,6 +92,14 @@
 - [x] Optional parens for trailing-block calls — `list.filter { block }` without `()`; in `parsePostfix`, LBRACE after MemberExpr → CallExpr with BocLiteral arg; golden test 34
 - [x] Unary minus on variables — `-x` → `x.Neg()`; `a - -b` → `a.Minus(b.Neg())`; pipeline was already wired (parser+sema+lowerer+codegen); golden test 35
 
+## Language Design — Open Questions (tracked in Questions/)
+
+- [ ] **Cancellation / non-local return across goroutine boundaries** — non-local `return` from a callback conflicts with structured concurrency. Three open sub-problems: goroutine leaks when a race-return fires, escaped non-local returns into completed bocs, and structured concurrency violation. See `Questions/How to cancel a running block.md`. No implementation work until the design question is resolved.
+
+- [ ] **Stateless bocs and pure functions** — BocWithSig form (`foo #(params) { ... }`) is the stateless function form; body form (`foo: { ... }`) is the stateful actor form. The compiler needs to enforce: (1) `foo.field` is a type error on a BocWithSig boc; (2) passing a stateless boc where a named-param signature type is expected (e.g., `#(name String, Int)`) is a type error; (3) BocWithSig calls emit free goroutines (no actor queue). See `Questions/Stateless bocs and pure functions.md` and `Features/Bocs.md`.
+
+- [ ] **SWMR write semantics in codegen** — field writes from outside a boc (`a.b = v` in a different boc) should be emitted as queued actor messages, not direct struct field assignments. Currently the codegen emits direct field writes which is a data race. Requires runtime support for a write-message channel per boc instance. Depends on the cancellation/actor-queue design.
+
 ## Known Bugs
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
 - [x] Array literals — already worked via variadic `std.NewArray(...)`; golden test 24

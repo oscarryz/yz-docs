@@ -102,9 +102,15 @@ print(counter.get())  // Message 4 → prints 3
 
 ### Actor Granularity
 
-**Every** boc instance is an actor — regardless of whether it has mutable state, methods, or complexity. The compiler may optimize away actor overhead for:
+**Stateful boc instances** (body form, no `#(...)`) are actors with message queues. **Stateless bocs** (BocWithSig form, `foo #(params) { ... }`) are not actors — each call creates a fresh independent goroutine with no shared queue.
 
-- **Pure bocs** (stateless, no side effects) — inline execution
+| Form | Actor? | Queue? | Parallel calls? |
+|---|---|---|---|
+| `foo: { field T; ... }` | Yes | Yes | No — serialized |
+| `Foo: { field T; ... }` (instance) | Yes | Yes | Yes — each instance has its own queue |
+| `foo #(param T) { ... }` | No | No | Yes — fully parallel |
+
+The compiler may further optimize:
 - **Literal bocs** (`{ 42 }`) — constant folding
 - **Bocs invoked and immediately materialized** — synchronous execution
 
@@ -129,38 +135,59 @@ This provides:
 2. **Error propagation** — errors in inner bocs propagate to the parent
 3. **Predictable lifetimes** — a boc's scope determines its children's lifetimes
 
-### Timeout Pattern
+### Timeout Pattern and Non-Local Return
 
-To limit execution time, use the race pattern:
+Non-local `return` from a callback (see §7.5) exits the enclosing boc early, which is intentionally in tension with structured concurrency:
 
 ```yz
-result: match {
-    data: fetch_with_timeout() => data
-}, {
-    time.sleep(5000) => "timeout"
+fetch: {
+    id String
+    time.sleep(10.seconds(), {
+        return Option.None()   // non-local: exits `fetch` early
+    })
+    return find(id)            // also exits `fetch`
 }
 ```
 
-## 8.6 Single-Writer Principle
+Both goroutines race to return from `fetch`. The first `return` wins; subsequent non-local returns from escaped callbacks are silently discarded. The losing goroutine runs to natural completion.
 
-Since each boc is an actor with a sequential message queue, mutable state is inherently safe:
+**Open design question**: how to cleanly cancel the losing goroutine to avoid goroutine leaks. See [Questions/How to cancel a running block](../Questions/How%20to%20cancel%20a%20running%20block.md).
 
-- Only one message is processed at a time per actor
-- No concurrent mutation of the same field
-- No locks, mutexes, or synchronization primitives needed
+## 8.6 Single-Writer Principle (SWMR)
+
+Yz uses the **Single Writer, Multiple Reader** model for field access:
+
+| Operation | Who | How |
+|---|---|---|
+| Read `a.field` | Any boc | Direct — no queue, no async overhead |
+| Write `a.field = v` from inside `a` | `a` and nested bocs | Direct |
+| Write `a.field = v` from outside `a` | Any boc | Queued through `a`'s actor |
+
+Only one goroutine ever writes a field — the field's owner. Reads are unrestricted and synchronous. This avoids torn writes without making reads expensive.
 
 ```yz
-// This is safe — increment messages are processed sequentially
 counter: {
     count: 0
-    increment: { count = count + 1 }
+    increment: { count = count + 1 }  // direct write — inside counter
 }
 
-// Even with concurrent callers:
-1.to(1000).each({ i Int
-    counter.increment()   // Each is a message, processed in order
-})
+// From outside: reads are direct, writes are queued
+x: counter.count          // direct read — any goroutine, no queue
+counter.count = 5         // queued write — sent to counter's actor
+counter.increment()       // queued call — also through actor
 ```
+
+**Tradeoff**: reads may see slightly stale values (a queued write hasn't applied yet). Multi-field reads are not atomically consistent — use a method that reads both fields within one actor turn when consistency is needed.
+
+**Note**: The "modify then call" pattern is not atomic:
+```yz
+hi.text = "Goodbye"       // queued write
+hi.recipient = "everyone" // queued write
+hi()                      // queued call — three separate queue entries, not atomic
+hi("Goodbye", "everyone") // prefer this — one atomic queue entry
+```
+
+See [Features/Single Writer](../Features/Single%20Writer.md) for the full specification.
 
 ## 8.7 Inter-Actor Communication
 

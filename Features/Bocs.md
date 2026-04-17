@@ -198,3 +198,71 @@ Named #(name String, greet #())
 ```
 
 These participate in structural typing — any boc with the right shape satisfies the type. See [Structural typing](Structural%20typing.md).
+
+## Stateful actors vs. stateless functions
+
+Every boc call is async and routed through an actor queue — but the two syntactic forms have meaningfully different semantics:
+
+### The body form — stateful actor
+
+```yz
+add: { a Int; b Int; a + b }
+```
+
+`add` is a singleton actor. Its fields `a` and `b` persist between calls. After `add(3, 4)`, `add.a == 3`. Concurrent calls are serialized through `add`'s queue — only one runs at a time. This is correct for objects and singletons with meaningful shared state, but wrong for pure utility functions (concurrent callers queue unnecessarily).
+
+### The BocWithSig form — stateless function
+
+```yz
+add #(a Int, b Int, Int) { a + b }
+```
+
+The `#(...)` declaration changes everything: `a` and `b` are **parameters local to each call**, not persistent fields. Each invocation is an independent goroutine. `add.a` does not exist. Concurrent calls run in **parallel**. Intermediate variables in the body are also always local:
+
+```yz
+add #(a Int, b Int, Int) {
+    r Int = a + b   // local — add.r does not exist
+    r
+}
+```
+
+### The rule
+
+> If a boc's declaration includes `#(...)`, it is a **stateless function** — each call is independent and parallel-safe.
+> If it has no `#(...)`, it is a **stateful actor** — fields persist between calls, concurrent calls serialize.
+
+This is why the `#(...)` syntax emerged: not just for type annotation, but as the declaration of intent that "this boc is a function, not an object."
+
+### Higher-order bocs: named vs. anonymous params
+
+When a boc is passed as an argument, the parameter type in the signature declares what the callee expects of it:
+
+**Anonymous types** (`#(String, Int)`) — callability only:
+
+```yz
+map #(func #(String, Int)) { ... }
+```
+
+`map` only calls `func(item)` — it never accesses `func`'s fields. Both stateful and stateless bocs satisfy `#(String, Int)`.
+
+**Named params** (`#(name String, Int)`) — field access required:
+
+```yz
+greet #(person #(name String, Int)) {
+    println(person.name)   // accessing .name — person must have this field
+}
+```
+
+`greet` accesses `person.name`, so `person` must be a stateful boc with a persistent `name` field. A stateless boc does not satisfy this — it has no `.name`. Passing a stateless boc here is a type error.
+
+This gives a natural subtyping: a stateful boc satisfies **both** `#(name String, Int)` (field-accessible + callable) and `#(String, Int)` (callable only). A stateless boc satisfies **only** the anonymous form.
+
+### Form summary
+
+| Form | Fields persist | Concurrent calls | `.field` access |
+|---|---|---|---|
+| `foo: { field T; ... }` | Yes — singleton | Serialized | `foo.field` valid |
+| `Foo: { field T; ... }` | Yes — per instance | Parallel (each fresh) | `instance.field` valid |
+| `foo #(param T, ...) { ... }` | No | Parallel | `foo.param` invalid |
+
+For utility functions (`add`, `max`, `filter`, etc.), always use the BocWithSig form. For objects and actors with meaningful shared state, use the body form. See also [Questions/Stateless bocs and pure functions](../Questions/Stateless%20bocs%20and%20pure%20functions.md).

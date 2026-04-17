@@ -74,15 +74,25 @@ Type of the variable can be generic
 
 ```
 
-### Note 
+## Signatures serve two purposes simultaneously
 
-For v0.1 The type `Unit` means the boc returns nothing e.g. 
+A boc signature `#(...)` is intentionally dual-purpose:
 
-```js
-print #(String, Unit)
+**1. Type constraint (structural typing).** Any boc with the right shape satisfies the signature. No explicit `implements` needed.
+
+```yz
+Greeter #(greet #())     // interface: requires greet #()
 ```
-instead of
 
-```js
-print #(String)
+**2. Access control (encapsulation).** Only the fields and methods declared in the signature are visible to external callers. Fields omitted from the signature are hidden.
+
+```yz
+Person #(name String, greet #())   // only name and greet are visible
+Person = {
+    name String      // public — also in signature
+    password String  // internal — not in the signature, not accessible externally
+    greet #() { print(name) }
+}
 ```
+
+These two concerns are fused by design. Yz defaults to **public-by-default**: if no signature is written, all fields are accessible. Writing a signature simultaneously narrows the public interface AND declares the type constraint. If full field visibility with a type constraint is desired, include all fields in the signature.
