@@ -27,3 +27,4 @@
 - [Info strings.md](Info%20strings.md) — Documentation strings attached to declarations
 - [Comments.md](Comments.md) — Code comments
 - [Single Writer.md](Single%20Writer.md) — Concurrency safety: each object has one logical writer
+- [Gotchas.md](Gotchas.md) — Common mistakes and the patterns that fix them
