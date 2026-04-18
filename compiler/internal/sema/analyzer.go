@@ -486,6 +486,23 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 
 	var returns []Type
 	if bws.Body != nil {
+		// Pre-register the symbol before analyzing the body so recursive calls
+		// inside the body can resolve the function's own name.
+		// Use sig-declared return types if available; otherwise default to Unit.
+		// The final symbol (with inferred return type) is re-registered after analysis.
+		preReturns := explicitReturns
+		if len(preReturns) == 0 {
+			preReturns = []Type{TypUnit}
+		}
+		preFQN := a.currentFQN(bws.Name.Name)
+		preSym := &Symbol{
+			Name: bws.Name.Name,
+			Type: &BocType{Params: inputParams, Returns: preReturns},
+			FQN:  preFQN,
+			Node: bws,
+		}
+		a.define(preSym)
+
 		prev := a.pushScope()
 		prevFQN := a.pushFQN(bws.Name.Name)
 		if bws.BodyOnly {
@@ -845,7 +862,13 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		a.analyzeExpr(expr.Cond)
 		trueType := a.analyzeExpr(expr.TrueCase)
 		a.analyzeExpr(expr.FalseCase)
-		t = trueType
+		// The ? operator calls the branch; the result is the branch's return value,
+		// not the branch boc itself. Unwrap one BocType level.
+		if bt, ok := trueType.(*BocType); ok && len(bt.Returns) == 1 {
+			t = bt.Returns[0]
+		} else {
+			t = trueType
+		}
 	case *ast.Ident:
 		t = a.analyzeIdent(expr)
 	case *ast.UnaryExpr:
