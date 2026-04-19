@@ -244,6 +244,7 @@ func TestBocParams(t *testing.T) {
 
 func TestNestedBocScoping(t *testing.T) {
 	// Inner boc can read outer variable.
+	// counter has an inner boc (increment) → analyzed as StructType{IsSingleton:true}.
 	a := mustAnalyze(t, `counter: {
     count: 0
     increment: { count = count + 1 }
@@ -252,8 +253,16 @@ func TestNestedBocScoping(t *testing.T) {
 	if sym == nil {
 		t.Fatal("'counter' not found")
 	}
-	if _, ok := sym.Type.(*BocType); !ok {
-		t.Fatalf("counter: got %T, want *BocType", sym.Type)
+	st, ok := sym.Type.(*StructType)
+	if !ok {
+		t.Fatalf("counter: got %T, want *StructType", sym.Type)
+	}
+	if !st.IsSingleton {
+		t.Error("counter: IsSingleton should be true")
+	}
+	// Fields should include count (Int) and increment (BocType).
+	if len(st.Fields) < 2 {
+		t.Errorf("counter fields: got %d, want at least 2", len(st.Fields))
 	}
 }
 
@@ -475,6 +484,7 @@ func TestDictLiteralType(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCounterProgram(t *testing.T) {
+	// counter has inner bocs (increment, value) → StructType{IsSingleton:true}.
 	src := `counter: {
     count: 0
     increment: { count = count + 1 }
@@ -485,8 +495,37 @@ func TestCounterProgram(t *testing.T) {
 	if sym == nil {
 		t.Fatal("'counter' not found")
 	}
-	if _, ok := sym.Type.(*BocType); !ok {
-		t.Fatalf("counter: got %T, want *BocType", sym.Type)
+	st, ok := sym.Type.(*StructType)
+	if !ok {
+		t.Fatalf("counter: got %T, want *StructType", sym.Type)
+	}
+	if !st.IsSingleton {
+		t.Error("counter: IsSingleton should be true")
+	}
+	// Fields: count, increment, value.
+	if len(st.Fields) != 3 {
+		t.Errorf("counter fields: got %d, want 3", len(st.Fields))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 12 — Singleton boc field access type-checking (Pass 1 boc uniformity)
+// ---------------------------------------------------------------------------
+
+func TestSingletonBocFieldAccess(t *testing.T) {
+	// Accessing a field of a singleton boc from outside its body should resolve
+	// to the correct type via StructType.Fields (not scope lookup).
+	a := mustAnalyze(t, `counter: {
+    count: 0
+    increment: { count = count + 1 }
+}
+x: counter.count`)
+	sym := a.LookupInFile("x")
+	if sym == nil {
+		t.Fatal("'x' not found")
+	}
+	if sym.Type != TypInt {
+		t.Errorf("counter.count type: got %v, want Int", sym.Type)
 	}
 }
 
