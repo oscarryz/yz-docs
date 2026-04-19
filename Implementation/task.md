@@ -92,6 +92,22 @@
 - [x] Optional parens for trailing-block calls — `list.filter { block }` without `()`; in `parsePostfix`, LBRACE after MemberExpr → CallExpr with BocLiteral arg; golden test 34
 - [x] Unary minus on variables — `-x` → `x.Neg()`; `a - -b` → `a.Minus(b.Neg())`; pipeline was already wired (parser+sema+lowerer+codegen); golden test 35
 
+## Boc Uniformity — Major Architectural Work
+
+See full analysis in [`boc_uniformity.md`](boc_uniformity.md).
+
+The compiler currently has three separate lowering paths for bocs depending on where they appear (file-scope, BocWithSig, local/nested). The intended design is one uniform construct: a boc is a boc regardless of nesting depth. Local bocs should produce the same struct+method+concurrency output as file-scope bocs.
+
+- [ ] **Pass 1 — Sema: uniform type recording for nested bocs** — `analyzeBocDecl` should produce a `StructType` (not just `BocType`) for lowercase local bocs that contain inner bocs or BocWithSig methods; FQN registration should mirror file-scope behavior.
+
+- [ ] **Pass 2 — Lowerer: lift nested boc structs to package level** — introduce a pre-pass that collects all boc declarations at any nesting depth; emit `_fqnBoc` struct + methods at package level; emit instance creation (`&_fqnBoc{}`) at the point of declaration in the enclosing function body.
+
+- [ ] **Pass 3 — Unify lowering paths** — after Passes 1+2, merge `lowerTopLevel` / `lowerBocBody` / `lowerClosureBody` / `lowerBocAsStmts` into a single path; remove `var f any` hacks and `localBocVars` tracking.
+
+- [ ] **Directory and file bocs** — defer until in-file nesting works; then extend the FQN tree to cover files and directories as bocs.
+
+- [ ] **Multiple source roots** — a project may declare more than one source root (e.g. `src/` for app code, `lib/` for third-party). Each root is an independent FQN mount point; names inside `src/foo/bar.yz` resolve as `foo.bar.*`, names inside `lib/baz.yz` resolve as `baz.*`. No cross-root FQN collision is possible. Tooling convention (versioning, lock files) deferred; the compiler needs to accept a list of source roots and build one FQN forest per root.
+
 ## Language Design — Open Questions (tracked in Questions/)
 
 - [ ] **Cancellation / non-local return across goroutine boundaries** — non-local `return` from a callback conflicts with structured concurrency. Three open sub-problems: goroutine leaks when a race-return fires, escaped non-local returns into completed bocs, and structured concurrency violation. See `Questions/How to cancel a running block.md`. No implementation work until the design question is resolved.
