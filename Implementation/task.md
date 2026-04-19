@@ -100,9 +100,9 @@ The compiler currently has three separate lowering paths for bocs depending on w
 
 - [ ] **Pass 1 — Sema: uniform type recording for nested bocs** — `analyzeBocDecl` should produce a `StructType` (not just `BocType`) for lowercase local bocs that contain inner bocs or BocWithSig methods; FQN registration should mirror file-scope behavior.
 
-- [ ] **Pass 2 — Lowerer: lift nested boc structs to package level** — introduce a pre-pass that collects all boc declarations at any nesting depth; emit `_fqnBoc` struct + methods at package level; emit instance creation (`&_fqnBoc{}`) at the point of declaration in the enclosing function body.
+- [ ] **Pass 2 — Lowerer: lift nested boc structs to package level** — introduce a pre-pass that collects all boc declarations at any nesting depth; emit `_fqnBoc` struct + methods at package level; emit instance creation (`&_fqnBoc{}`) at the point of declaration in the enclosing function body. **Acceptance criterion**: run `UPDATE_GOLDEN=1` on `39_local_boc_recursive` and `37_local_boc_var` — the regenerated `.go` files should show a lifted struct + `BocGroup` coordination instead of `var f any` and inline `.Force()` calls.
 
-- [ ] **Pass 3 — Unify lowering paths** — after Passes 1+2, merge `lowerTopLevel` / `lowerBocBody` / `lowerClosureBody` / `lowerBocAsStmts` into a single path; remove `var f any` hacks and `localBocVars` tracking.
+- [ ] **Pass 3 — Unify lowering paths** — after Passes 1+2, merge `lowerTopLevel` / `lowerBocBody` / `lowerClosureBody` / `lowerBocAsStmts` into a single path; remove `var f any` hacks and `localBocVars` tracking. **Note**: golden files for tests 27 (`27_hof`), 34 (`34_trailing_block`), and 05 (`05_while`) may also need updating once the design question is resolved — whether boc literals used as HOF callbacks and loop predicates are "real" bocs or just function syntax. Do not update those goldens until that question is answered.
 
 - [ ] **Directory and file bocs** — defer until in-file nesting works; then extend the FQN tree to cover files and directories as bocs.
 
