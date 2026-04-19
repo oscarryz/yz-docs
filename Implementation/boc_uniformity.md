@@ -2,40 +2,126 @@
 
 ## The Intended Design
 
-In Yz, **everything is a boc**. There is one construct. The same rules apply regardless of where a boc appears — in a directory, in a file, inside another boc, inside that boc. Nesting depth is irrelevant to semantics.
+In Yz there is **one construct: the boc**. Not "bocs and functions." Not "bocs and typed bocs." One thing.
+
+### What a boc is
+
+A boc is a named sequence of declarations and expressions enclosed in `{ }`. Its variables are its **fields**. Its nested bocs are its **children**. Calling a boc runs its body. Fields persist between calls.
+
+```yz
+counter: {
+    count: 0
+    increment: { count = count + 1 }
+    value: { count }
+}
+counter.increment()   // runs the body of `increment`
+counter.increment()
+print(counter.value()) // 2
+```
+
+`count`, `increment`, and `value` are all fields of `counter`. Calling `counter.increment()` runs the body `{ count = count + 1 }`. Calling `counter()` would run counter's own body top-to-bottom, reinitializing its fields.
+
+### Calling a boc with arguments
+
+Positional args set fields in declaration order before running the body:
+
+```yz
+greet: {
+    name String
+    message String
+    print("`name`: `message`")
+}
+
+greet("Alice", "hello")   // sets name="Alice", message="hello", then runs body
+greet.name = "Bob"        // set field directly
+greet()                   // runs body again with current fields
+```
+
+Fields persist after the call. `greet.name` is `"Bob"` after the second call.
+
+### BocWithSig is syntactic sugar
+
+The expanded form of a typed boc declaration:
+
+```yz
+foo #(a Int, Int) = { a Int; a }
+```
+
+means: declare `foo` with signature `#(a Int, Int)`, assign a boc whose body redeclares `a` as a field and returns it. The `a` in the signature and the `a Int` in the body are the same field.
+
+The shorthand form (no `=`) avoids redeclaring the fields in the body:
+
+```yz
+foo #(a Int, Int) { a }   // a is injected into the body scope automatically
+```
+
+Both are equivalent to:
+
+```yz
+foo: { a Int; a }         // body form — exactly the same thing
+```
+
+`a` is a field of `foo`. It persists between calls. `foo.a` is accessible from outside. Calling `foo(3)` sets `foo.a = 3` and runs the body.
+
+The `#(params)` notation exists for two purposes:
+1. To annotate a type signature without a body (`Point #(x Int, y Int)` declares a struct type)
+2. As a convenience to avoid redeclaring params in the body
+
+It does **not** create a different kind of boc. There is no such thing as a "stateless boc" or "function boc." There is only the boc.
+
+### Boc literals create instances
+
+A boc literal `{ ... }` without a name creates a **new anonymous boc instance** each time it appears in code. It is not a singleton.
+
+```yz
+[{}, {}, {}]           // three distinct instances, structurally identical
+list.filter({ item Int; item > 10 })  // creates one new instance, passes it to filter
+```
+
+This is identical to:
+
+```yz
+pred: { item Int; item > 10 }   // a named singleton
+list.filter(pred)               // same instance every call to filter
+```
+
+vs.
+
+```yz
+list.filter({ item Int; item > 10 })  // a new instance on each filter call
+```
+
+Calls from `filter` to the boc argument are serialized through that instance's queue — but since the instance is scoped to one `filter` call and `filter` is itself async, this is not a bottleneck.
+
+### lowercase = singleton, Uppercase = type
+
+- Lowercase name: one shared instance for all callers at that scope. `counter.increment()` always hits the same `counter`.
+- Uppercase name: each call creates a fresh independent instance. `Person("Alice")` and `Person("Bob")` are separate objects.
+- This rule applies at all nesting levels without exception.
 
 ### Source roots
 
-A project has one or more **source root directories**. Everything inside a source root is part of the boc tree; the source root directory itself is not a boc — it is just the mount point. FQNs are relative to the source root, not to the project directory.
-
-A typical project might have:
+A project has one or more **source root directories**. The source root is a mount point — not itself a boc. Everything inside it is.
 
 ```
 project/
-  src/          ← source root 1
+  src/          ← source root 1 (app code)
     foo/
       bar.yz
-  lib/          ← source root 2  (3rd-party / stdlib)
+  lib/          ← source root 2 (third-party / stdlib)
     baz.yz
 ```
 
-This produces two FQN trees:
+FQN trees:
 
 ```
-src root:  foo → bar → (declarations inside bar.yz)
-lib root:  baz → (declarations inside baz.yz)
+src root:  foo → bar → (declarations in bar.yz)
+lib root:  baz → (declarations in baz.yz)
 ```
 
-FQNs from `src`: `foo.bar`, `foo.bar.something`
-FQNs from `lib`: `baz`, `baz.something`
-
-A single source root (the default: `.`) means the project root is the mount point, giving the same behavior as today. Multiple source roots allow third-party libraries and a future stdlib to live in separate trees without polluting the app's namespace.
-
-> The `src/` vs `lib/` tooling convention — versions, lock files, download caching — is a future concern. What matters now is the principle: source roots are mount points; bocs are everything inside them.
+`src/foo/bar.yz` contributes `foo.bar`, `foo.bar.something`, etc. — not `src.foo.bar`. The source root is stripped from the FQN. Multiple roots produce independent FQN forests with no cross-root collision.
 
 ### Bocs form a forest
-
-Given a single source root:
 
 ```
 project/
@@ -47,43 +133,72 @@ project/
       }
 ```
 
-The FQN graph is:
+FQN tree (single source root at project root):
 
 ```
 xyz → foo → bar
           → baz → qux
 ```
 
-- `xyz` is a boc (the directory)
-- `foo` is a boc (the file)
-- `bar` is a boc (a declaration inside `foo`)
-- `baz` is a boc (another declaration inside `foo`)
-- `qux` is a boc (a declaration inside `baz`)
+`bar` is at "file scope" and `qux` is "nested" — but that is only a position in the tree. The same rules apply:
 
-`bar` being "file-scope" and `qux` being "nested" is not a semantic distinction — it is only a position in the tree. The same rules apply to both:
-
-- Lowercase name → singleton (shared by all callers at that scope)
-- Uppercase name → type (each call creates a fresh instance)
-- `#(params)` → stateless function (no persistent fields, parallel calls)
-- Inner declarations → children in the FQN tree
-- Calls are async, return a thunk
+- Lowercase → singleton at that scope
+- Uppercase → type at that scope
+- `#(params)` → same boc, fields declared upfront as sugar
+- All calls → async, return a thunk
+- Fields persist between calls
 - Access via FQN from outside, local name from inside
 
-## Current Implementation: Three Separate Code Paths
+---
 
-The compiler currently has three distinct lowering paths that diverged as implementation shortcuts:
+## Where the Misunderstanding Crept In
 
-### Path 1: File-scope boc (`counter: { ... }`)
+Understanding this section is important to avoid repeating the same confusion.
+
+### The confusion: BocWithSig looked like a function
+
+The `#(params) { body }` syntax looks like a function signature and body in most languages:
 
 ```yz
-counter: {
-    count: 0
-    increment: { count = count + 1 }
-    value: { count }
-}
+add #(a Int, b Int, Int) { a + b }
 ```
 
-Generates a Go struct + package-level singleton var + goroutine-wrapped methods. **Works correctly.**
+This looks exactly like:
+```go
+func add(a int, b int) int { return a + b }
+```
+
+The visual similarity pulled the implementation toward treating BocWithSig as a Go function. Once that decision was made, the params (`a`, `b`) became local variables (Go function arguments) rather than fields of a struct. This is where field persistence was lost: after `add(3, 4)`, `add.a` should be `3`, but the Go function lowering makes `a` a stack-local that disappears on return.
+
+### The confusion compounded: "stateless" was applied to BocWithSig
+
+Once BocWithSig was being lowered to Go functions, the word "stateless" appeared in documentation and design discussions — "BocWithSig bocs have no persistent fields." But this is a description of the implementation, not the design. The design has no stateless bocs. All bocs have fields. The `#(params)` form is just a way to declare those fields upfront.
+
+This led to treating BocWithSig as a **different concept** with different semantics, rather than as syntactic sugar over the same concept. Design questions like "when should you use BocWithSig vs body form?" arose from this confusion — but the answer is simply: "BocWithSig is body form with declared-upfront field names."
+
+### The confusion persisted into HOF discussion
+
+When discussing higher-order bocs, "boc vs function" framing led to questions like "does `#(String, Int)` accept only functions or only bocs?" The real question is simpler: `#(String, Int)` describes the shape of a boc (takes a String field, produces an Int). Any boc with that shape satisfies it, whether declared with BocWithSig syntax or body syntax.
+
+### What should have been understood from the start
+
+```
+foo: { a Int; a }          ← boc. a is a field.
+foo #(a Int, Int) { a }    ← same boc. sugar: a declared in sig, not body.
+foo #(a Int, Int) = { a Int; a }  ← same boc. expanded sugar form.
+```
+
+The three are identical in semantics. The compiler should lower all three the same way.
+
+---
+
+## Current Implementation Gaps
+
+The compiler has three separate lowering paths — all of which deviate from the true model in different ways.
+
+### Path 1: File-scope body-form boc (`counter: { ... }`)
+
+**Closest to correct.** Generates a Go struct + package-level var + goroutine methods.
 
 ```go
 type _counterBoc struct { count std.Int }
@@ -91,171 +206,191 @@ func (self *_counterBoc) Increment() *std.Thunk[std.Unit] { return std.Go(...) }
 var Counter = &_counterBoc{count: std.NewInt(0)}
 ```
 
-### Path 2: File-scope BocWithSig (`countdown #(n Int) { ... }`)
+**Gap:** Calling the boc itself — `counter()` — is not supported. Per the design, calling `counter()` runs counter's body, reinitializing its fields. Currently `Counter` is just a struct instance; there is no generated method for "run the top-level body." The `increment` and `value` variables-that-are-bocs are wired as methods, but the outer body is not.
 
-```yz
-countdown #(n Int) {
-    n == 0 ? { print("done") }, { print(n); countdown(n - 1) }
-}
-```
+### Path 2: BocWithSig (`countdown #(n Int) { ... }`)
 
-Generates a Go top-level function returning `*Thunk[T]`. **Works correctly.**
+**Semantically wrong.** Generates a Go function with a local parameter:
 
 ```go
 func countdown(n std.Int) *std.Thunk[std.Unit] { return std.Go(...) }
 ```
 
-### Path 3: Local boc inside a boc body (`f: { n Int; ... }`)
+This works as a computational approximation — the countdown runs correctly — but it loses the field semantics:
 
-```yz
-main: {
-    f: { n Int; n == 0 ? { print("fin") }, { print(n); f(n-1) } }
-    f(3)
-}
-```
+- `n` is a Go stack variable, not a struct field. It disappears on return.
+- `countdown.n` is inaccessible after a call. Per the design it should be `3` after `countdown(3)`.
+- The boc has no struct, so no inner bocs or additional fields could be added to `countdown` later without breaking the model.
 
-Currently generates a plain Go function literal stored in an `any` variable. **Broken:**
+This path exists because the implementation confused BocWithSig with Go functions. It is a semantic shortcut that happens to produce correct computational output for pure recursive/stateless uses, but it diverges from the design.
+
+### Path 3: Local boc inside a boc body (`f: { n Int; ... }` inside `main:`)
+
+**Broken.** Generates a plain Go function literal in an `any` variable:
 
 ```go
-func main() {
-    var f any = func(n std.Int) std.Unit { ... }   // typed as `any`
-    std.Go(func() std.Unit { return f(std.NewInt(3)) })  // no BocGroup, exits immediately
-}
+var f any = func(n std.Int) std.Unit { ... }
+std.Go(func() std.Unit { return f(std.NewInt(3)) })  // no BocGroup, program exits
 ```
 
-Inner bocs and BocWithSig methods on local bocs are silently dropped. The `baz #() { ... }` in:
+- `f` has no struct, no fields, no methods
+- Inner bocs inside `f` are dropped
+- Recursive calls fire goroutines with no coordination
+- `f(3)` in `main:` has no `BocGroup` — the program exits immediately
 
-```yz
-main: {
-    boc: {
-        bar: {}
-        baz #() { print("baz") }
-    }
-    boc.baz()
-}
-```
+This path was left unimplemented because the BocWithSig shortcut (Path 2) was handling the "function-like" use case, and local body-form bocs without a use case weren't prioritized.
 
-...generates `boc.Baz()` on an `any`-typed function literal — this doesn't compile.
+### Gap Summary
 
-## Gap Summary
+| Aspect | File-scope body | BocWithSig | Local body |
+|---|---|---|---|
+| Struct emitted | Yes | **No — Go func** | No — func literal |
+| Fields persist between calls | Yes | **No — stack locals** | No |
+| `.field` access from outside | Yes | **No** | No |
+| Inner bocs as fields | Yes | N/A | Dropped |
+| Methods on the boc | Yes | N/A | Dropped |
+| Calling the boc itself (`f()`) | **Not generated** | Yes (as Go func call) | Sort-of (wrong type) |
+| Goroutine-wrapped calls | Yes | Yes | No |
+| BocGroup coordination | Yes (in main:) | Yes (in main:) | No |
+| Recursive self-calls | Yes (thunk) | Yes (thunk, fixed) | Fire-and-forget |
+| Literal creates instance | N/A | N/A | No — reuses same var |
+| FQN in sema | Yes | Yes | Partial |
 
-| Capability | File-scope | Local (nested) |
-|---|---|---|
-| Singleton struct emitted | Yes | No — plain func literal |
-| Methods (BocWithSig) on boc | Yes | Dropped |
-| Inner bocs as fields | Yes | Dropped |
-| Goroutine-wrapped method calls | Yes | Sometimes — wrong type |
-| Structured concurrency (BocGroup) | Yes for `main:` | No |
-| Recursive self-calls | Yes (BocWithSig fixed) | Fire-and-forget |
-| `.field` access | Yes | No |
-| FQN registration in sema | Yes | Partial (pre-reg fix) |
+### HOF callbacks — intentional special case (pending design decision)
 
-## Root Cause
+`list.filter({ item Int; item > 10 })` — the boc literal argument is currently lowered as a synchronous Go `func(std.Int) std.Bool`, not as a goroutine-returning boc. This is a deliberate compiler shortcut: `filter` needs to call the predicate and get back a Bool synchronously to do its job.
 
-The lowerer (`ir/lower.go`) dispatches on the **position** of a node in the source file:
+Per the design, this literal IS a boc instance. Calls to it from `filter` would go through its queue — sequentially for that instance, but the `filter` call itself is async from the caller's perspective. This is semantically correct but would be slower than a direct function call for large collections.
 
-- `lowerTopLevel` for file-scope declarations
-- `lowerMainBoc` for `main:` body statements
-- `lowerBocBody` for method bodies
-- `lowerClosureBody` / `lowerBocAsStmts` for inline boc literals
+This is tracked as a pending design decision before touching goldens 27, 34, and 05 (while).
 
-Each path has different code for handling nested `BocLiteral` nodes, and none of the inner paths produce proper struct types with methods.
-
-The sema analyzer (`sema/analyzer.go`) has a corresponding split:
-
-- `analyzeBocDecl` for `ShortDecl` with `BocLiteral` RHS (both file-scope and local)
-- `analyzeStructBoc` for Uppercase boc bodies
-- `analyzeBocWithSig` for `BocWithSig` nodes
-
-`analyzeStructBoc` (the struct-emitting path) is only called for Uppercase names — so a lowercase local boc never gets the struct treatment even though it semantically should.
+---
 
 ## Desired State
 
-A locally-defined boc like:
+Every boc declaration at any nesting level should produce:
+
+1. A **struct type** (lifted to package level for Go compatibility) named by FQN
+2. A **"call" method** that runs the body
+3. Additional **named methods** for each inner boc that is itself a named boc
+4. An **instance** created at the point of declaration in the enclosing scope
+5. All calls to the boc go through goroutine + thunk
 
 ```yz
 main: {
     boc: {
-        bar: {}
-        baz #() { print("baz") }
+        n: 0
+        bar: { n = n + 1 }
+        baz #() { print(n) }
     }
+    boc.bar()
     boc.baz()
 }
 ```
 
-Should compile to roughly:
+Desired Go output:
 
 ```go
-// Lifted to package level (Go doesn't support methods on local types)
-type _main_bocBoc struct{}
+type _main_bocBoc struct {
+    n std.Int
+}
+
+func (self *_main_bocBoc) Call() *std.Thunk[std.Unit] {
+    return std.Go(func() std.Unit {
+        self.n = std.NewInt(0)   // body re-runs reinitializes
+        return std.TheUnit
+    })
+}
 
 func (self *_main_bocBoc) Bar() *std.Thunk[std.Unit] {
-    return std.Go(func() std.Unit { return std.TheUnit })
+    return std.Go(func() std.Unit {
+        self.n = self.n.Plus(std.NewInt(1))
+        return std.TheUnit
+    })
 }
+
 func (self *_main_bocBoc) Baz() *std.Thunk[std.Unit] {
     return std.Go(func() std.Unit {
-        std.Print(std.NewString("baz"))
+        std.Print(self.n)
         return std.TheUnit
     })
 }
 
 func main() {
-    _boc := &_main_bocBoc{}   // scoped to this invocation
+    _boc := &_main_bocBoc{}
     _bg0 := &std.BocGroup{}
+    _bg0.Go(func() any { return _boc.Bar().Force() })
     _bg0.Go(func() any { return _boc.Baz().Force() })
     _bg0.Wait()
 }
 ```
 
-Key principles:
-- The struct type is **lifted to package level** (Go constraint), but the **instance** is created inside the enclosing function body (so Uppercase outer bocs get fresh inner bocs per instance)
-- The struct name is derived from the **FQN** to avoid collisions: `_main_bocBoc`, `_main_baz_quxBoc`, etc.
-- Method calls on a local boc instance behave identically to method calls on a file-scope singleton
-- `BocGroup` coordination applies at the call site
+For BocWithSig (`countdown #(n Int) { ... }`), the same model applies:
+
+```go
+type _countdownBoc struct {
+    n std.Int
+}
+
+func (self *_countdownBoc) Call() *std.Thunk[std.Unit] {
+    return std.Go(func() std.Unit {
+        if self.n.Eqeq(std.NewInt(0)).GoBool() {
+            std.Print(std.NewString("done"))
+        } else {
+            std.Print(self.n)
+            self.n = self.n.Minus(std.NewInt(1))
+            Countdown.Call().Force()   // recursive: same singleton
+        }
+        return std.TheUnit
+    })
+}
+
+var Countdown = &_countdownBoc{}
+```
+
+Note: for the recursive case, the singleton model means all recursive calls share the same `Countdown` instance. The thunk model ensures no deadlock — `Call()` fires a goroutine and returns immediately, so the queue drains between recursive steps.
+
+---
 
 ## Implementation Approach
 
-This is a non-trivial change. It likely requires two or three passes:
+### Pass 1 — Sema: record struct shape for all boc declarations
 
-### Pass 1 — Sema: uniform FQN + type recording (lower risk)
+- `analyzeBocDecl` should call `analyzeStructBoc` for ALL lowercase boc bodies (not just Uppercase), producing a `StructType` with the correct fields at all nesting levels
+- `analyzeBocWithSig` should no longer be a fundamentally separate path — it resolves to the same `StructType` model, with params as fields
+- FQN registration should work the same at all depths
 
-- Ensure `analyzeBocDecl` records a proper `StructType` (not just `BocType`) for lowercase local bocs that contain inner bocs or BocWithSig methods — the same struct-shape analysis already done for Uppercase bocs
-- FQN registration for nested bocs should mirror the file-scope case
-- Sema changes are safer since they don't affect generated output until the lowerer is updated
+### Pass 2 — Lowerer: lift all boc structs to package level
 
-### Pass 2 — Lowerer: lift nested boc structs to package level
+- Pre-pass to collect all boc declarations at any nesting depth
+- For each, emit: `_fqnBoc` struct, `Call()` method (the body), named methods for inner bocs
+- In the enclosing function body, emit instance creation (`&_fqnBoc{}`) at the declaration point
+- File-scope bocs get package-level `var Boc = &_bocBoc{}`; local bocs get local `_boc := &_bocBoc{}`
 
-- Introduce a **pre-pass** (or recursive collection phase) that walks the AST and collects all boc declarations at any nesting depth
-- For each one, generate a `_fqnBoc` struct + methods at package level (same as today's `lowerTopLevel`)
-- In the enclosing function body, emit a local variable holding a `new(_fqnBoc)` instance instead of a function literal
+**Acceptance criterion**: `UPDATE_GOLDEN=1` on `39_local_boc_recursive` and `37_local_boc_var` should produce lifted structs and `BocGroup` coordination instead of `var f any` and inline `.Force()`.
 
-This requires restructuring the lowerer's top-level collection phase to handle nested bocs before the function bodies that reference them. The current single-pass approach emits declarations in encounter order; we'd need a two-phase approach: collect-all-types first, then emit function bodies.
+### Pass 3 — Unify lowering paths
 
-### Pass 3 — Unify the lowering paths
+- Merge `lowerTopLevel`, `lowerBocBody`, `lowerClosureBody`, `lowerBocAsStmts` into one path
+- Remove `localBocVars` tracking and `var f any` hacks
+- BocWithSig lowering becomes struct emission, not Go function emission
 
-Once Passes 1 and 2 work, several of the separate code paths in `lower.go` can be merged:
-- `lowerTopLevel` and the new nested-boc lowering become one path
-- `lowerBocBody`, `lowerClosureBody`, `lowerBocAsStmts` can be reviewed for consolidation
-- The `localBocVars` tracking and ad-hoc `var f any` hacks can be removed
+**Note**: goldens 27, 34, 05 (HOF callbacks, while loop bodies) should NOT be updated until the design question about synchronous callback bocs is resolved.
+
+---
 
 ## Risks and Unknowns
 
-- **Go local type restriction**: Go does not allow methods on locally-declared types. Lifting to package level means the struct name must be globally unique — FQN-based naming solves this but adds naming complexity.
-- **Uppercase outer boc with lowercase inner boc**: `Foo: { bar: { count: 0 } }` — `bar` should be a per-`Foo`-instance singleton, so `_foo_barBoc` is instantiated inside `NewFoo()`, not as a package-level var. This is the main complexity difference from file-scope singletons.
-- **Recursive local bocs**: `f: { n Int; f(n-1) }` — the pre-registration fix in sema already handles the name resolution; the lowerer needs to handle the function-var self-reference correctly.
-- **Cross-scope method calls**: `boc.baz()` from an outer scope where `boc` is a local var — sema needs to track that `boc`'s type is `_main_bocBoc`, not `any`, so member access resolves correctly.
-- **File/directory bocs**: The directory-as-boc and file-as-boc levels are not yet implemented at all. This design unification is a prerequisite for them making semantic sense.
-
-## Relation to Existing Open Items
-
-This work touches or resolves several items in `task.md`:
-
-- **"Top-level boc callable as function"** — subcase of the uniformity problem
-- **"SWMR write semantics"** — still deferred; this work doesn't address actor queues, only struct emission
-- **"Standalone thunk calls inside closure bodies not forced"** — the lowerClosureBody path cleanup in Pass 3 would be the right time to fix this
+- **Go local type restriction**: Go does not allow methods on locally-declared types. All boc structs must be lifted to package level. FQN-based naming avoids collisions.
+- **Uppercase outer boc + lowercase inner boc**: `Foo: { bar: { count: 0 } }` — `bar` is a per-`Foo`-instance singleton. `_foo_barBoc` must be instantiated inside `NewFoo()`, not as a package-level var. This is the main structural difference from top-level singletons.
+- **Calling the boc itself**: `counter()` vs `counter.increment()` — the generated `Call()` method runs the full body and reinitializes fields. This is correct by design but has no golden test yet. The current struct model just doesn't generate `Call()` at all.
+- **BocWithSig field persistence**: `countdown(3)` should leave `countdown.n == 3` after the call. The current Go-function lowering loses this. Test coverage for this semantic does not yet exist.
+- **Actor queue / SWMR**: concurrent calls to the same singleton from different goroutines currently race on struct fields. This is a known deferred issue — struct emission can land without fixing it.
 
 ## What NOT to Change Yet
 
-- **Directory and file bocs** — defer until the in-file nesting case works correctly first
-- **Actor queue / SWMR** — separate concern; struct emission can land without it
+- **Directory and file bocs** — defer until in-file nesting works correctly
+- **Actor queue** — separate concern; struct emission lands first
+- **HOF callback semantics** — resolve the design question before touching goldens 27/34/05
 - **FQN cross-file references to nested bocs** — defer until single-file case is solid
+- **BocWithSig field persistence tests** — add golden tests for `foo.a` access after call once struct model is in place
