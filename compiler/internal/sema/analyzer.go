@@ -298,24 +298,59 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 	return TypUnit
 }
 
+// hasInnerBocsOrMethods reports whether a boc literal contains any inner
+// body-form bocs (ShortDecl with BocLiteral value) or BocWithSig methods.
+// These require StructType recording for correct field-access type-checking.
+func hasInnerBocsOrMethods(bocLit *ast.BocLiteral) bool {
+	for _, elem := range bocLit.Elements {
+		switch e := elem.(type) {
+		case *ast.BocWithSig:
+			if e.Body != nil {
+				return true
+			}
+		case *ast.ShortDecl:
+			if len(e.Values) == 1 {
+				if _, ok := e.Values[0].(*ast.BocLiteral); ok {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // analyzeBocDecl handles `name: { ... }` for both lowercase (boc) and
 // uppercase (struct type) names.
 func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl ast.Node) Type {
 	fqn := a.currentFQN(name.Name)
 	prevFQN := a.pushFQN(name.Name)
 
+	isLower := name.TokType != token.TYPE_IDENT && name.TokType != token.GENERIC_IDENT
+	hasStructure := isLower && hasInnerBocsOrMethods(bocLit)
+
 	// For lowercase boc definitions, pre-register the symbol in the current
 	// (outer) scope before pushing the inner body scope, so that recursive
 	// self-calls inside the body can resolve the boc's own name via the
 	// parent scope chain.
-	if name.TokType != token.TYPE_IDENT && name.TokType != token.GENERIC_IDENT {
-		preParams := a.collectParams(bocLit.Elements)
-		a.define(&Symbol{
-			Name: name.Name,
-			Type: &BocType{Params: preParams, Returns: []Type{TypUnit}},
-			FQN:  fqn,
-			Node: decl,
-		})
+	if isLower {
+		if hasStructure {
+			// Pre-register with an approximate StructType (no fields yet — they're
+			// not analyzed until the body scope is entered below).
+			a.define(&Symbol{
+				Name: name.Name,
+				Type: &StructType{Name: name.Name, IsSingleton: true, Returns: []Type{TypUnit}},
+				FQN:  fqn,
+				Node: decl,
+			})
+		} else {
+			preParams := a.collectParams(bocLit.Elements)
+			a.define(&Symbol{
+				Name: name.Name,
+				Type: &BocType{Params: preParams, Returns: []Type{TypUnit}},
+				FQN:  fqn,
+				Node: decl,
+			})
+		}
 	}
 
 	prev := a.pushScope()
@@ -323,10 +358,21 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 	var typ Type
 	if name.TokType == token.TYPE_IDENT || name.TokType == token.GENERIC_IDENT {
 		// Uppercase (multi-char TYPE_IDENT or single-letter GENERIC_IDENT): struct type definition.
-		st := a.analyzeStructBoc(name.Name, bocLit)
+		st, _ := a.analyzeStructBoc(name.Name, bocLit)
+		typ = st
+	} else if hasStructure {
+		// Lowercase with inner bocs or methods: use analyzeStructBoc for correct
+		// field recording and FQN-aware analysis. The returned lastExprTypes give
+		// the call return type (what `counter()` produces).
+		st, returns := a.analyzeStructBoc(name.Name, bocLit)
+		if len(returns) == 0 {
+			returns = []Type{TypUnit}
+		}
+		st.IsSingleton = true
+		st.Returns = returns
 		typ = st
 	} else {
-		// Lowercase: boc definition.
+		// Simple lowercase boc (no inner structure): original BocType path.
 		bt := a.analyzeBocBody(bocLit.Elements)
 		params := a.collectParams(bocLit.Elements)
 		returns := bt
@@ -705,9 +751,14 @@ func (a *Analyzer) analyzeBocBody(elements []ast.Node) []Type {
 // Struct type analysis (uppercase boc)
 // ---------------------------------------------------------------------------
 
-func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType {
+// analyzeStructBoc analyzes a boc literal as a struct type, returning the
+// struct type and the last-expression types (body return types).
+// It is used for both uppercase struct declarations and lowercase singleton
+// bocs that have inner structure (inner bocs or BocWithSig methods).
+func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType, []Type) {
 	st := &StructType{Name: name}
 	fieldSet := make(map[string]bool)
+	var lastExprTypes []Type
 
 	// Pre-scan: detect whether this is a generic struct so we can activate
 	// constraint collection before processing method bodies.
@@ -736,24 +787,30 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 			}
 			fieldSet[e.Name.Name] = true
 			st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: typ})
+			lastExprTypes = nil
 
 		case *ast.ShortDecl:
-			for i, n := range e.Names {
-				var typ Type
-				if i < len(e.Values) {
-					typ = a.analyzeExpr(e.Values[i])
+			// Use analyzeShortDecl so inner body-form bocs get proper setType()
+			// registration (needed by lowerMethod to query ExprType on ShortDecl).
+			a.analyzeShortDecl(e)
+			// Collect the resulting field(s) into the struct.
+			for _, n := range e.Names {
+				sym := a.currentScope.LookupLocal(n.Name)
+				if sym == nil {
+					continue
 				}
 				if fieldSet[n.Name] {
 					a.errorf(e.Pos, "duplicate field %q in %s", n.Name, name)
 					continue
 				}
 				fieldSet[n.Name] = true
-				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: typ})
-				a.currentScope.Define(&Symbol{Name: n.Name, Type: typ, Node: e})
+				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: sym.Type})
 			}
+			lastExprTypes = nil
 
 		case *ast.MixStmt:
 			a.applyMix(e, st, fieldSet, name)
+			lastExprTypes = nil
 
 		case *ast.Ident:
 			// Generic type param declaration (T, E inside type boc body).
@@ -763,6 +820,7 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 			}
 			gt := &GenericType{Name: e.Name}
 			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
+			lastExprTypes = nil
 
 		case *ast.BocWithSig:
 			// Set the constraint attribution context before analyzing the method body
@@ -775,6 +833,7 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 				fieldSet[e.Name.Name] = true
 				st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: typ})
 			}
+			lastExprTypes = nil
 
 		case *ast.VariantDef:
 			vc := a.collectVariantCase(e)
@@ -788,9 +847,18 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 					a.currentScope.Define(&Symbol{Name: f.Name, Type: f.Type})
 				}
 			}
+			lastExprTypes = nil
 
 		default:
-			a.analyzeNode(elem)
+			// Expressions and other nodes — track last expression type for return type inference.
+			t := a.analyzeNode(elem)
+			if _, ok := elem.(ast.Expr); ok {
+				lastExprTypes = []Type{t}
+			} else if _, ok2 := elem.(*ast.ReturnStmt); ok2 {
+				lastExprTypes = []Type{t}
+			} else {
+				lastExprTypes = nil
+			}
 		}
 	}
 
@@ -803,7 +871,7 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) *StructType 
 		a.activeContext = prevContext
 	}
 
-	return st
+	return st, lastExprTypes
 }
 
 // collectVariantCase resolves a VariantDef into a VariantCase for the parent struct.
@@ -1006,8 +1074,14 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 			return Unknown // multi-return
 		}
 	case *StructType:
-		// At a generic struct constructor call, verify that the concrete type(s)
-		// bound to each type param satisfy all inferred constraints.
+		if bt.IsSingleton {
+			// Calling a singleton boc runs the body; return type is the body's last expr.
+			if len(bt.Returns) > 0 {
+				return bt.Returns[0]
+			}
+			return TypUnit
+		}
+		// Uppercase constructor call: verify generic constraints, return the struct type.
 		if len(bt.TypeParams) > 0 && len(bt.TypeConstraints) > 0 {
 			a.checkGenericConstraints(c.Callee.Position(), bt, argTypes)
 		}

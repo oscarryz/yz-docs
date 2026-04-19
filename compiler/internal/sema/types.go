@@ -156,6 +156,9 @@ type VariantCase struct {
 // IsInterface is set for type-only declarations (`Name #(methods...)`) where all
 // params are BocTypes — these generate Go interfaces, not structs.
 // IsVariant is set for sum types: `Pet: { Cat(...), Dog(...) }`.
+// IsSingleton is set for lowercase body-form bocs that have inner structure
+// (inner bocs or BocWithSig methods). These are singletons, not constructor types.
+// Returns holds the body's last-expression types for singleton bocs (the call return type).
 // TypeParams holds formal type parameter names for generic types (e.g., ["V"] for Option[V]).
 // TypeConstraints maps each type param to the methods inferred as required on it.
 type StructType struct {
@@ -163,6 +166,8 @@ type StructType struct {
 	Fields          []StructField                   // in declaration order (merged across all variants)
 	IsInterface     bool                            // true when declared as Name #(boc-params...) with no body
 	IsVariant       bool                            // true for sum/variant types
+	IsSingleton     bool                            // true for lowercase bocs with inner structure
+	Returns         []Type                          // body return types (only when IsSingleton=true)
 	Variants        []VariantCase                   // variant constructors (only when IsVariant=true)
 	TypeParams      []string                        // formal type parameter names (non-nil for generic types)
 	TypeConstraints map[string][]*GenericConstraint // typeParam → inferred method requirements

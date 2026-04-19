@@ -470,9 +470,17 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 	}
 
 	// Infer return type from the provided sema type (set on the ShortDecl node).
+	// May be BocType (simple inner boc) or StructType{IsSingleton:true} (inner boc with structure).
 	resultType := "std.Unit"
-	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
-		resultType = l.goType(bt.Returns[0])
+	switch st := semType.(type) {
+	case *sema.BocType:
+		if len(st.Returns) > 0 {
+			resultType = l.goType(st.Returns[0])
+		}
+	case *sema.StructType:
+		if len(st.Returns) > 0 {
+			resultType = l.goType(st.Returns[0])
+		}
 	}
 	thunkResult := "*std.Thunk[" + resultType + "]"
 
@@ -1089,10 +1097,18 @@ func (l *lowerer) lowerLocalBWS(bws *ast.BocWithSig) []Stmt {
 // inside main or a method body as a package-level struct with a Call() method.
 func (l *lowerer) lowerLocalBodyBoc(name string, bocLit *ast.BocLiteral, decl ast.Node) []Stmt {
 	// Determine return type from the sema type on the declaration node.
+	// The type may be BocType (simple boc) or StructType{IsSingleton:true} (boc with inner structure).
 	var resultType string
 	semType := l.analyzer.ExprType(decl)
-	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
-		resultType = l.goType(bt.Returns[0])
+	switch st := semType.(type) {
+	case *sema.BocType:
+		if len(st.Returns) > 0 {
+			resultType = l.goType(st.Returns[0])
+		}
+	case *sema.StructType:
+		if len(st.Returns) > 0 {
+			resultType = l.goType(st.Returns[0])
+		}
 	}
 	if resultType == "" {
 		resultType = "std.Unit"
@@ -1236,9 +1252,17 @@ func (l *lowerer) lowerName(name string) Expr {
 		return &FieldAccess{Object: &Ident{Name: l.recvName}, Field: name}
 	}
 	// Capitalize singleton boc var references, but NOT BocWithSig functions.
+	// Singletons may be BocType (simple body boc) or StructType{IsSingleton:true}
+	// (body boc with inner structure, after Pass 1 sema change).
 	sym := l.analyzer.LookupInFile(name)
 	if sym != nil {
+		isSingleton := false
 		if _, isBoc := sym.Type.(*sema.BocType); isBoc {
+			isSingleton = true
+		} else if st, isStruct := sym.Type.(*sema.StructType); isStruct && st.IsSingleton {
+			isSingleton = true
+		}
+		if isSingleton {
 			if _, isBWS := sym.Node.(*ast.BocWithSig); !isBWS {
 				return &Ident{Name: capitalize(name)}
 			}
@@ -1635,8 +1659,13 @@ func (l *lowerer) isSingletonBoc(expr Expr) bool {
 	if sym == nil {
 		return false
 	}
-	_, isBoc := sym.Type.(*sema.BocType)
-	return isBoc
+	if _, isBoc := sym.Type.(*sema.BocType); isBoc {
+		return true
+	}
+	if st, isStruct := sym.Type.(*sema.StructType); isStruct && st.IsSingleton {
+		return true
+	}
+	return false
 }
 
 // tryLowerWhile detects a while({cond},{body}) call and lowers it to a
