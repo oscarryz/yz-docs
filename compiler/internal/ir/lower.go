@@ -18,7 +18,12 @@ import (
 // Lower converts an analyzed source file into an IR File.
 // pkgName is the Go package name to emit (usually "main" for the entry file).
 func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
-	l := &lowerer{analyzer: a, thunkVars: make(map[string]bool), localBocVars: make(map[string]bool)}
+	l := &lowerer{
+		analyzer:         a,
+		thunkVars:        make(map[string]bool),
+		localBocVars:     make(map[string]bool),
+		localBodyBocVars: make(map[string]string),
+	}
 	return l.lowerFile(sf, pkgName)
 }
 
@@ -45,6 +50,20 @@ type lowerer struct {
 	// foo() must NOT be wrapped in an extra ThunkExpr — just emit foo()
 	// directly and let the caller force it.
 	localBocVars map[string]bool
+
+	// localBodyBocVars maps a local body-form boc Yz name (e.g. "f") to the
+	// Go variable name holding its instance (e.g. "_f"). These bocs are
+	// lifted to package-level structs; calls go through their Call() method.
+	localBodyBocVars map[string]string
+
+	// selfBocName is the Yz name of the local body boc whose Call() body is
+	// currently being lowered. Recursive calls to this name inside the body
+	// are emitted as self.Call(args) rather than _f.Call(args).
+	selfBocName string
+
+	// contextName is the name of the enclosing function/boc (e.g. "main").
+	// Used to generate unique FQN-based struct names for lifted local bocs.
+	contextName string
 }
 
 // ---------------------------------------------------------------------------
@@ -774,6 +793,9 @@ func (l *lowerer) lowerVariantBoc(name string, b *ast.BocLiteral) *StructDecl {
 
 func (l *lowerer) lowerMainBoc(b *ast.BocLiteral) *FuncDecl {
 	fn := &FuncDecl{Name: "main"}
+	prevCtx := l.contextName
+	l.contextName = "main"
+	defer func() { l.contextName = prevCtx }()
 
 	// Process statements in order, flushing concurrent boc-call groups
 	// whenever a non-boc statement appears. This preserves ordering so that
@@ -817,6 +839,10 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 	switch e := node.(type) {
 	case *ast.BocWithSig:
 		// Local boc variable: `foo #(String) { "hello" }` or `foo #(String) = { "hello" }`.
+		// Lift to a package-level struct with a Call() method.
+		if e.Body != nil && !isUppercase(e.Name.Name) {
+			return l.lowerLocalBWS(e)
+		}
 		return l.lowerBocWithSigAsLocal(e)
 	case *ast.TypedDecl:
 		if e.Value == nil {
@@ -833,6 +859,12 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		typ := l.goTypeFromTypeExpr(e.Type)
 		return []Stmt{&DeclStmt{Name: e.Name.Name, Type: typ, Init: expr}}
 	case *ast.ShortDecl:
+		// Check for local body-form boc: `f: { n Int; body }` — lift to struct.
+		if len(e.Names) == 1 && len(e.Values) == 1 {
+			if bocLit, ok := e.Values[0].(*ast.BocLiteral); ok && !isUppercase(e.Names[0].Name) {
+				return l.lowerLocalBodyBoc(e.Names[0].Name, bocLit, e)
+			}
+		}
 		var stmts []Stmt
 		for i, n := range e.Names {
 			var initExpr Expr
@@ -1019,6 +1051,115 @@ func (l *lowerer) lowerBocWithSigAsLocal(bws *ast.BocWithSig) []Stmt {
 	l.localBocVars[bws.Name.Name] = true
 	init := &ClosureExpr{Params: params, ResultType: thunkResult, Body: closureBody}
 	return []Stmt{&DeclStmt{Name: bws.Name.Name, Type: "", Init: init}}
+}
+
+// lowerLocalBWS lifts a BocWithSig that appears inside a boc body (main or
+// a method) as a package-level struct with a Call() method.  This replaces
+// the old closure-literal approach and gives every local boc a proper struct,
+// matching the "everything is a boc" design.
+func (l *lowerer) lowerLocalBWS(bws *ast.BocWithSig) []Stmt {
+	if bws.Body == nil {
+		return nil
+	}
+	bocSemType := l.analyzer.ExprType(bws)
+	bt, _ := bocSemType.(*sema.BocType)
+	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
+
+	// Collect method params from sig (shorthand) or body leading TypedDecls (body-only).
+	var methodParams []*ParamSpec
+	if bws.BodyOnly && bws.Body != nil {
+		for _, elem := range bws.Body.Elements {
+			td, ok := elem.(*ast.TypedDecl)
+			if !ok || td.Value != nil {
+				break
+			}
+			methodParams = append(methodParams, &ParamSpec{
+				Name: td.Name.Name,
+				Type: l.goTypeFromTypeExpr(td.Type),
+			})
+		}
+	} else {
+		methodParams = l.sigParams(bws.Sig, bt)
+	}
+
+	return l.liftLocalBoc(bws.Name.Name, methodParams, resultType, bws.Body)
+}
+
+// lowerLocalBodyBoc lifts a body-form boc (`f: { n Int; body }`) that appears
+// inside main or a method body as a package-level struct with a Call() method.
+func (l *lowerer) lowerLocalBodyBoc(name string, bocLit *ast.BocLiteral, decl ast.Node) []Stmt {
+	// Determine return type from the sema type on the declaration node.
+	var resultType string
+	semType := l.analyzer.ExprType(decl)
+	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
+		resultType = l.goType(bt.Returns[0])
+	}
+	if resultType == "" {
+		resultType = "std.Unit"
+	}
+
+	// Collect method params from TypedDecls with nil value.
+	var methodParams []*ParamSpec
+	for _, elem := range bocLit.Elements {
+		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+			methodParams = append(methodParams, &ParamSpec{
+				Name: td.Name.Name,
+				Type: l.goTypeFromTypeExpr(td.Type),
+			})
+		}
+	}
+
+	return l.liftLocalBoc(name, methodParams, resultType, bocLit)
+}
+
+// liftLocalBoc is the shared implementation: given a name, method params,
+// return type, and body literal, it lifts the boc to a package-level struct
+// with a Call(params) method and returns the local instance declaration.
+func (l *lowerer) liftLocalBoc(name string, methodParams []*ParamSpec, resultType string, body *ast.BocLiteral) []Stmt {
+	ctx := l.contextName
+	if ctx == "" {
+		ctx = "local"
+	}
+	structName := "_" + ctx + "_" + name + "Boc"
+	varName := "_" + name
+
+	// Register the boc BEFORE lowering the body so recursive self-calls inside
+	// the body can resolve the name via localBodyBocVars.
+	l.localBodyBocVars[name] = varName
+
+	// Lower the body with receiver context so self.Call(args) is emitted for
+	// recursive calls inside the body.
+	prevSelf := l.selfBocName
+	l.selfBocName = name
+	prev := l.setReceiver("self", map[string]bool{})
+	bodyStmts := l.lowerBocBody(body, resultType)
+	l.restoreReceiver(prev)
+	l.selfBocName = prevSelf
+
+	// Build the Call() method.
+	callMethod := &MethodDecl{
+		RecvType: "*" + structName,
+		RecvName: "self",
+		Name:     "Call",
+		Params:   methodParams,
+		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Body:     bodyStmts,
+	}
+
+	// Emit the struct + method at package level (no package-level singleton var).
+	sd := &SingletonDecl{
+		TypeName: structName,
+		VarName:  "", // local instance only — no package-level var
+		Methods:  []*MethodDecl{callMethod},
+	}
+	l.irFile.Decls = append(l.irFile.Decls, sd)
+
+	// Return the local instance declaration: _f := &_main_fBoc{}
+	return []Stmt{&DeclStmt{
+		Name: varName,
+		Type: "",
+		Init: &NewStructExpr{TypeName: structName},
+	}}
 }
 
 // ---------------------------------------------------------------------------
@@ -1398,6 +1539,16 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		if l.localBocVars[id.Name] {
 			return &FuncCall{Func: callee, Args: args}
 		}
+		// Local body-form boc call: f(3) → _f.Call(args).
+		// Inside the boc's own Call() body, recursive self-calls use self.Call(args).
+		if varName, isBodyBoc := l.localBodyBocVars[id.Name]; isBodyBoc {
+			recv := &Ident{Name: varName}
+			if l.selfBocName == id.Name && l.recvName != "" {
+				// Recursive self-call inside Call() body → self.Call(args)
+				recv = &Ident{Name: l.recvName}
+			}
+			return &MethodCall{Recv: recv, Method: "Call", Args: args}
+		}
 	}
 
 	// Other boc identifier calls — goroutine-launched thunks.
@@ -1457,6 +1608,10 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	// Direct BocWithSig call: greet("Alice")
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		if l.localBocVars[id.Name] {
+			return true
+		}
+		// Local body-form boc call: f(3) where f is lifted to a struct.
+		if _, isBodyBoc := l.localBodyBocVars[id.Name]; isBodyBoc {
 			return true
 		}
 		sym := l.analyzer.LookupInFile(id.Name)
