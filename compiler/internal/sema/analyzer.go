@@ -303,6 +303,21 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl ast.Node) Type {
 	fqn := a.currentFQN(name.Name)
 	prevFQN := a.pushFQN(name.Name)
+
+	// For lowercase boc definitions, pre-register the symbol in the current
+	// (outer) scope before pushing the inner body scope, so that recursive
+	// self-calls inside the body can resolve the boc's own name via the
+	// parent scope chain.
+	if name.TokType != token.TYPE_IDENT && name.TokType != token.GENERIC_IDENT {
+		preParams := a.collectParams(bocLit.Elements)
+		a.define(&Symbol{
+			Name: name.Name,
+			Type: &BocType{Params: preParams, Returns: []Type{TypUnit}},
+			FQN:  fqn,
+			Node: decl,
+		})
+	}
+
 	prev := a.pushScope()
 
 	var typ Type
