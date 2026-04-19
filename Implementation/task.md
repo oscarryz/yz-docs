@@ -98,7 +98,7 @@ See full analysis in [`boc_uniformity.md`](boc_uniformity.md).
 
 The compiler currently has three separate lowering paths for bocs depending on where they appear (file-scope, BocWithSig, local/nested). The intended design is one uniform construct: a boc is a boc regardless of nesting depth. Local bocs should produce the same struct+method+concurrency output as file-scope bocs.
 
-- [ ] **Pass 1 — Sema: uniform type recording for nested bocs** — `analyzeBocDecl` should produce a `StructType` (not just `BocType`) for lowercase local bocs that contain inner bocs or BocWithSig methods; FQN registration should mirror file-scope behavior.
+- [x] **Pass 1 — Sema: uniform type recording for nested bocs** — `analyzeBocDecl` produces `StructType{IsSingleton:true}` for lowercase bocs with inner structure; `analyzeStructBoc` returns return types; `lowerName` and `isSingletonBoc` accept singleton StructType; `TestSingletonBocFieldAccess` confirms field access from outside boc body resolves correctly.
 
 - [x] **Pass 2 — Lowerer: lift nested boc structs to package level** — `liftLocalBoc` unified handler in `lower.go`: detects body-form bocs (`f: { n Int; ... }`) and BocWithSig bocs (`foo #(String) { ... }`) inside `main`; emits `_main_fBoc` struct + `Call(params)` method at package level; emits `_f := &_main_fBoc{}` local instance; recursive self-calls inside `Call()` emit `self.Call(args)`. Goldens 37 and 39 updated: struct + BocGroup for body-form, struct + forced call for BocWithSig.
 
