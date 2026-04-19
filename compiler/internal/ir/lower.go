@@ -1807,7 +1807,13 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
 			} else {
-				stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
+				expr := l.lowerExpr(e)
+				// BocWithSig / boc method calls return *Thunk[T]; force them so
+				// the call completes before the enclosing body continues.
+				if l.isBocMethodCall(e) {
+					expr = &ForceExpr{Thunk: expr}
+				}
+				stmts = append(stmts, &ExprStmt{Expr: expr})
 			}
 		}
 	}
