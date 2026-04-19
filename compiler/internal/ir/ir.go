@@ -203,21 +203,22 @@ type SwitchCase struct {
 // Expr is any IR expression.
 type Expr interface{ irExpr() }
 
-func (*IntLit) irExpr()      {}
-func (*DecimalLit) irExpr()  {}
-func (*StringLit) irExpr()   {}
-func (*BoolLit) irExpr()     {}
-func (*UnitLit) irExpr()     {}
-func (*Ident) irExpr()       {}
-func (*MethodCall) irExpr()  {}
-func (*FuncCall) irExpr()    {}
-func (*FieldAccess) irExpr() {}
-func (*IndexExpr) irExpr()   {}
-func (*ThunkExpr) irExpr()   {}
-func (*ForceExpr) irExpr()   {}
-func (*ClosureExpr) irExpr() {}
-func (*SpawnExpr) irExpr()   {}
-func (*NewGroupExpr) irExpr(){}
+func (*IntLit) irExpr()       {}
+func (*DecimalLit) irExpr()   {}
+func (*StringLit) irExpr()    {}
+func (*BoolLit) irExpr()      {}
+func (*UnitLit) irExpr()      {}
+func (*Ident) irExpr()        {}
+func (*MethodCall) irExpr()   {}
+func (*FuncCall) irExpr()     {}
+func (*FieldAccess) irExpr()  {}
+func (*IndexExpr) irExpr()    {}
+func (*ThunkExpr) irExpr()    {}
+func (*ForceExpr) irExpr()    {}
+func (*ClosureExpr) irExpr()  {}
+func (*SpawnExpr) irExpr()    {}
+func (*NewGroupExpr) irExpr() {}
+func (*NewStructExpr) irExpr(){}
 func (*MatchExpr) irExpr()    {}
 func (*SwitchExpr) irExpr()   {}
 
@@ -287,6 +288,12 @@ type SpawnExpr struct {
 
 // NewGroupExpr creates a new BocGroup: &std.BocGroup{}.
 type NewGroupExpr struct{}
+
+// NewStructExpr creates a new struct instance: &TypeName{}.
+// Used for local boc instance declarations: _f := &_main_fBoc{}.
+type NewStructExpr struct {
+	TypeName string
+}
 
 // MatchExpr is a condition match lowered to an immediately-invoked closure
 // (IIFE) for expression position. Use tryLowerMatch to emit as an IfStmt

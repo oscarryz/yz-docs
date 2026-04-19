@@ -183,17 +183,20 @@ func (g *generator) emitSingletonDecl(sd *ir.SingletonDecl) {
 		g.nl()
 	}
 
-	// Package-level singleton var.
-	if len(sd.Fields) > 0 {
-		g.writef("var %s = &%s{\n", sd.VarName, sd.TypeName)
-		for _, f := range sd.Fields {
-			if f.Init != nil {
-				g.writef("\t%s: %s,\n", f.Name, g.expr(f.Init))
+	// Package-level singleton var (only emitted when VarName is non-empty;
+	// local boc structs lifted to package level have VarName == "").
+	if sd.VarName != "" {
+		if len(sd.Fields) > 0 {
+			g.writef("var %s = &%s{\n", sd.VarName, sd.TypeName)
+			for _, f := range sd.Fields {
+				if f.Init != nil {
+					g.writef("\t%s: %s,\n", f.Name, g.expr(f.Init))
+				}
 			}
+			g.write("}\n")
+		} else {
+			g.writef("var %s = &%s{}\n", sd.VarName, sd.TypeName)
 		}
-		g.write("}\n")
-	} else {
-		g.writef("var %s = &%s{}\n", sd.VarName, sd.TypeName)
 	}
 }
 
@@ -324,6 +327,8 @@ func (g *generator) expr(e ir.Expr) string {
 		return g.emitSpawn(ex)
 	case *ir.NewGroupExpr:
 		return "&std.BocGroup{}"
+	case *ir.NewStructExpr:
+		return "&" + ex.TypeName + "{}"
 	case *ir.MatchExpr:
 		return g.emitMatchIIFE(ex)
 	case *ir.SwitchExpr:
