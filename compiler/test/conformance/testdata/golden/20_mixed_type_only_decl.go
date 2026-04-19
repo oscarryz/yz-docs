@@ -18,5 +18,17 @@ func (self *Named) Greet() *std.Thunk[std.Unit] {
 	return self.greet()
 }
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
+	Main.Call().Force()
 }

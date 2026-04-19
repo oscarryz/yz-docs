@@ -2,12 +2,24 @@ package main
 
 import std "yz/runtime/yzrt"
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
+		doubled := std.ArrayMap(list, func(item std.Int) std.Int {
+			return item.Star(std.NewInt(2))
+		})
+		doubled.Each(func(item std.Int) std.Unit {
+			return std.Print(item)
+		})
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
-	doubled := std.ArrayMap(list, func(item std.Int) std.Int {
-		return item.Star(std.NewInt(2))
-	})
-	doubled.Each(func(item std.Int) std.Unit {
-		return std.Print(item)
-	})
+	Main.Call().Force()
 }

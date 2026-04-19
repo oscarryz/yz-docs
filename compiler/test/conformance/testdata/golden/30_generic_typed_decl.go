@@ -12,9 +12,21 @@ func NewBox[T any](value T) *Box[T] {
 	}
 }
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		b := NewBox(std.NewInt(42))
+		var s *Box[std.String] = NewBox(std.NewString("hello"))
+		std.Print(b.value)
+		std.Print(s.value)
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	b := NewBox(std.NewInt(42))
-	var s *Box[std.String] = NewBox(std.NewString("hello"))
-	std.Print(b.value)
-	std.Print(s.value)
+	Main.Call().Force()
 }

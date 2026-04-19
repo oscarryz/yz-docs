@@ -18,7 +18,19 @@ func (self *Wrapper[T]) Describe() *std.Thunk[std.String] {
 	})
 }
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		w := NewWrapper(std.NewString("hello"))
+		std.Print(w.Describe().Force())
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	w := NewWrapper(std.NewString("hello"))
-	std.Print(w.Describe().Force())
+	Main.Call().Force()
 }

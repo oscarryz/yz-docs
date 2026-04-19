@@ -28,12 +28,24 @@ func NewOptionNone[V any]() *Option[V] {
 }
 
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		x := NewOptionSome(std.NewString("hello"))
+		switch x._variant {
+		case _OptionSome:
+			std.Print(x.value)
+		case _OptionNone:
+			std.Print(std.NewString("nothing"))
+		}
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	x := NewOptionSome(std.NewString("hello"))
-	switch x._variant {
-	case _OptionSome:
-		std.Print(x.value)
-	case _OptionNone:
-		std.Print(std.NewString("nothing"))
-	}
+	Main.Call().Force()
 }

@@ -116,15 +116,18 @@ func TestGenerateDecimalLit(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGenerateSingletonStructType(t *testing.T) {
+	// counter: { count: 0 } — body-only singleton (no inner methods → BocType from sema).
+	// Under boc uniformity: count is a local var inside Call(), not a struct field.
 	got := gen(t, `counter: {
     count: 0
 }`)
 	contains(t, got,
 		"type _counterBoc struct",
-		"count std.Int",
-		"var Counter = &_counterBoc{",
-		"count: std.NewInt(0)",
+		"var Counter = &_counterBoc{}",
+		"func (self *_counterBoc) Call()",
+		"var count std.Int = std.NewInt(0)",
 	)
+	notContains(t, got, "count: std.NewInt(0)") // count is NOT initialized as struct field
 }
 
 // ---------------------------------------------------------------------------
@@ -189,11 +192,14 @@ func TestGenerateStructDecl(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGenerateMainFunc(t *testing.T) {
+	// After boc uniformity: main is a singleton with Call() + a func main() shim.
 	got := gen(t, `main: {
     x: 42
 }`)
 	contains(t, got, "func main()")
-	notContains(t, got, "type _mainBoc")
+	contains(t, got, "type _mainBoc")
+	contains(t, got, "func (self *_mainBoc) Call()")
+	contains(t, got, "Main.Call().Force()")
 }
 
 // ---------------------------------------------------------------------------

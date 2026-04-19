@@ -8,7 +8,19 @@ func identity[V any](value V) *std.Thunk[V] {
 	})
 }
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		x := identity(std.NewString("hello"))
+		std.Print(x.Force())
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	x := identity(std.NewString("hello"))
-	std.Print(x.Force())
+	Main.Call().Force()
 }

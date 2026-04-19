@@ -2,12 +2,24 @@ package main
 
 import std "yz/runtime/yzrt"
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3), std.NewInt(10), std.NewInt(20))
+		var filtered std.Array[std.Int] = list.Filter(func(item std.Int) std.Bool {
+			return item.Gt(std.NewInt(10))
+		})
+		filtered.Each(func(item std.Int) std.Unit {
+			return std.Print(item)
+		})
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3), std.NewInt(10), std.NewInt(20))
-	var filtered std.Array[std.Int] = list.Filter(func(item std.Int) std.Bool {
-		return item.Gt(std.NewInt(10))
-	})
-	filtered.Each(func(item std.Int) std.Unit {
-		return std.Print(item)
-	})
+	Main.Call().Force()
 }

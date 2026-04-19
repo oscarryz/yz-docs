@@ -14,10 +14,22 @@ func countdown(n std.Int) *std.Thunk[std.Unit] {
 	})
 }
 
-func main() {
-	_bg0 := &std.BocGroup{}
-	_bg0.Go(func() any {
-		return countdown(std.NewInt(3)).Force()
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		_bg0 := &std.BocGroup{}
+		_bg0.Go(func() any {
+			return countdown(std.NewInt(3)).Force()
+		})
+		_bg0.Wait()
+		return std.TheUnit
 	})
-	_bg0.Wait()
+}
+
+var Main = &_mainBoc{}
+
+func main() {
+	Main.Call().Force()
 }

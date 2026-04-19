@@ -12,7 +12,19 @@ func NewBox[T any](value T) *Box[T] {
 	}
 }
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		b := NewBox(std.NewInt(42))
+		std.Print(b.value)
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	b := NewBox(std.NewInt(42))
-	std.Print(b.value)
+	Main.Call().Force()
 }
