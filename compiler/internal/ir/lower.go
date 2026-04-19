@@ -61,6 +61,12 @@ type lowerer struct {
 	// are emitted as self.Call(args) rather than _f.Call(args).
 	selfBocName string
 
+	// recvMethods tracks method names on the current receiver singleton that
+	// can be called unqualified from inside a Call() body (e.g. foo() → self.Foo()).
+	// Unlike recvFields (data fields accessed as self.field), these are boc methods
+	// that return *Thunk[T] and need special handling in lowerCall / isBocMethodCall.
+	recvMethods map[string]bool
+
 	// contextName is the name of the enclosing function/boc (e.g. "main").
 	// Used to generate unique FQN-based struct names for lifted local bocs.
 	contextName string
@@ -73,10 +79,34 @@ type lowerer struct {
 func (l *lowerer) lowerFile(sf *ast.SourceFile, pkgName string) *File {
 	f := &File{PkgName: pkgName}
 	l.irFile = f
+	hasMain := false
 	for _, node := range sf.Stmts {
 		if d := l.lowerTopLevel(node); d != nil {
 			f.Decls = append(f.Decls, d)
 		}
+		if sd, ok := node.(*ast.ShortDecl); ok && len(sd.Names) == 1 && sd.Names[0].Name == "main" {
+			if len(sd.Values) == 1 {
+				if _, isBoc := sd.Values[0].(*ast.BocLiteral); isBoc {
+					hasMain = true
+				}
+			}
+		}
+	}
+	if hasMain {
+		// Emit the entry-point shim: func main() { Main.Call().Force() }
+		f.Decls = append(f.Decls, &FuncDecl{
+			Name: "main",
+			Body: []Stmt{
+				&ExprStmt{
+					Expr: &ForceExpr{
+						Thunk: &FuncCall{
+							Func: &FieldAccess{Object: &Ident{Name: "Main"}, Field: "Call"},
+							Args: nil,
+						},
+					},
+				},
+			},
+		})
 	}
 	return f
 }
@@ -344,9 +374,6 @@ func (l *lowerer) lowerTopShortDecl(d *ast.ShortDecl) Decl {
 	if isUppercase(name.Name) {
 		return l.lowerStructBoc(name.Name, bocLit)
 	}
-	if name.Name == "main" {
-		return l.lowerMainBoc(bocLit)
-	}
 	return l.lowerSingletonBoc(name.Name, bocLit)
 }
 
@@ -366,12 +393,104 @@ func (l *lowerer) lowerSimpleTopDecl(name string, val ast.Expr) Decl {
 // Singleton boc
 // ---------------------------------------------------------------------------
 
+// lowerSingletonBoc dispatches to either lowerBodyOnlySingleton (for pure
+// body-form bocs like main: { ... } whose sema type is BocType) or
+// lowerStructuredSingleton (for bocs that also have fields and inner methods,
+// whose sema type is StructType{IsSingleton:true}).
 func (l *lowerer) lowerSingletonBoc(name string, b *ast.BocLiteral) *SingletonDecl {
+	sym := l.analyzer.LookupInFile(name)
+	if sym != nil {
+		if _, isBoc := sym.Type.(*sema.BocType); isBoc {
+			return l.lowerBodyOnlySingleton(name, b)
+		}
+	}
+	return l.lowerStructuredSingleton(name, b)
+}
+
+// lowerBodyOnlySingleton lowers a pure body-form singleton boc (one whose
+// body is all statements with no fields or inner methods) into a struct with
+// a single Call() method.  Example: main: { print("hello") } becomes
+// type _mainBoc struct{} + func (self *_mainBoc) Call() *Thunk[Unit] + var Main.
+func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *SingletonDecl {
+	typeName := "_" + name + "Boc"
+	sd := &SingletonDecl{TypeName: typeName, VarName: capitalize(name)}
+
+	prevCtx := l.contextName
+	l.contextName = name
+	defer func() { l.contextName = prevCtx }()
+
+	innerStmts := l.lowerSingletonBodyStmts(b.Elements)
+	thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true}
+	callMethod := &MethodDecl{
+		RecvType: "*" + typeName,
+		RecvName: "self",
+		Name:     "Call",
+		Params:   nil,
+		Results:  []string{"*std.Thunk[std.Unit]"},
+		Body:     []Stmt{&ExprStmt{Expr: thunk}},
+	}
+	sd.Methods = append(sd.Methods, callMethod)
+	return sd
+}
+
+// lowerSingletonBodyStmts produces the inner statements for a body-only
+// singleton's Call() method body.  Consecutive boc method calls are batched
+// into BocGroups so they run concurrently and are joined before the next
+// statement (same semantics as the old lowerMainBoc).
+func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
+	var stmts []Stmt
+	var pendingBocCalls []ast.Expr
+	bgIdx := 0
+
+	flushGroup := func() {
+		if len(pendingBocCalls) == 0 {
+			return
+		}
+		bgVar := fmt.Sprintf("_bg%d", bgIdx)
+		bgIdx++
+		stmts = append(stmts, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
+		for _, call := range pendingBocCalls {
+			callExpr := l.lowerExpr(call)
+			stmts = append(stmts, &ExprStmt{
+				Expr: &SpawnExpr{
+					GroupVar: bgVar,
+					Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: callExpr}}},
+				},
+			})
+		}
+		stmts = append(stmts, &WaitStmt{GroupVar: bgVar})
+		pendingBocCalls = nil
+	}
+
+	for _, elem := range elems {
+		if expr, ok := elem.(ast.Expr); ok && l.isBocMethodCall(expr) {
+			pendingBocCalls = append(pendingBocCalls, expr)
+		} else {
+			flushGroup()
+			stmts = append(stmts, l.lowerMainStmt(elem)...)
+		}
+	}
+	flushGroup()
+
+	if len(stmts) == 0 || !isReturnStmt(stmts[len(stmts)-1]) {
+		stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
+	}
+	return stmts
+}
+
+func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *SingletonDecl {
 	typeName := "_" + name + "Boc"
 	sd := &SingletonDecl{TypeName: typeName, VarName: capitalize(name)}
 
 	// Collect field names so methods can detect field access.
 	fieldNames := l.collectFieldNames(b)
+
+	// Pre-scan: collect all method names before lowering any method body, so that
+	// recursive and cross-method calls can be resolved as self.Method() inside bodies.
+	methodNames := l.collectMethodNames(b)
+
+	// Collect statement elements (expressions, assignments) for the optional Call() method.
+	var stmtElems []ast.Node
 
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
@@ -381,7 +500,10 @@ func (l *lowerer) lowerSingletonBoc(name string, b *ast.BocLiteral) *SingletonDe
 				if isInnerBoc && !isUppercase(e.Names[0].Name) {
 					// Inner boc → method. The BocType is on the ShortDecl, not the BocLiteral.
 					bocSemType := l.analyzer.ExprType(e)
+					prevMethods := l.recvMethods
+					l.recvMethods = methodNames
 					m := l.lowerMethod(e.Names[0].Name, "*"+typeName, inner, fieldNames, bocSemType)
+					l.recvMethods = prevMethods
 					sd.Methods = append(sd.Methods, m)
 					continue
 				}
@@ -407,12 +529,69 @@ func (l *lowerer) lowerSingletonBoc(name string, b *ast.BocLiteral) *SingletonDe
 
 		case *ast.BocWithSig:
 			if e.Body != nil {
+				prevMethods := l.recvMethods
+				l.recvMethods = methodNames
 				m := l.lowerBocWithSigAsMethod(e, "*"+typeName, fieldNames)
+				l.recvMethods = prevMethods
 				sd.Methods = append(sd.Methods, m)
+			}
+
+		default:
+			// Statement element (expression, assignment, return) → goes into Call() body.
+			stmtElems = append(stmtElems, elem)
+		}
+	}
+
+	// If there are statement elements, generate a Call() method.
+	if len(stmtElems) > 0 {
+		prevCtx := l.contextName
+		l.contextName = name
+
+		prevMethods := l.recvMethods
+		l.recvMethods = methodNames
+
+		prev := l.setReceiver("self", fieldNames)
+		innerStmts := l.lowerSingletonBodyStmts(stmtElems)
+		l.restoreReceiver(prev)
+
+		l.recvMethods = prevMethods
+		l.contextName = prevCtx
+
+		thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true}
+		callMethod := &MethodDecl{
+			RecvType: "*" + typeName,
+			RecvName: "self",
+			Name:     "Call",
+			Params:   nil,
+			Results:  []string{"*std.Thunk[std.Unit]"},
+			Body:     []Stmt{&ExprStmt{Expr: thunk}},
+		}
+		sd.Methods = append(sd.Methods, callMethod)
+	}
+
+	return sd
+}
+
+// collectMethodNames returns the set of method names (ShortDecl+BocLiteral and BocWithSig
+// with body) in the boc literal. Used to resolve unqualified method calls inside
+// method bodies as self.Method().
+func (l *lowerer) collectMethodNames(b *ast.BocLiteral) map[string]bool {
+	methods := map[string]bool{}
+	for _, elem := range b.Elements {
+		switch e := elem.(type) {
+		case *ast.ShortDecl:
+			if len(e.Names) == 1 && len(e.Values) == 1 {
+				if _, isBoc := e.Values[0].(*ast.BocLiteral); isBoc && !isUppercase(e.Names[0].Name) {
+					methods[e.Names[0].Name] = true
+				}
+			}
+		case *ast.BocWithSig:
+			if e.Body != nil {
+				methods[e.Name.Name] = true
 			}
 		}
 	}
-	return sd
+	return methods
 }
 
 // collectFieldNames returns the set of field names (non-boc ShortDecls and TypedDecls
@@ -795,53 +974,6 @@ func (l *lowerer) lowerVariantBoc(name string, b *ast.BocLiteral) *StructDecl {
 	return sd
 }
 
-// ---------------------------------------------------------------------------
-// main boc → FuncDecl
-// ---------------------------------------------------------------------------
-
-func (l *lowerer) lowerMainBoc(b *ast.BocLiteral) *FuncDecl {
-	fn := &FuncDecl{Name: "main"}
-	prevCtx := l.contextName
-	l.contextName = "main"
-	defer func() { l.contextName = prevCtx }()
-
-	// Process statements in order, flushing concurrent boc-call groups
-	// whenever a non-boc statement appears. This preserves ordering so that
-	// local variables declared before a boc call are visible inside it.
-	var pendingBocCalls []ast.Expr
-	bgIdx := 0
-
-	flushGroup := func() {
-		if len(pendingBocCalls) == 0 {
-			return
-		}
-		bgVar := fmt.Sprintf("_bg%d", bgIdx)
-		bgIdx++
-		fn.Body = append(fn.Body, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
-		for _, call := range pendingBocCalls {
-			callExpr := l.lowerExpr(call)
-			fn.Body = append(fn.Body, &ExprStmt{
-				Expr: &SpawnExpr{
-					GroupVar: bgVar,
-					Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: callExpr}}},
-				},
-			})
-		}
-		fn.Body = append(fn.Body, &WaitStmt{GroupVar: bgVar})
-		pendingBocCalls = nil
-	}
-
-	for _, elem := range b.Elements {
-		if expr, ok := elem.(ast.Expr); ok && l.isBocMethodCall(expr) {
-			pendingBocCalls = append(pendingBocCalls, expr)
-		} else {
-			flushGroup()
-			fn.Body = append(fn.Body, l.lowerMainStmt(elem)...)
-		}
-	}
-	flushGroup()
-	return fn
-}
 
 func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 	switch e := node.(type) {
@@ -1573,6 +1705,11 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			}
 			return &MethodCall{Recv: recv, Method: "Call", Args: args}
 		}
+		// Unqualified call to a method on the current receiver singleton (inside Call() body).
+		// foo() → self.Foo() — the method already returns *Thunk[T].
+		if l.recvMethods[id.Name] && l.recvName != "" {
+			return &MethodCall{Recv: &Ident{Name: l.recvName}, Method: capitalize(id.Name), Args: args}
+		}
 	}
 
 	// Other boc identifier calls — goroutine-launched thunks.
@@ -1636,6 +1773,10 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		}
 		// Local body-form boc call: f(3) where f is lifted to a struct.
 		if _, isBodyBoc := l.localBodyBocVars[id.Name]; isBodyBoc {
+			return true
+		}
+		// Method call on the current receiver singleton: foo() → self.Foo() → returns *Thunk.
+		if l.recvMethods[id.Name] {
 			return true
 		}
 		sym := l.analyzer.LookupInFile(id.Name)
@@ -2097,7 +2238,11 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 				if ms, ok := l.tryLowerMatch(e); ok {
 					stmts = append(stmts, ms)
 				} else {
-					stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
+					expr := l.lowerExpr(e)
+					if l.isBocMethodCall(e) {
+						expr = &ForceExpr{Thunk: expr}
+					}
+					stmts = append(stmts, &ExprStmt{Expr: expr})
 				}
 			}
 		}

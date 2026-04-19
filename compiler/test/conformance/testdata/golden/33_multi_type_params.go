@@ -20,8 +20,20 @@ func makePair[K any, V any](a K, b V) *std.Thunk[*Pair[K, V]] {
 	})
 }
 
+type _mainBoc struct {
+}
+
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		p := makePair(std.NewInt(42), std.NewString("hello"))
+		std.Print(p.Force().first)
+		std.Print(p.Force().second)
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
+
 func main() {
-	p := makePair(std.NewInt(42), std.NewString("hello"))
-	std.Print(p.Force().first)
-	std.Print(p.Force().second)
+	Main.Call().Force()
 }
