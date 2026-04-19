@@ -127,7 +127,7 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 	g.nl()
 
 	// Constructor (skipped for type-only declarations: Name #(params)).
-	if !sd.NoConstructor && len(sd.Fields) > 0 {
+	if !sd.NoConstructor {
 		// Build param list: expand embedded sub-fields inline.
 		var params []string
 		for _, f := range sd.Fields {

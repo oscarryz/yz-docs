@@ -67,6 +67,11 @@ type lowerer struct {
 	// that return *Thunk[T] and need special handling in lowerCall / isBocMethodCall.
 	recvMethods map[string]bool
 
+	// syncParams tracks parameter names that are sync callback functions (e.g. from
+	// a param declared as `cond #(Bool)` → Go type `func() std.Bool`). These must
+	// be called directly — never wrapped in std.Go — because they are already sync.
+	syncParams map[string]bool
+
 	// contextName is the name of the enclosing function/boc (e.g. "main").
 	// Used to generate unique FQN-based struct names for lifted local bocs.
 	contextName string
@@ -857,6 +862,9 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 	}
 
 	fieldNames := l.collectFieldNames(b)
+	// Pre-scan method names so struct methods can call themselves (and each other) recursively.
+	methodNames := l.collectMethodNames(b)
+	prevRecvMethods := l.recvMethods
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
 		case *ast.TypedDecl:
@@ -871,7 +879,9 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				inner, isInnerBoc := e.Values[0].(*ast.BocLiteral)
 				if isInnerBoc && !isUppercase(e.Names[0].Name) {
 					bocSemType := l.analyzer.ExprType(e)
+					l.recvMethods = methodNames
 					m := l.lowerMethod(e.Names[0].Name, recvType, inner, fieldNames, bocSemType)
+					l.recvMethods = prevRecvMethods
 					sd.Methods = append(sd.Methods, m)
 					continue
 				}
@@ -911,7 +921,9 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 
 		case *ast.BocWithSig:
 			if e.Body != nil {
+				l.recvMethods = methodNames
 				m := l.lowerBocWithSigAsMethod(e, recvType, fieldNames)
+				l.recvMethods = prevRecvMethods
 				sd.Methods = append(sd.Methods, m)
 			}
 		}
@@ -1067,9 +1079,23 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 	// Build params using sema for ordering/filtering, AST types for generic TypeArgs.
 	params := l.sigParams(bws.Sig, bt)
 
+	// Register any boc-typed params as syncParams so calls to them are direct (not std.Go).
+	prevSyncParams := l.syncParams
+	if bws.Sig != nil {
+		for _, p := range bws.Sig.Params {
+			if _, isBocType := p.Type.(*ast.BocTypeExpr); isBocType && p.Label != "" {
+				if l.syncParams == nil {
+					l.syncParams = map[string]bool{}
+				}
+				l.syncParams[p.Label] = true
+			}
+		}
+	}
+
 	prev := l.setReceiver("self", parentFields)
 	body := l.lowerBocBody(bws.Body, resultType)
 	l.restoreReceiver(prev)
+	l.syncParams = prevSyncParams
 
 	return &MethodDecl{
 		RecvType: recvType,
@@ -1710,6 +1736,12 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		if l.recvMethods[id.Name] && l.recvName != "" {
 			return &MethodCall{Recv: &Ident{Name: l.recvName}, Method: capitalize(id.Name), Args: args}
 		}
+	}
+
+	// Sync callback params (e.g. `cond #(Bool)` → func() std.Bool) must be called
+	// directly — not wrapped in std.Go — because they are already synchronous functions.
+	if id, ok := c.Callee.(*ast.Ident); ok && l.syncParams[id.Name] {
+		return &FuncCall{Func: callee, Args: args}
 	}
 
 	// Other boc identifier calls — goroutine-launched thunks.
@@ -2564,7 +2596,18 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 			l.goTypeFromTypeExpr(t.KeyType),
 			l.goTypeFromTypeExpr(t.ValType))
 	case *ast.BocTypeExpr:
-		return "any" // simplified — boc type exprs as function types handled in codegen
+		// #(Bool) → func() std.Bool  |  #(name String, Bool) → func(std.String) std.Bool
+		// Anonymous (no-label) params are return types in the shorthand form.
+		var inputTypes []string
+		returnType := "std.Unit"
+		for _, p := range t.Params {
+			if p.Label == "" {
+				returnType = l.goTypeFromTypeExpr(p.Type)
+			} else {
+				inputTypes = append(inputTypes, l.goTypeFromTypeExpr(p.Type))
+			}
+		}
+		return fmt.Sprintf("func(%s) %s", strings.Join(inputTypes, ", "), returnType)
 	}
 	return "any"
 }

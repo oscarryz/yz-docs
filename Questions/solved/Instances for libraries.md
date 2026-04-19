@@ -115,37 +115,37 @@ See: [Immutability](Immutability.md)
 condition: {
     boolean.true() // returns a new instance of true    
 }
-if condition() { 
+if condition(), { 
     1
-} {
+}, {
     2
 }
 ... 
 True: Boolean {
     ? : { 
-        tb {v}
-        fb {v}
+        tb #(v)
+        fb #(v)
         tb()
     }
 }
 boolean: {
     true: {
-        True{}
+        True()
     }
 }
 while: {
-    cond {Bool}
-    body {v}
+    cond #(Bool)
+    body #(V)
     w: While{}
-    w.run cond body
+    w.run(cond, body)
 }
 While: {
     run: {
-        cond {Bool}
-        body {v}
+        cond #(Bool)
+        body #(V)
         if cond() {
             body()
-            run cond body
+            run(cond,body)
         }
     }
 }
