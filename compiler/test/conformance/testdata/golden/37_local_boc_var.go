@@ -2,29 +2,31 @@ package main
 
 import std "yz/runtime/yzrt"
 
-type _main_fooBoc struct {
+type _mainBoc struct {
 }
 
-func (self *_main_fooBoc) Call() *std.Thunk[std.String] {
+func (self *_mainBoc) Foo() *std.Thunk[std.String] {
 	return std.Go(func() std.String {
 		return std.NewString("hello")
 	})
 }
 
-
-type _main_barBoc struct {
-}
-
-func (self *_main_barBoc) Call() *std.Thunk[std.String] {
+func (self *_mainBoc) Bar() *std.Thunk[std.String] {
 	return std.Go(func() std.String {
 		return std.NewString("world")
 	})
 }
 
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
+		std.Print(self.Foo().Force())
+		std.Print(self.Bar().Force())
+		return std.TheUnit
+	})
+}
+
+var Main = &_mainBoc{}
 
 func main() {
-	_foo := &_main_fooBoc{}
-	_bar := &_main_barBoc{}
-	std.Print(_foo.Call().Force())
-	std.Print(_bar.Call().Force())
+	Main.Call().Force()
 }

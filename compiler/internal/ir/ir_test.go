@@ -79,6 +79,8 @@ func TestLowerBoolLit(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLowerSingletonBoc(t *testing.T) {
+	// counter: { count: 0 } — pure body-form boc (BocType from sema, no inner methods).
+	// Under boc uniformity, count is a local var inside Call(), not a struct field.
 	f := lower(t, `counter: {
     count: 0
 }`)
@@ -95,8 +97,12 @@ func TestLowerSingletonBoc(t *testing.T) {
 	if outer.TypeName != "_counterBoc" {
 		t.Errorf("TypeName: got %q, want _counterBoc", outer.TypeName)
 	}
-	if len(outer.Fields) != 1 || outer.Fields[0].Name != "count" {
-		t.Errorf("fields: %v", outer.Fields)
+	// No struct fields — count is a local variable inside the Call() method.
+	if len(outer.Fields) != 0 {
+		t.Errorf("fields: want 0, got %v", outer.Fields)
+	}
+	if len(outer.Methods) != 1 || outer.Methods[0].Name != "Call" {
+		t.Errorf("methods: want [Call], got %v", outer.Methods)
 	}
 }
 
@@ -234,16 +240,29 @@ func TestLowerMethodReturnsThunk(t *testing.T) {
 // 06 — main boc becomes FuncDecl
 // ---------------------------------------------------------------------------
 
-func TestLowerMainBecomesFuncDecl(t *testing.T) {
+func TestLowerMainBecomesSingleton(t *testing.T) {
+	// main: { x: 42 } — body-only singleton.
+	// After boc uniformity: emits _mainBoc struct + Call() method + func main() shim.
 	f := lower(t, `main: {
     x: 42
 }`)
-	if len(f.Decls) != 1 {
-		t.Fatalf("want 1 decl, got %d", len(f.Decls))
+	// Expect 2 decls: _mainBoc SingletonDecl + func main() FuncDecl.
+	if len(f.Decls) != 2 {
+		t.Fatalf("want 2 decls, got %d", len(f.Decls))
 	}
-	fn, ok := f.Decls[0].(*FuncDecl)
+	sd, ok := f.Decls[0].(*SingletonDecl)
 	if !ok {
-		t.Fatalf("want *FuncDecl, got %T", f.Decls[0])
+		t.Fatalf("Decls[0]: want *SingletonDecl, got %T", f.Decls[0])
+	}
+	if sd.VarName != "Main" {
+		t.Errorf("VarName: got %q, want Main", sd.VarName)
+	}
+	if len(sd.Methods) != 1 || sd.Methods[0].Name != "Call" {
+		t.Errorf("methods: want [Call], got %v", sd.Methods)
+	}
+	fn, ok := f.Decls[1].(*FuncDecl)
+	if !ok {
+		t.Fatalf("Decls[1]: want *FuncDecl, got %T", f.Decls[1])
 	}
 	if fn.Name != "main" {
 		t.Errorf("func name: got %q, want main", fn.Name)
@@ -270,20 +289,42 @@ func TestLowerTypedDeclField(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLowerWhileToForStmt(t *testing.T) {
+	// After boc uniformity: main is a SingletonDecl with Call() method.
+	// The ForStmt is inside the ThunkExpr in Call()'s body.
 	f := lower(t, `main: {
     n: 0
     while({n < 3}, {n = n + 1})
 }`)
-	fn := f.Decls[0].(*FuncDecl)
-	// Expect: DeclStmt(n), ForStmt
+	// Decls[0] is _mainBoc SingletonDecl; Decls[1] is func main() shim.
+	sd, ok := f.Decls[0].(*SingletonDecl)
+	if !ok {
+		t.Fatalf("Decls[0]: want *SingletonDecl, got %T", f.Decls[0])
+	}
+	if len(sd.Methods) != 1 || sd.Methods[0].Name != "Call" {
+		t.Fatalf("methods: want [Call], got %v", sd.Methods)
+	}
+	callMethod := sd.Methods[0]
+	// Call() body is [ExprStmt{ThunkExpr}].
+	if len(callMethod.Body) != 1 {
+		t.Fatalf("Call body stmts: want 1, got %d", len(callMethod.Body))
+	}
+	es, ok := callMethod.Body[0].(*ExprStmt)
+	if !ok {
+		t.Fatalf("Call body[0]: want *ExprStmt, got %T", callMethod.Body[0])
+	}
+	thunk, ok := es.Expr.(*ThunkExpr)
+	if !ok {
+		t.Fatalf("Call body[0].Expr: want *ThunkExpr, got %T", es.Expr)
+	}
+	// ThunkExpr inner body: DeclStmt(n), ForStmt, ReturnStmt.
 	var forStmt *ForStmt
-	for _, s := range fn.Body {
+	for _, s := range thunk.Body {
 		if fs, ok := s.(*ForStmt); ok {
 			forStmt = fs
 		}
 	}
 	if forStmt == nil {
-		t.Fatalf("no ForStmt found in main body; stmts: %v", fn.Body)
+		t.Fatalf("no ForStmt found in Call() thunk body; stmts: %v", thunk.Body)
 	}
 	// Cond must be a MethodCall (n.Lt(...))
 	if _, ok := forStmt.Cond.(*MethodCall); !ok {
@@ -373,28 +414,40 @@ func TestLowerBocWithSigCallInMain(t *testing.T) {
 main: {
     greet("Alice")
 }`)
-	// Two decls: FuncDecl(greet) + FuncDecl(main)
-	if len(f.Decls) != 2 {
-		t.Fatalf("want 2 decls, got %d", len(f.Decls))
+	// Three decls: FuncDecl(greet) + SingletonDecl(_mainBoc) + FuncDecl(main shim)
+	if len(f.Decls) != 3 {
+		t.Fatalf("want 3 decls, got %d", len(f.Decls))
 	}
-	mainFn, ok := f.Decls[1].(*FuncDecl)
+	mainSD, ok := f.Decls[1].(*SingletonDecl)
 	if !ok {
-		t.Fatalf("decls[1]: want *FuncDecl, got %T", f.Decls[1])
+		t.Fatalf("decls[1]: want *SingletonDecl, got %T", f.Decls[1])
 	}
-	if mainFn.Name != "main" {
-		t.Fatalf("decls[1] name: got %q, want main", mainFn.Name)
+	if mainSD.VarName != "Main" {
+		t.Fatalf("decls[1] VarName: got %q, want Main", mainSD.VarName)
 	}
-	// main body: DeclStmt(_bg), ExprStmt(SpawnExpr), WaitStmt
+	// Call() body's ThunkExpr should contain a SpawnExpr for greet("Alice")
+	if len(mainSD.Methods) != 1 {
+		t.Fatalf("methods: want 1, got %d", len(mainSD.Methods))
+	}
+	callBody := mainSD.Methods[0].Body
+	es, ok := callBody[0].(*ExprStmt)
+	if !ok {
+		t.Fatalf("Call body[0]: want *ExprStmt, got %T", callBody[0])
+	}
+	thunk, ok := es.Expr.(*ThunkExpr)
+	if !ok {
+		t.Fatalf("Call body[0].Expr: want *ThunkExpr, got %T", es.Expr)
+	}
 	var hasSpawn bool
-	for _, s := range mainFn.Body {
-		if es, ok := s.(*ExprStmt); ok {
-			if _, ok := es.Expr.(*SpawnExpr); ok {
+	for _, s := range thunk.Body {
+		if es2, ok := s.(*ExprStmt); ok {
+			if _, ok := es2.Expr.(*SpawnExpr); ok {
 				hasSpawn = true
 			}
 		}
 	}
 	if !hasSpawn {
-		t.Errorf("main body has no SpawnExpr; body: %v", mainFn.Body)
+		t.Errorf("Call() thunk body has no SpawnExpr; body: %v", thunk.Body)
 	}
 }
 
