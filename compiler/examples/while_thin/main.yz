@@ -1,0 +1,33 @@
+// B: while using a thin dispatcher.
+//
+// `While` is an uppercase struct type — each call gets its own fresh instance,
+// so there is no shared mutable state between concurrent loops at all.
+// `countDown` is the thin dispatcher singleton: it constructs a `While`
+// instance, delegates to it, and is free to accept the next call immediately.
+//
+// Concurrency result is identical to A: both loops interleave their output.
+// The difference is architectural — in a strict actor model the thin
+// dispatcher is unblocked faster because the expensive work lives in the
+// per-call `While` instance, not in the shared singleton.
+
+While: {
+    run #(n Int) {
+        while({ n > 0 }, {
+            print(n)
+            n = n - 1
+        })
+        print("done")
+    }
+}
+
+countDown: {
+    run #(n Int) {
+        cd: While()
+        cd.run(n)
+    }
+}
+
+main: {
+    countDown.run(50)
+    countDown.run(30)
+}
