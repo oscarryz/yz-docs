@@ -1,0 +1,11 @@
+// Standalone boc method call inside a closure body must be forced.
+// counter.increment() is a non-last expression in the each callback;
+// it must emit .Force() so the increment completes before print(item).
+counter: {
+    count: 0
+    increment: { count = count + 1 }
+}
+main: {
+    list: [1, 2, 3]
+    list.each({ item Int; counter.increment(); print(item) })
+}
