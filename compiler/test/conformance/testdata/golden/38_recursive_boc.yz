@@ -1,0 +1,13 @@
+// Recursive BocWithSig: countdown using == comparison and n-1 recursion.
+// Tests that recursive calls in conditional branches are forced (not fire-and-forget).
+countdown #(n Int) {
+    n == 0 ? {
+        print("done")
+    }, {
+        print(n)
+        countdown(n - 1)
+    }
+}
+main: {
+    countdown(3)
+}

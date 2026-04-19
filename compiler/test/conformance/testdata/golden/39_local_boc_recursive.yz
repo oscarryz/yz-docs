@@ -1,0 +1,5 @@
+// Local boc variable with params and recursive call.
+main: {
+    f: { n Int; n == 0 ? { print("fin") }, { print(n); f(n-1) } }
+    f(3)
+}
