@@ -20,19 +20,6 @@ func Print(v any) Unit {
 }
 
 // ---------------------------------------------------------------------------
-// While
-// ---------------------------------------------------------------------------
-
-// While loops as long as cond() returns Bool{true}, calling body() each iteration.
-// Both arguments are zero-argument functions (compiled from boc literals).
-func While(cond func() Bool, body func() Unit) Unit {
-	for cond().GoBool() {
-		body()
-	}
-	return TheUnit
-}
-
-// ---------------------------------------------------------------------------
 // Info
 // ---------------------------------------------------------------------------
 
