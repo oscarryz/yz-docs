@@ -5,3 +5,4 @@ compiler/yzc
 compiler/bin/yzc
 **/target
 .envrc
+.idea/
