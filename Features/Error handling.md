@@ -1,3 +1,4 @@
+#feature 
 # Error Handling
 
 Yz uses `Option` and `Result` variant types for error handling — no exceptions, no null references.

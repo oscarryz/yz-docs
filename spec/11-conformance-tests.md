@@ -1,3 +1,4 @@
+#spec 
 # 11. Conformance Tests
 
 This chapter defines the conformance test suite — a collection of canonical Yz programs with expected behavior that validates compiler correctness.

@@ -1,3 +1,4 @@
+#spec 
 # 10. Standard Library
 
 This chapter defines the built-in types, their methods, and core functions provided by the Yz standard library.

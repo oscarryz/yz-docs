@@ -1,3 +1,4 @@
+#spec
 # 2. Grammar
 
 This chapter defines the syntactic grammar of Yz in Extended Backus-Naur Form (EBNF). The grammar operates on the token stream produced by the lexer (see Chapter 1).

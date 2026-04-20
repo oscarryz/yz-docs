@@ -1,6 +1,7 @@
+#readme 
 # The Yz Programming Language
 
-> **Note**: [Yz compiler](https://github.com/oscarryz/yz) is work in progress. All examples and features described here represent the intended design.
+> **Note**: [Yz compiler](./compiler) is work in progress. All examples and features described here represent the intended design.
 
 ## Table of Contents
 

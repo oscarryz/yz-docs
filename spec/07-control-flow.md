@@ -1,3 +1,4 @@
+#spec 
 # 7. Control Flow
 
 This chapter defines Yz's control flow mechanisms. Yz has no built-in control flow keywords for conditionals or loops — they are expressed through methods and boc composition.

@@ -1,3 +1,4 @@
+#feature 
 # Non-Word Method Invocation
 
 When a method name is a non-word symbol (e.g. `<<`, `+`, `==`), it can be invoked without `.` or parentheses, as long as it has at least one parameter. The receiver comes first, then the method name, then the arguments.

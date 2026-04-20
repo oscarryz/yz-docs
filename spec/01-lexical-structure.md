@@ -1,3 +1,4 @@
+#spec 
 # 1. Lexical Structure
 
 This chapter defines the lexical grammar of Yz: how source text is divided into tokens.

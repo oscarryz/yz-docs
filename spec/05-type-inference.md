@@ -1,3 +1,4 @@
+#spec
 # 5. Type Inference
 
 This chapter defines how the Yz compiler infers types when they are not explicitly declared.

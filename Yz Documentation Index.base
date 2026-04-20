@@ -6,7 +6,5 @@ views:
       - file.tags
       - file.folder
     sort:
-      - property: file.tags
-        direction: DESC
-      - property: file.name
+      - property: file.folder
         direction: ASC

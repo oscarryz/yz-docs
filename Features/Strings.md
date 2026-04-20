@@ -1,3 +1,4 @@
+#feature 
 # Strings
 
 Both single and double quotes delimit string literals:

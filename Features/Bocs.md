@@ -1,3 +1,4 @@
+#feature 
 # Blocks of Code (Bocs)
 
 In Yz, everything is a **block of code** (boc). A boc plays the role that packages, modules, functions, methods, closures, objects, and classes play in other languages — unified under one construct.

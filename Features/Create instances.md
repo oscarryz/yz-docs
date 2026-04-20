@@ -1,3 +1,4 @@
+#feature 
 # Creating Instances
 
 Uppercase-named bocs are types. Call them with `()` to create a new instance:

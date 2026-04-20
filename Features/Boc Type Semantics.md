@@ -1,3 +1,4 @@
+#feature 
 # Boc Type Semantics
 
 This document summarizes the runtime semantics of boc types — how singletons differ from instantiable types, and when a boc returns a value vs. runs side effects.

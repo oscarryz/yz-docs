@@ -1,3 +1,4 @@
+#feature 
 # Structural Typing
 
 Yz uses **structural typing**: a boc satisfies a type if it has the required fields and methods, regardless of its declared name. No explicit "implements" declaration is needed.
