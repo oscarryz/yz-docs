@@ -731,23 +731,13 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
 				}
 			} else if !isLast {
-				// Non-last position: lower as statement (no return value needed).
 				if ms, ok := l.tryLowerMatch(e); ok {
 					inner = append(inner, ms)
 				} else {
-					expr := l.lowerExpr(e)
-					if l.isBocMethodCall(e) {
-						expr = &ForceExpr{Thunk: expr}
-					}
-					inner = append(inner, &ExprStmt{Expr: expr})
+					inner = append(inner, &ExprStmt{Expr: l.lowerExprForced(e)})
 				}
 			} else {
-				// Last expression: force thunk if it's a boc method call.
-				expr := l.lowerExpr(e)
-				if l.isBocMethodCall(e) {
-					expr = &ForceExpr{Thunk: expr}
-				}
-				inner = append(inner, &ReturnStmt{Value: expr})
+				inner = append(inner, &ReturnStmt{Value: l.lowerExprForced(e)})
 			}
 		default:
 			// Other statements — skip for now.
@@ -1820,6 +1810,16 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	return false
 }
 
+// lowerExprForced lowers e and wraps the result in ForceExpr when e is a boc
+// method call (which returns *Thunk[T] and must be materialized at the call site).
+func (l *lowerer) lowerExprForced(e ast.Expr) Expr {
+	expr := l.lowerExpr(e)
+	if l.isBocMethodCall(e) {
+		return &ForceExpr{Thunk: expr}
+	}
+	return expr
+}
+
 // isSingletonBoc reports whether expr is an Ident that refers to a
 // singleton boc (a lowercase boc defined at file scope).
 func (l *lowerer) isSingletonBoc(expr Expr) bool {
@@ -2095,10 +2095,7 @@ func (l *lowerer) lowerMatchArmBody(elements []ast.Node, resultType string) []St
 			}
 			stmts = append(stmts, &ReturnStmt{Value: val})
 		case ast.Expr:
-			expr := l.lowerExpr(e)
-			if l.isBocMethodCall(e) {
-				expr = &ForceExpr{Thunk: expr}
-			}
+			expr := l.lowerExprForced(e)
 			if isLast {
 				stmts = append(stmts, &ReturnStmt{Value: expr})
 			} else {
@@ -2130,11 +2127,7 @@ func (l *lowerer) lowerBocAsStmts2(elements []ast.Node) []Stmt {
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
 			} else {
-				expr := l.lowerExpr(e)
-				if l.isBocMethodCall(e) {
-					expr = &ForceExpr{Thunk: expr}
-				}
-				stmts = append(stmts, &ExprStmt{Expr: expr})
+				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprForced(e)})
 			}
 		}
 	}
@@ -2170,13 +2163,7 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
 			} else {
-				expr := l.lowerExpr(e)
-				// BocWithSig / boc method calls return *Thunk[T]; force them so
-				// the call completes before the enclosing body continues.
-				if l.isBocMethodCall(e) {
-					expr = &ForceExpr{Thunk: expr}
-				}
-				stmts = append(stmts, &ExprStmt{Expr: expr})
+				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprForced(e)})
 			}
 		}
 	}
@@ -2194,13 +2181,7 @@ func (l *lowerer) lowerBuiltinCall(goName string, c *ast.CallExpr) Expr {
 			// Boc literal arg to a builtin → closure (not a goroutine-thunk).
 			args = append(args, l.lowerExpr(val))
 		} else {
-			// For print/info: if the arg is a boc method call (returns *Thunk),
-			// force it so the actual value is passed, not the thunk pointer.
-			expr := l.lowerExpr(val)
-			if l.isBocMethodCall(val) {
-				expr = &ForceExpr{Thunk: expr}
-			}
-			args = append(args, expr)
+			args = append(args, l.lowerExprForced(val))
 		}
 	}
 	return &FuncCall{Func: &Ident{Name: goName}, Args: args}
@@ -2267,20 +2248,12 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 					stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
 				}
 			} else if isLast {
-				expr := l.lowerExpr(e)
-				if l.isBocMethodCall(e) {
-					expr = &ForceExpr{Thunk: expr}
-				}
-				stmts = append(stmts, &ReturnStmt{Value: expr})
+				stmts = append(stmts, &ReturnStmt{Value: l.lowerExprForced(e)})
 			} else {
 				if ms, ok := l.tryLowerMatch(e); ok {
 					stmts = append(stmts, ms)
 				} else {
-					expr := l.lowerExpr(e)
-					if l.isBocMethodCall(e) {
-						expr = &ForceExpr{Thunk: expr}
-					}
-					stmts = append(stmts, &ExprStmt{Expr: expr})
+					stmts = append(stmts, &ExprStmt{Expr: l.lowerExprForced(e)})
 				}
 			}
 		}
@@ -2298,11 +2271,7 @@ func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 	for _, part := range e.Parts {
 		var node Expr
 		if part.IsExpr {
-			inner := l.lowerExpr(part.Expr)
-			// Force thunks (boc method calls return *Thunk[T]).
-			if l.isBocMethodCall(part.Expr) {
-				inner = &ForceExpr{Thunk: inner}
-			}
+			inner := l.lowerExprForced(part.Expr)
 			// std.NewString(std.Stringify(inner))
 			node = &FuncCall{
 				Func: &Ident{Name: "std.NewString"},
