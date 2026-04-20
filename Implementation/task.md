@@ -112,8 +112,6 @@ The compiler currently has three separate lowering paths for bocs depending on w
 
 - [ ] **Cancellation / non-local return across goroutine boundaries** — non-local `return` from a callback conflicts with structured concurrency. Three open sub-problems: goroutine leaks when a race-return fires, escaped non-local returns into completed bocs, and structured concurrency violation. See `Questions/How to cancel a running block.md`. No implementation work until the design question is resolved.
 
-- [ ] **Stateless bocs and pure functions** — BocWithSig form (`foo #(params) { ... }`) is the stateless function form; body form (`foo: { ... }`) is the stateful actor form. The compiler needs to enforce: (1) `foo.field` is a type error on a BocWithSig boc; (2) passing a stateless boc where a named-param signature type is expected (e.g., `#(name String, Int)`) is a type error; (3) BocWithSig calls emit free goroutines (no actor queue). See `Questions/Stateless bocs and pure functions.md` and `Features/Bocs.md`.
-
 - [ ] **SWMR write semantics in codegen** — field writes from outside a boc (`a.b = v` in a different boc) should be emitted as queued actor messages, not direct struct field assignments. Currently the codegen emits direct field writes which is a data race. Requires runtime support for a write-message channel per boc instance. Depends on the cancellation/actor-queue design.
 
 ## Known Bugs
