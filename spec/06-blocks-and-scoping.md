@@ -1,3 +1,4 @@
+#spec 
 # 6. Blocks and Scoping
 
 This chapter defines the semantics of blocks of code (bocs) — Yz's unified abstraction — and variable scoping rules.

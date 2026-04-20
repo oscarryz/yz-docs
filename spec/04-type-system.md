@@ -1,3 +1,4 @@
+#spec
 # 4. Type System
 
 This chapter defines Yz's type system: the kinds of types, structural compatibility rules, type variants, generics, and the `mix` composition mechanism.

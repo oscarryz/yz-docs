@@ -1,3 +1,4 @@
+#readme 
 # yzc — The Yz Compiler
 
 Compiles Yz source files (`.yz`) to Go source code, then invokes `go build` to produce a native binary.
