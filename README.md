@@ -25,6 +25,7 @@
 18. [Examples](#examples)
 19. [Reserved Words and Symbols](#reserved-words-and-symbols)
 20. [Design Philosophy](#design-philosophy)
+21. [Repository structure](#repository-structure)
 
 ## Quick Example
 
@@ -1109,3 +1110,9 @@ Yz operates on the principle that most programming constructs can be unified und
 - Define types (like classes)
 
 This documentation provides a comprehensive overview of the Yz programming language design. The language aims to simplify concurrent programming while maintaining type safety through its innovative "blocks of code" abstraction that unifies many traditionally separate language constructs.
+
+## Repository Structure
+
+- **`compiler/`** — Go implementation of the Yz compiler. Includes the lexer, parser, AST, lowerer, and code generator. Emits Go source and invokes `go build` to produce binaries.
+- **`docs/`** — Additional documentation, design notes, and implementation decisions.
+- **`spec/`** — Language specification split across numbered sections (01–11), describing syntax, semantics, and type system.
