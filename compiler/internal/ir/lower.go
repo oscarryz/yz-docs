@@ -138,7 +138,7 @@ func (l *lowerer) lowerTopLevel(node ast.Node) Decl {
 		if n.Body == nil && isUppercase(n.Name.Name) {
 			return l.lowerTypeOnlyDecl(n)
 		}
-		return l.lowerBocWithSig(n, "", nil)
+		return l.lowerBocWithSig(n)
 	case *ast.Assignment:
 		return l.lowerTopAssignment(n)
 	default:
@@ -731,24 +731,23 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
 				}
 			} else if !isLast {
-				// Match in non-last position: lower as statement (no return value needed).
+				// Non-last position: lower as statement (no return value needed).
 				if ms, ok := l.tryLowerMatch(e); ok {
 					inner = append(inner, ms)
 				} else {
-					inner = append(inner, &ExprStmt{Expr: l.lowerExpr(e)})
-				}
-			} else {
-				expr := l.lowerExpr(e)
-				if isLast {
-					// If the last expression is a boc method call it returns *Thunk[T],
-					// but the closure expects T — force the thunk.
+					expr := l.lowerExpr(e)
 					if l.isBocMethodCall(e) {
 						expr = &ForceExpr{Thunk: expr}
 					}
-					inner = append(inner, &ReturnStmt{Value: expr})
-				} else {
 					inner = append(inner, &ExprStmt{Expr: expr})
 				}
+			} else {
+				// Last expression: force thunk if it's a boc method call.
+				expr := l.lowerExpr(e)
+				if l.isBocMethodCall(e) {
+					expr = &ForceExpr{Thunk: expr}
+				}
+				inner = append(inner, &ReturnStmt{Value: expr})
 			}
 		default:
 			// Other statements — skip for now.
@@ -1107,7 +1106,7 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 	}
 }
 
-func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig, recvType string, parentFields map[string]bool) Decl {
+func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
 	if bws.Body == nil {
 		return nil
 	}
@@ -1374,7 +1373,7 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 	case *ast.BinaryExpr:
 		left := l.lowerExpr(expr.Left)
 		right := l.lowerExpr(expr.Right)
-		method := goMethodName(sema.NonWordMethodName(expr.Op))
+		method := capitalize(sema.NonWordMethodName(expr.Op))
 		return &MethodCall{Recv: left, Method: method, Args: []Expr{right}}
 	case *ast.CallExpr:
 		return l.lowerCall(expr)
@@ -2097,6 +2096,9 @@ func (l *lowerer) lowerMatchArmBody(elements []ast.Node, resultType string) []St
 			stmts = append(stmts, &ReturnStmt{Value: val})
 		case ast.Expr:
 			expr := l.lowerExpr(e)
+			if l.isBocMethodCall(e) {
+				expr = &ForceExpr{Thunk: expr}
+			}
 			if isLast {
 				stmts = append(stmts, &ReturnStmt{Value: expr})
 			} else {
@@ -2128,7 +2130,11 @@ func (l *lowerer) lowerBocAsStmts2(elements []ast.Node) []Stmt {
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
 			} else {
-				stmts = append(stmts, &ExprStmt{Expr: l.lowerExpr(e)})
+				expr := l.lowerExpr(e)
+				if l.isBocMethodCall(e) {
+					expr = &ForceExpr{Thunk: expr}
+				}
+				stmts = append(stmts, &ExprStmt{Expr: expr})
 			}
 		}
 	}
@@ -2610,15 +2616,6 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 		return fmt.Sprintf("func(%s) %s", strings.Join(inputTypes, ", "), returnType)
 	}
 	return "any"
-}
-
-// goMethodName converts a sema symbol-style method name (e.g. "plus") to the
-// exported Go method name on the yzrt type (e.g. "Plus").
-func goMethodName(symbolName string) string {
-	if symbolName == "" {
-		return ""
-	}
-	return strings.ToUpper(symbolName[:1]) + symbolName[1:]
 }
 
 // ---------------------------------------------------------------------------
