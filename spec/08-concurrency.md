@@ -1,3 +1,4 @@
+#spec 
 # 8. Concurrency
 
 This chapter defines Yz's concurrency model: async-by-default execution, the actor model, thunk materialization, and structured concurrency.

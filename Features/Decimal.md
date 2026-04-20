@@ -1,3 +1,4 @@
+#feature 
 # Decimal
 
 Decimal (floating-point) literals use a `.`:

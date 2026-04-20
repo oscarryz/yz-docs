@@ -1,3 +1,4 @@
+#feature 
 # Info Strings
 
 An info string is a string literal placed **before** a declaration. It attaches documentation metadata to the declaration, retrievable at runtime via `info(element)`.

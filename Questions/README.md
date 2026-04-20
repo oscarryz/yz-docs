@@ -1,3 +1,5 @@
+#readme 
+
 To ask: _How would Yz do X_ and explore answers. 
 
 Files on the root directory are open questions and marked with `open-question`

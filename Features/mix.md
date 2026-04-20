@@ -1,3 +1,4 @@
+#feature 
 # Code Composition: `mix`
 
 The `mix` keyword merges the fields and methods of one boc into another. It provides compositional reuse without inheritance.
