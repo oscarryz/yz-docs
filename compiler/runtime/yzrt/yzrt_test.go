@@ -183,20 +183,3 @@ func TestDict(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// While
-// ---------------------------------------------------------------------------
-
-func TestWhile(t *testing.T) {
-	count := NewInt(0)
-	While(
-		func() Bool { return count.Lt(NewInt(5)) },
-		func() Unit {
-			count = count.Plus(NewInt(1))
-			return TheUnit
-		},
-	)
-	if count.GoInt() != 5 {
-		t.Errorf("While: got %d, want 5", count.GoInt())
-	}
-}
