@@ -3,15 +3,15 @@
 [A boring function](https://go.dev/talks/2012/concurrency.slide#12)
 ```js
 boring: {
-	msg String
- i: 0
-	loop: {
-		print('`msg`, `i`')
-		time.delay(1)
-		// less boring
-		time.delay(random.int(3))
-		i = i + 1
- loop()
+  msg String
+  i: 0
+  loop: {
+    print('`msg`, `i`')
+    time.delay(1)
+    // less boring
+    time.delay(random.int(3))
+    i = i + 1
+    loop()
 	}
 }
 main: {
