@@ -13,10 +13,11 @@ boring: {
     i = i + 1
     loop()
   }
+  loop()
 }
 main: {
   boring("boring!") // launches and continues
-	// but then waits at the end of the main block because of structural concurrency
+  // but then waits at the end of the main block because of structural concurrency
 }
 ```
 
