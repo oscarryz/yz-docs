@@ -34,15 +34,13 @@ value: not_a_channel.c // "receiving", value has type `Int` but is a thunk, it w
 
 ```js
 main: {
-	nac #(String) {
-		s String
-	}
-	boring("boring", nac)
-	0.to(5).each({ _ Int
-		wait_for: nac.value_set()
-		print('You say: `nac.s`') // right now this would just print nac.s 5 times
-	})
-	print("You're boring; I'm leaving")
+  nac #(s String) {}    
+  boring("boring", nac)
+  0.to(5).each({ _ Int
+    wait_for: nac.value_set()
+    print('You say: `nac.s`') // right now this would just print nac.s 5 times
+  })
+  print("You're boring; I'm leaving")
 }
 boring: {
 	msg String
