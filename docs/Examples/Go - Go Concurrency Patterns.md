@@ -12,10 +12,10 @@ boring: {
     time.delay(random.int(3))
     i = i + 1
     loop()
-	}
+  }
 }
 main: {
-	boring("boring!") // launches and continues
+  boring("boring!") // launches and continues
 	// but then waits at the end of the main block because of structural concurrency
 }
 ```
