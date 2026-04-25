@@ -48,7 +48,7 @@ boring: {
 
 main:{
   nc : { m String }
-  boring("b", c )
+  boring("b", nc )
   5.times().do({
     print("You said: `nc.m`)
   })
