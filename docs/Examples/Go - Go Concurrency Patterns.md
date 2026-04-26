@@ -131,4 +131,4 @@ main:{
 }
 ```
 
-26: https://go.dev/talks/2012/concurrency.slide#26
+[26]: https://go.dev/talks/2012/concurrency.slide#26
