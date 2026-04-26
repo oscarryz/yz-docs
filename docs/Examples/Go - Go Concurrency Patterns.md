@@ -25,10 +25,9 @@ main: {
 ```js
 boring: {
     m String
-    messages [String]()
-    next: { 
-       messages.pop()
-    }
+
+    messages: [String]()
+    next: messages.pop
     i: 1
     
     while({ true }, {
