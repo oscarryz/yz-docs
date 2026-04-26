@@ -25,12 +25,15 @@ main: {
 ```js
 boring: {
     m String
-    next: { value String }
+    messages [String]()
+    next: { 
+       messages.pop()
+    }
     i: 1
     
     while({ true }, {
         time.delay(1)
-        next("`m` `i`")    // acquires {next}, writes, releases
+        messages.push("`m` `i`")    // acquires {messages}, writes, releases
         i = i + 1
     })                      // ← natural yield point here!
 }
@@ -38,20 +41,9 @@ boring: {
 main: {
     boring("sync")          // launches boring, doesn't block
     5.times().do({
-        print(boring.next()) // acquires {next}, reads, releases
+        print(boring.next()) // acquires {messages}, reads, releases
     })
 }
 ```
 
-Because the BoC model, the boc in the `while` and the boc in the `do` loop have to gain access to the `next` boc, and due to the _happens-before_ trait, they interleave taking turns to write and read to it
-
-The queue on next is the magic:
-
-```
-boring: acquires {next}, writes "sync 1", releases
-main:   acquires {next}, reads  "sync 1", releases
-boring: acquires {next}, writes "sync 2", releases
-main:   acquires {next}, reads  "sync 2", releases
-```
-
-The while loop's recursive nature creates natural yield points because each iteration has to re-acquire next — and if main is waiting on it, boring yields implicitly without any new keyword.
+Because the BoC model, the boc in the `while` and the boc in the `do` loop have to gain access to the `messages` boc, and due to the _happens-before_ trait, the first message is written before the first read takes place.
