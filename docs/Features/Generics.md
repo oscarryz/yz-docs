@@ -1,6 +1,6 @@
 #feature
 
-A single uppercase letter declares a **generic type parameter**. Yz follows the same convention as Go, Rust, Java, and Scala: type parameters are always declared explicitly in the type body.
+A single uppercase letter declares a **generic type parameter**. Type parameters are always declared explicitly in the type body.
 
 ## Declaring a generic type
 
@@ -8,7 +8,7 @@ Type parameters are declared as bare uppercase single-letter identifiers inside 
 
 ```yz
 Box: {
-    T          // T is a type parameter — not a field
+    T          // T is a type parameter
     value T    // field whose type is T
 }
 ```
@@ -25,8 +25,6 @@ When constructing a generic type, the type argument is **inferred from the const
 b: Box(42)         // T inferred as Int
 s: Box("hello")    // T inferred as String
 ```
-
-This is equivalent to Go's `NewBox(42)` with type inference.
 
 ## Typed variable declaration
 
