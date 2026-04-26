@@ -54,26 +54,45 @@ Because the BoC model, the boc in the `while` and the boc in the `do` loop have 
 
 [Generator](https://go.dev/talks/2012/concurrency.slide#24)
 
+Similar principle, share the messages queue, but start the loop from outside.
+
+The boring last two expressions are bocs, one has an infinite loop writing to the array, the other extracts an element from the array 
+
 ```js
 boring: {
   s String
   messages: [String]()
   
-  loop : {
+  {
     while({true}, {
       messages.push("`s` `i`")
       i = i + 1
       time.delay(1) 
     })
   }
-  messages
+  { messages.pop() }
 }
 main: {
-  msgs, l : boring("sync")
+  // assigning the bocs
+  msg, l : boring("sync")
   l() // start the loop
   5.times().do({
-    print("you said `msgs.pop()`")
+    print("you said `msg()`")
   })
 }
 ```
 
+Now each can handle a service
+
+```js
+main:{
+   joe, jl: boring("joe")
+   ann, al: boring("ann")
+   jl()
+   al()
+   5.times().do({
+      print(joe())
+      print(ann())
+   })
+}
+```
