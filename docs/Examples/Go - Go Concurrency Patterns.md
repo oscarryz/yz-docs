@@ -43,13 +43,14 @@ boring: {
 }
 
 main:{
-  // Can't launch and forget if we want to hear back
+  // Can't launch and forget
+  // if we want to hear back
   // nc : { m String }
   // boring("b", nc )
 
   // It needs to be used as callback
   5.times().do({
-    boring("fn", { m String; print("You said: `m`) })
+    boring("fn", { m String; print("You said: `m`") })
   })
 }
 ```
