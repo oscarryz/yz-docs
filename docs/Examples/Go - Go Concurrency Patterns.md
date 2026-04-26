@@ -102,27 +102,19 @@ main:{
 ```js
 fan_in : {
    a #(String)
-   launcher_a #()
+   launch_a #()
    b #(String)
-   launcher_b #()
+   launch_b #()
 
-   messages: [String]()
+   m: [String]()
+   launch_a()
+   launch_b()
+   { 
+      while_true({ m.push(a()) })
+      while_true({ m.push(b()) })
+   }
    
-   read: { src #(String
-
-   {{
-       launcher_a()
-       while_true({
-         messages.push(a())
-       })
-   }()
-   {
-       launcher_b()
-       while_true({
-         messages.push(b())
-       })
-   }()}
-   { messages.pop() }
+   m.pop
 }
 main:{
    m, l = fan_in(boring("joe"), boring("ann"))
