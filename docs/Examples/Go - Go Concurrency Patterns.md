@@ -96,3 +96,39 @@ main:{
    })
 }
 ```
+
+[Multiplexing][26]
+
+```js
+fan_in : {
+   a #(String)
+   launcher_a #()
+   b #(String)
+   launcher_b #()
+
+   messages: [String]()
+   
+   read: { src #(String
+
+   {{
+       launcher_a()
+       while_true({
+         messages.push(a())
+       })
+   }()
+   {
+       launcher_b()
+       while_true({
+         messages.push(b())
+       })
+   }()}
+   { messages.pop() }
+}
+main:{
+   m, l = fan_in(boring("joe"), boring("ann"))
+   l()
+   while_true(m)
+}
+```
+
+26: https://go.dev/talks/2012/concurrency.slide#26
