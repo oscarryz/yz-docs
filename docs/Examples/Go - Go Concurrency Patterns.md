@@ -50,3 +50,30 @@ main: {
 ```
 
 Because the BoC model, the boc in the `while` and the boc in the `do` loop have to gain access to the `messages` boc, and due to the _happens-before_ trait, the first message is written before the first read takes place.
+
+
+[Generator](https://go.dev/talks/2012/concurrency.slide#24)
+
+```js
+boring: {
+  s String
+  messages: [String]()
+  
+  loop : {
+    while({true}, {
+      messages.push("`s` `i`")
+      i = i + 1
+      time.delay(1) 
+    })
+  }
+  messages
+}
+main: {
+  msgs, l : boring("sync")
+  l() // start the loop
+  5.times().do({
+    print("you said `msgs.pop()`")
+  })
+}
+```
+
