@@ -49,7 +49,7 @@ main:{
   // boring("b", nc )
 
   // It needs to be used as callback
-  cb : { m String; print("You said: `m`") })
+  cb : { m String; print("You said: `m`") }
   5.times().do({
     boring("sync", cb)
   })
