@@ -31,13 +31,13 @@ main: {
 boring: {
 
   msg String
-  nc #(m String)
+  emit #(m String)
 
   i: 1
 
   while {true}, {
     time.delay(1)
-    nc("`msg` `i` back")
+    emit("`msg` `i` back")
     i = i + 1
   }
 }
@@ -49,8 +49,9 @@ main:{
   // boring("b", nc )
 
   // It needs to be used as callback
+  cb : { m String; print("You said: `m`") })
   5.times().do({
-    boring("fn", { m String; print("You said: `m`") })
+    boring("sync", cb)
   })
 }
 ```
