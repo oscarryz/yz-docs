@@ -7,19 +7,15 @@
 boring: {
   msg String
   i: 0
-  loop: {
-    print('`msg`, `i`')
-    time.delay(1)
-    // less boring
+  while({true}: {
+    print("`msg`, `i`")
     time.delay(random.int(3))
     i = i + 1
-    loop()
   }
-  loop()
 }
 main: {
-  boring("boring!") // launches and continues
-  // but then waits at the end of the main block because of structural concurrency
+  boring("boring!") // launches
+  // and waits at the end of the main block because of structural concurrency
 }
 ```
 
@@ -47,10 +43,13 @@ boring: {
 }
 
 main:{
-  nc : { m String }
-  boring("b", nc )
+  // Can't launch and forget if we want to hear back
+  // nc : { m String }
+  // boring("b", nc )
+
+  // It needs to be used as callback
   5.times().do({
-    print("You said: `nc.m`)
+    boring("fn", { m String; print("You said: `m`) })
   })
 }
 ```
