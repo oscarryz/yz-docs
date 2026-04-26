@@ -22,25 +22,29 @@ main: {
 
 [Channels](https://go.dev/talks/2012/concurrency.slide#19)
 
+There are no channels, instead use a boc to communicate.
+
+To avoid race ahead the following example uses an array to store the generated messages, then retrieves them in order by calling `messages.pop`
+
 ```js
 boring: {
     m String
 
     messages: [String]()
-    next: messages.pop
     i: 1
     
     while({ true }, {
-        time.delay(1)
+        
         messages.push("`m` `i`")    // acquires {messages}, writes, releases
         i = i + 1
+        time.delay(1)
     })                      // ← natural yield point here!
 }
 
 main: {
     boring("sync")          // launches boring, doesn't block
     5.times().do({
-        print(boring.next()) // acquires {messages}, reads, releases
+        print(boring.messages.pop()) // acquires {messages}, reads, releases
     })
 }
 ```
