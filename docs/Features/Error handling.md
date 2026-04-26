@@ -1,7 +1,7 @@
 #feature 
 # Error Handling
 
-Yz uses `Option` and `Result` variant types for error handling — no exceptions, no null references.
+Yz uses `Option` and `Result` variant types for error handling.
 
 ## Option
 
@@ -24,7 +24,7 @@ match result
   { None => print("Not found") }
 ```
 
-Or use `or` to provide a default value:
+Use `or` to provide a default value:
 
 ```yz
 name: find_name(id).or("anonymous")
@@ -36,7 +36,7 @@ name: find_name(id).or("anonymous")
 
 ```yz
 Result: {
-  T, E
+  T; E
   Ok(value T)
   Err(error E)
 }
@@ -45,7 +45,7 @@ Result: {
 Use `match` to handle both outcomes:
 
 ```yz
-divide #(a Int, b Int, Result) {
+divide #(a Int, b Int, Result(Int, String)) {
   b == 0 ? {
     Err("division by zero")
   }, {
@@ -64,7 +64,7 @@ match r
 Methods like `and_then` and `or_else` allow composing fallible operations:
 
 ```yz
-process_file #(filename String, Result) {
+process_file #(filename String, Result(String,String)) {
   read_file(filename)
     .and_then { content String
       parse_content(content)
@@ -75,4 +75,5 @@ process_file #(filename String, Result) {
 }
 ```
 
-See also [Type variants](Type%20variants.md) for the general variant/sum type mechanism.
+See also: 
+- [Type variants](Type%20variants.md) for the general variant/sum type mechanism.
