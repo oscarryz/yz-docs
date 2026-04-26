@@ -22,38 +22,36 @@ main: {
 
 [Channels](https://go.dev/talks/2012/concurrency.slide#19)
 
-
 ```js
-
-// no channels in Yz
-// just use a boc to
-// send and read the message
 boring: {
-
-  msg String
-  emit #(m String)
-
-  i: 1
-
-  while {true}, {
-    time.delay(1)
-    emit("`msg` `i` back")
-    i = i + 1
-  }
+    m String
+    next: { value String }
+    i: 1
+    
+    while({ true }, {
+        time.delay(1)
+        next("`m` `i`")    // acquires {next}, writes, releases
+        i = i + 1
+    })                      // ← natural yield point here!
 }
 
-main:{
-  // Can't launch and forget
-  // if we want to hear back
-  // nc : { m String }
-  // boring("b", nc )
-
-  // It needs to be used as callback
-  cb : { m String; print("You said: `m`") }
-  5.times().do({
-    boring("sync", cb)
-  })
+main: {
+    boring("sync")          // launches boring, doesn't block
+    5.times().do({
+        print(boring.next()) // acquires {next}, reads, releases
+    })
 }
 ```
 
-Because the BoC model, the boc in the `while` and the boc in the `do` loop have to gain access to the `nc` boc, due to the _happens-before_ trait, they interleave taking turns to write and read the `m` variable.
+Because the BoC model, the boc in the `while` and the boc in the `do` loop have to gain access to the `next` boc, and due to the _happens-before_ trait, they interleave taking turns to write and read to it
+
+The queue on next is the magic:
+
+```
+boring: acquires {next}, writes "sync 1", releases
+main:   acquires {next}, reads  "sync 1", releases
+boring: acquires {next}, writes "sync 2", releases
+main:   acquires {next}, reads  "sync 2", releases
+```
+
+The while loop's recursive nature creates natural yield points because each iteration has to re-acquire next — and if main is waiting on it, boring yields implicitly without any new keyword.
