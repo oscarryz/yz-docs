@@ -4,9 +4,9 @@
 
 Yz generics are built on three principles:
 
-- **Inference first** â€” constraints are never written by the developer, they are derived from usage and surfaced by the compiler and tooling
-- **Minimalist** â€” no new constructs are introduced; generics fall out of existing language concepts
-- **Statically typed** â€” all types are fully resolved at compile time despite being inferred
+- **Inference first** — constraints are never written by the developer, they are derived from usage and surfaced by the compiler and tooling
+- **Minimalist** — no new constructs are introduced; generics fall out of existing language concepts
+- **Statically typed** — all types are fully resolved at compile time despite being inferred
 
 ---
 
@@ -14,10 +14,10 @@ Yz generics are built on three principles:
 
 A type parameter is any **single uppercase letter** identifier: `T`, `U`, `V`, etc.
 
-This is a language-level rule â€” a single uppercase letter is always and only a type parameter. There are no exceptions and no ambiguity.
+This is a language-level rule — a single uppercase letter is always and only a type parameter. There are no exceptions and no ambiguity.
 
 ```yz
-// T and U are type parameters â€” unambiguous by identifier shape alone
+// T and U are type parameters — unambiguous by identifier shape alone
 transform : {
     thing T
     mapper U
@@ -49,8 +49,8 @@ greet : {
 The inferred constraint is the complete and precise description of what `T` must be. If a caller passes a boc that does not satisfy it, the error is reported at the call site:
 
 ```yz
-greet(Person("Ann"))  // ok â€” Person has talk #()
-greet(Animal())       // ok â€” Animal has talk #()
+greet(Person("Ann"))  // ok — Person has talk #()
+greet(Animal())       // ok — Animal has talk #()
 greet({})             // error: no talk method
 ```
 
@@ -82,14 +82,14 @@ There are no special cases for operators anywhere in the generics system.
 
 ---
 
-## Type Parameters Inside boc â€” Associated Types
+## Type Parameters Inside boc — Associated Types
 
-A type parameter declared inside a boc acts as a **type slot** â€” a placeholder whose concrete value is fixed by each implementation. This is possible because in Yz a type is a boc like anything else, so holding a type in a slot is no different from holding any other value.
+A type parameter declared inside a boc acts as a **type slot** — a placeholder whose concrete value is fixed by each implementation. This is possible because in Yz a type is a boc like anything else, so holding a type in a slot is no different from holding any other value.
 
 ```yz
 Converter : {
     T
-    Output #()             // type slot â€” fixed per implementation
+    Output #()             // type slot — fixed per implementation
     convert #(T, Output)
 }
 ```
@@ -119,7 +119,7 @@ process : {
 }
 ```
 
-No additional type parameter is needed to name the output type â€” the compiler derives and tracks it from `U`'s definition.
+No additional type parameter is needed to name the output type — the compiler derives and tracks it from `U`'s definition.
 
 ---
 
@@ -142,9 +142,9 @@ greetAll : {
 }
 ```
 
-`greetAll` ends up with the same constraint as `greet` â€” `T must have talk #()` â€” even though `talk` is never mentioned in `greetAll`'s body directly.
+`greetAll` ends up with the same constraint as `greet` — `T must have talk #()` — even though `talk` is never mentioned in `greetAll`'s body directly.
 
-Chains of arbitrary depth are followed. The final constraint surfaced to the developer is always **flattened** â€” the full set of requirements on `T` regardless of how deep they originated.
+Chains of arbitrary depth are followed. The final constraint surfaced to the developer is always **flattened** — the full set of requirements on `T` regardless of how deep they originated.
 
 ---
 
@@ -152,7 +152,7 @@ Chains of arbitrary depth are followed. The final constraint surfaced to the dev
 
 A boc may contain a compile-time block that executes during compilation. This block has access to the inferred type information of the boc it annotates and can emit errors, synthesized types, or documentation.
 
-This is the mechanism for metaprogramming in Yz. It is consistent with the rest of the language â€” a compile-time block is a boc like anything else, just executed at a different phase.
+This is the mechanism for metaprogramming in Yz. It is consistent with the rest of the language — a compile-time block is a boc like anything else, just executed at a different phase.
 
 ```yz
 add : {
@@ -173,7 +173,7 @@ The design of compile-time boc is ongoing.
 
 ## Module Boundaries and Tooling
 
-The compiler always has full knowledge of inferred constraints. At module boundaries â€” where a developer or user of a boc cannot see its body â€” the compiler and tooling surface the flattened inferred constraint automatically.
+The compiler always has full knowledge of inferred constraints. At module boundaries — where a developer or user of a boc cannot see its body — the compiler and tooling surface the flattened inferred constraint automatically.
 
 A generic boc like:
 
@@ -204,7 +204,7 @@ The following features present in other languages are deliberately absent, with 
 |---|---|
 | Explicit constraint declaration | Inference covers this completely |
 | Variance annotations (`in`/`out`) | No inheritance means no variance problem |
-| Type elements / union constraints | No primitive/object split â€” everything is a boc |
+| Type elements / union constraints | No primitive/object split — everything is a boc |
 | Higher-kinded types | Contradicts minimalism; inference covers common cases |
 | Explicit where clauses | Tooling's job, not the language's |
 | Default method implementations | Not yet needed; under consideration |
@@ -218,7 +218,7 @@ The following features present in other languages are deliberately absent, with 
 | Constraint declaration | Inferred | Explicit | Explicit | Explicit | Explicit | Inferred |
 | Operator constraints | Methods on boc | Type elements | Operator traits | Operator methods | Not supported | Type classes |
 | Associated types | Type slots (inferred) | Not supported | Explicit | Not supported | Not supported | Explicit |
-| Variance | N/A â€” no inheritance | N/A | Automatic | Declaration-site | Use-site (PECS) | Automatic |
+| Variance | N/A — no inheritance | N/A | Automatic | Declaration-site | Use-site (PECS) | Automatic |
 | Primitive/object split | None | Partial | None | JVM split | Full split | None |
 | Higher-kinded types | Not supported | Not supported | Not supported | Not supported | Not supported | Supported |
 | Monomorphization | TBD | GCShape stenciling | Full | JVM: erasure / Native: full | Erasure | Dictionary |
