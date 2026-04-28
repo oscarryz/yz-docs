@@ -284,3 +284,93 @@ See also: [Standard Library Reference](./yz-stdlib.md#compile-implementations)
 | Syntax extension | ✅ via boc | ✅ | ✅ | ❌ | ❌ |
 | Accidental trigger risk | Low — type opt-in | Medium | Low — explicit | Medium | Low — explicit |
 | Constraint side effects | ✅ visible in tooling | N/A | N/A | N/A | N/A |
+
+
+---
+
+## Compilation Lifecycle
+
+Yz `Compile` slots require full type information — they run after inference, not before
+it. This distinguishes Yz from Lisp and Rust macros, which run before type checking and
+therefore cannot see type information.
+
+The pipeline is:
+
+```
+Source
+  │
+  ▼
+Tokenizer + Parser
+  │
+  ▼
+Semantic Analysis
+  │
+  ▼
+Inference ←──────────────────────────┐
+  │                                  │
+  │ encounters unknown method        │
+  │ on boc with Compile slots        │
+  ▼                                  │
+Run Compile slots                    │
+  │                                  │
+  │ generated code folded back in    │
+  └──────────────────────────────────┘ re-enter inference
+  │
+  │ all Compile slots exhausted
+  ▼
+IR Generation
+  │
+  ▼
+Codegen
+```
+
+Inference and `Compile` execution are **interleaved**. When inference encounters a method
+that does not exist on a boc that has `Compile` slots, it triggers those slots, folds the
+generated code back into the AST, and continues inference on the result. The loop
+continues until no new `Compile` slots are triggered.
+
+This means generated code is fully analysed — its types are inferred, its constraints
+propagate, and it participates in the type system identically to hand-written code. No
+separate compilation round is needed.
+
+See also: [Generics — Constraint Propagation](./yz-generics.md#constraint-propagation)
+
+---
+
+## Circular Generation
+
+Mutually triggering `Compile` slots produce an infinite loop:
+
+```yz
+A : {
+    compile [Compile] = [GenB]   // generates something that triggers B's Compile
+}
+
+B : {
+    compile [Compile] = [GenA]   // generates something that triggers A's Compile
+}
+```
+
+The compiler detects this via cycle tracking on `Compile` slot execution — the same
+mechanism used for cycle detection in recursive type inference.
+
+The rule is:
+
+> **A `Compile` slot cannot trigger the `Compile` slots of a boc that is currently
+> being compiled.**
+
+A violation of this rule is a compile error, not a hang.
+
+---
+
+## Comparison With Other Languages
+
+| Language | When it runs | Type info available | Re-analysis strategy |
+|---|---|---|---|
+| Lisp | During parsing | ❌ | Not needed — macros precede analysis |
+| Rust | After parsing, before semantic | ❌ | One pass on expanded AST |
+| Java | After semantic | Partial | Full new compilation round |
+| Zig | During semantic, lazily | ✅ | Folded in place |
+| Haskell (Template Haskell) | After type checking, top-to-bottom | ✅ | Local re-analysis per splice |
+| Haskell (deriving) | During type checking | ✅ | Part of same phase |
+| Yz | During inference, lazily | ✅ | Inference reruns until exhausted |
