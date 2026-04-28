@@ -41,8 +41,16 @@ This fits naturally with the existing identifier system:
 
 Under the hood, a type parameter is a `Boc` instance with no fields, no methods, and no
 concrete definition — an empty slot waiting to be filled at instantiation time. The
-single uppercase letter convention is a human readability signal. The compiler identifies
-placeholder bocs by their emptiness, not their name.
+single uppercase letter rule is enforced by the compiler — it is what distinguishes a
+type parameter from a reference to an existing boc:
+
+```yz
+Box : { T }    // T is a type parameter — placeholder Boc
+Box : { Tom }  // Tom is a reference to an existing boc named Tom — not a type parameter
+```
+
+Only a single uppercase letter declares a type parameter. Anything else is treated as a
+reference to a named boc and will produce an error if that boc does not exist.
 
 When `Box(String)` is written, the compiler substitutes `String`'s `Boc` instance for
 `T`'s placeholder `Boc` everywhere in `Box`. **Generics are `Boc` substitution.**
