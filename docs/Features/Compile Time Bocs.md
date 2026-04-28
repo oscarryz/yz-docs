@@ -2,21 +2,28 @@
 
 ## Overview
 
-Yz provides a compile-time execution system that is regular Yz code that runs during the compilation phase, with access to the full language and to the structural metadata of the boc being compiled.
+Yz provides a compile-time execution system that is regular Yz code running during the
+compilation phase, with access to the full language and to the structural description of
+the boc being compiled.
 
 The system is built on one rule:
 
-> **Any variable typed `Compile` or `[Compile]` is executed by the compiler at boc definition time. Its return value is merged into the parent boc.**
+> **Any variable typed `Compile` or `[Compile]` is executed by the compiler at boc
+> definition time. Its return value is merged into the parent boc.**
 
-Everything else follows from existing Yz concepts.
+Everything else follows from existing Yz concepts. There is no separate macro language,
+no special syntax, and no annotation processor. A `Compile` implementation is a boc like
+any other — it happens to run at a different time.
 
-See also: [Yz Language Overview](./yz-overview.md) · [Generics](./yz-generics.md) · [boc Reference](./yz-boc.md)
+See also: [Yz Language Overview](./yz-overview.md) · [Generics](./yz-generics.md) ·
+[Structural Reflection — The Boc Type](./yz-structural-reflection.md) ·
+[boc Reference](./yz-boc.md)
 
 ---
 
 ## The `Compile` Type
 
-`Compile` is a structural interface in Yz:
+`Compile` is a structural interface like any other in Yz:
 
 ```yz
 Compile : {
@@ -24,7 +31,13 @@ Compile : {
 }
 ```
 
-Any boc that satisfies this interface can be used in a `Compile` variable. The compiler recognises the type as the trigger. The variable can be named anything:
+`Boc` is the type the compiler creates for every boc definition — it describes the boc's
+fields, methods, type parameters, infostrings, and literal source as regular Yz values.
+See [Structural Reflection](./yz-structural-reflection.md) for the full `Boc` definition.
+
+Any boc that satisfies the `Compile` interface can be used in a `Compile` variable. The
+compiler recognises the **type** as the trigger — not the variable name. The variable can
+be named anything:
 
 ```yz
 Person : {
@@ -33,14 +46,14 @@ Person : {
 }
 
 Person : {
-    derives [Compile] = [Derive, JSON]       // named 'derives' — also valid
+    derives [Compile] = [Derive, JSON]  // named 'derives' — equally valid
     name String
 }
 ```
 
 The type does the work. The name is irrelevant.
 
-See also: [Structural Typing](./yz-structural-typing.md) · [boc Interface Reference](./yz-boc.md#interfaces)
+See also: [Structural Typing](./yz-structural-typing.md)
 
 ---
 
@@ -51,7 +64,8 @@ A single `Compile` implementation:
 ```yz
 Logger : {
     run #(Boc, Boc) = {
-        // generates a log() method on the parent boc
+        // receives parent as a Boc instance
+        // returns a boc with a log() method to merge in
     }
 }
 
@@ -72,20 +86,61 @@ Person : {
 }
 ```
 
-Each implementation in the array receives the parent boc, generates code, and the results are merged in order.
+Each implementation in the array receives the parent boc as a `Boc` instance, generates
+code, and the results are merged in order.
+
+---
+
+## Accessing The Parent boc
+
+Inside a `Compile` implementation, the parent boc is received as the first argument to
+`run` — a regular `Boc` value. There is no magic `self`. The argument is a `Boc`
+instance the compiler created when it parsed the parent:
+
+```yz
+Serialize : {
+    run #(Boc, Boc) = { parent Boc
+        fields = parent.fields.map({ f Boc
+            "{f.name}: {f.source().serialize()}"
+        }).join(",")
+
+        {
+            serialize #(String) = { fields }
+        }
+    }
+}
+```
+
+`parent.fields` is `[Boc]`. Each field is a `Boc`. The returned boc literal is what gets
+merged into the parent. Everything is regular Yz operating on regular values.
+
+To read any boc's structural description, use `compiler.read()`. To splice a `Boc` into
+the current compilation context, use `compiler.insert()`. These are the only two
+compile-time operations that are special — everything else is standard Yz:
+
+```yz
+compiler.read(Named)     // returns the Boc instance for Named
+compiler.insert(b)       // splices Boc b into the current compilation context
+```
+
+`compiler` is available only during `Compile` slot execution.
+
+See also: [Structural Reflection — The compiler boc](./yz-structural-reflection.md#the-compiler-boc)
 
 ---
 
 ## Field Metadata — Infostrings
 
-Infostrings provide **passive metadata** to `Compile` implementations. They attach to the boc or to individual fields and are readable via `self.infostring` and `self.fields[n].infostring` inside any `Compile` boc.
+Infostrings provide **passive metadata** to `Compile` implementations. They attach to a
+boc or to individual fields and are readable via `Boc.infostrings` and
+`Boc.fields[n].infostrings` inside any `Compile` implementation:
 
 ```yz
-"graphql-schema:https://myapi.com/graphql"   // boc-level infostring
+"graphql-schema:https://myapi.com/graphql"
 Movies : {
-    compile Compile = GraphQL
+    compile Compile = GraphQL()
 
-    "json:movie_title"               // field-level infostring
+    "json:movie_title"
     title String
 
     "json:ignore"
@@ -93,14 +148,13 @@ Movies : {
 }
 ```
 
-Infostrings are data — they describe only but they do not execute. All execution happens in `Compile` variables that read them.
+Infostrings describe — they do not execute. All execution happens in `Compile`
+implementations that read them. The division of responsibility is firm:
 
-The division of responsibility:
-
-| Infostrings | Compile slots |
+| Infostrings | Compile implementations |
 |---|---|
 | Passive metadata | Active code generation |
-| Attached to fields or bocs | Reads infostrings |
+| Attached to fields or bocs | Reads infostrings via `Boc.infostrings` |
 | No execution | Full language access |
 | Parameters to Compile | The engine |
 
@@ -108,14 +162,18 @@ See also: [Infostrings](./yz-infostrings.md)
 
 ---
 
-## What Compile Has Access To
+## Full Language Access
 
-A `Compile` boc has access to everything — there is no restricted subset of the language at compile time. The same facilities available at runtime are available during compilation:
+A `Compile` boc has access to everything — there is no restricted subset of the language
+at compile time. The same facilities available at runtime are available during
+compilation:
 
 ```yz
 GraphQL : {
-    run #(Boc, Boc) = {
-        schema_url : self. infostring("graphql-schema")
+    run #(Boc, Boc) = { parent Boc
+        schema_url = parent.infostrings
+            .find({ s String  s.starts_with("graphql-schema:") })
+            .split(":").last()
 
         // fetch a remote schema at compile time
         schema = http.get(schema_url)
@@ -123,12 +181,11 @@ GraphQL : {
         // read a local file at compile time
         query = file.read("queries/movies.gql")
 
-        // use the full Yz standard library
+        // generate typed query bocs from the schema
         types = schema.parse().types.map({ t Type
-            // generate a boc per type
+            compiler.read(t)
         })
 
-        // return generated bocs to merge into parent
         { queries: types }
     }
 }
@@ -145,14 +202,12 @@ Everything inside is regular Yz.
 
 ## Execution Timing
 
-`Compile` slots run at **boc definition time** — when the boc is first compiled, not when it is instantiated.
-
-For generic bocs this distinction matters:
+`Compile` slots run at **boc definition time** — when the boc is first compiled, not
+when it is instantiated. For generic bocs this distinction matters:
 
 ```yz
-"derive:[Serializable]"
 Stack : {
-    compile Compile = Derive()
+    compile [Compile] = [Derive]
     T
     items []T
     push #(T)
@@ -163,7 +218,8 @@ istack Stack(Int)    // Compile already ran — Stack is fully defined
 sstack Stack(String) // same — no Compile re-execution
 ```
 
-Generated code contains type parameters and is monomorphized later at instantiation, exactly as hand-written generic code would be.
+Generated code contains type parameters and is monomorphized later at instantiation,
+exactly as hand-written generic code would be.
 
 See also: [Generics — Monomorphization](./yz-generics.md#monomorphization)
 
@@ -171,11 +227,14 @@ See also: [Generics — Monomorphization](./yz-generics.md#monomorphization)
 
 ## Generated Code and Constraint Inference
 
-Code generated by `Compile` implementations participates in constraint inference equally with hand-written code. If a `Compile` boc generates a method that calls `value.serialize()`, the compiler infers `serialize #(String)` as a constraint on the relevant type parameter — even though the developer never wrote that call.
+Code generated by `Compile` implementations participates in constraint inference equally
+with hand-written code. If a `Compile` boc generates a method that calls
+`value.serialize()`, the compiler infers `serialize #(String)` as a constraint on the
+relevant type parameter — even though the developer never wrote that call:
 
 ```yz
 Box : {
-    compile Compile = Serialize()   // generates serialize() calling value.serialize()
+    compile Compile = Serialize()  // generates serialize() calling value.serialize()
     T
     value T
 }
@@ -183,108 +242,87 @@ Box : {
 // even though the developer never wrote value.serialize()
 ```
 
-Generated constraints propagate upward through call chains exactly as described in [Generics — Constraint Propagation](./yz-generics.md#constraint-propagation).
+Generated constraints propagate upward through call chains exactly as hand-written
+constraints do.
+
+See also: [Generics — Constraint Propagation](./yz-generics.md#constraint-propagation)
 
 ---
 
 ## ⚠️ The Unexpected Constraints Problem
 
-This is the most significant danger in the compile-time system and should be understood before using `Compile` implementations from external libraries.
-
-When you add a `Compile` implementation to a generic boc, that implementation may generate code that adds constraints to your type parameters. These constraints are real — callers of your boc must satisfy them — but they are **not visible in your source code**.
+This is the most significant danger in the compile-time system. When a `Compile`
+implementation generates code that calls methods on a type parameter, those method
+requirements become constraints on that parameter — silently, from the developer's
+perspective.
 
 ```yz
 Container : {
-    compile [Compile] = [Derive, Logging, Metrics]  // three external libraries
+    compile [Compile] = [Derive, Logging, Metrics]
     T
     value T
 }
 ```
 
-`Derive`, `Logging`, and `Metrics` may collectively add constraints requiring `T` to have `serialize #(String)`, `toString #(String)`, `metricsId #(String)`, and others. A caller passing a simple `Int` may get a surprising error about unsatisfied constraints originating from generated code they never saw.
+`Derive`, `Logging`, and `Metrics` may collectively require `T` to have
+`serialize #(String)`, `toString #(String)`, `metricsId #(String)`, and others. A caller
+passing a plain `Int` may receive a constraint error referencing methods they never wrote.
 
-**Mitigations:**
-
-The compiler always surfaces the full flattened constraint set — including constraints from generated code — in error messages and tooling. When a call fails, the complete picture is visible even if the source of the constraint is a `Compile` implementation.
+The compiler always surfaces the full flattened constraint set — including constraints
+from generated code — in error messages and tooling:
 
 ```
-// tooling surfaces:
 Container #(value T)
   T requires:
-    serialize #(String)       ← generated by Derive
-    toString #(String)        ← generated by Logging
-    metricsId #(String)       ← generated by Metrics
+    serialize #(String)    ← generated by Derive
+    toString #(String)     ← generated by Logging
+    metricsId #(String)    ← generated by Metrics
 ```
 
 **Best practices:**
 
 - Prefer `Compile` implementations that document their generated constraints explicitly
 - For public APIs, review the full inferred constraint set before publishing
-- Prefer focused `Compile` implementations that do one thing over broad ones that generate many methods
-- Treat unexpected constraints as a signal that a `Compile` implementation is doing too much
+- Prefer focused `Compile` implementations that do one thing
+- Treat unexpected constraints as a signal that a `Compile` implementation is doing
+  too much
 
 ---
 
 ## Ordering of Multiple Compile Implementations
 
-When `[Compile]` contains multiple implementations they run in array order. Each receives the **original** parent boc, not the progressively merged result. All generated bocs are merged at the end.
+When `[Compile]` contains multiple implementations, they run in array order. Each
+receives the **original** parent boc — not the progressively merged result. All generated
+bocs are merged at the end:
 
 ```yz
 compile [Compile] = [First, Second, Third]
 // First, Second, Third each receive the original parent boc independently
-// their outputs are merged in order: First's output, then Second's, then Third's
+// their outputs are merged in order
 ```
 
-If two implementations generate the same slot name the later one wins. This is a source of subtle bugs when combining third-party `Compile` implementations — check for slot name collisions.
+If two implementations generate the same slot name the later one wins. Check for slot
+name collisions when combining third-party `Compile` implementations.
 
 ---
 
 ## Compile Implementations Are Regular bocs
 
-`Compile` implementations can themselves have `Compile` slots, type parameters, and infostrings. They are not special — they are bocs that happen to satisfy the `Compile` interface:
+`Compile` implementations can themselves have `Compile` slots, type parameters, and
+infostrings. They are not special — they are bocs that satisfy the `Compile` interface:
 
 ```yz
 Derive : {
     compile [Compile] = [Validate]  // Derive has its own Compile slot
-    T
     run #(Boc, Boc) = {
         // implementation
     }
 }
 ```
 
-`Derive`'s own `Compile` slot runs when `Derive` is compiled as a library — long before any boc uses it. By the time `Person` includes `Derive` in its `[Compile]` array, `Derive` is fully compiled. No ordering problem.
-
----
-
-## Standard Library Compile Implementations
-
-The following `Compile` implementations are provided by the Yz standard library. Each documents its infostring format and the constraints it adds to type parameters.
-
-| Implementation | Infostring | Generates | Added constraints |
-|---|---|---|---|
-| `Derive` | `"derive:[Interface,...]"` | Interface implementations | Varies per interface |
-| `JSON` | `"json:field_name"` / `"json:ignore"` | Serialization/deserialization | None |
-| `GraphQL` | `"schema:url"` | Typed query bocs | None |
-| `Debug` | None | `debug #(String)` method | None |
-| `Validate` | `"validate:rule"` | Validation methods | None |
-
-See also: [Standard Library Reference](./yz-stdlib.md#compile-implementations)
-
----
-
-## Comparison With Other Languages
-
-| Feature | Yz | Lisp | Rust | Zig | Java |
-|---|---|---|---|---|---|
-| Same language at compile time | ✅ | ✅ | ❌ separate crate | ✅ | ❌ separate processor |
-| Full type information access | ✅ | N/A dynamic | ❌ pre-type-check | ✅ | ❌ syntax only |
-| Attached to target | ✅ inside boc | ❌ separate | ❌ separate | ❌ separate | ❌ separate |
-| Passive metadata | Infostrings | N/A | Attributes | N/A | Annotation values |
-| Syntax extension | ✅ via boc | ✅ | ✅ | ❌ | ❌ |
-| Accidental trigger risk | Low — type opt-in | Medium | Low — explicit | Medium | Low — explicit |
-| Constraint side effects | ✅ visible in tooling | N/A | N/A | N/A | N/A |
-
+`Derive`'s own `Compile` slot runs when `Derive` is compiled as a library — before any
+boc uses it. By the time `Person` includes `Derive` in its `[Compile]` array, `Derive`
+is fully compiled. No ordering problem.
 
 ---
 
@@ -329,9 +367,9 @@ that does not exist on a boc that has `Compile` slots, it triggers those slots, 
 generated code back into the AST, and continues inference on the result. The loop
 continues until no new `Compile` slots are triggered.
 
-This means generated code is fully analysed — its types are inferred, its constraints
-propagate, and it participates in the type system identically to hand-written code. No
-separate compilation round is needed.
+Generated code is fully analysed — its types are inferred, its constraints propagate, and
+it participates in the type system identically to hand-written code. No separate
+compilation round is needed.
 
 See also: [Generics — Constraint Propagation](./yz-generics.md#constraint-propagation)
 
@@ -363,7 +401,38 @@ A violation of this rule is a compile error, not a hang.
 
 ---
 
+## Standard Library Compile Implementations
+
+The following `Compile` implementations are provided by the Yz standard library. Each
+documents its infostring format and the constraints it adds to type parameters.
+
+| Implementation | Infostring | Generates | Added constraints |
+|---|---|---|---|
+| `Derive` | `"derive:[Interface,...]"` | Interface implementations | Varies per interface |
+| `JSON` | `"json:field_name"` / `"json:ignore"` | Serialization/deserialization | None |
+| `GraphQL` | `"graphql-schema:url"` | Typed query bocs | None |
+| `Debug` | None | `debug #(String)` method | None |
+| `Validate` | `"validate:rule"` | Validation methods | None |
+
+See also: [Standard Library Reference](./yz-stdlib.md#compile-implementations)
+
+---
+
 ## Comparison With Other Languages
+
+### Feature Comparison
+
+| Feature | Yz | Lisp | Rust | Zig | Java |
+|---|---|---|---|---|---|
+| Same language at compile time | ✅ | ✅ | ❌ separate crate | ✅ | ❌ separate processor |
+| Full type information access | ✅ | N/A dynamic | ❌ pre-type-check | ✅ | ❌ syntax only |
+| Attached to target | ✅ inside boc | ❌ separate | ❌ separate | ❌ separate | ❌ separate |
+| Passive metadata | Infostrings | N/A | Attributes | N/A | Annotation values |
+| Syntax extension | ✅ via boc | ✅ | ✅ | ❌ | ❌ |
+| Accidental trigger risk | Low — type opt-in | Medium | Low — explicit | Medium | Low — explicit |
+| Constraint side effects | ✅ visible in tooling | N/A | N/A | N/A | N/A |
+
+### Lifecycle Comparison
 
 | Language | When it runs | Type info available | Re-analysis strategy |
 |---|---|---|---|
