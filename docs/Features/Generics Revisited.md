@@ -46,11 +46,9 @@ type parameter from a reference to an existing boc:
 
 ```yz
 Box : { T }    // T is a type parameter — placeholder Boc
-Box : { Tom }  // Tom is a reference to an existing boc named Tom — not a type parameter
 ```
 
-Only a single uppercase letter declares a type parameter. Anything else is treated as a
-reference to a named boc and will produce an error if that boc does not exist.
+Only a single uppercase letter declares a type parameter. 
 
 When `Box(String)` is written, the compiler substitutes `String`'s `Boc` instance for
 `T`'s placeholder `Boc` everywhere in `Box`. **Generics are `Boc` substitution.**
