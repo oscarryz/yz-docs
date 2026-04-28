@@ -276,11 +276,11 @@ See also: [Standard Library Reference](./yz-stdlib.md#compile-implementations)
 ## Comparison With Other Languages
 
 | Feature | Yz | Lisp | Rust | Zig | Java |
-|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|
 | Same language at compile time | ✅ | ✅ | ❌ separate crate | ✅ | ❌ separate processor |
 | Full type information access | ✅ | N/A dynamic | ❌ pre-type-check | ✅ | ❌ syntax only |
 | Attached to target | ✅ inside boc | ❌ separate | ❌ separate | ❌ separate | ❌ separate |
-| Passive metadata | Infostrings | N/A | Attributes | N/A | Annotation values | 
+| Passive metadata | Infostrings | N/A | Attributes | N/A | Annotation values |
 | Syntax extension | ✅ via boc | ✅ | ✅ | ❌ | ❌ |
 | Accidental trigger risk | Low — type opt-in | Medium | Low — explicit | Medium | Low — explicit |
 | Constraint side effects | ✅ visible in tooling | N/A | N/A | N/A | N/A |
