@@ -1,5 +1,6 @@
-#open-question
-#v2
+#solved
+
+Explained in [Compile time Bocs](https://github.com/oscarryz/yz-docs/blob/main/docs%2FFeatures%2FCompile%20Time%20Bocs.md)
 
 - Regular Yz code
 - Creates AST nodes at compile time
