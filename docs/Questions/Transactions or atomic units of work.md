@@ -1,4 +1,9 @@
-#open-question 
+#solved 
+
+See:[Concurrency](https://github.com/oscarryz/yz-docs/blob/main/docs%2FFeatures%2FConcurrency.md)
+
+
+----
 
 How to make "transactions" without locking ala BOCs (Behavior Oriented stuff )
 
