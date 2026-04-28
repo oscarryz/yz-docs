@@ -32,4 +32,4 @@ macro! def {
 def x y Int 0 
 ```
 
-#open-question 
+#solved
