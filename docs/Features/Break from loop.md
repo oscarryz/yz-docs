@@ -1,5 +1,10 @@
 #feature
 
+
+>Note this has been completely replaced by [return. break,  continue](https://github.com/oscarryz/yz-docs/blob/main/docs%2FFeatures%2Freturn%2C%20break%2C%20continue.md)
+
+______
+
 This might not be straightforward but I might need to implement something like this to break loops
 
 
