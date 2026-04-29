@@ -8,7 +8,6 @@ break
 continue
 return
 match
-mix
 =>
 :
 `
