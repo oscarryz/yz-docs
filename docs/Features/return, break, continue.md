@@ -1,9 +1,9 @@
 #feature 
 # return, break, and continue
 
-These are the four reserved keywords in Yz. Each one performs a non-local jump —
-something that cannot be expressed as a boc calling another boc. Everything else in the
-language is a boc.
+These are three of the four reserved keywords in Yz. Each one performs a non-local jump —
+something that cannot be expressed as a boc calling another boc. The fourth keyword,
+`match`, is documented in [Conditional Bocs](./yz-conditional-bocs.md).
 
 See also: [Language Primitives](./yz-primitives.md) · [Concurrency](./yz-concurrency.md)
 
