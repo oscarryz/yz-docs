@@ -1,4 +1,8 @@
 #feature 
+#replaced
+
+see Concurrency
+
 # Single Writer
 
 Every boc is the **sole writer** of its own variables. External code can read another boc's fields freely, but cannot write to them directly — writes from outside are queued through the owner's actor.
