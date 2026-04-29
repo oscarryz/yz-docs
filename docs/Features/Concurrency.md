@@ -1,215 +1,252 @@
+# Yz Concurrency
 
-#feature
+## Overview
 
-# Concurrency
+Concurrency in Yz is not something you opt into. Every value is protected by default,
+and every boc invocation runs asynchronously. There are no locks, no explicit threads,
+no `async`/`await` annotations, and no function colouring. The runtime handles
+synchronisation automatically and the compiler optimises away overhead in the common
+case.
 
-Concurrency in Yz language is built on a single, unified model: **every value is a concurrent owner (cown), and every function call is am asynchronous behaviour**. There are no locks, explicit threads, async/await annotations, nor function coloring. The runtime handles the synchronization automatically, and the compiler optimizes away the overhead in the common case.
+---
 
-## Core Concepts
+## Core Model
 
-### Everything is a Cown
+### Every Value Is Protected
 
-A cown (concurrent owner) is a protected piece of data that provides the only entry point to that data in the program. Every value in the language — whether a simple integer, an object, or a function — is implicitly a cown.
+Every value in Yz — whether a simple integer, a boc, or a complex object — is
+implicitly a protected concurrent owner. A value is either **available** or
+**acquired**. Only one running boc can hold a value at a time. When a value is acquired,
+all other bocs that need it wait in a queue.
 
-```js
-counter: { value Int }   // counter is a cown, automatically
+```yz
+counter : { value Int }   // counter is protected automatically — no annotation needed
 ```
 
-A cown is either **available** or **acquired**. Only one behaviour (or boc invocation) can hold a cown at a time. When a cown is acquired, all other behaviours that need it wait in a queue.
+There is nothing to declare. Protection is the default, not an opt-in.
 
-### Every Call is a Behaviour
+### Every Invocation Is Asynchronous
 
-A behaviour is an asynchronous unit of work. When you call a boc, you are spawning a behaviour that will run when it has acquired all the cowns it needs. Crucially, **all required cowns are acquired atomically** — a behaviour either gets all of them at once, or waits until it can.
+When you invoke a boc, you are scheduling an asynchronous unit of work that will run
+when it has acquired all the values it needs. Crucially, **all required values are
+acquired atomically** — a running boc either gets all of them at once, or waits until
+it can. There is no partial acquisition.
 
-```js
-transfer(src, dst, 100)   // spawns a behaviour requiring {src, dst}
-check_balance(src)         // spawns a behaviour requiring {src}
+```yz
+transfer(src, dst, 100)   // acquires src and dst atomically before running
+check_balance(src)        // waits if src is already acquired
 ```
 
-This means Yz runtime infers concurrency from data dependencies, not from annotations.
+The runtime infers what needs to run in parallel from data dependencies — not from
+annotations.
 
 ### Happens-Before Ordering
 
-The runtime guarantees that if two behaviours share at least one cown, and one was spawned before the other, the earlier one always runs first. This is called the **happens-before** relation.
+The runtime guarantees that if two invocations share at least one value, the one
+spawned earlier always runs first.
 
-```js
-transfer(s1, s2)     // b1: acquires {s1, s2}
-check_balance(s1)    // b2: must wait — s1 is taken by b1
+```yz
+transfer(s1, s2)     // acquires {s1, s2}
+check_balance(s1)    // must wait — s1 is taken by transfer
 ```
 
-`check_balance` will always see the result of `transfer`. No explicit synchronization needed.
+`check_balance` will always see the result of `transfer`. No explicit synchronisation
+needed.
 
-Behaviours that share **no** cowns have no ordering constraint and run freely in parallel:
+Invocations that share **no** values have no ordering constraint and run freely in
+parallel:
 
-```js
-transfer(s1, s2)    // b1: acquires {s1, s2}
-transfer(s3, s4)    // b2: acquires {s3, s4} — runs in parallel with b1
+```yz
+transfer(s1, s2)    // acquires {s1, s2}
+transfer(s3, s4)    // acquires {s3, s4} — runs in parallel with the first
 ```
+
+---
 
 ## Safety Guarantees
 
 The model provides four guarantees by construction, not by programmer discipline:
 
-**Data-race freedom** — since each cown's data is isolated and only one behaviour holds it at a time, two behaviours can never concurrently mutate the same state.
+**Data-race freedom** — each value is isolated and only one running boc holds it at a
+time. Two invocations can never concurrently mutate the same state.
 
-**Deadlock freedom** — because all cowns are acquired atomically (all at once or not at all), the circular waiting that causes deadlock cannot form. There is no "grab one lock, then wait for another."
+**Deadlock freedom** — because all values are acquired atomically, the circular waiting
+that causes deadlock cannot form. There is no "acquire one value, then wait for
+another."
 
-**Determinism** — for any two behaviours sharing a cown, their execution order is always the same: the one spawned first runs first. A program's observable behaviour is deterministic with respect to spawn order.
+**Determinism** — for any two invocations sharing a value, their execution order is
+always the same: the one spawned first runs first. A program's observable behaviour is
+deterministic with respect to invocation order.
 
-**Structured lifetimes** — a block does not complete until all behaviours it spawned have completed, regardless of whether return values have already been delivered to the caller. Child behaviours cannot outlive their parent scope. See [Structured Concurrency](#structured-concurrency) below.
+**Structured lifetimes** — a boc does not complete until all invocations it spawned
+have completed, even if return values have already been delivered to the caller.
+See [Structured Concurrency](#structured-concurrency) below.
+
+---
 
 ## Performance
 
-Every function call going through a queue might sound expensive. In practice it is not, for two reasons.
+Every invocation going through a queue might sound expensive. In practice it is not.
 
-First, an **uncontended cown** — one with no other waiters — is acquired instantly. The queue exists but is empty, so acquisition is a single atomic operation with no waiting.
+An **uncontended value** — one with no other waiters — is acquired instantly. The queue
+exists but is empty, so acquisition is a single atomic operation with no waiting.
 
-Second, the compiler and the runtime can **inline and elide** cown acquisition entirely for values that are probably local to a single behaviour. Correctness is guaranteed by the model; performance is a pure optimization problem, decoupled from correctness.
+The compiler and runtime can **inline and elide** value acquisition entirely for values
+that are local to a single invocation. Correctness is guaranteed by the model;
+performance is a pure optimisation problem, decoupled from correctness.
 
-The result: you write simple, safe code, and the runtime figures out what can run in parallel.
+You write simple, safe code. The runtime figures out what can run in parallel.
 
-## Return Values and Suspension
+---
 
-Return values in Yz are **concurrently lazy**. When you call a function, it starts running immediately as a behaviour, and a transparent thunk is returned to the caller. The thunk is forced — and the caller suspends — only when the value is actually used.
+## Return Values
 
-```js
-w : load("world")   // load starts running, w is a thunk
-other()             // runs immediately, load still in progress
-print(w)            // forced here — suspends until load completes
+Return values in Yz are **transparently lazy**. When you invoke a boc, it starts
+running immediately and a placeholder is returned to the caller. The placeholder
+resolves — and the caller suspends — only when the value is actually used.
+
+```yz
+w User = load("user:123")   // load starts running immediately
+other()                      // runs immediately, load still in progress
+print(w)                     // suspends here until load completes
 ```
 
-The suspension is transparent. You write sequential-looking code; the runtime handles the interleaving. This gives you future/promise semantics without any `Future[T]` type or `.then()` chain.
+The type of `w` is always the declared return type — `User` in this case, not a
+`Future[User]` or any wrapper type. The placeholder is an internal runtime concept,
+not something the developer works with directly:
 
-Importantly, a thunk being forced does not mean the spawning block is done. Even after `print(w)` receives its value, if `load` spawned further child behaviours internally, the enclosing block waits for all of them. Return values and scope completion are distinct — this is the structured concurrency guarantee described in the next section.
+```yz
+load #(id String, User)   // returns User — always, regardless of concurrency
+```
+
+The suspension is transparent. You write sequential-looking code and the runtime handles
+the interleaving.
 
 ### Multiple Return Values
 
-Functions can return multiple values. All outputs are resolved simultaneously when the behaviour completes — there is no partial resolution.
+Bocs can return multiple values. All outputs are resolved simultaneously when the
+invocation completes — there is no partial resolution:
 
-```js
-value, errors : parse(input)    // suspends until parse finishes
-                              // then value AND errors are assigned together
+```yz
+value, errors : parse(input)    // both assigned together when parse finishes
 
 errors.len() == 0 ? {
-    print(value) // value is available here
+    print(value)
 }, {
-   print(errors)
+    print(errors)
 }
 ```
 
-Because functions and objects are the same thing, multiple return values are equivalent to returning a single anonymous object. These two forms are identical in semantics:
+Because bocs and objects are the same thing, multiple return values are equivalent to
+returning a single anonymous boc. These two forms are semantically identical:
 
-```js
-// explicit destructuring
-value, err : parse(input)
+```yz
+value, err : parse(input)   // destructured form
 
-// attribute access
-parse(input)
-value : parse.value
-err   : parse.err
+result : parse(input)       // attribute access form
+value : result.value
+err   : result.err
 ```
+
+---
 
 ## Structured Concurrency
 
-A block does not complete until **all behaviours it spawned have completed**, even if those behaviours were spawned indirectly or if all return values have already been delivered to the caller.
+A boc does not complete until **all invocations it spawned have completed**, even if
+those invocations were spawned indirectly or if all return values have already been
+delivered to the caller.
 
-```js
-outer: {
+```yz
+outer : {
     done Bool
-    inner: {
+    inner : {
         time.delay(10)
         print("inner done")
     }
-    done = true // assigned immediately 
+    done = true   // assigned immediately
 }
 outer()
-print("outer done `outer.done`")    // guaranteed to print AFTER "inner done"
+print("outer done `outer.done`")   // guaranteed to print AFTER "inner done"
 ```
 
-This is the **scope guarantee**: the lifetime of every behaviour is bounded by the block that spawned it. Child behaviours cannot escape their parent scope. This prevents the classic failure mode of fire-and-forget tasks that leak resources, propagate errors silently, or produce results no one is listening to.
+The lifetime of every invocation is bounded by the boc that spawned it. Child
+invocations cannot outlive their parent scope. This prevents fire-and-forget tasks that
+leak resources, propagate errors silently, or produce results no one is listening to.
 
-### Thunks Do Not Escape
+### Return Values Do Not Close Child Scopes
 
-Return values (thunks) are child behaviours. Forcing a thunk delivers the value to the caller, but does not close the child's scope — any work still running inside that child continues, and the parent scope waits for it.
+Receiving a return value does not close the child's scope. Any work still running inside
+that child continues, and the parent waits for it:
 
-```js
-main: {
-    result : compute()    // compute starts, thunk returned
-    print(result)         // thunk forced — main gets the value
-                          // but main does NOT exit here if compute
-                          // has child behaviours still running
-}                         // main exits only when all descendants done
+```yz
+main : {
+    result : compute()   // compute starts, placeholder returned
+    print(result)        // main gets the value here
+                         // but main does NOT exit if compute has children still running
+}                        // main exits only when all descendants are done
 ```
 
-This is what distinguishes structured concurrency from plain futures. A future in other languages can outlive its creator. In this language, it cannot.
+This is what distinguishes Yz structured concurrency from plain futures. A future in
+other languages can outlive its creator. In Yz it cannot.
 
-### Scope and Parallelism Together
+### Parallelism Within A Scope
 
-Structured lifetimes compose naturally with parallel execution. Multiple child behaviours run in parallel within a scope, and the scope waits for all of them:
+Multiple child invocations run in parallel within a scope. The scope waits for all of
+them:
 
-```js
-process: {
-    a : step_one()      // runs in parallel...
-    b : step_two()      // ...with this
-    combine(a, b)       // waits for both, then runs
-}                       // exits only after combine and all descendants finish
+```yz
+process : {
+    a : step_one()    // runs in parallel...
+    b : step_two()    // ...with this
+    combine(a, b)     // waits for both, then runs
+}                     // exits only after combine and all descendants finish
 ```
 
-The happens-before ordering ensures `combine` waits for `a` and `b`. The scope guarantee ensures `process` waits for `combine`. Both properties hold simultaneously with no extra annotation.
+---
 
-### Producer Lifetimes
+## Scheduling And Parallelism
 
-Structured concurrency has a direct consequence for long-running or infinite producers: a producer spawned inside a block is bounded by that block's scope, so the block cannot exit until the producer finishes.
+The ordering guarantee is determined by **invocation order and value overlap**. The
+programmer controls parallelism by controlling when invocations are spawned.
 
-```js
-main: {
-    boring("sync")          // spawns an infinite producer
-    5.times().do({
-        print(boring.next())
-    })
-}                           // main cannot exit — boring never finishes
-```
+Consider four philosophers each needing two forks:
 
-Cancellation is not yet part of the model. For infinite producers the recommended pattern is to use independent instances with explicit launcher and reader blocks so their lifetime can be managed separately from the calling scope. See [Blocks and Instances](/docs/blocks-and-instances) and the Producer-Consumer section below.
-
-## Ordering and Scheduling
-
-The happens-before relation is determined by **spawn order and cown overlap**. This means the programmer controls parallelism by controlling when behaviours are spawned.
-
-Consider four philosophers each eating once, where each needs two forks:
-
-```js
-// Sequential — each call overlaps with the next, forced into a chain
-eat(f1, f2)   // b1
-eat(f2, f3)   // b2 — waits for b1 (shares f2)
-eat(f3, f4)   // b3 — waits for b2 (shares f3)
-eat(f4, f1)   // b4 — waits for b3 (shares f4)
+```yz
+// Sequential — each invocation shares a fork with the next, forced into a chain
+eat(f1, f2)
+eat(f2, f3)   // waits for first  (shares f2)
+eat(f3, f4)   // waits for second (shares f3)
+eat(f4, f1)   // waits for third  (shares f4)
 
 // Parallel — non-overlapping pairs spawned first
-eat(f1, f2)   // b1
-eat(f3, f4)   // b3 — no overlap with b1, runs in parallel
-eat(f2, f3)   // b2 — waits for both b1 and b3
-eat(f4, f1)   // b4 — waits for both b1 and b3
+eat(f1, f2)   // runs in parallel...
+eat(f3, f4)   // ...with this
+eat(f2, f3)   // waits for both above
+eat(f4, f1)   // waits for both above
 ```
 
-The second schedule runs two things in parallel in the first phase and two in the second. **Incorrect scheduling hurts performance but never correctness** — the program is always data-race free and deadlock free regardless of spawn order.
+The second schedule runs two invocations in parallel in the first phase and two in the
+second.
 
-## Blocks and Instances
+> **Incorrect scheduling hurts performance but never correctness.** The program is
+> always data-race free and deadlock free regardless of invocation order.
 
-Concurrency composes naturally with the language's block and instance model. Independent instances each carry their own cowns, so they share no state and run fully in parallel. Each instance also forms its own structured scope — its child behaviours are bounded by its own lifetime, not the parent's, which makes independent instances the natural tool for managing long-running concurrent work. For a full explanation see [Blocks and Instances](/docs/blocks-and-instances).
+---
 
-## Producer-Consumer Communication
+## Producer-Consumer
 
-Because every value is a cown and every access goes through a queue, producer-consumer communication falls out of the model naturally — no channels required as a language primitive.
+Because every value is protected and every access goes through a queue,
+producer-consumer communication falls out of the model naturally.
 
-A producer writing to a shared array and a consumer reading from it are automatically ordered:
+A producer writing to a shared array and a consumer reading from it are automatically
+ordered:
 
-```js
-boring: {
+```yz
+boring : {
     m String
-    messages: [String]()
-    next: { messages.pop() }
-    i: 1
+    messages : [String]()
+    next : { messages.pop() }
+    i : 1
 
     while({ true }, {
         messages.push("`m` `i`")
@@ -218,7 +255,7 @@ boring: {
     })
 }
 
-main: {
+main : {
     boring("sync")
     5.times().do({
         print(boring.next())
@@ -226,31 +263,80 @@ main: {
 }
 ```
 
-The happens-before guarantee ensures `boring` writes at least once before `main` reads (boring is spawned first). After that, boring can race ahead freely — since it writes to an array rather than a single value, no messages are lost. The consumer always reads in order via `pop`.
+The ordering guarantee ensures `boring` writes at least once before `main` reads —
+`boring` is spawned first. After that, `boring` can race ahead freely. Since it writes
+to an array rather than a single value, no messages are lost.
 
-Because `boring` contains an infinite loop, the structured concurrency guarantee means `main`'s scope will not close until `boring` finishes. Until cancellation is supported, infinite producers should be structured as independent instances with explicit launcher and reader blocks so their lifetime can be managed independently.
+### Infinite Producers And Cancellation
 
-For bounded producer-consumer with backpressure, the standard library provides `Chan[T]` — a cown wrapping a bounded queue with blocking push and pop semantics. This is a library type, not a language primitive; it is built entirely from the same cown mechanics described above.
+A producer spawned inside a scope is bounded by that scope — the scope cannot exit until
+the producer finishes. For infinite producers this means the enclosing scope never exits.
 
-For block signatures and type annotations see [Block Signatures](/docs/block-signatures).
+```yz
+main : {
+    boring("sync")          // infinite loop
+    5.times().do({ print(boring.next()) })
+}                           // main cannot exit — boring never finishes
+```
+
+Cancellation is supported via a `cancel()` method on any running invocation. The
+scheduler is preemptive — a running boc periodically checks whether cancellation has
+been requested and exits cleanly when it has:
+
+```yz
+b : boring("sync")          // b is a handle to the invocation
+5.times().do({ print(b.next()) })
+b.cancel()                  // signals boring to stop
+```
+
+Structured concurrency contexts for grouping and cancelling related invocations are
+under design.
+
+---
+
+## Compile-Time Bocs And Concurrency
+
+`Compile` typed slots execute during the compilation phase, not at runtime. The
+concurrency model described in this document is a **runtime** property and does not
+apply to compile-time execution.
+
+`Compile` slots run sequentially in the current implementation. The compilation phase
+does not use the runtime scheduler. This is a deliberate simplification — concurrent
+compilation could be added later without changing the language or the runtime model,
+since the same safety guarantees would apply.
+
+See also: [Compile-Time Bocs](./yz-compile-time-bocs.md)
+
+---
 
 ## Summary
 
-| Concept | How it works |
+| Property | How Yz achieves it |
 |---|---|
-| Shared state | Everything is a cown — protected by default |
-| Parallelism | Behaviours with non-overlapping cowns run in parallel automatically |
-| Ordering | Behaviours sharing a cown run in spawn order |
-| Deadlock | Impossible — all cowns acquired atomically |
-| Data races | Impossible — exclusive access guaranteed |
-| Async | Every call is async — suspension is transparent at return value use |
-| Structured lifetimes | A block waits for all descendant behaviours before completing |
-| Thunk escaping | Impossible — return values are child behaviours, bounded by their scope |
-| Channels | Fall out of cown semantics — available as `Chan[T]` in stdlib |
-| Performance | Uncontended cowns are inlined/elided by the compiler |
+| Shared state safety | Every value is protected — exclusive access guaranteed |
+| Parallelism | Invocations with non-overlapping values run in parallel automatically |
+| Ordering | Invocations sharing a value run in spawn order |
+| Deadlock | Impossible — all values acquired atomically |
+| Data races | Impossible — exclusive access by construction |
+| Async | Every invocation is async — suspension transparent at value use |
+| Structured lifetimes | A boc waits for all descendant invocations before completing |
+| Return value escaping | Impossible — return values are bounded by their scope |
+| Cancellation | Via `cancel()` method on invocation handle |
+| Performance | Uncontended values are inlined/elided by the compiler |
 
-## Further Reading
+---
 
-The concurrency model in this language is directly inspired by **Behaviour-Oriented Concurrency (BoC)**, a concurrency paradigm developed at Imperial College London and Microsoft Research. The formal model, semantics, and implementation details are described in:
+## Theoretical Background
 
-> Cheeseman et al. (2023). *When Concurrency Matters: Behaviour-Oriented Concurrency*. Proc. ACM Program. Lang. 7, OOPSLA2, Article 276. [https://marioskogias.github.io/docs/boc.pdf](https://marioskogias.github.io/docs/boc.pdf)
+The concurrency model in Yz is directly inspired by an academic concurrency paradigm
+developed at Imperial College London and Microsoft Research. In that model, protected
+values are called **cowns** (concurrent owners) and asynchronous units of work are
+called **behaviours**. In Yz, a cown is any value and a behaviour is any boc
+invocation — the concepts map directly onto the language's existing constructs rather
+than requiring separate primitives.
+
+The formal model, semantics, and implementation details are described in:
+
+> Cheeseman et al. (2023). *When Concurrency Matters: Behaviour-Oriented Concurrency*.
+> Proc. ACM Program. Lang. 7, OOPSLA2, Article 276.
+> <https://marioskogias.github.io/docs/boc.pdf>
