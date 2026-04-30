@@ -1,3 +1,5 @@
+#open-question
+
 ### 1. Simple Generics (Parametric Polymorphism)
 
 Definition: Types are passed as inputs to a function or structure (e.g., List<T>).
