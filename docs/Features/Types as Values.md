@@ -1,5 +1,4 @@
-#feature
-#pending
+#open-question 
 
 # Yz Language Design: Types as First-Class Values
 
