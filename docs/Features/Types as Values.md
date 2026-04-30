@@ -140,3 +140,27 @@ When a boc is invoked `boc(arg1, arg2)`, the compiler maps these values to the *
 ### Mutability
 * **`:` (Binding)** is used for the initial declaration of a variable within a scope.
 * **`=` (Assignment)** is used to update the value of an existing variable.
+## 7. Evaluation and Multi-Value Returns
+
+In Yz, the distinction between a "function call" and "instance creation" is determined by the boc's terminal expressions. When a boc is invoked, it binds arguments to its uninitialized variables and then evaluates its internal logic.
+
+* **Implicit Self:** If a boc consists only of declarations or definitions (variables and nested bocs), it returns the specialized instance of itself.
+* **Explicit Yield:** If a boc contains trailing expressions, it yields those values in order. This allows a boc to act as a factory that performs logic (e.g., validation, side effects) and returns both the results of that logic and its own internal state.
+
+```yz
+// Example: A boc returning both a status and a value
+person : {
+  name String
+  last_name String
+
+  status : fetch_record(name) // Internal logic
+  
+  status  // First return value
+  name    // Second return value
+}
+
+// p = status, n = "Ann"
+p, n : person("Ann", "Taylor")
+```
+
+If a boc is invoked with fewer arguments than it has uninitialized variables, it returns a **partially applied boc** (a specialization). This provides native "currying" and allows for the incremental construction of complex data types.
