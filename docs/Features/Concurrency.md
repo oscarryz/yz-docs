@@ -2,7 +2,7 @@
 
 ## Overview
 
-Concurrency in Yz is every boc invocation runs concurrently. There are no locks, no explicit threads,
+In Yz every boc invocation runs concurrently. There are no locks, no explicit threads,
 nor `async`/`await` annotations. The runtime handles
 synchronisation automatically and the compiler optimises away overhead in the common
 case.
