@@ -37,7 +37,7 @@ check_balance(src)        // waits if src is already acquired
 The runtime guarantees that if two invocations share at least one value, the one
 spawned earlier always runs first.
 
-```yz
+```js
 transfer(s1, s2)     // acquires {s1, s2}
 check_balance(s1)    // must wait — s1 is taken by transfer
 ```
@@ -48,7 +48,7 @@ needed.
 Invocations that share **no** values have no ordering constraint and run freely in
 parallel:
 
-```yz
+```js
 transfer(s1, s2)    // acquires {s1, s2}
 transfer(s3, s4)    // acquires {s3, s4} — runs in parallel with the first
 ```
@@ -90,7 +90,7 @@ exists but is empty, so acquisition is a single atomic operation with no waiting
 Return values in Yz are **transparently lazy**. When you invoke a boc, it gets scheduled to run as sson as its dependencies are acquired and a placeholder is returned to the caller. The placeholder
 resolves — and the caller waits — only when the value is actually used, typically in a I/O boundry
 
-```yz
+```js
 u User = load("user:123")   // load starts running immediately
 other()                      // runs immediately, load still in progress
 print(u)                     // suspends here until load completes
@@ -100,7 +100,7 @@ The type of `u` is always the declared return type — `User` in this case, not 
 `Future[User]` or any wrapper type. The placeholder is an internal runtime concept,
 not something the developer works with directly:
 
-```yz
+```js
 load #(id String, User)   // returns User — always, regardless of concurrency
 ```
 
@@ -118,7 +118,7 @@ A boc does not complete until **all invocations it spawned have completed**, eve
 those invocations were spawned indirectly or if all return values have already been
 delivered to the caller.
 
-```yz
+```js
 outer : {
     done Bool
     inner : {
@@ -140,7 +140,7 @@ leak resources, propagate errors silently, or produce results no one is listenin
 Receiving a return value does not close the child's scope. Any work still running inside
 that child continues, and the parent waits for it:
 
-```yz
+```js
 main : {
     result : compute()   // compute starts, placeholder returned
     print(result)        // main gets the value here
@@ -156,7 +156,7 @@ other languages can outlive its creator. In Yz it cannot.
 Multiple child invocations run in parallel within a scope. The scope waits for all of
 them:
 
-```yz
+```js
 process : {
     a : step_one()    // runs in parallel...
     b : step_two()    // ...with this
@@ -173,7 +173,7 @@ programmer controls parallelism by controlling when invocations are spawned.
 
 Consider four philosophers each needing two forks:
 
-```yz
+```js
 // Sequential — each invocation shares a fork with the next, forced into a chain
 eat(f1, f2)
 eat(f2, f3)   // waits for first  (shares f2)
@@ -203,7 +203,7 @@ producer-consumer communication falls out of the model naturally.
 A producer writing to a shared array and a consumer reading from it are automatically
 ordered:
 
-```yz
+```js
 boring : {
     m String
     messages : [String]()
@@ -234,11 +234,12 @@ to an array rather than a single value, no messages are lost.
 A producer spawned inside a scope is bounded by that scope — the scope cannot exit until
 the producer finishes. For infinite producers this means the enclosing scope never exits.
 
-```yz
+```js
 main : {
     boring("sync")          // infinite loop
     5.times().do({ print(boring.next()) })
 }                           // main cannot exit — boring never finishes
+```
 
 
 Structured concurrency contexts for grouping and cancelling related invocations are
