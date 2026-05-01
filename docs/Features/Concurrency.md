@@ -11,11 +11,11 @@ case.
 
 ## Concurrency Model
 
-### Concurrency Owners
+### Concurrent Resources
 
 Every value in Yz — whether a simple integer, a boc, or a complex object — is
-implicitly a protected concurrent owner. A value is either **available** or
-**acquired**. Only one running boc can own a value at a time. When a value is acquired,
+implicitly a protected concurrent resource. A resource is either **available** or
+**acquired**. Only one running boc can acquire a resource at a time. When a resource is acquired,
 all other bocs that need it wait in a queue.
 
 
@@ -23,7 +23,7 @@ all other bocs that need it wait in a queue.
 ### Every Invocation Is Concurent
 
 When you invoke a boc, you are scheduling an asynchronous unit of work that will run
-when it has acquired all the values it needs. Crucially, **all required values are
+when it has acquired all the resources it needs. Crucially, **all required resources are
 acquired atomically** — a running boc either gets all of them at once, or waits until
 it can. There is no partial acquisition.
 
@@ -34,7 +34,7 @@ check_balance(src)        // waits if src is already acquired
 
 ### Happens-Before Ordering
 
-The runtime guarantees that if two invocations share at least one value, the one
+The runtime guarantees that if two invocations share at least one resource, the one
 spawned earlier always runs first.
 
 ```js
@@ -45,8 +45,8 @@ check_balance(s1)    // must wait — s1 is taken by transfer
 `check_balance` will always see the result of `transfer`. No explicit synchronisation
 needed.
 
-Invocations that share **no** values have no ordering constraint and run freely in
-parallel:
+Invocations that share **no** resources have no ordering constraint and run freely
+concurrently:
 
 ```js
 transfer(s1, s2)    // acquires {s1, s2}
@@ -57,16 +57,16 @@ transfer(s3, s4)    // acquires {s3, s4} — runs in parallel with the first
 
 ## Safety Guarantees
 
-The model provides four guarantees by construction, not by programmer discipline:
+The model provides four guarantees by construction, it doesn't require programmer's concurrency abilities:
 
-**Data-race freedom** — each value is isolated and only one running boc holds it at a
+**Data-race freedom** — each resource is isolated and only one running boc holds it at a
 time. Two invocations can never concurrently mutate the same state.
 
-**Deadlock freedom** — because all values are acquired atomically, the circular waiting
-that causes deadlock cannot form. There is no "acquire one value, then wait for
+**Deadlock freedom** — because all resources are acquired atomically, the circular waiting
+that causes deadlock cannot take place. There is no "acquire one resource, then wait for
 another."
 
-**Determinism** — for any two invocations sharing a value, their execution order is
+**Determinism** — for any two invocations sharing a resource, their execution order is
 always the same: the one spawned first runs first. A program's observable behaviour is
 deterministic with respect to invocation order.
 
@@ -78,7 +78,7 @@ See [Structured Concurrency](#structured-concurrency) below.
 
 ## Performance
 
-An **uncontended value** — one with no other waiters — is acquired instantly. The queue
+An **uncontended resource** — one with no other waiters — is acquired instantly. The queue
 exists but is empty, so acquisition is a single atomic operation with no waiting.
 
  The runtime figures out what can run in parallel.
@@ -87,13 +87,13 @@ exists but is empty, so acquisition is a single atomic operation with no waiting
 
 ## Return Values
 
-Return values in Yz are **transparently lazy**. When you invoke a boc, it gets scheduled to run as sson as its dependencies are acquired and a placeholder is returned to the caller. The placeholder
-resolves — and the caller waits — only when the value is actually used, typically in a I/O boundry
+Return values in Yz are **transparently lazy**. When you invoke a boc, it gets scheduled to run as soon as its resources are acquired and a placeholder is returned to the caller. The placeholder
+resolves — and the caller synchronizes — only when the value is actually used, typically in a I/O boundry. 
 
 ```js
-u User = load("user:123")   // load starts running immediately
+u User = load("user:123")   // load scheduled to run immediately
 other()                      // runs immediately, load still in progress
-print(u)                     // suspends here until load completes
+print(u)                     // synchronizes here until load completes
 ```
 
 The type of `u` is always the declared return type — `User` in this case, not a
@@ -101,14 +101,11 @@ The type of `u` is always the declared return type — `User` in this case, not 
 not something the developer works with directly:
 
 ```js
-load #(id String, User)   // returns User — always, regardless of concurrency
+load #(id String, User)   // returns User — always
 ```
 
-The suspension is transparent. You write sequential-looking code and the runtime handles
+The synchronization is transparent. You write sequential-looking code and the runtime handles
 the interleaving.
-
-### Multiple Return Values
-
 
 ---
 
@@ -146,22 +143,6 @@ main : {
     print(result)        // main gets the value here
                          // but main does NOT exit if compute has children still running
 }                        // main exits only when all descendants are done
-```
-
-This is what distinguishes Yz structured concurrency from plain futures. A future in
-other languages can outlive its creator. In Yz it cannot.
-
-### Parallelism Within A Scope
-
-Multiple child invocations run in parallel within a scope. The scope waits for all of
-them:
-
-```js
-process : {
-    a : step_one()    // runs in parallel...
-    b : step_two()    // ...with this
-    combine(a, b)     // waits for both, then runs
-}                     // exits only after combine and all descendants finish
 ```
 
 ---
@@ -229,21 +210,7 @@ The ordering guarantee ensures `boring` writes at least once before `main` reads
 `boring` is spawned first. After that, `boring` can race ahead freely. Since it writes
 to an array rather than a single value, no messages are lost.
 
-### Infinite Producers
-
-A producer spawned inside a scope is bounded by that scope — the scope cannot exit until
-the producer finishes. For infinite producers this means the enclosing scope never exits.
-
-```js
-main : {
-    boring("sync")          // infinite loop
-    5.times().do({ print(boring.next()) })
-}                           // main cannot exit — boring never finishes
-```
-
-
-Structured concurrency contexts for grouping and cancelling related invocations are
-under design.
+> _Note: Structured concurrency contexts for grouping and cancelling related invocations are under design._
 
 ---
 
