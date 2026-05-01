@@ -143,6 +143,7 @@ main : {
                          // but main does NOT exit if compute has children still running
 }                        // main exits only when all descendants are done
 ```
+> _Note: Structured concurrency contexts for grouping and cancelling related invocations are under design._
 
 ---
 
@@ -209,7 +210,6 @@ The ordering guarantee ensures `boring` writes at least once before `main` reads
 `boring` is spawned first. After that, `boring` can race ahead freely. Since it writes
 to an array rather than a single value, no messages are lost.
 
-> _Note: Structured concurrency contexts for grouping and cancelling related invocations are under design._
 
 ---
 
