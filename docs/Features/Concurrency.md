@@ -56,7 +56,7 @@ transfer(s3, s4)    // acquires {s3, s4} — runs in parallel with the first
 
 ## Safety Guarantees
 
-The model provides four guarantees by construction, it doesn't require programmer's concurrency abilities:
+The model provides four guarantees by design:
 
 **Data-race freedom** — each resource is isolated and only one running boc holds it at a
 time. Two invocations can never concurrently mutate the same state.
