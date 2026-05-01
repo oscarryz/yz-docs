@@ -2,9 +2,8 @@
 
 ## Overview
 
-Concurrency in Yz is not something you opt into. Every value is protected by default,
-and every boc invocation runs asynchronously. There are no locks, no explicit threads,
-no `async`/`await` annotations, and no function colouring. The runtime handles
+Concurrency in Yz is every boc invocation runs concurrently. There are no locks, no explicit threads,
+nor `async`/`await` annotations. The runtime handles
 synchronisation automatically and the compiler optimises away overhead in the common
 case.
 
@@ -19,26 +18,19 @@ implicitly a protected concurrent owner. A value is either **available** or
 **acquired**. Only one running boc can hold a value at a time. When a value is acquired,
 all other bocs that need it wait in a queue.
 
-```yz
-counter : { value Int }   // counter is protected automatically — no annotation needed
-```
 
-There is nothing to declare. Protection is the default, not an opt-in.
 
-### Every Invocation Is Asynchronous
+### Every Invocation Is Concurent
 
 When you invoke a boc, you are scheduling an asynchronous unit of work that will run
 when it has acquired all the values it needs. Crucially, **all required values are
 acquired atomically** — a running boc either gets all of them at once, or waits until
 it can. There is no partial acquisition.
 
-```yz
+```js
 transfer(src, dst, 100)   // acquires src and dst atomically before running
 check_balance(src)        // waits if src is already acquired
 ```
-
-The runtime infers what needs to run in parallel from data dependencies — not from
-annotations.
 
 ### Happens-Before Ordering
 
@@ -78,7 +70,7 @@ another."
 always the same: the one spawned first runs first. A program's observable behaviour is
 deterministic with respect to invocation order.
 
-**Structured lifetimes** — a boc does not complete until all invocations it spawned
+**Structured concurrency** — a boc does not complete until all invocations it spawned
 have completed, even if return values have already been delivered to the caller.
 See [Structured Concurrency](#structured-concurrency) below.
 
@@ -86,32 +78,25 @@ See [Structured Concurrency](#structured-concurrency) below.
 
 ## Performance
 
-Every invocation going through a queue might sound expensive. In practice it is not.
-
 An **uncontended value** — one with no other waiters — is acquired instantly. The queue
 exists but is empty, so acquisition is a single atomic operation with no waiting.
 
-The compiler and runtime can **inline and elide** value acquisition entirely for values
-that are local to a single invocation. Correctness is guaranteed by the model;
-performance is a pure optimisation problem, decoupled from correctness.
-
-You write simple, safe code. The runtime figures out what can run in parallel.
+ The runtime figures out what can run in parallel.
 
 ---
 
 ## Return Values
 
-Return values in Yz are **transparently lazy**. When you invoke a boc, it starts
-running immediately and a placeholder is returned to the caller. The placeholder
-resolves — and the caller suspends — only when the value is actually used.
+Return values in Yz are **transparently lazy**. When you invoke a boc, it gets scheduled to run as sson as its dependencies are acquired and a placeholder is returned to the caller. The placeholder
+resolves — and the caller waits — only when the value is actually used, typically in a I/O boundry
 
 ```yz
-w User = load("user:123")   // load starts running immediately
+u User = load("user:123")   // load starts running immediately
 other()                      // runs immediately, load still in progress
-print(w)                     // suspends here until load completes
+print(u)                     // suspends here until load completes
 ```
 
-The type of `w` is always the declared return type — `User` in this case, not a
+The type of `u` is always the declared return type — `User` in this case, not a
 `Future[User]` or any wrapper type. The placeholder is an internal runtime concept,
 not something the developer works with directly:
 
@@ -124,29 +109,6 @@ the interleaving.
 
 ### Multiple Return Values
 
-Bocs can return multiple values. All outputs are resolved simultaneously when the
-invocation completes — there is no partial resolution:
-
-```yz
-value, errors : parse(input)    // both assigned together when parse finishes
-
-errors.len() == 0 ? {
-    print(value)
-}, {
-    print(errors)
-}
-```
-
-Because bocs and objects are the same thing, multiple return values are equivalent to
-returning a single anonymous boc. These two forms are semantically identical:
-
-```yz
-value, err : parse(input)   // destructured form
-
-result : parse(input)       // attribute access form
-value : result.value
-err   : result.err
-```
 
 ---
 
@@ -267,7 +229,7 @@ The ordering guarantee ensures `boring` writes at least once before `main` reads
 `boring` is spawned first. After that, `boring` can race ahead freely. Since it writes
 to an array rather than a single value, no messages are lost.
 
-### Infinite Producers And Cancellation
+### Infinite Producers
 
 A producer spawned inside a scope is bounded by that scope — the scope cannot exit until
 the producer finishes. For infinite producers this means the enclosing scope never exits.
@@ -277,35 +239,10 @@ main : {
     boring("sync")          // infinite loop
     5.times().do({ print(boring.next()) })
 }                           // main cannot exit — boring never finishes
-```
 
-Cancellation is supported via a `cancel()` method on any running invocation. The
-scheduler is preemptive — a running boc periodically checks whether cancellation has
-been requested and exits cleanly when it has:
-
-```yz
-b : boring("sync")          // b is a handle to the invocation
-5.times().do({ print(b.next()) })
-b.cancel()                  // signals boring to stop
-```
 
 Structured concurrency contexts for grouping and cancelling related invocations are
 under design.
-
----
-
-## Compile-Time Bocs And Concurrency
-
-`Compile` typed slots execute during the compilation phase, not at runtime. The
-concurrency model described in this document is a **runtime** property and does not
-apply to compile-time execution.
-
-`Compile` slots run sequentially in the current implementation. The compilation phase
-does not use the runtime scheduler. This is a deliberate simplification — concurrent
-compilation could be added later without changing the language or the runtime model,
-since the same safety guarantees would apply.
-
-See also: [Compile-Time Bocs](./yz-compile-time-bocs.md)
 
 ---
 
