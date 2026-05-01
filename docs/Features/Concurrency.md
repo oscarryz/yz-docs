@@ -9,13 +9,13 @@ case.
 
 ---
 
-## Core Model
+## Concurrency Model
 
-### Every Value Is Protected
+### Concurrency Owners
 
 Every value in Yz — whether a simple integer, a boc, or a complex object — is
 implicitly a protected concurrent owner. A value is either **available** or
-**acquired**. Only one running boc can hold a value at a time. When a value is acquired,
+**acquired**. Only one running boc can own a value at a time. When a value is acquired,
 all other bocs that need it wait in a queue.
 
 
