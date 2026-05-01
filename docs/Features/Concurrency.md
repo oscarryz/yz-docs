@@ -232,12 +232,10 @@ to an array rather than a single value, no messages are lost.
 
 ## Theoretical Background
 
-The concurrency model in Yz is directly inspired by an academic concurrency paradigm
-developed at Imperial College London and Microsoft Research. In that model, protected
-values are called **cowns** (concurrent owners) and asynchronous units of work are
+The concurrency model in Yz is a variation of the Behaviour Oriented Concurrency model developed at Imperial College London and Microsoft Research. In that model, protected
+resources are called **cowns** (concurrent owners) and asynchronous units of work are
 called **behaviours**. In Yz, a cown is any value and a behaviour is any boc
-invocation — the concepts map directly onto the language's existing constructs rather
-than requiring separate primitives.
+invocation — the concepts map directly onto the language's  constructs rather and do not require separate primitives.
 
 The formal model, semantics, and implementation details are described in:
 
