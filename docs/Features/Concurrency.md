@@ -2,8 +2,7 @@
 
 ## Overview
 
-In Yz every boc invocation runs concurrently. There are no locks, no explicit threads,
-nor `async`/`await` annotations. The runtime handles
+Yz is concurrent by default and is the only model. Every boc invocation runs concurrently, lock free, data race free and in a deterministic way. There are no language constructs to drive concurrency like locks, threads, channels nor `async`/`await` annotations. The runtime handles
 synchronisation automatically and the compiler optimises away overhead in the common
 case.
 
