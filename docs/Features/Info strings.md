@@ -7,18 +7,18 @@
 An infostring is a string literal that appears immediately before a boc definition or a field declaration. Its content is a **boc body** — parsed and compiled by the language, but never executed. It carries structured metadata that `Compile` implementations and tooling can read at compile time.
 
 ```
-"
+`
 compile_time: [Derive, Debug, Logging]
 graphql: {
     schema: "https://myapi.com/graphql"
 }
-"
+`
 Movies : {
     ...
 }
 ```
 
-The string delimiters take the place of `{` and `}`. Everything inside is valid Yz — field declarations, nested bocs, scalar values — subject to the restrictions described below.
+The backtick delimiters take the place of `{` and `}`. Everything inside is valid Yz — field declarations, nested bocs, scalar values — subject to the restrictions described below.
 
 See also: [Compile-Time Bocs](Compile%20Time%20Bocs.md) · [Structural Reflection](Structural%20Reflection.md) · [Boc Type](Block%20type.md)
 
@@ -31,14 +31,14 @@ An infostring is placed on the line(s) immediately before the definition it anno
 A minimal infostring with a single scalar:
 
 ```
-"port: 8080"
+`port: 8080`
 Server : { ... }
 ```
 
 A more structured infostring using nested bocs:
 
 ```
-"
+`
 graphql: {
     schema: "https://myapi.com/graphql"
     keep_foo: { "bar" }
@@ -47,7 +47,7 @@ json: {
     ignore: false
 }
 produces: "application/json"
-"
+`
 Movies : { ... }
 ```
 
@@ -64,9 +64,7 @@ The content of an infostring is parsed and compiled as a boc. This means:
 - Infostrings can reference bocs defined elsewhere in the program
 
 ```
-"
-compile_time: [Derive, JSON, some.package.GraphQL]
-"
+`compile_time: [Derive, JSON, some.package.GraphQL]`
 Movies : { ... }
 // error if Derive, JSON, or some.package.GraphQL do not exist
 ```
@@ -74,7 +72,7 @@ Movies : { ... }
 Infostrings have restrictions that distinguish them from regular bocs:
 
 - **Never executed.** The boc body is data. No method calls, no side effects, no invocations.
-- **No string interpolation.** An infostring lives inside a string literal — template expressions are unavailable.
+- **No string interpolation.** Infostrings are not regular strings — `${}` template expressions are unavailable inside them.
 - **No nested infostrings.** An infostring cannot contain another infostring.
 
 Everything else a boc can contain is available: nested boc literals, arrays, scalar values, references to named types.
@@ -86,42 +84,43 @@ Everything else a boc can contain is available: nested boc literals, arrays, sca
 The reserved variable `compile_time` inside an infostring declares the `Compile` implementations the compiler should run on the annotated boc. It is always an array:
 
 ```
-"compile_time: [Derive, Debug, Logging]"
+`compile_time: [Derive, Debug, Logging]`
 Person : {
     name String
     age  Int
 }
 ```
 
-During parsing, the compiler scans infostrings for `compile_time`. When found, the listed implementations are scheduled to run during type inference — sequentially, in array order.
+During parsing, the compiler scans infostrings for `compile_time`. When found, the listed implementations are scheduled to run during type inference — sequentially, in array order. The boc body carries no compile-time triggering mechanism.
 
 ---
 
 ## How Compile Implementations Read Infostrings
 
-Inside a `Compile` implementation's `run` method, the parent boc's infostring is accessible as a regular boc value via `self.infostring`. Each variable in the infostring is a field on that value:
+Inside a `Compile` implementation's `run` method, the parent boc's infostring is accessible via `self.infostring`. It is typed as `Boc` — the full shared infostring. Each implementation accesses only the variable it owns, and the return type of that access is determined by the implementation's `Schema` associated type:
 
 ```
 GraphQL : {
+    Schema : #(schema String)
     run #(Boc, Boc) = {
-        config     = self.infostring.graphql    // the graphql: { ... } boc
-        schema_url = config.schema              // "https://myapi.com/graphql"
+        // self.infostring is Boc
+        // self.infostring.graphql is typed as Schema = #(schema String)
+        schema_url = self.infostring.graphql.schema   // String — validated
         ...
     }
 }
 
 JSON : {
+    Schema : #(field_name String, ignore Bool)
     run #(Boc, Boc) = {
-        config      = self.infostring.json      // the json: { ... } boc
-        should_skip = config.ignore             // false
+        config      = self.infostring.json    // typed as Schema
+        should_skip = config.ignore           // Bool
         ...
     }
 }
 ```
 
-Each `Compile` implementation reads the variable it cares about. Others are ignored. No string parsing is required — field access is direct and type-checked.
-
-Dynamic access by string key (`infostring["graphql"]`) is under consideration for cases where the key is not known at author time. For now, direct field access is the supported form.
+Each implementation reads the variable it cares about. Others are ignored. No string parsing is required — field access is direct and validated against `Schema` at compile time.
 
 ---
 
@@ -130,19 +129,18 @@ Dynamic access by string key (`infostring["graphql"]`) is under consideration fo
 Infostrings follow the same rules on individual fields:
 
 ```
+`compile_time: [GraphQL, JSON]`
 Movies : {
-    compile_time: [GraphQL, JSON]
-
-    "graphql: { rename: 'movieTitle' }"
+    `graphql: { rename: "movieTitle" }`
     title String
 
-    "json: { ignore: true }"
+    `json: { ignore: true }`
     internal_id String
 
-    "
-    json: { field_name: 'release' }
+    `
+    json: { field_name: "release" }
     validate: { min: 1888 }
-    "
+    `
     year Int
 }
 ```
@@ -151,9 +149,10 @@ A `Compile` implementation reads field infostrings via `self.fields[n].infostrin
 
 ```
 JSON : {
+    Schema : #(field_name String, ignore Bool)
     run #(Boc, Boc) = {
         self.fields.forEach({ f Boc
-            config = f.infostring.json
+            config = f.infostring.json         // typed as Schema
             config.ignore ? { /* skip this field */ }
         })
     }
@@ -169,13 +168,13 @@ JSON : {
 Not all infostrings need nested boc structure. Scalar values are valid:
 
 ```
-"port: 8080"
+`port: 8080`
 Server : { ... }
 
-"produces: 'application/json'"
+`produces: "application/json"`
 Handler : { ... }
 
-"json: 'ignore'"
+`json: "ignore"`
 internal_id String
 ```
 
@@ -188,18 +187,20 @@ A `Compile` implementation reading `self.infostring.json` receives the string `"
 Documentation can live in an infostring as a regular variable:
 
 ```
-"
+`
 documentation: "
     The Movies boc represents a film record as returned by the catalogue API.
     Fields map directly to the GraphQL schema unless annotated otherwise.
 "
 compile_time: [GraphQL, JSON]
-graphql: { schema: 'https://myapi.com/graphql' }
-"
+graphql: { schema: "https://myapi.com/graphql" }
+`
 Movies : { ... }
 ```
 
 A `Documentation` compile implementation could read `self.infostring.documentation` and generate API docs, IDE hover text, or reference pages.
+
+Regular code comments (`/* ... */` and `//`) remain available for inline code explanation and are not accessible to `Compile` implementations. Documentation intended for tooling or generated output belongs in the infostring.
 
 ---
 
@@ -229,14 +230,14 @@ See also: [Structural Reflection](Structural%20Reflection.md) for the full `Boc`
 
 | Property | Rule |
 | --- | --- |
-| Syntax | Boc body without `{` `}`, inside a string literal |
+| Syntax | Boc body without `{` `}`, backtick delimited |
 | Placement | Immediately before a boc or field definition |
 | Per definition | One infostring per definition |
 | Multiple concerns | Separate variables inside the same infostring |
 | Execution | Never executed |
-| String interpolation | Not available |
+| String interpolation | Not available — `${}` expressions unavailable inside infostrings |
 | Nested infostrings | Not allowed |
 | Type references | Resolved at compile time — missing types are errors |
-| `compile_time` | Always an array; triggers listed `Compile` implementations |
-| Access in `Compile` | `self.infostring.<variable>` |
+| `compile_time` | Always an array; the only trigger for `Compile` implementations |
+| Access in `Compile` | `self.infostring.<variable>` — return type determined by `Schema` |
 | In `Boc` metatype | `Boc.infostring` — a regular compiled `Boc` value |
