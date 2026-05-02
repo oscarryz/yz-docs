@@ -93,9 +93,7 @@ Person : {
 }
 ```
 
-During parsing, the compiler scans infostrings for `compile_time`. When found, the listed implementations are scheduled to run during type inference — sequentially, in array order — exactly as if they had been declared in a `compile [Compile] = [...]` field on the boc.
-
-A `Compile` implementation field on the boc itself (`compile [Compile] = [...]`) and `compile_time` in the infostring are distinct mechanisms and can coexist. `Movies.compile` is a field on the `Movies` boc. The infostring's `compile_time` is a property of `Movies`'s metadata — accessible as `Movies_boc.infostring.compile_time`. They do not conflict.
+During parsing, the compiler scans infostrings for `compile_time`. When found, the listed implementations are scheduled to run during type inference — sequentially, in array order.
 
 ---
 
@@ -202,8 +200,6 @@ Movies : { ... }
 ```
 
 A `Documentation` compile implementation could read `self.infostring.documentation` and generate API docs, IDE hover text, or reference pages.
-
-Regular code comments (`/* ... */` and `//`) remain available for inline code explanation and are not accessible to `Compile` implementations. Documentation intended for tooling or generated output belongs in the infostring.
 
 ---
 
