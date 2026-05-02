@@ -1,0 +1,6 @@
+- Add a dedicated callout (and a specific compiler error message) explaining the separate-package requirement for custom Compile implementations
+- Add a lint/warning for name collisions between single-field Schema implementations sharing the same derived key
+- Investigate an in-process fast path (shared library) for Compile execution to mitigate cold-build subprocess latency
+- Upgrade constraint declaration from "strong convention" to a compiler warning when a Compile impl generates calls on a type parameter without declaring constraints on S
+- Specify the fallback behavior when a field's infostring is missing a variable expected by a Compile implementation (default, compile error, etc.)
+- Add a note that compile-time IO (e.g. http.get) is the implementer's responsibility to make deterministic/cacheable
