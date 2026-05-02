@@ -8,7 +8,9 @@ Yz provides a compile-time execution system built from regular Yz code. Compile-
 
 The system is built on one rule:
 
-> **Any variable typed `Compile` or `[Compile]` is executed by the compiler during type inference. Its return value is merged into the parent boc.**
+> **A `compile_time: [...]` variable inside a boc's infostring triggers `Compile` implementations during type inference. Their return values are merged into the parent boc.**
+
+Everything else follows from existing Yz concepts.
 
 Everything else follows from existing Yz concepts.
 
@@ -26,103 +28,94 @@ Compile : {
 }
 ```
 
-Any boc that satisfies this interface can be used in a `Compile` variable. The compiler recognises the type as the trigger. The variable can be named anything:
+Any boc that satisfies this interface can be used in the `compile_time` infostring variable.
 
 ```
+"
+compile_time : [Derive, JSON]
+"
 Person : {
-    compile [Compile] = [Derive, JSON]  // named 'compile' — conventional
     name String
 }
 
-Person : {
-    derives [Compile] = [Derive, JSON]  // named 'derives' — also valid
-    name String
-}
 ```
 
-The type does the work. The name is irrelevant.
 
 See also: [Structural Typing](Structural%20typing.md) · [Boc Type](Block%20type.md)
 
 ---
 
-## Basic Usage
+## Triggering Compile Implementations
 
-A single `Compile` implementation:
+`Compile` implementations are declared in the `compile_time` variable of the boc's infostring:
 
 ```
-Logger : {
-    run #(Boc, Boc) = {
-        // generates a log() method on the parent boc
-    }
-}
-
+"compile_time: [Derive, JSON, Logger]"
 Person : {
-    logger Compile = Logger()
     name String
     age  Int
 }
 ```
 
-Multiple `Compile` implementations via array:
+During parsing, the compiler scans infostrings for `compile_time`. When found, the listed implementations are scheduled to run during type inference — sequentially, in array order.
 
-```
-Person : {
-    compile [Compile] = [Derive, JSON, Logger]
-    name String
-    age  Int
-}
-```
+The boc body itself carries no compile-time triggering mechanism. `compile_time` lives in the infostring, keeping the boc body free of compile-time concerns.
 
 ---
 
 ## Field Metadata — Infostrings
 
-Infostrings provide passive metadata to `Compile` implementations. They attach to the boc or to individual fields and are readable via `self.infostring` and `self.fields[n].infostring` inside any `Compile` boc.
-
-Infostrings are regular Yz strings — multiline by default — and their content can be a boc literal. A boc literal inside an infostring is compiled and available as structured data, but **never executed**. This gives `Compile` implementations a consistent, compiler-validated format to read from, rather than each implementation inventing its own string parsing convention.
+An infostring is a string literal placed immediately before a boc or field definition. Its content is a **boc body** — parsed and compiled, but never executed. Multiple concerns live as separate variables inside a single infostring.
 
 ```
-"graphql: {
-    schema: 'https://myapi.com/graphql'
-    keep_foo: { 'bar' }
-}"
+"
+compile_time: [Derive, JSON, GraphQL]
+graphql: {
+    schema: "https://myapi.com/graphql"
+    keep_foo: { "bar" }
+}
+json: {
+    ignore: false
+}
+"
 Movies : {
-    compile Compile = GraphQL
-
-    "json: {
-        field_name: 'movie_title'
-    }"
+    "json: { field_name: 'movie_title' }"
     title String
 
-    "json: {
-        ignore: true
-    }"
+    "json: { ignore: true }"
     internal_id String
 }
 ```
 
-A `Compile` implementation reads the infostring boc as a regular value — field access, iteration, pattern matching — with no string parsing required:
+A `Compile` implementation reads the infostring via `self.infostring` — direct field access, no string parsing:
 
 ```
 GraphQL : {
     run #(Boc, Boc) = {
-        config    = self.infostring("graphql")  // returns a Boc
-        schema_url = config.schema              // 'https://myapi.com/graphql'
-        kept       = config.keep_foo            // { 'bar' } — a Boc, not executed
+        config     = self.infostring.graphql   // the graphql: { ... } boc
+        schema_url = config.schema             // "https://myapi.com/graphql"
+        kept       = config.keep_foo           // { "bar" } — a Boc, data only
         ...
+    }
+}
+
+JSON : {
+    run #(Boc, Boc) = {
+        self.fields.forEach({ f Boc
+            config = f.infostring.json
+            config.ignore ? { /* skip field */ }
+        })
     }
 }
 ```
 
-The boc inside the infostring is data. Its fields are readable. Its body is never invoked. The contract is the same as a plain string infostring — describe, never act — but the structure is validated by the compiler and shared across any `Compile` implementation that reads it.
+Each `Compile` implementation reads the variable it cares about. Others are ignored. Referenced types in the infostring are resolved at compile time — a typo like `compile_time: [Deribe]` is a compile error.
 
 | Infostrings | Compile slots |
 | --- | --- |
-| Passive metadata | Active code generation |
-| Attached to fields or bocs | Reads infostrings |
-| Plain strings or structured boc literals | The engine |
-| Never executed | Full language access |
+| Passive metadata, never executed | Active code generation |
+| Attached to fields or bocs | Reads infostrings via `self.infostring` |
+| Boc body — compiler validated | Full language access |
 
 See also: [Info strings](Info%20strings.md)
 
@@ -135,8 +128,8 @@ A `Compile` boc has access to the full language. The same facilities available a
 ```
 GraphQL : {
     run #(Boc, Boc) = {
-        config     = self.infostring("graphql")  // returns the infostring boc
-        schema_url = config.schema               // structured field access — no parsing
+        config     = self.infostring.graphql   // direct field access on infostring boc
+        schema_url = config.schema             // structured — no parsing
 
         // fetch a remote schema at compile time
         schema = http.get(schema_url)
@@ -170,7 +163,8 @@ See also: [Structural Reflection](Structural%20Reflection.md) for the full `Boc`
 When `[Compile]` contains multiple implementations they run in **array order**. Each implementation receives the result of the previous one — the progressively merged boc, not the original.
 
 ```
-compile [Compile] = [Derive, Logging, Metrics]
+"compile_time: [Derive, Logging, Metrics]"
+Container : { T; value T }
 ```
 
 Execution is sequential:
@@ -249,8 +243,8 @@ See also: [Generics Revisited](Generics%20Revisited.md) — constraints are opti
 `Compile` slots run at **boc definition time** — when the boc is compiled, not when it is instantiated. For generic bocs this distinction matters:
 
 ```
+"compile_time: [Derive]"
 Stack : {
-    compile Compile = Derive()
     T
     items []T
     push  #(T)
@@ -358,8 +352,8 @@ A violation is a compile error. The error message names the full cycle.
 `Compile` implementations can themselves have `Compile` slots, type parameters, and infostrings. They are bocs that happen to satisfy the `Compile` interface:
 
 ```
+"compile_time: [Validate]"
 Derive : {
-    compile [Compile] = [Validate]  // Derive has its own Compile slot
     S #(serialize #(String))
     run #(Boc, Boc) = {
         // implementation
