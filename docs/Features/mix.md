@@ -13,12 +13,15 @@ The `mix` keyword merges the fields and methods of one boc into another. It prov
 Named: {
   name String
   hi: {
-    print("My name is `name`")
+    print("My name is ${name}")
   }
 }
 
+`
+compile_time:[Mix]
+mix: [Named]
+`
 Person: {
-  mix Named
   last_name String
 }
 
