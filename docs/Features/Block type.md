@@ -1,33 +1,37 @@
 #feature
-# Boc type 
+# Boc type `#()`
 
-A block of code `boc` has a type. Just like a number literal `1` has a type `Int` or `1.0` a type `Decimal` a boc literal has a boc type defined by `#(` optional variables or expression types  `)`
+Every block of code `boc` has a type (or signature). Just like a number literal `1` has a type 
+`Int` or `1.0` a 
+type `Decimal` a boc literal has a boc type defined by `#(...)` where `...` represents optional variables or expression types
 
 The variables of a boc type follow the same rules as regular variables: 
 
-- Named with a type: 
+- Named with a type:   
   `#(a Int)`
 
-- Assigned a default value: 
+- Assigned a default value:   
    `#(a Int = 1)`
 
-- Short decl:
+- Short decl:  
    `#(a : 1)`
 
-- Other boc types
+- Other boc types  
    `#(a #())`
-- Generic:
+- Generic:  
    `#(a T)`
+- Generic with constraint:   
+   `#(o O Ord)`
 
 In adition to variables, the boc type can have pure expression types, these are always at the end of the list. They can be thought as input and output parameters:
 
-- A boc that just returns a String 
+- A boc that just returns a String  
   `#(String)`
 
-- A boc that takes an integer and returns a string
+- A boc that takes an integer and returns a string  
    `#(Int, String)`
 
-- For instance the type of a variable `map` that takes a mapping function from A to B, an arrays of A and retuns an array of B would be:  
+- For instance the type of a variable `map` that takes a mapping function from A to B, an arrays of A and retuns an array of B would be:    
    `#(#(A,B), [A], [B])`
 
 
@@ -35,7 +39,6 @@ Example of a block that takes nothing and returns nothing
 
 ```js
 #() // empty block type
-#() // empty block 
 #() = {} // initialized as empty block 
 ```
 
@@ -84,7 +87,9 @@ A boc signature `#(...)` is intentionally dual-purpose:
 Greeter #(greet #())     // interface: requires greet #()
 ```
 
-**2. Access control (encapsulation).** Only the fields and methods declared in the signature are visible to external callers. Fields omitted from the signature are hidden.
+**2. Access control (encapsulation).** Only the fields and methods declared in the signature are 
+visible to external callers. Fields omitted from the signature are hidden. Inferred boc types 
+will always expose all the variables
 
 ```yz
 Person #(name String, greet #())   // only name and greet are visible

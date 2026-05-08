@@ -12,7 +12,8 @@ The system is built on one rule:
 
 Everything else follows from existing Yz concepts.
 
-See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20Revisited.md) · [Structural Reflection](Structural%20Reflection.md)
+See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20Revisited.md) · 
+[Structural Reflection](Structural%20Reflection.md) - [Info strings](Info%20strings.md)
 
 ---
 
@@ -235,7 +236,7 @@ By strong convention, `Compile` implementations declare the constraints they req
 // Inline structural constraint
 `compile_time: [Validate]`
 Derive : {
-    Schema     : #(serialize #(String))
+    Schema     #(serialize #(String))
     S          #(serialize #(String))
     run #(Boc, Boc) = { ... }
 }
