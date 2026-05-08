@@ -17,12 +17,12 @@
 
 
 - Implement a capability-based sandbox to strictly control and track side-effects like file system access.
-- ​Provide a diagnostic API within run to emit compiler errors mapped directly to the user’s infostring source lines.
-- ​Require an explicit override modifier when a Compile block intentionally shadows an existing slot to prevent bugs.
-- ​Automatically register external files read during run as build dependencies for the incremental caching engine.
-- ​Ensure IDE "Jump to Definition" support can trace generated slots back to the specific Compile logic that created them.
-- ​Enforce a "No-Network" constraint for Compile Bocs to guarantee offline-first, reproducible build hermeticity.
-- ​Provide a compiler "Expand" tool to export the final merged Boc structure for auditing and debugging.
-- ​Standardize a synthetic flag for generated slots so documentation tools can distinguish them from handwritten code.
-- ​Add an optional priority field to the Compile interface to help the compiler auto-sort the compile_time array.
-- ​Define clear "Visibility" rules so Compile blocks can specify if generated slots are public or private to the parent.
+- Provide a diagnostic API within run to emit compiler errors mapped directly to the user’s infostring source lines.
+- Require an explicit override modifier when a Compile block intentionally shadows an existing slot to prevent bugs.
+- Automatically register external files read during run as build dependencies for the incremental caching engine.
+- Ensure IDE "Jump to Definition" support can trace generated slots back to the specific Compile logic that created them.
+- Enforce a "No-Network" constraint for Compile Bocs to guarantee offline-first, reproducible build hermeticity.
+- Provide a compiler "Expand" tool to export the final merged Boc structure for auditing and debugging.
+- Standardize a synthetic flag for generated slots so documentation tools can distinguish them from handwritten code.
+- Add an optional priority field to the Compile interface to help the compiler auto-sort the compile_time array.
+- Define clear "Visibility" rules so Compile blocks can specify if generated slots are public or private to the parent.
