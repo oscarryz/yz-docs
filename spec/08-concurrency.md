@@ -188,7 +188,7 @@ hi()                      // queued call — three separate queue entries, not a
 hi("Goodbye", "everyone") // prefer this — one atomic queue entry
 ```
 
-See [Features/Single Writer](../Features/Single%20Writer.md) for the full specification.
+See [Features/Single Writer](Single%20Writer.md) for the full specification.
 
 ## 8.7 Inter-Actor Communication
 

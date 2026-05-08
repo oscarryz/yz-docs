@@ -10,7 +10,7 @@
 - [Define new types.md](Define%20new%20types.md) — Uppercase bocs as named types (structs)
 - [Create instances.md](Create%20instances.md) — Constructing instances of types
 - [Structural typing.md](Structural%20typing.md) — Structural (duck-typing) compatibility between bocs
-- [Generics.md](Generics.md) — Generic type parameters
+- [Generics.md](docs/Features/Replaced%20features/Generics.md) — Generic type parameters
 - [Type variants.md](Type%20variants.md) — Sum types and variant constructors
 - [mix.md](mix.md) — Code composition: merge fields and methods from another boc
 - [Concurrency.md](Concurrency.md) — Async by default, lazy evaluation, and structured concurrency

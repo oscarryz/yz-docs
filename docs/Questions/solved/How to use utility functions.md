@@ -91,4 +91,4 @@ The Uppercase worker pattern avoids this because each `While(...)` call produces
 
 - [Stateless bocs and pure functions](Stateless%20bocs%20and%20pure%20functions.md)
 - [Concurrency](../../Features/Concurrency.md)
-- [Single Writer](../../Features/Single%20Writer.md)
+- [Single Writer](Single%20Writer.md)

@@ -85,5 +85,5 @@ Library authors writing hot utilities use the thin dispatcher pattern (lowercase
 
 - [How to use utility functions](How%20to%20use%20utility%20functions.md)
 - [Concurrency](../../Features/Concurrency.md)
-- [Single Writer](../../Features/Single%20Writer.md)
+- [Single Writer](Single%20Writer.md)
 - [Bocs](../../Features/Bocs.md)

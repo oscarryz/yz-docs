@@ -32,6 +32,7 @@ proj_name/
 
 ## Larger projects
 
+// TODO: The configuration structure is a `Compile` implementation 
 If a `yz` file contains a `configuration` structure, then it will be used to create the executable. 
 Also you can create this configuration structure by invoking the build tool `init` _`project_name`_  which can create additional folders 
 
@@ -68,12 +69,20 @@ Inside the configuration  is structured:
 
 File: `./restaurant.yz`
 
-```yz
- version: '0.1.0'
- entry: 'main.yz'
- src_path: ['./src/' './vendor/' './lib/']
- vendor: ['./vendor']
- dependencies: []
+```js
+ `
+ compile-time: [Project]
+ project: {
+	 version: '0.1.0'
+	 entry: 'main.yz'
+	 src_path: ['./src/' './vendor/' './lib/']
+	 vendor: ['./vendor']
+	 dependencies: []
+ }
+ `
+ restaurant: {
+ ...
+ }
 ```
 
 

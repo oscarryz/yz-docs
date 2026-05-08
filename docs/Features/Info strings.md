@@ -6,9 +6,9 @@
 
 An infostring is a string literal that appears immediately before a boc definition or a field declaration. Its content is a **boc body** — parsed and compiled by the language, but never executed. It carries structured metadata that `Compile` implementations and tooling can read at compile time.
 
-```
+```js
 `
-compile_time: [Derive, Debug, Logging]
+compile_time: [Debug, Logging]
 graphql: {
     schema: "https://myapi.com/graphql"
 }
@@ -72,10 +72,9 @@ Movies : { ... }
 Infostrings have restrictions that distinguish them from regular bocs:
 
 - **Never executed.** The boc body is data. No method calls, no side effects, no invocations.
-- **No string interpolation.** Infostrings are not regular strings — `${}` template expressions are unavailable inside them.
 - **No nested infostrings.** An infostring cannot contain another infostring.
 
-Everything else a boc can contain is available: nested boc literals, arrays, scalar values, references to named types.
+Everything else a boc can contain is available: nested boc literals, arrays, scalar values, references to named types, string interpolation etc. 
 
 ---
 

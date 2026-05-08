@@ -16,7 +16,7 @@ Option: {
 }
 ```
 
-- `V` declares a generic type parameter (see [Generics](Generics.md)).
+- `V` declares a generic type parameter (see [Generics](docs/Features/Replaced%20features/Generics.md)).
 - `Some(value V)` is a constructor that carries one field named `value` of type `V`.
 - `None()` is a constructor that carries no data.
 
@@ -82,4 +82,4 @@ match s
 ## See also
 
 - [SumTypes](SumTypes.md) — brief conceptual overview
-- [Generics](Generics.md) — how generic type parameters work
+- [Generics](docs/Features/Replaced%20features/Generics.md) — how generic type parameters work
