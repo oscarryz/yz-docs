@@ -131,7 +131,7 @@ The compiler currently has three separate lowering paths for bocs depending on w
 
 These are documented in the language spec/features and need compiler implementation:
 
-- [ ] **`break` / `continue` / `return` in loops** — spec defines these keywords; lexer/parser may tokenize them but lowerer/codegen don't emit them yet. Needed for `while` loops, `each` callbacks, and early exit from bocs.
+- [ ] **`break` / `continue` / `return` in loops** — spec defines these keywords; lexer/parser may tokenize them but lowerer/codegen don't emit them yet. *(Full semantics now in Breaking Change item 2)*
 
 - [ ] **Range iteration** — `1.to(10).each({ i Int; ... })` — `Range.Each` exists in yzrt and `Int.To` returns a `Range`, but the lowerer doesn't recognize `.each(closure)` on a Range value (only on Array). Need HOF lowering for Range receivers.
 
@@ -151,7 +151,110 @@ These are documented in the language spec/features and need compiler implementat
 
 - [ ] **Bool methods `&&` / `||`** — `Bool.Ampamp` and `Bool.Pipepipe` exist in yzrt; confirm they are wired through the operator lowering path (codegen for `&&`/`||` binary expressions). Add golden test.
  
-- [ ] **Info strings** — `` `"doc string"` `` before a declaration; retrievable via `info(var).text` at runtime. The lexer captures info strings as AST nodes, and `yzrt.Info()` exists, but codegen doesn't attach info strings to declarations or emit `Info()` calls. See `Features/Info strings.md`.
+- [ ] **Info strings** — `` `"doc string"` `` before a declaration; retrievable via `info(var).text` at runtime. The lexer captures info strings as AST nodes, and `yzrt.Info()` exists, but codegen doesn't attach info strings to declarations or emit `Info()` calls. See `Features/Info strings.md`. *(Superseded by Breaking Change item 3 — infostrings as boc bodies; that item covers the full redesign)*
 
 - [x] **Explicit type on boc-call declarations** — `c String = http.get(url)`: fixed in `lowerMainStmt`, `lowerBocBody`, and `lowerClosureBody` — detect `isBocMethodCall` on the TypedDecl value and use inferred `:=` + `thunkVars`, same as `ShortDecl`; golden test 36.
 - [x] **Local boc variable with explicit boc-type** — `foo #(String) = { "hello" }` and `foo #(String) { "hello" }` inside a boc body: sema now falls back to shorthand semantics (String = return type) when the body-only form has no TypedDecl params; lowerer emits a local function literal `func() *Thunk[String] { return std.Go(...) }` tracked in `localBocVars` so calls are emitted directly (not double-wrapped) and results are auto-forced; golden test 37.
+
+---
+
+## Yz 0.2.0
+
+These items reflect decisions documented in `docs/Implementation/breaking-changes.md`. Each one requires changes across spec, compiler, and/or runtime.
+
+### 1. String Interpolation: `${}` instead of backtick
+
+The old interpolation syntax `` `expr` `` inside strings is replaced by `${expr}`. Backtick is now reserved exclusively for infostrings. See `docs/Features/String interpolation.md`.
+
+- [ ] **Lexer** — change `lexer.go` to recognize `${` / `}` as interpolation delimiters inside string literals instead of `` ` `` / `` ` ``; backtick now only starts an infostring (outside strings)
+- [ ] **AST** — rename / update `InterpolatedStringExpr` comment; the parse structure stays the same but the delimiter changes
+- [ ] **Golden tests** — update any conformance test `.yz` files using backtick interpolation to `${}`
+- [ ] **Spec 01** — update lexical structure section describing string interpolation syntax
+
+### 2. `return`, `break`, `continue` — full semantics
+
+The spec (`docs/Features/return, break, continue.md`) now defines precise semantics. See also `docs/Features/Language Primitives.md`.
+
+- [ ] **Parser** — ensure `break` and `continue` are parsed as `BreakStmt` / `ContinueStmt` AST nodes (not just tokenized)
+- [ ] **Lowerer** — emit Go `break` for `break` in loop bodies
+- [ ] **Lowerer** — emit Go `continue` for `continue` in loop bodies
+- [ ] **Lowerer** — `continue` inside `match` arm: fall-through to next arm (design: likely emit a flag variable or restructure to labeled `goto`)
+- [ ] **Lowerer** — `return` inside anonymous boc (closure/callback): must exit the nearest enclosing *named* boc, transparent through anonymous bocs — requires non-local return (e.g. panic/recover or closure sentinel value threading); this is the complex case
+- [ ] **Spec 07** — update control-flow spec to match semantics in `docs/Features/return, break, continue.md`
+- [ ] **Golden tests** — add golden tests for `break`, `continue`, and early `return` from inside a callback
+
+### 3. Infostrings — content is a boc body
+
+The infostring delimiter stays backtick, but its content is now a **boc body** (full Yz syntax, parsed and type-checked, never executed). Currently the AST stores the infostring as a plain `*StringLit`. See `docs/Features/Info strings.md`.
+
+- [ ] **AST** — change `InfoString` to hold a `*BocLiteral` (or `[]ast.Node` elements) instead of `*StringLit`
+- [ ] **Lexer** — infostring content needs to be re-lexed as Yz source, not treated as a string value; currently the lexer emits the raw string content
+- [ ] **Parser** — after lexing the backtick span, re-parse its content as a boc body using the existing boc-body parser
+- [ ] **Sema** — type-check infostring content; validate that referenced names (e.g. in `compile_time: [Derive]`) resolve to known bocs; report missing types at compile time
+- [ ] **Codegen** — attach the compiled infostring boc to the declaration's metadata in generated code (prerequisite for compile-time bocs)
+- [ ] **Spec 01** — update lexical structure to clarify backtick = infostring delimiter, content = boc body (not string value)
+
+### 4. Generics — Explicit Constraint Declaration
+
+Type parameters can now carry an explicit constraint: `thing T Talker` declares that `T` must implement `Talker`. Constraint inference from usage still works; explicit declaration is additive. See `docs/Features/Generics - Type Parameters.md`.
+
+- [ ] **Parser** — in param lists and boc bodies, after a single-uppercase-letter type param, allow an optional uppercase-name constraint: `T Constraint`; produce a new `TypeParamDecl{Name: "T", Constraint: "Talker"}` AST node (or extend the existing generic param representation)
+- [ ] **Sema** — when an explicit constraint is present, validate at instantiation that the concrete type satisfies it; combine with inferred constraints from usage (union, not replacement)
+- [ ] **Error messages** — surface explicit constraint violations clearly, distinct from inferred violations
+- [ ] **Spec 04** — update type-system spec to document `T Constraint` syntax and its interaction with inference
+
+### 5. `:` as Type Alias
+
+`Name : SomeType` (or `Name : #(...)`) declares a type alias — a new name for an existing type. This is a general-purpose feature usable anywhere, not exclusive to boc bodies or compile-time contexts. (Feature doc to be created.) The `Schema : #(...)` pattern in `Compile` implementations is one use of this.
+
+- [ ] **Feature doc** — user to create `docs/Features/Type Alias.md` describing `: ` alias syntax and scoping rules
+- [ ] **Parser** — distinguish `Name : TypeExpr` (alias) from `Name TypeExpr` (typed declaration) and from `name : value` (short decl); uppercase `Name` + `:` + type expression = alias
+- [ ] **Sema** — register alias in current scope; resolve references to the alias name as the aliased type; aliases do not produce runtime fields or values
+- [ ] **Lowering** — emit Go type alias (`type Name = GoType`) at the appropriate scope; do not emit struct fields for alias declarations
+- [ ] **Spec 04** — add type alias syntax and scoping rules
+
+### 6. Compile-Time Bocs (`Compile` interface)
+
+Major new feature. Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies the `Compile` interface. `compile_time: [Impl, ...]` in a boc's infostring schedules those implementations to run during type inference. Their return values are merged into the parent boc. See `docs/Features/Compile Time Bocs.md`.
+
+Depends on: items 3 (infostring as boc body), 4 (explicit constraints), 5 (associated types).
+
+- [ ] **Sema** — recognize the `Compile` structural interface (duck-typed: any boc with `Schema #()` and `run #(Boc, Boc)`)
+- [ ] **Sema** — when resolving a boc definition: scan its infostring for `compile_time: [...]`; resolve each name; schedule them in array order during type inference
+- [ ] **Boc metatype** — implement the `Boc` value type accessible inside `run`: `{name String, instantiable Bool, fields [Boc], methods [Boc], type_params [Boc], infostring Boc, source #()}`; the compiler must populate it for every boc definition
+- [ ] **Two-phase build** — Phase 1: scan all source for `Compile` implementations; compile them to native executables first. Phase 2: main compilation; when inference hits a `compile_time` trigger, call the pre-compiled executable via subprocess, serialize the current `Boc` in, deserialize the returned `Boc`, merge into AST, re-enter inference
+- [ ] **Serialization** — implement `Boc` → wire format (JSON or binary) for subprocess calls
+- [ ] **AST merge** — implement merging a returned `Boc` into the parent boc's AST (add fields, methods, type params)
+- [ ] **Cycle detection** — detect circular `compile_time` triggers and report as compile errors
+- [ ] **Caching** — cache compiled `Compile` executables keyed on source hash + input boc structure hash
+- [ ] **Spec** — add `spec/12-compile-time-bocs.md` covering the `Compile` interface, two-phase build, execution timing, and constraint propagation
+
+### 7. Remove `mix` as a Keyword
+
+`mix` is no longer a language keyword; it becomes a library `Compile` implementation. See `docs/Features/Replaced features/mix.md`.
+
+Depends on: item 6 (compile-time bocs) landing first — `mix` functionality moves to a `Mix` compile implementation.
+
+- [ ] **Lexer** — remove `mix` from the keyword list (currently `token.MIX`)
+- [ ] **Parser** — remove `MixStmt` parsing; `mix` becomes a regular identifier
+- [ ] **Sema** — remove `mix` analysis (embedding resolution, conflict detection)
+- [ ] **Lowering/Codegen** — remove Go-embedding code path for `mix`
+- [ ] **Runtime** — implement `Mix` as a `Compile` boc in yzrt or stdlib (flattens fields and promotes methods from named boc into host)
+- [ ] **Golden tests** — update or remove conformance tests that use `mix` syntax; add new test using `compile_time: [Mix]` infostring form
+- [ ] **Spec 09** — remove `mix` from modules-and-organization spec; document `Mix` compile implementation
+
+### 8. Concurrency Model — Behaviour-Oriented Concurrency (BOC)
+
+**Scope: complete runtime redesign.** The current model (goroutines + `*Thunk[T]` + `Force()`) is replaced by cown-based resource acquisition semantics: every value is a protected concurrent resource; every invocation acquires all needed resources atomically before running; ordering is determined by resource overlap and spawn order. See `docs/Features/Concurrency.md`.
+
+This item is **large and architectural** — it touches the runtime, codegen, and the thunk transparency mechanism. It should be broken into sub-phases when implementation begins.
+
+- [ ] **Runtime** — replace `yzrt.Thunk[T]` / `std.Go()` / `Force()` with a cown-based scheduler: each value wraps a cown (protected resource); invocations declare their resource set and are queued behind any current holder
+- [ ] **Runtime** — implement atomic multi-resource acquisition (no partial acquire, no deadlock)
+- [ ] **Runtime** — implement happens-before ordering: invocations sharing a resource run in spawn order
+- [ ] **Runtime** — implement structured concurrency: a boc does not complete until all invocations it spawned complete (currently done via `BocGroup`; redesign to work with cown semantics)
+- [ ] **Codegen** — remove `*Thunk[T]` return types and `Force()` calls from generated Go; invocations become resource-acquiring calls that block at their resource boundary, not at explicit force points
+- [ ] **Codegen** — remove `thunkVars` tracking (no longer needed when thunks are gone)
+- [ ] **Codegen** — invocations that share no resources run in parallel automatically (scheduler handles this, not codegen)
+- [ ] **Sema** — resource set inference: determine which boc fields / values an invocation reads or writes, to populate the resource declaration (may start as conservative: all accessed values)
+- [ ] **Spec 08** — rewrite concurrency spec to describe BOC model (cowns, atomic acquisition, happens-before, deadlock freedom proof)

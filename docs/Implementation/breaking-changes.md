@@ -2,7 +2,7 @@
 - String interpolation: Uses `${}`  instead of backtick 
 - Compilentime docs: New feature, builds on top of Infostrings
 - Generics and constraints: Generics now have contraints
-- associated types
-- concurrency
-- return,  continue, break
-- mix
+- associated types: New feature, doesn't need extra grammar support
+- concurrency: New feature, syntax doesn't change at all. The calling mechanism is greatly improved and chaned. 
+- return,  continue, break: Specify how it will work 
+- mix: No longer a keyword, it will be implemented by compile time bocs
