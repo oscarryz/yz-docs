@@ -1,5 +1,5 @@
 #answered 
-#rejected Follow the original design and let everything declared as in the signature to be public, but make the owner the solely writer for that variable [Single Writer](../../Features/Single%20Writer.md)
+#rejected Follow the original design and let everything declared as in the signature to be public, but make the owner the solely writer for that variable [Single Writer](Single%20Writer.md)
 
 Idea, make variable read only by default and require objects to provide a writer method.
 

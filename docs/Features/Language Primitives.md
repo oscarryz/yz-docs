@@ -210,7 +210,8 @@ This convention fits within the existing identifier system without ambiguity:
 | `Uppercase` multi-letter | instantiable boc |
 | Single uppercase letter `T` | type parameter |
 
-See also: [Generics](./yz-generics-revisited.md)
+See also:  [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md)
+
 
 ---
 

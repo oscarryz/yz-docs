@@ -1,7 +1,8 @@
-- infostring
-- String interpolation
-- Compilentime docs
-- Generics and constraints 
+- infostring: Uses back tick and the content is a boc body
+- String interpolation: Uses `${}`  instead of backtick 
+- Compilentime docs: New feature, builds on top of Infostrings
+- Generics and constraints: Generics now have contraints
 - associated types
 - concurrency
 - return,  continue, break
+- mix
