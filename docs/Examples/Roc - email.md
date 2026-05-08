@@ -30,7 +30,7 @@ handle_error: {
 }
 ```
 
-Will inform [return, break, continue, exit](../../Questions/return,%20break,%20continue,%20exit.md)
+Will inform [return, break, continue, exit](return,%20break,%20continue,%20exit.md)
 
 ```js
 main: {

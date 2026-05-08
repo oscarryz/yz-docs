@@ -15,8 +15,7 @@ language — it can be passed to functions, iterated, serialized, and sent acros
 This document describes the `Boc` type, how the compiler creates and exposes instances,
 and how generics, compile-time execution, and `mix` are all built on top of it.
 
-See also: [Generics](./yz-generics.md) · [Compile-Time boc](./yz-compile.md) ·
-[mix](./yz-mix.md) · [boc Reference](./yz-boc.md)
+See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) · [Compile Time Bocs](Compile%20Time%20Bocs.md)
 
 ---
 

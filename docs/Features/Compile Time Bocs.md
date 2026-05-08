@@ -12,7 +12,7 @@ The system is built on one rule:
 
 Everything else follows from existing Yz concepts.
 
-See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20Revisited.md) · 
+See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20-%20Type%20Parameters.md) · 
 [Structural Reflection](Structural%20Reflection.md) - [Info strings](Info%20strings.md)
 
 ---
@@ -267,7 +267,7 @@ Container #(value T)
     metricsId  #(String)    ← declared by Metrics
 ```
 
-See also: [Generics Revisited](Generics%20Revisited.md) — constraints are optional for regular generics but by convention required for `Compile` implementations
+See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) — constraints are optional for regular generics but by convention required for `Compile` implementations
 
 ---
 
@@ -430,7 +430,7 @@ The key distinction from Haskell's `deriving` and Rust's `derive` is openness. B
 ## See Also
 
 - [Structural Reflection](Structural%20Reflection.md) — the full `Boc` API available inside `run`
-- [Generics Revisited](Generics%20Revisited.md) — constraint inference and propagation
+- [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) — constraint inference and propagation
 - [Structural Typing](Structural%20typing.md) — how `#(...)` signatures work
 - [Boc Type](Block%20type.md) — boc type syntax including `#(...)`
 - [Info strings](Info%20strings.md) — infostring syntax and conventions

@@ -93,6 +93,6 @@ The runtime atomically marks the parent boc as "returned." Subsequent non-local 
 ## Related
 
 - [Concurrency](../Features/Concurrency.md) — structured concurrency semantics
-- [Single Writer](../Features/Single%20Writer.md) — actor model and queue semantics
+- [Single Writer](Single%20Writer.md) — actor model and queue semantics
 - [return, break, continue](../Features/return%2C%20break%2C%20continue.md) — non-local return semantics
 - [Transactions or atomic units of work](Transactions%20or%20atomic%20units%20of%20work.md)

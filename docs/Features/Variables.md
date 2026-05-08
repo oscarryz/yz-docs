@@ -79,4 +79,4 @@ Variables can carry a generic type parameter:
 item T   // T is a generic type variable
 ```
 
-See [Generics](./Generics.md)
+See [Generics](docs/Features/Replaced%20features/Generics.md)

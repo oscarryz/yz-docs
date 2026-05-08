@@ -1,1 +1,1 @@
-#open-question [[questions/macros]]
+#open-question [[docs/Questions/solved/Macros]]
