@@ -27,7 +27,7 @@ Complex expressions including method calls and closures are valid inside `${}`:
 
 ```
 names: ["Alice", "Bob", "Carol"]
-print("Members: ${names.join(", ")}")      // Members: Alice, Bob, Carol
+print('Members: ${names.join(", ")}')      // Members: Alice, Bob, Carol
 
 print("fib(5) = ${fib(2 + 3)}")           // fib(5) = 5
 ```
