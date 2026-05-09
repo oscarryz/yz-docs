@@ -164,14 +164,14 @@ These are documented in the language spec/features and need compiler implementat
 
 These items reflect decisions documented in `docs/Implementation/breaking-changes.md`. Each one requires changes across spec, compiler, and/or runtime.
 
-### 1. String Interpolation: `${}` instead of backtick
+### 1. String Interpolation: `${}` instead of backtick — COMPLETE
 
 The old interpolation syntax `` `expr` `` inside strings is replaced by `${expr}`. Backtick is now reserved exclusively for infostrings. See `docs/Features/String interpolation.md`.
 
-- [ ] **Lexer** — change `lexer.go` to recognize `${` / `}` as interpolation delimiters inside string literals instead of `` ` `` / `` ` ``; backtick now only starts an infostring (outside strings)
-- [ ] **AST** — rename / update `InterpolatedStringExpr` comment; the parse structure stays the same but the delimiter changes
-- [ ] **Golden tests** — update any conformance test `.yz` files using backtick interpolation to `${}`
-- [ ] **Spec 01** — update lexical structure section describing string interpolation syntax
+- [x] **Lexer** — already recognizes `${` / `}` as interpolation delimiters; backtick only starts an infostring (outside strings)
+- [x] **AST** — `InterpolatedStringExpr` comment updated to reflect `${}` syntax
+- [x] **Golden tests** — no conformance `.yz` files used backtick interpolation; examples updated to `${}`
+- [ ] **Spec 01** — update lexical structure section describing string interpolation syntax (doc-only, no compiler work)
 
 ### 2. `return`, `break`, `continue` — frontend up to sema
 
