@@ -271,8 +271,8 @@ type InterpPart struct {
 	Expr   Expr   // non-nil for expression parts
 }
 
-// InterpolatedStringExpr is a string with backtick-embedded expressions:
-// `"Hello, `name`!"` desugars to a Plus chain at the IR level.
+// InterpolatedStringExpr is a string with ${}-embedded expressions:
+// `"Hello, ${name}!"` desugars to a Plus chain at the IR level.
 type InterpolatedStringExpr struct {
 	Pos
 	Parts []InterpPart

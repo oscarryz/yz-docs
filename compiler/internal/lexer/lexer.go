@@ -4,7 +4,7 @@
 // the Yz spec §1. Features include:
 //   - Unicode identifier scanning
 //   - Multi-line strings with both ' and " delimiters
-//   - String interpolation via backtick-delimited expressions
+//   - String interpolation via ${}-delimited expressions
 //   - Nested /* */ comments
 //   - Automatic semicolon insertion (ASI)
 //   - Open non-word identifier set
