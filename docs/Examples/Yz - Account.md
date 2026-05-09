@@ -44,7 +44,7 @@ transfer: {
   src Account
   dst Account
   amount Int
-  (src.balance >= amount) && (src.frozen == false) && (dst.frozen == false) ? {
+  (src.balance >= amount) && {src.frozen == false} && {dst.frozen == false} ? {
     src.balance = src.balance - amount
     dst.balance = dst.balance + amount
   }
@@ -55,7 +55,4 @@ transfer(account, account, 100)
 transfer(account, account, 100)
 
 ```
-
-???
-[[Transactions or atomic units of work]]
 
