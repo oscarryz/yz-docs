@@ -70,9 +70,9 @@ https://github.com/shadowninja55/carbon/blob/master/examples/tic-tac-toe.cb
 			}, {
 				count == 2 => "twice"
 			}, {
-				"`count` times"
+				"${count} times"
 			}
-			msg: 'Click me `times`'
+			msg: 'Click me ${times}'
 		}
 	}
 ```
@@ -85,13 +85,13 @@ main: {
 	hd: 0
 	lines: os.read_lines('input.txt').or({
 		e Error
-		panic('`e`')
+		panic('${e}')
 	})
 	lines.each({
 		line String
 		p: line.split(' ')
 		d: p[0]
-		m: int.parse(p[1]).or({ e Error; panic('`e`') })
+		m: int.parse(p[1]).or({ e Error; panic('${e}') })
 		vd = vd + match {
 			d == 'up'   => m.neg()
 		}, {
@@ -101,7 +101,7 @@ main: {
 		}
 		hd = hd + (d == 'forward' ? { m }, { 0 })
 	})
-	print("`vd * hd`")
+	print("${vd * hd}")
 }
 
 	main: {
@@ -109,7 +109,7 @@ main: {
 		horizontal_direction: 0
 		lines: os.read_lines('input.txt').or({
 			err Error
-			panic('`err`')
+			panic('${err}')
 		})
 
 		lines.each({
@@ -126,6 +126,6 @@ main: {
 			}
 
 		})
-		print('`vertical_direction * horizontal_direction`')
+		print('${vertical_direction * horizontal_direction}')
 	}
 ```

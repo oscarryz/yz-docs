@@ -33,7 +33,7 @@ fetch_issue #(number Int, repo Repository, Promise(Issue)) {
 }
 print_issue_title #(issue Promise(Issue), Unit) {
 	issue.then({ i Issue
-		print("Issue: `i.title()`")
+		print("Issue: ${i.title()}")
 	})
 }
 ...

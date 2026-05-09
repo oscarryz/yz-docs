@@ -53,7 +53,7 @@ main: {
     v << 'I '
 
     while({ v.is_empty() == false }, {
-        print('`v.pop()`')
+        print('${v.pop()}')
     })
 }
 

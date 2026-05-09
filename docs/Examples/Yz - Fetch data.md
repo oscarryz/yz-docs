@@ -20,7 +20,7 @@ main: {
 		r Result(String,Error)
 		r.and_then({
 		  value String
-		  print("The result is `value`")
+		  print("The result is ${value}")
 		})
 	})
 }

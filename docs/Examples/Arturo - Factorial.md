@@ -8,7 +8,7 @@ factorial: { n Int
 }
 
 1.to(19).each({ x Int
-    print('Factorial of `x` = `factorial(x)`')
+    print('Factorial of ${x} = ${factorial(x)}')
 })
 `Output:
 Factorial of 1 = 1

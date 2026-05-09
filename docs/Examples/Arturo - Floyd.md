@@ -15,7 +15,7 @@ floyd: {
     col: 0
     while({ row <= rows }, {
 
-        print(pad("`n`", width(rows, col)))
+        print(pad("${n}", width(rows, col)))
         col = col + 1
         n = n + 1
         col == row ? {

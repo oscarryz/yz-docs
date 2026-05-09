@@ -14,7 +14,7 @@ RedditLink:  {
         points: 0
     }
     print_on: {
-        "(`url`),`title`)"
+        "(${url}),${title})"
     }
     posted: {
         date.now() - created

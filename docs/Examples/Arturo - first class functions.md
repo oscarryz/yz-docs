@@ -22,7 +22,7 @@ fcf: {
     0.to(2).each({
         i Int
         result: func_list[i](num)
-        print('`names[i]` => `inv_list[i](result)`')
+        print('${names[i]} => ${inv_list[i](result)}')
     })
 }
 ```

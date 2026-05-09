@@ -7,7 +7,7 @@ NOBLE_GAS: ['Helium', 'Neon', 'Argon', 'Krypton', 'Xenon']
 
 group_by_name_length: enum.group_by({ s String; s.length() })
 groups: group_by_name_length(NOBLE_GAS)
-print("`groups`")
+print("${groups}")
 
 ```
 
@@ -47,7 +47,7 @@ obj_counters.map({
 task: {
 	id T
 	{
-		print("Hello from task `id`")
+		print("Hello from task ${id}")
 	}()
 }
 0.to(10000).each({ i Int; task(i) })

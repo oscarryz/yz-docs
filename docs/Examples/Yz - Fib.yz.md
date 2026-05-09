@@ -33,7 +33,7 @@ fibonacci: { n Int
 //
 main: {
   name: get_line()
-  print("Hello `name`")
+  print("Hello ${name}")
 }
 
 

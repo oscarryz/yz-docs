@@ -15,7 +15,7 @@ Concurrency is automatic: every boc call returns a thunk that runs in the backgr
 // Yz thunks fire all four immediately — total time ~2 seconds.
 
 main: {
-    print("start: `time.now()`")
+    print("start: ${time.now()}")
 
     // All four fire immediately concurrently.
     // a and b use inferred type; c and d declare the type explicitly.
@@ -36,7 +36,7 @@ main: {
     print("=== D ===")
     print(d)
 
-    print("done:  `time.now()`")
+    print("done:  ${time.now()}")
 }
 ```
 
@@ -77,7 +77,7 @@ the time of the slowest one, not the sum of all four.
 `time.now()` can be called directly inside a string interpolation:
 
 ```js
-print("start: `time.now()`")
+print("start: ${time.now()}")
 ```
 
 The call is inlined — no intermediate variable needed. The thunk is forced

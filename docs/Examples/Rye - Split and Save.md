@@ -27,7 +27,7 @@ split_and_save: {
    people Int
 
    apples.checked_div(people).and_then({ result Int
-     fs.write("apples.txt", "`result`")
+     fs.write("apples.txt", "${result}")
      Result.Ok(result)
    }).or(
       Result.Err("Can't split to no people")
@@ -41,7 +41,7 @@ split_and_save(10, 0).or_else({ Result.Ok(1) })
 // If we want to preserve the original error we can create a new one
 // with handle
 10.checked_div(0).map_err({ e Err
-  Result.Err("Custom message. Cause: `e`")
+  Result.Err("Custom message. Cause: ${e}")
 })
 // Would print(Error("Custom message. Cause: Error(Divison by zero))")
 

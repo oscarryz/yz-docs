@@ -78,6 +78,6 @@ main: {
         _ Int
         drone.move(movement.random())
     })
-    print('`drone`')
+    print('${drone}')
 }
 ```

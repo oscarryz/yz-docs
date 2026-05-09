@@ -60,7 +60,7 @@ main: {
     config.res.values.prod > 50 ? {
         print_err("Only up to 50 supported")
     }, { }
-    print("up=`config.ut`")
+    print("up=${config.ut}")
 }
 ```
 

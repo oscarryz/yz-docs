@@ -183,7 +183,7 @@ print_level #(Node(T)) {
 
     while({ q.is_empty() == false }, {
         c: q.remove(0)
-        println("`c.data`")
+        println("${c.data}")
 
         // match on variant to check if left/right are Tree nodes
         c.left.Tree ? {
