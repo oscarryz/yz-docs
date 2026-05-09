@@ -115,7 +115,7 @@ The compiler currently has three separate lowering paths for bocs depending on w
 
 - [ ] **Cancellation / non-local return across goroutine boundaries** — non-local `return` from a callback conflicts with structured concurrency. Three open sub-problems: goroutine leaks when a race-return fires, escaped non-local returns into completed bocs, and structured concurrency violation. See `Questions/How to cancel a running block.md`. No implementation work until the design question is resolved.
 
-- [ ] **SWMR write semantics in codegen** — field writes from outside a boc (`a.b = v` in a different boc) should be emitted as queued actor messages, not direct struct field assignments. Currently the codegen emits direct field writes which is a data race. Requires runtime support for a write-message channel per boc instance. Depends on the cancellation/actor-queue design.
+- [ ] **SWMR write semantics in codegen** — field writes from outside a boc (`a.b = v` in a different boc) should be wrapped in `std.Schedule(&target.Cown, func() { target.field = value })`. Currently the codegen emits direct field writes which is a data race. The fix follows directly from BOC ownership: the writer must hold the target's cown before mutating it. No new runtime primitives needed — `Schedule` already exists. See Phase C in the concurrency section.
 
 ## Known Bugs
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
@@ -269,16 +269,15 @@ This item is **large and architectural** — it touches the runtime, codegen, an
 - [x] **Codegen** — emit `std.ScheduleMulti([]*std.Cown{...}, ...)` when ExtraCowns present; hoist IsThunk DeclStmts outside Schedule closure (split-BocGroup pattern extended)
 - [x] **Conformance** — test 41 `41_multi_cown_sync.yz`: sync boc acquires bank + ledger cowns atomically
 
-#### Full redesign (long-term)
-- [ ] **Runtime** — replace `yzrt.Thunk[T]` / `std.Go()` / `Force()` with a cown-based scheduler: each value wraps a cown (protected resource); invocations declare their resource set and are queued behind any current holder
-- [ ] **Runtime** — implement atomic multi-resource acquisition (no partial acquire, no deadlock)
-- [ ] **Runtime** — implement happens-before ordering: invocations sharing a resource run in spawn order
-- [ ] **Runtime** — implement structured concurrency: a boc does not complete until all invocations it spawned complete (currently done via `BocGroup`; redesign to work with cown semantics)
-- [ ] **Codegen** — remove `*Thunk[T]` return types and `Force()` calls from generated Go; invocations become resource-acquiring calls that block at their resource boundary, not at explicit force points
-- [ ] **Codegen** — remove `thunkVars` tracking (no longer needed when thunks are gone)
-- [ ] **Codegen** — invocations that share no resources run in parallel automatically (scheduler handles this, not codegen)
-- [ ] **Sema** — resource set inference: determine which boc fields / values an invocation reads or writes, to populate the resource declaration (may start as conservative: all accessed values)
-- [ ] **Spec 08** — rewrite concurrency spec to describe BOC model (cowns, atomic acquisition, happens-before, deadlock freedom proof)
+#### Phase C — Ownership-based field writes (SWMR fix)
+
+`Thunk[T]` / `Go()` / `Force()` are compatible with the BOC model and are not removed. Phase C applies BOC ownership to field mutation: a write to a field owned by a different boc must go through that boc's cown.
+
+- [ ] **Lowerer/Codegen** — detect field assignment targets that belong to a different singleton (not `self`); wrap the write in `std.Schedule(&target.Cown, func() std.Unit { target.field = value; return std.TheUnit })`. Call sites that don't hold the target's cown already get `.Force()` on the result so the write completes before execution continues past it.
+- [ ] **Happens-before** — invocations sharing a resource (same cown) run in spawn order; this is already guaranteed by the queue scheduler from Phase B.1.
+- [ ] **Sema** — optionally: record which singleton each field access belongs to, so the lowerer can detect cross-cown writes without re-deriving it from the type.
+- [ ] **Conformance** — add a golden test where `main` writes directly to a singleton field; verify the generated code wraps it in `Schedule`.
+- [ ] **Spec 08** — update concurrency spec to document the ownership rule: a boc owns its own fields; writes from outside must go through `Schedule`.
 
 ### 9. Remove `while` built-in — let recursion be the implementation
 
