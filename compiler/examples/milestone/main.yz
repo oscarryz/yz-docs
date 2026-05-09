@@ -19,5 +19,5 @@ main: {
     print(a)
     print("=== response B ===")
     print(b)
-    print("fetches: `counter.value()`")
+    print("fetches: ${counter.value()}")
 }

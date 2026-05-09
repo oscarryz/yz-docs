@@ -400,13 +400,19 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	preWait := th.Body[:waitIdx]
 	postWait := th.Body[waitIdx:] // WaitStmt and everything after
 
-	// Separate BocGroup DeclStmts (hoisted) from the rest of the pre-Wait body.
-	var bocGroupDecls []ir.Stmt
+	// Separate hoisted declarations from the rest of the pre-Wait body.
+	// Hoisted: BocGroup DeclStmts and thunkVar DeclStmts. Both must be accessible
+	// in the post-Wait section (after the Schedule closure releases the cown).
+	var hoistedDecls []ir.Stmt
 	var immediateBody []ir.Stmt
 	for _, s := range preWait {
 		if ds, ok := s.(*ir.DeclStmt); ok {
 			if _, isGroup := ds.Init.(*ir.NewGroupExpr); isGroup {
-				bocGroupDecls = append(bocGroupDecls, s)
+				hoistedDecls = append(hoistedDecls, s)
+				continue
+			}
+			if ds.IsThunk {
+				hoistedDecls = append(hoistedDecls, s)
 				continue
 			}
 		}
@@ -420,8 +426,8 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 
 	outer := g.sub(g.level + 1)
 
-	// Hoisted BocGroup declarations.
-	for _, s := range bocGroupDecls {
+	// Hoisted declarations (BocGroup vars and thunkVars).
+	for _, s := range hoistedDecls {
 		outer.emitStmt(s)
 	}
 

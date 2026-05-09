@@ -1,6 +1,7 @@
 package rt
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -181,5 +182,91 @@ func TestDict(t *testing.T) {
 	if !d.Has(NewString("b")).GoBool() {
 		t.Error("Has")
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Cown / Schedule
+// ---------------------------------------------------------------------------
+
+func TestScheduleBasic(t *testing.T) {
+	var c Cown
+	th := Schedule(&c, func() Int { return NewInt(42) })
+	if th.Force().GoInt() != 42 {
+		t.Error("Schedule basic")
+	}
+}
+
+// TestScheduleSerializes verifies that N concurrent Schedule calls on the same
+// cown serialize: the counter ends up at N with no lost updates.
+func TestScheduleSerializes(t *testing.T) {
+	const n = 1000
+	var c Cown
+	count := 0 // unprotected — Schedule must serialize access
+
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for range n {
+		go func() {
+			Schedule(&c, func() Unit {
+				count++
+				return TheUnit
+			}).Force()
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	if count != n {
+		t.Errorf("lost updates: got %d, want %d", count, n)
+	}
+}
+
+// TestSchedulePreservesOrder verifies that behaviours on the same cown run in
+// the order they were spawned (FIFO).
+func TestSchedulePreservesOrder(t *testing.T) {
+	const n = 100
+	var c Cown
+	var order []int
+
+	var wg sync.WaitGroup
+	wg.Add(n)
+	// Serialize the spawning so positions are well-defined.
+	for i := range n {
+		i := i
+		Schedule(&c, func() Unit {
+			order = append(order, i)
+			wg.Done()
+			return TheUnit
+		}).Force()
+	}
+	wg.Wait()
+
+	for i, v := range order {
+		if v != i {
+			t.Fatalf("out of order at position %d: got %d", i, v)
+		}
+	}
+}
+
+// TestScheduleTwoIndependentCowns verifies that behaviours on different cowns
+// run in parallel (both can make progress without waiting for each other).
+func TestScheduleTwoIndependentCowns(t *testing.T) {
+	var c1, c2 Cown
+	ch1 := make(chan struct{})
+	ch2 := make(chan struct{})
+
+	t1 := Schedule(&c1, func() Unit {
+		close(ch1)
+		<-ch2 // wait for c2's behaviour — would deadlock if serialized
+		return TheUnit
+	})
+	t2 := Schedule(&c2, func() Unit {
+		close(ch2)
+		<-ch1
+		return TheUnit
+	})
+
+	t1.Force()
+	t2.Force()
 }
 
