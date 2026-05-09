@@ -19,10 +19,11 @@ func (self *Named) Greet() *std.Thunk[std.Unit] {
 }
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return std.TheUnit
 	})
 }

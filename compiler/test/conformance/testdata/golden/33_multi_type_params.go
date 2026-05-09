@@ -21,10 +21,11 @@ func makePair[K any, V any](a K, b V) *std.Thunk[*Pair[K, V]] {
 }
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		p := makePair(std.NewInt(42), std.NewString("hello"))
 		std.Print(p.Force().first)
 		std.Print(p.Force().second)

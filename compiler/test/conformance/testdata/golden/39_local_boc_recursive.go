@@ -3,10 +3,11 @@ package main
 import std "yz/runtime/rt"
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) F(n std.Int) *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		if n.Eqeq(std.NewInt(0)).GoBool() {
 			std.Print(std.NewString("fin"))
 		} else {
@@ -18,11 +19,14 @@ func (self *_mainBoc) F(n std.Int) *std.Thunk[std.Unit] {
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
-		_bg0.Go(func() any {
-			return self.F(std.NewInt(3)).Force()
-		})
+		std.Schedule(&self.Cown, func() std.Unit {
+			_bg0.Go(func() any {
+				return self.F(std.NewInt(3)).Force()
+			})
+			return std.TheUnit
+		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
 	})

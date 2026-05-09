@@ -142,7 +142,7 @@ func TestGenerateMethodThunk(t *testing.T) {
 	contains(t, got,
 		"func (self *_counterBoc) Value()",
 		"*std.Thunk[std.Int]",
-		"return std.Go(func() std.Int {",
+		"return std.Schedule(&self.Cown, func() std.Int {",
 		"return self.count",
 	)
 }
@@ -154,7 +154,7 @@ func TestGenerateIncrementMethod(t *testing.T) {
 }`)
 	contains(t, got,
 		"func (self *_counterBoc) Increment()",
-		"std.Go(func() std.Unit {",
+		"std.Schedule(&self.Cown, func() std.Unit {",
 		"self.count = self.count.Plus(std.NewInt(1))",
 	)
 }
