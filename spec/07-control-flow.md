@@ -90,9 +90,9 @@ Discriminates between type variants of a specific value:
 
 ```yz
 match result {
-    Result.Ok => print("Value: `result.value`")
+    Result.Ok => print("Value: ${result.value}")
 }, {
-    Result.Err => print("Error: `result.error`")
+    Result.Err => print("Error: ${result.error}")
 }
 ```
 
@@ -144,7 +144,7 @@ Yz has no loop syntax. Iteration is achieved through methods on ranges and colle
 
 ```yz
 1.to(10).each({ i Int
-    print("`i`")
+    print("${i}")
 })
 ```
 
@@ -156,7 +156,7 @@ Yz has no loop syntax. Iteration is achieved through methods on ranges and colle
 ```yz
 names: ["Alice", "Bob", "Charlie"]
 names.each({ name String
-    print("Hello, `name`!")
+    print("Hello, ${name}!")
 })
 ```
 
@@ -167,7 +167,7 @@ names.each({ name String
 ```yz
 count: 0
 while({ count < 10 }, {
-    print("`count`")
+    print("${count}")
     count = count + 1
 })
 ```
@@ -180,7 +180,7 @@ while({ count < 10 }, {
 
 ```yz
 names.each_with_index({ name String, i Int
-    print("`i`: `name`")
+    print("${i}: ${name}")
 })
 ```
 
@@ -216,7 +216,7 @@ Exits the current iteration (used inside `.each`, `while`, etc.):
 ```yz
 1.to(100).each({ i Int
     (i > 10) ? { break }, { }
-    print("`i`")
+    print("${i}")
 })
 ```
 
@@ -227,7 +227,7 @@ In iteration context: skips to the next iteration. In match context: falls throu
 ```yz
 1.to(20).each({ i Int
     (i % 2 == 0) ? { continue }, { }
-    print("`i`")    // Only odd numbers
+    print("${i}")    // Only odd numbers
 })
 ```
 

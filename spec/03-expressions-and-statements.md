@@ -200,7 +200,7 @@ When a boc has an explicit return type in its signature, the last expression mus
 
 ```yz
 greet #(name String, String) {
-    "Hello, `name`!"   // Must be String
+    "Hello, ${name}!"   // Must be String
 }
 ```
 

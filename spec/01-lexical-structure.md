@@ -251,12 +251,12 @@ Like Go, Yz uses newline-based automatic semicolon insertion. A semicolon is aut
 // Source code:
 name: "Alice"
 age: 30
-print("`name` is `age`")
+print("${name} is ${age}")
 
 // After ASI:
 name: "Alice";
 age: 30;
-print("`name` is `age`");
+print("${name} is ${age}");
 ```
 
 A semicolon is **NOT** inserted after:

@@ -1,7 +1,7 @@
 #spec 
 # 8. Concurrency
 
-This chapter defines Yz's concurrency model: async-by-default execution, the actor model, thunk materialization, and structured concurrency.
+This chapter defines Yz's concurrency model: behaviour-oriented concurrency (BOC), transparent thunks, and structured concurrency.
 
 ## 8.1 Design Principle
 
@@ -66,27 +66,15 @@ The following do **not** trigger materialization:
 - Method calls (`x.to_string()`) — returns a new thunk
 - Comparison (`x == y`) — returns a thunk Bool
 
-## 8.4 The Actor Model
+## 8.4 Behaviour-Oriented Concurrency (BOC)
 
-Every boc instance is an **actor**:
+Yz's concurrency model is based on **Behaviour-Oriented Concurrency** (Cheeseman et al., OOPSLA 2023). Every singleton boc instance is a **cown** (concurrent owner) — a protected resource. Invocations that need a cown are called **behaviours**; they run only when they have acquired all required cowns.
 
-- It has its own **message queue** (channel)
-- Messages (method calls) are processed **in order**
-- Each actor runs on its own **green thread** (goroutine in Go backend)
-- Actors do not share mutable state — communication is via message passing
+### Cowns and Behaviours
 
-### Actor Lifecycle
-
-```
-1. Boc is instantiated → goroutine + channel created
-2. Method calls are sent as messages to the channel
-3. Actor processes messages sequentially from its queue
-4. Actor completes when its body finishes and all inner actors complete
-```
-
-### Message Ordering
-
-Messages to a single actor are processed in **FIFO order**:
+- A **cown** is a singleton boc instance. It owns its fields exclusively.
+- A **behaviour** is an invocation that must acquire one or more cowns before running.
+- All required cowns are **acquired atomically** — a behaviour either gets all of them at once or waits.
 
 ```yz
 counter: {
@@ -95,27 +83,44 @@ counter: {
     get: { count }
 }
 
-counter.increment()   // Message 1
-counter.increment()   // Message 2
-counter.increment()   // Message 3
-print(counter.get())  // Message 4 → prints 3
+counter.increment()   // behaviour — acquires counter's cown, runs body, releases
+counter.increment()   // queued — waits until previous releases
+print(counter.get())  // waits for previous to complete → prints 2
 ```
 
-### Actor Granularity
+### Ordering Guarantee
 
-**Stateful boc instances** (body form, no `#(...)`) are actors with message queues. **Stateless bocs** (BocWithSig form, `foo #(params) { ... }`) are not actors — each call creates a fresh independent goroutine with no shared queue.
+Two behaviours that share at least one cown always run in **spawn order** — the one scheduled first runs first. Behaviours with no cown overlap run freely in parallel:
 
-| Form | Actor? | Queue? | Parallel calls? |
-|---|---|---|---|
-| `foo: { field T; ... }` | Yes | Yes | No — serialized |
-| `Foo: { field T; ... }` (instance) | Yes | Yes | Yes — each instance has its own queue |
-| `foo #(param T) { ... }` | No | No | Yes — fully parallel |
+```yz
+transfer(src, dst, 100)   // acquires src + dst atomically
+check_balance(src)        // waits — shares src with transfer
 
-The compiler may further optimize:
-- **Literal bocs** (`{ 42 }`) — constant folding
-- **Bocs invoked and immediately materialized** — synchronous execution
+transfer(s1, s2)          // runs in parallel with...
+transfer(s3, s4)          // ...this (no shared cowns)
+```
 
-These optimizations are transparent to the programmer.
+### Multi-Cown Acquisition
+
+When a behaviour needs multiple cowns, it acquires them all at once. This prevents deadlock: there is no partial acquisition and no "acquire one, then wait for another":
+
+```yz
+sync #(b bank, l ledger) {
+    b.balance = b.balance + 1    // atomic: both cowns held simultaneously
+    l.total   = l.total   + 1
+}
+sync(bank, ledger)   // atomically acquires bank's and ledger's cowns
+```
+
+### Boc Forms and Cown Ownership
+
+| Form | Owns a cown? | Behaviours serialized? |
+|---|---|---|
+| `foo: { field T; method: {...} }` | Yes — singleton cown | Yes |
+| `Foo: { field T; ... }` (struct type) | Yes — one cown per instance | Yes per instance |
+| `foo #(param T) { ... }` (BocWithSig) | No | Fully parallel |
+
+BocWithSig forms (`foo #(params) { body }`) are stateless — each call is an independent goroutine with no cown, no serialization.
 
 ## 8.5 Structured Concurrency
 
@@ -136,24 +141,6 @@ This provides:
 2. **Error propagation** — errors in inner bocs propagate to the parent
 3. **Predictable lifetimes** — a boc's scope determines its children's lifetimes
 
-### Timeout Pattern and Non-Local Return
-
-Non-local `return` from a callback (see §7.5) exits the enclosing boc early, which is intentionally in tension with structured concurrency:
-
-```yz
-fetch: {
-    id String
-    time.sleep(10.seconds(), {
-        return Option.None()   // non-local: exits `fetch` early
-    })
-    return find(id)            // also exits `fetch`
-}
-```
-
-Both goroutines race to return from `fetch`. The first `return` wins; subsequent non-local returns from escaped callbacks are silently discarded. The losing goroutine runs to natural completion.
-
-**Open design question**: how to cleanly cancel the losing goroutine to avoid goroutine leaks. See [Questions/How to cancel a running block](../Questions/How%20to%20cancel%20a%20running%20block.md).
-
 ## 8.6 Single-Writer Principle (SWMR)
 
 Yz uses the **Single Writer, Multiple Reader** model for field access:
@@ -161,79 +148,85 @@ Yz uses the **Single Writer, Multiple Reader** model for field access:
 | Operation | Who | How |
 |---|---|---|
 | Read `a.field` | Any boc | Direct — no queue, no async overhead |
-| Write `a.field = v` from inside `a` | `a` and nested bocs | Direct |
-| Write `a.field = v` from outside `a` | Any boc | Queued through `a`'s actor |
+| Write `a.field = v` from inside `a` | `a`'s own behaviours | Direct — cown already held |
+| Write `a.field = v` from outside `a` | Any other boc | Wrapped in `Schedule(&a.Cown, ...)` |
 
-Only one goroutine ever writes a field — the field's owner. Reads are unrestricted and synchronous. This avoids torn writes without making reads expensive.
+Only the cown's owner can write a field directly. Reads from outside are unrestricted and synchronous. Writes from outside are automatically scheduled through the target's cown — the compiler generates this wrapping transparently.
 
 ```yz
 counter: {
     count: 0
-    increment: { count = count + 1 }  // direct write — inside counter
+    increment: { count = count + 1 }  // direct — cown is held
 }
 
-// From outside: reads are direct, writes are queued
-x: counter.count          // direct read — any goroutine, no queue
-counter.count = 5         // queued write — sent to counter's actor
-counter.increment()       // queued call — also through actor
+// From outside:
+x: counter.count          // direct read — no serialization needed
+counter.count = 5         // compiler wraps in Schedule(&Counter.Cown, ...)
+counter.increment()       // behaviour — runs when Counter's cown is free
 ```
 
-**Tradeoff**: reads may see slightly stale values (a queued write hasn't applied yet). Multi-field reads are not atomically consistent — use a method that reads both fields within one actor turn when consistency is needed.
+**Tradeoff**: reads may see slightly stale values (a queued write hasn't applied yet). Multi-field reads are not atomically consistent — use a method that reads both fields within one behaviour turn when consistency is needed.
 
-**Note**: The "modify then call" pattern is not atomic:
-```yz
-hi.text = "Goodbye"       // queued write
-hi.recipient = "everyone" // queued write
-hi()                      // queued call — three separate queue entries, not atomic
-hi("Goodbye", "everyone") // prefer this — one atomic queue entry
-```
+**Prefer methods over direct field writes**: calling `counter.increment()` is idiomatic Yz. Direct cross-cown field writes (`counter.count = 5`) are legal but bypass the method's encapsulation.
 
-See [Features/Single Writer](Single%20Writer.md) for the full specification.
+## 8.7 Inter-Boc Communication
 
-## 8.7 Inter-Actor Communication
-
-Actors communicate by calling each other's methods. These calls are messages sent to the target actor's queue:
+Bocs communicate by calling each other's methods. Each call is a behaviour scheduled on the target's cown:
 
 ```yz
 producer: {
-    consumer #(item String)    // Parameter: reference to consumer
+    consumer #(item String)    // Parameter: reference to consumer boc
     1.to(100).each({ i Int
-        consumer.receive("item `i`")
+        consumer.receive("item ${i}")
     })
 }
 
 consumer: {
     receive: {
         item String
-        print("Got: `item`")
+        print("Got: ${item}")
     }
 }
 
-producer(consumer)   // producer sends messages to consumer
+producer(consumer)   // producer schedules receives on consumer's cown
 ```
 
 ## 8.8 Concurrency Implementation (Go Backend)
 
 | Yz Concept | Go Implementation |
 |-----------|-------------------|
-| Boc instance | Goroutine + channel |
-| Method call | Message sent to channel |
-| Thunk | `chan T` or lazy wrapper |
-| Materialization | `<-chan` (channel receive) |
-| Structured concurrency | `sync.WaitGroup` on child goroutines |
-| Actor message queue | Buffered channel with sequential processing loop |
+| Singleton boc (cown) | Struct with embedded `std.Cown` (lock-free atomic queue) |
+| Method call (behaviour) | `std.Schedule(&self.Cown, func() T { ... })` |
+| Multi-cown behaviour | `std.ScheduleMulti([]*std.Cown{...}, func() T { ... })` |
+| Cross-cown field write | `std.Schedule(&Target.Cown, func() Unit { Target.field = val })` |
+| Thunk | `*std.Thunk[T]` — lazy wrapper forced at IO boundary |
+| Materialization | `.Force()` call on `*Thunk[T]` |
+| Structured concurrency | `std.BocGroup` + `WaitGroup` on child goroutines |
+| Cown acquisition order | Atomic queue per cown; behaviours run when all queues grant |
 
 ## 8.9 Summary
 
 ```
 Concurrency Model:
-  Default:           All invocations are async
-  Value wrapper:     Thunk (same type, lazy)
-  Materialization:   IO boundaries only
-  Actor:             Every boc instance
-  Message ordering:  FIFO per actor
-  State safety:      Single-writer (sequential message processing)
-  Structured:        Parent waits for all children
-  Runtime:           Green threads (goroutines)
-  Scheduler:         Preemptive
+  Default:           All invocations are async (return *Thunk[T])
+  Value wrapper:     Thunk (same type to the programmer, lazy internally)
+  Materialization:   IO boundaries only (.Force())
+  Ownership unit:    Cown (one per singleton boc instance)
+  Behaviour:         Invocation that holds one or more cowns while running
+  Acquisition:       Atomic — all cowns acquired at once or none
+  Ordering:          Spawn order for behaviours sharing a cown
+  Parallelism:       Behaviours with disjoint cowns run freely in parallel
+  State safety:      Single-writer — only the cown owner writes its fields
+  Deadlock:          Impossible — atomic multi-cown acquisition
+  Data races:        Impossible — exclusive cown access
+  Structured:        Parent waits for all spawned behaviours before completing
+  Runtime:           Goroutines + lock-free cown queue (Go backend)
 ```
+
+## 8.10 Theoretical Background
+
+The concurrency model in Yz is a direct application of **Behaviour-Oriented Concurrency** developed at Imperial College London and Microsoft Research. In that model, protected resources are called **cowns** and asynchronous units of work are called **behaviours** — Yz uses the same terms and the same formal guarantees.
+
+> Cheeseman et al. (2023). *When Concurrency Matters: Behaviour-Oriented Concurrency*.
+> Proc. ACM Program. Lang. 7, OOPSLA2, Article 276.
+> <https://marioskogias.github.io/docs/boc.pdf>
