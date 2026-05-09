@@ -45,11 +45,11 @@ Person: { name String; age Int }
 p1: Person("Alice", 30)   // New instance — independent of p2
 p2: Person("Bob", 25)     // Another new instance
 
-greet: { name String; print("Hi, `name`!") }
+greet: { name String; print("Hi, ${name}!") }
 greet("Alice")             // Executes greet singleton (serialized if concurrent)
 greet("Bob")               // Also executes greet singleton
 
-hi #(name String) { print("Hi, `name`!") }
+hi #(name String) { print("Hi, ${name}!") }
 hi("Alice")                // Independent goroutine — parallel-safe
 hi("Bob")                  // Another independent goroutine
 ```
@@ -100,9 +100,9 @@ A variable in an inner scope can shadow a variable with the same name from an ou
 x: 10
 inner: {
     x: 20           // Shadows outer x
-    print("`x`")    // Prints 20
+    print("${x}")    // Prints 20
 }
-print("`x`")        // Prints 10
+print("${x}")        // Prints 10
 ```
 
 ## 6.4 Variable Capture (Closures)
@@ -115,7 +115,7 @@ increment: {
     count = count + 1   // Captures 'count' by reference
 }
 increment()
-print("`count`")   // Prints 1
+print("${count}")   // Prints 1
 ```
 
 ### Capture in Type Instances

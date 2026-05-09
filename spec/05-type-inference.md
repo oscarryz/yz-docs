@@ -30,7 +30,7 @@ When a boc literal is assigned, the type is the structural signature of the boc:
 ```yz
 greet: {
     name String
-    "Hello, `name`!"
+    "Hello, ${name}!"
 }
 // greet : #(name String, String)
 ```

@@ -115,7 +115,7 @@ The compiler currently has three separate lowering paths for bocs depending on w
 
 - [ ] **Cancellation / non-local return across goroutine boundaries** — non-local `return` from a callback conflicts with structured concurrency. Three open sub-problems: goroutine leaks when a race-return fires, escaped non-local returns into completed bocs, and structured concurrency violation. See `Questions/How to cancel a running block.md`. No implementation work until the design question is resolved.
 
-- [ ] **SWMR write semantics in codegen** — field writes from outside a boc (`a.b = v` in a different boc) should be wrapped in `std.Schedule(&target.Cown, func() { target.field = value })`. Currently the codegen emits direct field writes which is a data race. The fix follows directly from BOC ownership: the writer must hold the target's cown before mutating it. No new runtime primitives needed — `Schedule` already exists. See Phase C in the concurrency section.
+- [x] **SWMR write semantics in codegen** — field writes from outside a boc (`a.b = v` in a different boc) are wrapped in `std.Schedule(&target.Cown, func() std.Unit { target.field = value; return std.TheUnit }).Force()`. Implemented in Phase C; golden test 42.
 
 ## Known Bugs
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
@@ -171,7 +171,7 @@ The old interpolation syntax `` `expr` `` inside strings is replaced by `${expr}
 - [x] **Lexer** — already recognizes `${` / `}` as interpolation delimiters; backtick only starts an infostring (outside strings)
 - [x] **AST** — `InterpolatedStringExpr` comment updated to reflect `${}` syntax
 - [x] **Golden tests** — no conformance `.yz` files used backtick interpolation; examples updated to `${}`
-- [ ] **Spec 01** — update lexical structure section describing string interpolation syntax (doc-only, no compiler work)
+- [x] **Spec 01** — updated: §1.10 and §1.12 ASI example now use `${}` syntax; all backtick-interpolation examples in spec files 01–08 replaced
 
 ### 2. `return`, `break`, `continue` — frontend up to sema
 
@@ -273,11 +273,11 @@ This item is **large and architectural** — it touches the runtime, codegen, an
 
 `Thunk[T]` / `Go()` / `Force()` are compatible with the BOC model and are not removed. Phase C applies BOC ownership to field mutation: a write to a field owned by a different boc must go through that boc's cown.
 
-- [ ] **Lowerer/Codegen** — detect field assignment targets that belong to a different singleton (not `self`); wrap the write in `std.Schedule(&target.Cown, func() std.Unit { target.field = value; return std.TheUnit })`. Call sites that don't hold the target's cown already get `.Force()` on the result so the write completes before execution continues past it.
-- [ ] **Happens-before** — invocations sharing a resource (same cown) run in spawn order; this is already guaranteed by the queue scheduler from Phase B.1.
-- [ ] **Sema** — optionally: record which singleton each field access belongs to, so the lowerer can detect cross-cown writes without re-deriving it from the type.
-- [ ] **Conformance** — add a golden test where `main` writes directly to a singleton field; verify the generated code wraps it in `Schedule`.
-- [ ] **Spec 08** — update concurrency spec to document the ownership rule: a boc owns its own fields; writes from outside must go through `Schedule`.
+- [x] **Lowerer/Codegen** — `lowerAssignment` detects field assignment targets on top-level singletons (via `LookupInFile`); wraps in `std.Schedule(&Target.Cown, ...).Force()`.
+- [x] **Happens-before** — already guaranteed by Phase B.1 queue scheduler.
+- [ ] **Sema** — optional: record singleton ownership per field access to avoid re-deriving at codegen time.
+- [x] **Conformance** — golden test 42 `42_cross_cown_write.yz`: main writes directly to bank's field; generated code uses `std.Schedule`.
+- [x] **Spec 08** — rewritten: replaced actor/channel model with BOC/cown model; §8.4 now describes cowns and behaviours; §8.6 SWMR updated; §8.8 implementation table corrected.
 
 ### 9. Remove `while` built-in — let recursion be the implementation
 

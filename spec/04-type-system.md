@@ -40,7 +40,7 @@ A boc type is explicitly declared using the `#(...)` syntax:
 
 ```yz
 greet #(name String, String) {
-    "Hello, `name`!"
+    "Hello, ${name}!"
 }
 ```
 
@@ -65,11 +65,11 @@ The signature `#(name String, String)` means: "accepts a `String` parameter name
 counter #(Int) { 0 }
 
 // One required parameter, returns String
-greet #(name String, String) { "Hello, `name`!" }
+greet #(name String, String) { "Hello, ${name}!" }
 
 // Two parameters (one optional), returns Unit
 log #(message String, level String = "INFO") {
-    print("`level`: `message`")
+    print("${level}: ${message}")
 }
 
 // Multiple return values
@@ -138,7 +138,7 @@ A boc that doesn't return a meaningful value has return type `Unit`:
 
 ```yz
 say_hi #(name String) {
-    print("Hi, `name`!")
+    print("Hi, ${name}!")
     // Returns Unit implicitly
 }
 ```
@@ -198,9 +198,9 @@ The `match` expression discriminates between variants:
 
 ```yz
 match result {
-    Result.Ok => print("Value: `result.value`")
+    Result.Ok => print("Value: ${result.value}")
 }, {
-    Result.Err => print("Error: `result.error`")
+    Result.Err => print("Error: ${result.error}")
 }
 ```
 
@@ -259,7 +259,7 @@ Employee: {
 
 // Employee is compatible with Person (has all of Person's fields)
 greet #(p Person) {
-    print("Hello, `p.name`!")
+    print("Hello, ${p.name}!")
 }
 
 e: Employee("Alice", 30, 1001)
