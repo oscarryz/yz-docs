@@ -8,11 +8,11 @@ server: http.Server(
     get: {
         context http.Context
         context.response.context_type = 'text/plain'
-        context.response.print('Hello world!  The time is `time.now()`')
+        context.response.print('Hello world!  The time is ${time.now()}')
     }
 )
 address: server.bind(8080)
-print('Listening on https://`address`')
+print('Listening on https://${address}')
 server.listen()
 
 ```
@@ -38,7 +38,7 @@ option_parser: optionParser.parse({
     })
 
     parser.on(['-h', '--help', 'Show help'], {
-        print('`parser`')
+        print('${parser}')
         return
     })
 
@@ -61,15 +61,15 @@ option_parser: optionParser.parse({
     })
 
     parser.missing_option({ option_flag String
-        print(io.std_err('Error `option_flag` is missing something'))
+        print(io.std_err('Error ${option_flag} is missing something'))
         print(io.std_err(""))
-        print(io.std_err('`parser`'))
+        print(io.std_err('${parser}'))
         return
     })
 
     parser.invalid_option({ option_flag String
-        print(io.std_err("Error: `option_flag` is not a valid option"))
-        print(io.std_err('`parser`'))
+        print(io.std_err("Error: ${option_flag} is not a valid option"))
+        print(io.std_err('${parser}'))
         return
     })
 })
@@ -88,10 +88,10 @@ print(`
 `)
 members.each({ member String
     icon: strawberry ? { '🍓' }, { '-' }
-    print('`icon` `member`')
+    print('${icon} ${member}')
 })
 say_hi_to.empty() == false ? {
-    print("You say goodbye  and I say hello to `say_hi_to`")
+    print("You say goodbye  and I say hello to ${say_hi_to}")
 }
 
 ```
@@ -114,7 +114,7 @@ parser: OptionParser(
             print('version 1.0')
         },
         ['-h', '--help', 'Show help']: {
-             print('`parser`')
+             print('${parser}')
         },
         ['-t', '--twist', 'Twist and SHOUT']: {
             shout = true
@@ -133,13 +133,13 @@ parser: OptionParser(
 
 
      missing_option: { option_flag String
-        print(io.std_err('Error `option_flag` is missing something'))
+        print(io.std_err('Error ${option_flag} is missing something'))
         print(io.std_err(""))
-        print(io.std_err('`parser`'))
+        print(io.std_err('${parser}'))
     }
     invalid_option: { option_flag String
-        print(io.std_err("Error: `option_flag` is not a valid option"))
-        print(io.std_err('`parser`'))
+        print(io.std_err("Error: ${option_flag} is not a valid option"))
+        print(io.std_err('${parser}'))
     }
 members: the_beatles
 shout ? {
@@ -155,10 +155,10 @@ print(`
 `)
 members.each({ member String
     icon: strawberry ? { '🍓' }, { '-' }
-    print('`icon` `member`')
+    print('${icon} ${member}')
 })
 say_hi_to.empty() == false ? {
-    print("You say goodbye  and I say hello to `say_hi_to`")
+    print("You say goodbye  and I say hello to ${say_hi_to}")
 }
 
 ```

@@ -20,14 +20,14 @@ names: ", ".join(people.keys())  // Alice, Bob, Charlie, Dave
 "Return a greeting"
 greet: {
    names [String]
-   "Hello `names`"
+   "Hello ${names}"
 }
 
 greeting: greet(names)
 
 above30: people.filter({ name String; age Int; age > 30 })
 
-println("`above30.length()` people are above 30.")
+println("${above30.length()} people are above 30.")
 
 fizz_buzz: {
 	n Int
@@ -36,7 +36,7 @@ fizz_buzz: {
 		println(match
 			{ i % 3 == 0 => s = s + "Fizz" },
 			{ i % 5 == 0 => s = s + "Buzz" },
-			{ "`i`" })
+			{ "${i}" })
 	})
 }
 fizz_buzz(20)

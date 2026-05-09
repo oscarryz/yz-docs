@@ -49,7 +49,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
             self Foo
             text: "Hi"
             to_myself: {
-                print('`self.text`')
+                print('${self.text}')
             }
         }
         new: {
@@ -95,7 +95,7 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
         a <=> b
     })
     args.each({ s String
-        print('Hello `s`')
+        print('Hello ${s}')
     })
 
     correct: "Pass123"

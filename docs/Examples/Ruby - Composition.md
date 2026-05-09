@@ -8,7 +8,7 @@ Point: {
 	x Int
 	y Int
 	to_string #() {
-		"(`x`, `y`)"
+		"(${x}, ${y})"
 	}
 }
 MovablePoint: {
@@ -19,7 +19,7 @@ MovablePoint: {
 }
 
 mp: MovablePoint(3, 4)
-println("`mp`")
+println("${mp}")
 mp.move_right()
 puts(mp)
 
@@ -29,7 +29,7 @@ MovablePoint: {
 	x Int
 	y Int
 	to_string #() {
-		"(`x`, `y`)"
+		"(${x}, ${y})"
 	}
 	...
 }

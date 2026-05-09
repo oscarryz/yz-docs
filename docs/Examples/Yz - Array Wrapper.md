@@ -19,7 +19,7 @@ ArrayWrapper: {
         r: '['
         l: nums.length()
         nums.each({ i Int; e Int
-            r = r ++ '`e`'
+            r = r ++ '${e}'
             i < l ? {
                 r = r ++ ', '
             }, { }

@@ -51,7 +51,7 @@ get_all_tasks #(Result([Task], Error)) {
     .or({
         e Error
         // This is primarily the File Open failure (file not found).
-		print("JSON file (`TASK_FILE`) not found. Creating a new list.")
+		print("JSON file (${TASK_FILE}) not found. Creating a new list.")
         // Return an OK Result with an empty Task list on file access error
         Result.Ok([Task]())
 	})
@@ -92,16 +92,16 @@ add_task #(task_description String, Unit) {
                 f File
                 // 6. Write the JSON string to the file
                 f.write(json_string)
-                print("Task added and saved to JSON: `task_description`")
+                print("Task added and saved to JSON: ${task_description}")
             })
             .or({
                 e Error
-                print("Error writing JSON to file: `e`")
+                print("Error writing JSON to file: ${e}")
             })
         })
         .or({
             e Error
-            print("Error serializing tasks to JSON: `e`")
+            print("Error serializing tasks to JSON: ${e}")
         })
     })
     // Note: Since `get_all_tasks` is designed to always return an OK Result (even if empty),
@@ -130,7 +130,7 @@ view_tasks #(Unit) {
                 status: task.done ? { "[DONE]" }, { "[PENDING]" }
 
                 // Accessing struct properties using dot notation
-                print("`index`. `status` `task.description` (Created: `task.created_at`)")
+                print("${index}. ${status} ${task.description} (Created: ${task.created_at})")
             })
             print("---------------------\n")
         }

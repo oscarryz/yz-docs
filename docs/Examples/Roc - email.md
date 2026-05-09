@@ -13,19 +13,19 @@ store_email: {
 	early_return: { e Err; e }
 	url: file.read_utf8(path).or(early_return)
 	user: http.get(url, json.codec).or(early_return)
-	dest: path.from_string('`user.name`.txt').or(early_return)
+	dest: path.from_string('${user.name}.txt').or(early_return)
 	_: file.write_utf8(dest, user.email).or(early_return)
-	print('Wrote email to `path.display(dest)`')
+	print('Wrote email to ${path.display(dest)}')
 }
 
 handle_error: {
 	err Err
 	match {
-		err.HttpErr      => print('Error fetching URL `err.cause`')
+		err.HttpErr      => print('Error fetching URL ${err.cause}')
 	}, {
-		err.FileReaderErr => print('Error reading from `path.display(err.cause)`')
+		err.FileReaderErr => print('Error reading from ${path.display(err.cause)}')
 	}, {
-		err.FileWriter   => print('Error writing to `path.display(err.cause)`')
+		err.FileWriter   => print('Error writing to ${path.display(err.cause)}')
 	}
 }
 ```
@@ -41,19 +41,19 @@ store_email #(Path, Result(String,String)) {
   fs.read(path).and_then({ url String
     http.get(url, json.UTF8)
   }).and_then({ json JSONObject
-    p: path.from_string("`json.name`.txt")
+    p: path.from_string("${json.name}.txt")
     fs.write(p, json.email)
-    print("Wrote email to: `p`")
+    print("Wrote email to: ${p}")
   })
 }
 handle_error: {
   err Error(String)
   match {
-    err.HttpErr       => print('Error fetching URL: `err`')
+    err.HttpErr       => print('Error fetching URL: ${err}')
   }, {
-    err.FileReaderErr => print('Error reading from path: `err`')
+    err.FileReaderErr => print('Error reading from path: ${err}')
   }, {
-    err.FileWriter    => print('Error writing file: `err`')
+    err.FileWriter    => print('Error writing file: ${err}')
   }
 }
 ```
@@ -66,11 +66,11 @@ store_email #(Path, Result(Unit,String)) {
   fs.read(path) >>= { url String
     http.get(url, json.UTF8)
   }  >>= { json JSONObject
-    p: path.from_string("`json.name`.txt")
+    p: path.from_string("${json.name}.txt")
     fs.write_to(p, json.email)
   } >>= {
     p Path
-    print("Wrote email to: `p`")
+    print("Wrote email to: ${p}")
     Result.Ok("")
   }
 }

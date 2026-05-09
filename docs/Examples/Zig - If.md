@@ -19,7 +19,7 @@ dude_is_ed: { name String; name == 'Ed' }
 say_hello: {
     name String
     dude_is_ed(name) ? {
-        println('Hello `name`')
+        println('Hello ${name}')
     }, {
         println('Hello world')
     }
@@ -39,15 +39,15 @@ dude_is_ed_or_error: {
 say_hello: {
     name String
     dude_is_ed_or_error(name).and_then({ name String
-      println('good seeing you `name` again')
+      println('good seeing you ${name} again')
     }).or({ e Error
-        println('got error `e`')
+        println('got error ${e}')
     })
 }
 say_hello_ignore_error: {
     name String
     dude_is_ed_or_error(name).Ok ? {
-        print('good seeing you `name` again')
+        print('good seeing you ${name} again')
     }, {
         // Result.Ok? #( if_ok #(V), if_err #(Err(V)))
         print('Hello world')
@@ -58,12 +58,12 @@ dude_is_edish_or_error #(name String, Result(String)) = {
     name String
     match {
         name == 'Ed' => {
-            print('Hello `name`')
+            print('Hello ${name}')
             Result.Ok(true)
         }
     }, {
         name == 'Edward' => {
-            println('Hello again `name`')
+            println('Hello again ${name}')
             Result.Ok(false)
         }
     }, {
@@ -73,14 +73,14 @@ dude_is_edish_or_error #(name String, Result(String)) = {
 say_hello_edish: {
     name String
     dude_is_edish_or_error(name).and_then({ ok Bool
-        println('ed? `ok`')
+        println('ed? ${ok}')
         ok ? {
-            println('Good seeing you `name`')
+            println('Good seeing you ${name}')
         }, {
-            println('Good seeing you again `name`')
+            println('Good seeing you again ${name}')
         }
     }).or({ err Error
-        println('Got error `err`')
+        println('Got error ${err}')
         println('Hello world')
     })
 }
@@ -89,12 +89,12 @@ dude_is_maybe_ed: {
     name String
     match {
         name == 'Ed' => {
-            print('Hello `name`')
+            print('Hello ${name}')
             Option.Some(true)
         }
     }, {
         name == 'Edward' => {
-            println('Hello again `name`')
+            println('Hello again ${name}')
             Option.Some(false)
         }
     }, {
@@ -106,9 +106,9 @@ say_hello_maybe_ed: {
     name String
     result: dude_is_maybe_ed(name)
     match {
-        result.Some && result.v == true => println('Hello `name`')
+        result.Some && result.v == true => println('Hello ${name}')
     }, {
-        result.Some && result.v == false => println('Hello again `name`')
+        result.Some && result.v == false => println('Hello again ${name}')
     }, {
         println('Hello world')
     }

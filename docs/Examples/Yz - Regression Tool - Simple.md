@@ -111,22 +111,22 @@ regression_tester: RegressionTester()
 Logger: {  
     info: {  
         message String  
-        print("`colors.blue`[INFO]`colors.reset` `message`")  
+        print("${colors.blue}[INFO]${colors.reset} ${message}")  
     }  
       
     success: {  
         message String  
-        print("`colors.green`[SUCCESS]`colors.reset` `message`")  
+        print("${colors.green}[SUCCESS]${colors.reset} ${message}")  
     }  
       
     warning: {  
         message String  
-        print("`colors.yellow`[WARNING]`colors.reset` `message`")  
+        print("${colors.yellow}[WARNING]${colors.reset} ${message}")  
     }  
       
     error: {  
         message String  
-        print("`colors.red`[ERROR]`colors.reset` `message`")  
+        print("${colors.red}[ERROR]${colors.reset} ${message}")  
     }  
 }  
   
@@ -142,7 +142,7 @@ FileSystem: {
     // Create directory if it doesn't exist  
     ensure_directory: {  
         path String  
-        logger.info("Ensuring directory exists: `path`")  
+        logger.info("Ensuring directory exists: ${path}")  
         // In real implementation: os.MkdirAll(path, 0755)  
     }  
       
@@ -150,7 +150,7 @@ FileSystem: {
     move_file: {  
         src String  
         dst String  
-        logger.info("Moving file from `src` to `dst`")  
+        logger.info("Moving file from ${src} to ${dst}")  
         // In real implementation: os.Rename(src, dst)  
     }  
       
@@ -196,8 +196,8 @@ CommandExecutor: {
           
         tests_passed ? {  
             logger.info("Step 2: Building compiler...")  
-            compiler_path: "`project_root`/bin/yzc"  
-            print("Command: go build -o `compiler_path` ./cmd/yzc")  
+            compiler_path: "${project_root}/bin/yzc"  
+            print("Command: go build -o ${compiler_path} ./cmd/yzc")  
             print()  
               
             // In real implementation: exec.Command("go", "build", "-o", compiler_path, "./cmd/yzc")  
@@ -328,7 +328,7 @@ TestExecutor: {
                 // Execute directory  
                 parent_dir: dir_path.substring(0, dir_path.last_index_of("/"))  
                 dir_name: dir_path.substring(dir_path.last_index_of("/") + 1)  
-                actual_output: command_executor.execute_yz_file(compiler_path, "`dir_name`/", parent_dir)  
+                actual_output: command_executor.execute_yz_file(compiler_path, "${dir_name}/", parent_dir)  
                   
                 // Compare outputs  
                 normalized_expected: test_parser.normalize_output(expected_output)  
@@ -368,16 +368,16 @@ TestExecutor: {
         })  
           
         main_yz.length() > 0 ? {  
-            "`dir_path`/`main_yz`"  
+            "${dir_path}/${main_yz}"  
         }, {
             // Look for file with main boc  
             main_boc_file: files.find({ file String  
-                content: file_system.read_file("`dir_path`/`file`")  
+                content: file_system.read_file("${dir_path}/${file}")  
                 content.contains("main:")  
             })  
               
             main_boc_file.length() > 0 ? {  
-                "`dir_path`/`main_boc_file`"  
+                "${dir_path}/${main_boc_file}"  
             }, {
                 ""  
             }  
@@ -395,10 +395,10 @@ RegressionTester: {
           
         config: Config()  
         config.project_root = project_root  
-        config.failing_dir = "`project_root`/test/failing"  
-        config.passing_dir = "`project_root`/test/passing"  
-        config.regressed_dir = "`project_root`/test/regressed"  
-        config.compiler_path = "`project_root`/bin/yzc"  
+        config.failing_dir = "${project_root}/test/failing"  
+        config.passing_dir = "${project_root}/test/passing"  
+        config.regressed_dir = "${project_root}/test/regressed"  
+        config.compiler_path = "${project_root}/bin/yzc"  
         config.verbose = verbose  
         config.incremental = incremental  
           
@@ -441,7 +441,7 @@ RegressionTester: {
         print("==================================================")  
         print("           Yz Compiler Regression Test")  
         print("==================================================")  
-        print("Project Root: `project_root`")  
+        print("Project Root: ${project_root}")  
         print("Date: Mon Jan 15 14:30:45 PST 2024")  
         print("==================================================")  
         print()  
@@ -463,25 +463,25 @@ RegressionTester: {
           
         print()  
         print("📊 Regression Test Results:")  
-        print("   Files moved from failing → passing: `results.failing_to_passing`")  
-        print("   Files moved from passing → regressed: `results.passing_to_regressed`")  
-        print("   Files moved from regressed → passing: `results.regressed_to_passing`")  
-        print("   Files still failing: `results.still_failing`")  
-        print("   Files still passing: `results.still_passing`")  
-        print("   Files still regressed: `results.still_regressed`")  
-        print("   Total files tested: `results.total_files_tested`")  
+        print("   Files moved from failing → passing: ${results.failing_to_passing}")  
+        print("   Files moved from passing → regressed: ${results.passing_to_regressed}")  
+        print("   Files moved from regressed → passing: ${results.regressed_to_passing}")  
+        print("   Files still failing: ${results.still_failing}")  
+        print("   Files still passing: ${results.still_passing}")  
+        print("   Files still regressed: ${results.still_regressed}")  
+        print("   Total files tested: ${results.total_files_tested}")  
           
         results.output_mismatches > 0 ? {
-            print("   Files with output mismatches: `results.output_mismatches`")
+            print("   Files with output mismatches: ${results.output_mismatches}")
         }, { }
 
         results.missing_expected_output > 0 ? {
-            print("   Files missing expected output: `results.missing_expected_output`")
+            print("   Files missing expected output: ${results.missing_expected_output}")
         }, { }
 
         results.regression_detected ? {
             print()
-            print("`colors.red` REGRESSION DETECTED: `results.passing_to_regressed` previously passing test(s) now regressed!`colors.reset`")
+            print("${colors.red} REGRESSION DETECTED: ${results.passing_to_regressed} previously passing test(s) now regressed!${colors.reset}")
         }, { }
           
         print("==================================================")  
@@ -506,11 +506,11 @@ RegressionTester: {
         // Collect failing directory files  
         logger.info("Collecting items from test/failing (known broken features)...")  
         failing_files: file_system.list_files(config.failing_dir)  
-        logger.info("  Found `failing_files.length()` items to test")  
+        logger.info("  Found ${failing_files.length()} items to test")  
           
         failing_files.each({ file String  
             job: TestJob()  
-            job.file_path = "`config.failing_dir`/`file`"  
+            job.file_path = "${config.failing_dir}/${file}"  
             job.source_dir = "failing"  
             job.compiler_path = config.compiler_path  
             job.show_generated_code = config.verbose  
@@ -521,11 +521,11 @@ RegressionTester: {
         // Collect regressed directory files  
         logger.info("Collecting items from test/regressed (previously working features)...")  
         regressed_files: file_system.list_files(config.regressed_dir)  
-        logger.info("  Found `regressed_files.length()` items to test")  
+        logger.info("  Found ${regressed_files.length()} items to test")  
           
         regressed_files.each({ file String  
             job: TestJob()  
-            job.file_path = "`config.regressed_dir`/`file`"  
+            job.file_path = "${config.regressed_dir}/${file}"  
             job.source_dir = "regressed"  
             job.compiler_path = config.compiler_path  
             job.show_generated_code = config.verbose  
@@ -536,11 +536,11 @@ RegressionTester: {
         // Collect passing directory files  
         logger.info("Collecting items from test/passing (currently working features)...")  
         passing_files: file_system.list_files(config.passing_dir)  
-        logger.info("  Found `passing_files.length()` items to test")  
+        logger.info("  Found ${passing_files.length()} items to test")  
           
         passing_files.each({ file String  
             job: TestJob()  
-            job.file_path = "`config.passing_dir`/`file`"  
+            job.file_path = "${config.passing_dir}/${file}"  
             job.source_dir = "passing"  
             job.compiler_path = config.compiler_path  
             job.show_generated_code = config.verbose  
@@ -565,35 +565,35 @@ RegressionTester: {
                   
                 // Process based on source directory  
                 job.source_dir == "failing" ? {  
-                    print("  [failing] `item_name`... ")  
+                    print("  [failing] ${item_name}... ")  
                     test_result.output_matched ? {  
                         print("✓ SUCCESS (moving to passing)")  
-                        files_to_move.push(FileMove(job.file_path, "`config.passing_dir`/`item_name`"))
+                        files_to_move.push(FileMove(job.file_path, "${config.passing_dir}/${item_name}"))
                         results.failing_to_passing = results.failing_to_passing + 1  
                     }, {
-                        print("✗ FAILED (staying in failing) - `test_result.error_message`")  
+                        print("✗ FAILED (staying in failing) - ${test_result.error_message}")  
                         results.still_failing = results.still_failing + 1  
                     }  
                 }, {
                     job.source_dir == "regressed" ? {  
-                        print("  [regressed] `item_name`... ")  
+                        print("  [regressed] ${item_name}... ")  
                         test_result.output_matched ? {  
-                            print("✓ SUCCESS (moving to passing) `colors.green`- FIXED!`colors.reset`")  
-                            files_to_move.push(FileMove(job.file_path, "`config.passing_dir`/`item_name`"))
+                            print("✓ SUCCESS (moving to passing) ${colors.green}- FIXED!${colors.reset}")  
+                            files_to_move.push(FileMove(job.file_path, "${config.passing_dir}/${item_name}"))
                             results.regressed_to_passing = results.regressed_to_passing + 1  
                         }, {
-                            print("✗ FAILED (staying in regressed) - `test_result.error_message`")  
+                            print("✗ FAILED (staying in regressed) - ${test_result.error_message}")  
                             results.still_regressed = results.still_regressed + 1  
                         }  
                     }, {
                         // passing directory  
-                        print("  [passing] `item_name`... ")  
+                        print("  [passing] ${item_name}... ")  
                         test_result.output_matched ? {  
                             print("✓ SUCCESS (staying in passing)")  
                             results.still_passing = results.still_passing + 1  
                         }, {
-                            print("✗ FAILED (moving to regressed) `colors.red`- REGRESSION!`colors.reset`")  
-                            files_to_move.push(FileMove(job.file_path, "`config.regressed_dir`/`item_name`"))
+                            print("✗ FAILED (moving to regressed) ${colors.red}- REGRESSION!${colors.reset}")  
+                            files_to_move.push(FileMove(job.file_path, "${config.regressed_dir}/${item_name}"))
                             results.passing_to_regressed = results.passing_to_regressed + 1  
                             results.regression_detected = true  
                         }  
@@ -606,13 +606,13 @@ RegressionTester: {
             // Move files  
             files_to_move.length() > 0 ? {
                 print()
-                logger.info("Moving `files_to_move.length()` files...")
+                logger.info("Moving ${files_to_move.length()} files...")
                 files_to_move.each({ move FileMove
                     file_system.move_file(move.src, move.dst)
                 })
             }, { }
               
-            logger.success("Completed `all_jobs.length()` tests in 12.34 seconds")  
+            logger.success("Completed ${all_jobs.length()} tests in 12.34 seconds")  
         }, {
             logger.info("No files to test")  
         }  

@@ -25,12 +25,12 @@ year >= 2001 ? {
 }
 
 fly_by_objects.each({ object String
-    print('`object`')
+    print('${object}')
 })
 
 // might need to use `1.to(12)` syntax instead
 1.to(12).each({ month Int
-    print('`month`')
+    print('${month}')
 })
 while({ year < 2016 }, {
     year = year + 1
@@ -59,7 +59,7 @@ result: fibonacci(20)
 /*
     Multiline
 */
-'Value of n is: `n`'
+'Value of n is: ${n}'
 n: 0
 info(n)  // Value of n is: 0
 ```
@@ -114,7 +114,7 @@ write: { data [Int](); r Int; eh: {Int}
  ...
 }
 n: write([1, 2, 3], eh: { e Int
-     match { e == write.ERROR => { print('Error: `info(e)`') } }
+     match { e == write.ERROR => { print('Error: ${info(e)}') } }
  })
 n: write([4, 5, 6])
 

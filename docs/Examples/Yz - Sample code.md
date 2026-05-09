@@ -20,9 +20,9 @@ Counter: {
 
 main: {
     c: Counter()
-    print("c.value = `c.value()`")
+    print("c.value = ${c.value()}")
     c.increment()
     c.increment()
-    print("after two increments: `c.value()`")
+    print("after two increments: ${c.value()}")
 }
 ```

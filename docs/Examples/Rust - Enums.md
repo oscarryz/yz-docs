@@ -20,11 +20,11 @@ inspect #(event WebEvent, Unit) {
    }, {
 	   WebEvent.PageUnload => println("page unloaded")
    }, {
-	   WebEvent.KeyPress(String) => println("pressed `event.c`.")
+	   WebEvent.KeyPress(String) => println("pressed ${event.c}.")
    }, {
-	   WebEvent.Paste(String) => println("pasted \"`event.s`\"")
+	   WebEvent.Paste(String) => println("pasted \"${event.s}\"")
    }, {
-	   WebEvent.Click(#(Int,Int)) => println("clicked at `event.x`, `event.y`.")
+	   WebEvent.Click(#(Int,Int)) => println("clicked at ${event.x}, ${event.y}.")
    }
 }
 main: {

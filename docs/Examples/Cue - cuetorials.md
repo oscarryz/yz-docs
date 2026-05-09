@@ -20,6 +20,7 @@ hierarchy: {
         nums [Int]
         struct #()
     }
+    `compile-time: [Cue]`
     Constrained: {
 
         'cue:=~"[a-z]+"'

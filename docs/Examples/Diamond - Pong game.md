@@ -116,8 +116,8 @@ displays_scores: {
     score1 Int
     score2 Int
 
-    context.drawText("Player 1: `score1`", 10, 20)
-    context.drawText("Player 2: `score2`", 700, 20)
+    context.drawText("Player 1: ${score1}", 10, 20)
+    context.drawText("Player 2: ${score2}", 700, 20)
 }
 
 display_game_over: {

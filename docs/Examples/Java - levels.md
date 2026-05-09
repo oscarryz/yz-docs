@@ -29,6 +29,6 @@ input.each({ node Node
   list << node
   map[node.level + 1] = node.list
 })
-println('`map[1]`')
+println('${map[1]}')
 
 ```

@@ -45,8 +45,8 @@ main: {
     stretch_depth: max_depth + 1
 
     stretch_tree: node.create(stretch_depth)
-    _: print('stretch tree of depth `stretch_depth`\t' ++
-             ' check: `stretch_tree.check()`')
+    _: print('stretch tree of depth ${stretch_depth}\t' ++
+             ' check: ${stretch_tree.check()}')
 
     long_lived: node.create(max_depth)
 
@@ -59,8 +59,8 @@ main: {
             sum = sum + node.create(depth).check()
         })
         depth = depth + 2
-        print('`iterations`\t trees of depth `depth`\t check: `sum`')
+        print('${iterations}\t trees of depth ${depth}\t check: ${sum}')
     })
-    _: print('long lived tree of depth `max_depth`\t check `long_lived.check()`')
+    _: print('long lived tree of depth ${max_depth}\t check ${long_lived.check()}')
 }
 ```

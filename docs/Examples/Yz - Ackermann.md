@@ -47,7 +47,7 @@ ack: { m Int; n Int
 
 0.to(3).each({ m Int
     0.to(4).each({ n Int
-        print('ackermann `m` `n` => `ackermann(m, n)`')
+        print('ackermann ${m} ${n} => ${ackermann(m, n)}')
     })
 })
 ```

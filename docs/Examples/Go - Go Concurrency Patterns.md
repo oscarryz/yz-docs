@@ -8,7 +8,7 @@ boring: {
   msg String
   i: 0
   while({true}: {
-    print("`msg`, `i`")
+    print("${msg}, ${i}")
     time.delay(random.int(3))
     i = i + 1
   }
@@ -35,7 +35,7 @@ boring: {
     
     while({ true }, {
         
-        messages.push("`m` `i`")    // acquires {messages}, writes, releases
+        messages.push("${m} ${i}")    // acquires {messages}, writes, releases
         i = i + 1
         time.delay(1)
     })                      // ← natural yield point here!
@@ -65,7 +65,7 @@ boring: {
   
   {
     while({true}, {
-      messages.push("`s` `i`")
+      messages.push("${s} ${i}")
       i = i + 1
       time.delay(1) 
     })
@@ -77,7 +77,7 @@ main: {
   msg, l : boring("sync")
   l() // start the loop
   5.times().do({
-    print("you said `msg()`")
+    print("you said ${msg()}")
   })
 }
 ```

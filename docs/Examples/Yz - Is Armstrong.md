@@ -8,7 +8,7 @@ is_armstrong #(Int, Bool) {
 }
 digits #(Int, [Int]()) {
   n Int
-  "`n`".split("").map({ c String; strings.parse_int(c) })
+  "${n}".split("").map({ c String; strings.parse_int(c) })
 }
 ```
 

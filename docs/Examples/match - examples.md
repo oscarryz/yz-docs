@@ -19,7 +19,7 @@ fib #(n Int, Int) {
 }
 main: {
     max : 10 
-    println("`fib(max)`")
+    println("${fib(max)}")
 }
 // fac.yz
 factorial #(n Int, Int) {
@@ -31,7 +31,7 @@ factorial #(n Int, Int) {
 }
 main: {
 	max : 10 
-	println("`fact(max)`")
+	println("${fact(max)}")
 }
 
 

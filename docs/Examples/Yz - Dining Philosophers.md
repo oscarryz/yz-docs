@@ -47,13 +47,13 @@ Philosopher: {
     self Philosopher
 
     think #() {
-           print("`name` is thinking...")
+           print("${name} is thinking...")
            time.sleep(random(1, 5), time.SECONDS)
            eat()
     }
     eat  #() {
         left.try_take(self) && { right.try_take(self) } ? {
-           print("`name` is eating...")
+           print("${name} is eating...")
            wait: time.sleep(random(1, 5), time.SECONDS)
         }
         left.try_drop(self)

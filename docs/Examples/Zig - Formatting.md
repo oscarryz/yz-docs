@@ -8,11 +8,11 @@ Person: {
     death_year Int
     format: {
         dys: death_year != int.nan ? {
-                '`death_year`'
+                '${death_year}'
             }, {
                 ''
             }
-        '`name` (`birth_year`-`dys`)'
+        '${name} (${birth_year}-${dys})'
     }
 }
 test: {

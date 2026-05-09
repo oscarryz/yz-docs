@@ -47,9 +47,9 @@ error: State(type: 'error')
 state State
 ...
 match {
-    state.type == 'success' => print('`state.type`')
+    state.type == 'success' => print('${state.type}')
 }, {
-    state.type == 'error' => print('`state.message`')
+    state.type == 'error' => print('${state.message}')
 }
 
 ```

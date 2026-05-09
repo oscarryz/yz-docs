@@ -13,7 +13,7 @@ From: http://rosettacode.org/wiki/24_game
   // Ask user for an aritmetic operation
   prompt_user: {
     numbers [Int]
-    expression: input("Enter an aritmetic expression to add up to 24 using `numbers[0]` `numbers[1]` `numbers[2]` and `numbers[3]`.
+    expression: input("Enter an aritmetic expression to add up to 24 using ${numbers[0]} ${numbers[1]} ${numbers[2]} and ${numbers[3]}.
     You can only use the following operators: + - / *")
     eval(expression)
   }
@@ -45,7 +45,7 @@ From: http://rosettacode.org/wiki/24_game
             stack.push(numbers.parseInt(item))
           }
         }, {
-          panic("Invalid character `item`")
+          panic("Invalid character ${item}")
         }
     })
     stack.pop()
@@ -178,7 +178,7 @@ func evaluate(expression string, numbers []int) int {
   // Ask user for an aritmetic operation
   prompt_user: {
     numbers [Int]
-    expression: input("Enter an aritmetic expression to add up to 24 using `numbers[0]`, `numbers[1]`, `numbers[2]` and `numbers[3]`.
+    expression: input("Enter an aritmetic expression to add up to 24 using ${numbers[0]}, ${numbers[1]}, ${numbers[2]} and ${numbers[3]}.
     You can only use the following operators: + - / *")
     eval(expression)
   }
@@ -246,7 +246,7 @@ eval: {
             stack.push(numbers.parseInt(item))
           }
         }, {
-          panic("Invalid character `item`")
+          panic("Invalid character ${item}")
         }
     })
     stack.pop()

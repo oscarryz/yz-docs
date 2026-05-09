@@ -27,10 +27,10 @@ RelatedPost: {
 
 main: {
    json_str: os.read_file('../post.json').or({ err Error
-       print('Failed to read file `err`')
+       print('Failed to read file ${err}')
    })
    posts: json.decode([Post](), json_str).or({ err Error
-      print('Failed to parse json `err`')
+      print('Failed to parse json ${err}')
    })
    start: time.now()
    tag_map: [String: [Int]]()
@@ -78,10 +78,10 @@ main: {
      ))
   })
   end: time.now()
-  print('Processing time (w/o IO): `end - start`')
+  print('Processing time (w/o IO): ${end - start}')
   json_str_out: json.encode(all_related_posts)
   os.write_file('../related_posts_yz.json', json_str_out).or({ err Error
-     print('Failed to write file `err`')
+     print('Failed to write file ${err}')
   })
 
 }

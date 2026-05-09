@@ -58,7 +58,7 @@ main: {
     .and_then(write_result("output.csv"))
     .or_else({
       e Error
-      println("Coulnd't process file. Error: `e`")
+      println("Coulnd't process file. Error: ${e}")
     })
 }
 
@@ -138,7 +138,7 @@ std: {
 
 ## Syntax
 
-Some syntax short explaination:
+Some syntax short explanation:
 
 - `{ stuff }` a block of code containing _stuff_ . Variables inside blocks work as both parameter and values (and attributes).
   - e.g. `{ print("Hello world") }`

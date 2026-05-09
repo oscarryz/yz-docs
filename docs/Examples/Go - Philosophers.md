@@ -86,20 +86,20 @@ dining_problem: {
     dominant_hand ?
     other_hand ?
 
-    print("`ph_name` Seated")
+    print("${ph_name} Seated")
     h: hunger
     while({ h > 0 }, {
         h = h - 1
-        print("`ph_name` Hungry")
+        print("${ph_name} Hungry")
         dominant_hand.lock()
         other_hand.lock()
-        print("`ph_name` Eating")
+        print("${ph_name} Eating")
         time.sleep(eat)
         dominant_hand.unlock()
         other_hand.unlock()
-        print("`ph_name` Thinking")
+        print("${ph_name} Thinking")
         time.sleep(think)
     })
-    print("`ph_name` Satisfied")
+    print("${ph_name} Satisfied")
 }
 ```
