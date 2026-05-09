@@ -185,7 +185,7 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	}
 	thunkResult := "*std.Thunk[" + resultType + "]"
 
-	// Collect params from the body's leading TypedDecls (same as lowerMethod).
+	// Collect params from the body's leading TypedDecls.
 	var params []*ParamSpec
 	for _, elem := range bocLit.Elements {
 		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
@@ -196,27 +196,35 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 		}
 	}
 
-	prev := l.setReceiver("", nil)
-	bocBodyStmts := l.lowerBocBody(bocLit, resultType, "")
-	l.restoreReceiver(prev)
-
-	var funcBody []Stmt
-	if len(bocBodyStmts) == 1 {
-		if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
-			funcBody = []Stmt{&ReturnStmt{Value: es.Expr}}
+	// Generic: keep as FuncDecl.
+	if len(typeParams) > 0 {
+		prev := l.setReceiver("", nil)
+		bocBodyStmts := l.lowerBocBody(bocLit, resultType, "")
+		l.restoreReceiver(prev)
+		var funcBody []Stmt
+		if len(bocBodyStmts) == 1 {
+			if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
+				funcBody = []Stmt{&ReturnStmt{Value: es.Expr}}
+			}
+		}
+		if funcBody == nil {
+			funcBody = bocBodyStmts
+		}
+		return &FuncDecl{
+			Name:       id.Name,
+			TypeParams: typeParams,
+			Params:     params,
+			Results:    []string{thunkResult},
+			Body:       funcBody,
 		}
 	}
-	if funcBody == nil {
-		funcBody = bocBodyStmts
-	}
 
-	return &FuncDecl{
-		Name:       id.Name,
-		TypeParams: typeParams,
-		Params:     params,
-		Results:    []string{thunkResult},
-		Body:       funcBody,
+	// Non-generic: lower as singleton struct (same model as lowerBocWithSig).
+	var sig *ast.BocTypeExpr
+	if bws, ok := sym.Node.(*ast.BocWithSig); ok {
+		sig = bws.Sig
 	}
+	return l.lowerBocWithSigAsSingleton(id.Name, sig, bocLit, params, resultType)
 }
 
 // lowerTypeOnlyDecl lowers `Name #(params)` (no body) into a Go struct
@@ -1096,21 +1104,14 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
 	if bws.Body == nil {
 		return nil
 	}
-	// Get the sema-inferred BocType (carries Params and Returns).
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
-
-	// Use AST sig for return type to preserve generic TypeArgs (e.g. Option(V)).
 	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
-	thunkResult := "*std.Thunk[" + resultType + "]"
-
-	// Collect generic type params from the sig (e.g. V in #(value V, V)).
 	typeParams := collectSigTypeParams(bws.Sig)
 
-	// Build Go params from the sig (shorthand) or body leading TypedDecls (body-only).
+	// Build input params from sig or body leading TypedDecls.
 	var params []*ParamSpec
 	if bws.BodyOnly && bws.Body != nil {
-		// Body-only form (`name #(sig) = { body }`): body redeclares params as TypedDecls.
 		for _, elem := range bws.Body.Elements {
 			td, ok := elem.(*ast.TypedDecl)
 			if !ok || td.Value != nil {
@@ -1122,34 +1123,107 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
 			})
 		}
 	} else {
-		// Shorthand form (`name #(sig) { body }`): use sema params for ordering/filtering
-		// but prefer AST types (which preserve generic TypeArgs like Option(V)).
 		params = l.sigParams(bws.Sig, bt)
 	}
 
-	// Lower body as a boc (produces [ExprStmt{ThunkExpr}]).
-	// Params are regular Go variables — no receiver context needed.
-	prev := l.setReceiver("", nil)
-	bocBodyStmts := l.lowerBocBody(bws.Body, resultType, "")
-	l.restoreReceiver(prev)
-
-	// lowerBocBody returns [ExprStmt{ThunkExpr}]; promote to ReturnStmt.
-	var funcBody []Stmt
-	if len(bocBodyStmts) == 1 {
-		if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
-			funcBody = []Stmt{&ReturnStmt{Value: es.Expr}}
+	// Generic BocWithSig: Go methods can't have free type params not on the receiver.
+	// Keep as FuncDecl until generic singletons are supported.
+	if len(typeParams) > 0 {
+		prev := l.setReceiver("", nil)
+		bocBodyStmts := l.lowerBocBody(bws.Body, resultType, "")
+		l.restoreReceiver(prev)
+		var funcBody []Stmt
+		if len(bocBodyStmts) == 1 {
+			if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
+				funcBody = []Stmt{&ReturnStmt{Value: es.Expr}}
+			}
+		}
+		if funcBody == nil {
+			funcBody = bocBodyStmts
+		}
+		return &FuncDecl{
+			Name:       bws.Name.Name,
+			TypeParams: typeParams,
+			Params:     params,
+			Results:    []string{"*std.Thunk[" + resultType + "]"},
+			Body:       funcBody,
 		}
 	}
-	if funcBody == nil {
-		funcBody = bocBodyStmts
+
+	return l.lowerBocWithSigAsSingleton(bws.Name.Name, bws.Sig, bws.Body, params, resultType)
+}
+
+// lowerBocWithSigAsSingleton lowers a non-generic BocWithSig into a singleton
+// struct + package-level var + Call(params...) method. The Call() body uses
+// std.Go (not std.Schedule) to avoid re-entrancy deadlocks for recursive singletons.
+func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, body *ast.BocLiteral, params []*ParamSpec, resultType string) *SingletonDecl {
+	// Struct fields from params (no Init — set inside Call() at invocation time).
+	var fields []*FieldSpec
+	for _, p := range params {
+		fields = append(fields, &FieldSpec{Name: p.Name, Type: p.Type})
 	}
 
-	return &FuncDecl{
-		Name:       bws.Name.Name,
-		TypeParams: typeParams,
-		Params:     params,
-		Results:    []string{thunkResult},
-		Body:       funcBody,
+	// Receiver fields map: param names resolve to self.param inside the body.
+	paramNames := map[string]bool{}
+	for _, p := range params {
+		paramNames[p.Name] = true
+	}
+
+	// Register BocType params as syncParams (direct calls, not std.Go-wrapped).
+	prevSyncParams := l.syncParams
+	if sig != nil {
+		for _, p := range sig.Params {
+			if _, isBocType := p.Type.(*ast.BocTypeExpr); isBocType && p.Label != "" {
+				if l.syncParams == nil {
+					l.syncParams = map[string]bool{}
+				}
+				l.syncParams[p.Label] = true
+			}
+		}
+	}
+
+	// Lower body with receiver context so param references → self.param.
+	// RecvCown="" uses std.Go — avoids re-entrancy deadlock for recursive singletons.
+	prev := l.setReceiver("self", paramNames)
+	bocBodyStmts := l.lowerBocBody(body, resultType, "")
+	l.restoreReceiver(prev)
+	l.syncParams = prevSyncParams
+
+	// Unwrap [ExprStmt{ThunkExpr}] and prepend self.param = param assignments.
+	var callBody []Stmt
+	if len(bocBodyStmts) == 1 {
+		if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
+			if th, ok := es.Expr.(*ThunkExpr); ok {
+				var preamble []Stmt
+				for _, p := range params {
+					preamble = append(preamble, &AssignStmt{
+						Target: &FieldAccess{Object: &Ident{Name: "self"}, Field: p.Name},
+						Value:  &Ident{Name: p.Name},
+					})
+				}
+				th.Body = append(preamble, th.Body...)
+				callBody = []Stmt{&ReturnStmt{Value: th}}
+			}
+		}
+	}
+	if callBody == nil {
+		callBody = bocBodyStmts
+	}
+
+	typeName := "_" + name + "Boc"
+	callMethod := &MethodDecl{
+		RecvType: "*" + typeName,
+		RecvName: "self",
+		Name:     "Call",
+		Params:   params,
+		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Body:     callBody,
+	}
+	return &SingletonDecl{
+		TypeName: typeName,
+		VarName:  capitalize(name),
+		Fields:   fields,
+		Methods:  []*MethodDecl{callMethod},
 	}
 }
 
@@ -1394,9 +1468,9 @@ func (l *lowerer) lowerName(name string) Expr {
 	if l.recvName != "" && l.recvFields[name] {
 		return &FieldAccess{Object: &Ident{Name: l.recvName}, Field: name}
 	}
-	// Capitalize singleton boc var references, but NOT BocWithSig functions.
-	// Singletons may be BocType (simple body boc) or StructType{IsSingleton:true}
-	// (body boc with inner structure, after Pass 1 sema change).
+	// Capitalize singleton boc var references.
+	// Singletons may be BocType (body boc or BocWithSig) or StructType{IsSingleton:true}.
+	// Generic BocWithSig (typeParams>0) stays as a FuncDecl — don't capitalize.
 	sym := l.analyzer.LookupInFile(name)
 	if sym != nil {
 		isSingleton := false
@@ -1406,9 +1480,11 @@ func (l *lowerer) lowerName(name string) Expr {
 			isSingleton = true
 		}
 		if isSingleton {
-			if _, isBWS := sym.Node.(*ast.BocWithSig); !isBWS {
-				return &Ident{Name: capitalize(name)}
+			// Generic BocWithSig is kept as FuncDecl — don't capitalize.
+			if bws, isBWS := sym.Node.(*ast.BocWithSig); isBWS && len(collectSigTypeParams(bws.Sig)) > 0 {
+				return &Ident{Name: name}
 			}
+			return &Ident{Name: capitalize(name)}
 		}
 	}
 	return &Ident{Name: name}
@@ -1659,6 +1735,13 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		args = append(args, l.lowerExpr(arg.Value))
 	}
 
+	// Sync callback params (BocType fields stored as func() values): call directly as
+	// function field values — e.g. self.cond() not self.Cond(). Must be checked before
+	// the FieldAccess path which would incorrectly emit a method call.
+	if id, ok := c.Callee.(*ast.Ident); ok && l.syncParams[id.Name] {
+		return &FuncCall{Func: callee, Args: args}
+	}
+
 	// Check for built-in singleton method calls: http.get("url") → std.Http.Get(url).
 	// The runtime method already returns *Thunk[T], so no extra wrapping is needed.
 	if fa, ok := callee.(*FieldAccess); ok {
@@ -1692,11 +1775,20 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			if _, isStruct := sym.Type.(*sema.StructType); isStruct {
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
-			// BocWithSig functions already return *Thunk[T] — emit a plain call.
-			// Inject default argument values for any omitted optional params.
+			// BocWithSig singletons: call as Singleton.Call(args).
+			// Generic BocWithSig (typeParams) kept as FuncDecl — plain call.
 			if bws, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
-				args = l.fillDefaults(args, bws.Sig.Params)
-				return &FuncCall{Func: callee, Args: args}
+				if bws.Sig != nil {
+					args = l.fillDefaults(args, bws.Sig.Params)
+				}
+				if len(collectSigTypeParams(bws.Sig)) > 0 {
+					return &FuncCall{Func: callee, Args: args}
+				}
+				return &MethodCall{
+					Recv:   &Ident{Name: capitalize(id.Name)},
+					Method: "Call",
+					Args:   args,
+				}
 			}
 		}
 	}
@@ -1721,12 +1813,6 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		if l.recvMethods[id.Name] && l.recvName != "" {
 			return &MethodCall{Recv: &Ident{Name: l.recvName}, Method: capitalize(id.Name), Args: args}
 		}
-	}
-
-	// Sync callback params (e.g. `cond #(Bool)` → func() std.Bool) must be called
-	// directly — not wrapped in std.Go — because they are already synchronous functions.
-	if id, ok := c.Callee.(*ast.Ident); ok && l.syncParams[id.Name] {
-		return &FuncCall{Func: callee, Args: args}
 	}
 
 	// Other boc identifier calls — goroutine-launched thunks.
