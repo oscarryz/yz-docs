@@ -720,12 +720,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 			}
 			inner = append(inner, &ReturnStmt{Value: val})
 		case ast.Expr:
-			if fs, ok := l.tryLowerWhile(e); ok {
-				inner = append(inner, fs)
-				if isLast {
-					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
-				}
-			} else if is, ok := l.tryLowerConditional(e); ok {
+			if is, ok := l.tryLowerConditional(e); ok {
 				inner = append(inner, is)
 				if isLast {
 					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
@@ -1035,9 +1030,6 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		}
 		return []Stmt{&ReturnStmt{Value: val}}
 	case ast.Expr:
-		if fs, ok := l.tryLowerWhile(e); ok {
-			return []Stmt{fs}
-		}
 		if is, ok := l.tryLowerConditional(e); ok {
 			return []Stmt{is}
 		}
@@ -1840,34 +1832,6 @@ func (l *lowerer) isSingletonBoc(expr Expr) bool {
 	return false
 }
 
-// tryLowerWhile detects a while({cond},{body}) call and lowers it to a
-// native ForStmt rather than a runtime call. Returns (stmt, true) on match.
-func (l *lowerer) tryLowerWhile(e ast.Expr) (Stmt, bool) {
-	call, ok := e.(*ast.CallExpr)
-	if !ok {
-		return nil, false
-	}
-	id, ok := call.Callee.(*ast.Ident)
-	if !ok || id.Name != "while" {
-		return nil, false
-	}
-	if len(call.Args) != 2 {
-		return nil, false
-	}
-	condBoc, ok := call.Args[0].Value.(*ast.BocLiteral)
-	if !ok {
-		return nil, false
-	}
-	bodyBoc, ok := call.Args[1].Value.(*ast.BocLiteral)
-	if !ok {
-		return nil, false
-	}
-	return &ForStmt{
-		Cond: l.lowerBocAsExpr(condBoc),
-		Body: l.lowerBocAsStmts(bodyBoc),
-	}, true
-}
-
 // tryLowerConditional detects a ConditionalExpr and lowers it to an IfStmt.
 // Returns (stmt, true) on match.
 func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
@@ -2120,9 +2084,7 @@ func (l *lowerer) lowerBocAsStmts2(elements []ast.Node) []Stmt {
 		case *ast.ShortDecl:
 			stmts = append(stmts, l.lowerBodyShortDecl(e, false, "std.Unit"))
 		case ast.Expr:
-			if fs, ok := l.tryLowerWhile(e); ok {
-				stmts = append(stmts, fs)
-			} else if is, ok := l.tryLowerConditional(e); ok {
+			if is, ok := l.tryLowerConditional(e); ok {
 				stmts = append(stmts, is)
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
@@ -2134,19 +2096,8 @@ func (l *lowerer) lowerBocAsStmts2(elements []ast.Node) []Stmt {
 	return stmts
 }
 
-// lowerBocAsExpr extracts and lowers the primary expression from a boc
-// literal, for use as a for-loop condition.
-func (l *lowerer) lowerBocAsExpr(b *ast.BocLiteral) Expr {
-	for _, elem := range b.Elements {
-		if e, ok := elem.(ast.Expr); ok {
-			return l.lowerExpr(e)
-		}
-	}
-	return &BoolLit{Val: true} // fallback: infinite loop
-}
-
 // lowerBocAsStmts lowers boc elements as a flat list of statements without
-// goroutine wrapping. Used for while loop bodies.
+// goroutine wrapping. Used for conditional branch bodies.
 func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 	var stmts []Stmt
 	for _, elem := range b.Elements {
@@ -2156,9 +2107,7 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 		case *ast.ShortDecl:
 			stmts = append(stmts, l.lowerBodyShortDecl(e, false, "std.Unit"))
 		case ast.Expr:
-			if fs, ok := l.tryLowerWhile(e); ok {
-				stmts = append(stmts, fs)
-			} else if is, ok := l.tryLowerConditional(e); ok {
+			if is, ok := l.tryLowerConditional(e); ok {
 				stmts = append(stmts, is)
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
@@ -2237,12 +2186,7 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 			}
 			stmts = append(stmts, &ReturnStmt{Value: val})
 		case ast.Expr:
-			if fs, ok := l.tryLowerWhile(e); ok {
-				stmts = append(stmts, fs)
-				if isLast {
-					stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
-				}
-			} else if is, ok := l.tryLowerConditional(e); ok {
+			if is, ok := l.tryLowerConditional(e); ok {
 				stmts = append(stmts, is)
 				if isLast {
 					stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
