@@ -253,10 +253,16 @@ type IndexExpr struct {
 
 // ThunkExpr wraps a body in std.Go(...) (spawned goroutine) or
 // std.NewThunk(...) (synchronous lazy), returning *std.Thunk[ResultType].
+// When RecvCown is non-empty, codegen uses std.Schedule(RecvCown, ...) instead of
+// std.Go, serializing the body through the singleton's cown. If the body also
+// contains a WaitStmt (BocGroup pattern), the split-BocGroup pattern is used:
+// BocGroup declarations are hoisted out of Schedule, and Wait runs after the
+// cown is released, avoiding re-entrancy deadlocks.
 type ThunkExpr struct {
 	ResultType string // e.g. "std.Int" or "std.Unit"
 	Body       []Stmt // the closure body
 	Spawn      bool   // true → std.Go, false → std.NewThunk
+	RecvCown   string // if non-empty: use std.Schedule(RecvCown, ...) instead of std.Go
 }
 
 // ForceExpr materializes a thunk: Thunk.Force().
