@@ -1184,8 +1184,28 @@ func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, 
 		}
 	}
 
+	// Detect singleton boc params: they require ScheduleMulti for atomic acquisition.
+	// Each such param contributes its cown (&paramName.Cown) to the cowns list.
+	var extraCowns []string
+	if sig != nil {
+		for _, sp := range sig.Params {
+			if sp.Label == "" || sp.Type == nil {
+				continue
+			}
+			if ste, ok := sp.Type.(*ast.SimpleTypeExpr); ok {
+				sym := l.analyzer.LookupInFile(ste.Name)
+				if sym != nil {
+					if st, ok2 := sym.Type.(*sema.StructType); ok2 && st.IsSingleton {
+						extraCowns = append(extraCowns, "&"+sp.Label+".Cown")
+					}
+				}
+			}
+		}
+	}
+
 	// Lower body with receiver context so param references → self.param.
-	// RecvCown="" uses std.Go — avoids re-entrancy deadlock for recursive singletons.
+	// RecvCown="" uses std.Go — avoids re-entrancy deadlock for recursive singletons
+	// unless cown-typed params are present (in which case ScheduleMulti is used).
 	prev := l.setReceiver("self", paramNames)
 	bocBodyStmts := l.lowerBocBody(body, resultType, "")
 	l.restoreReceiver(prev)
@@ -1196,6 +1216,11 @@ func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, 
 	if len(bocBodyStmts) == 1 {
 		if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
 			if th, ok := es.Expr.(*ThunkExpr); ok {
+				// Multi-cown: acquire self + all singleton boc params atomically.
+				if len(extraCowns) > 0 {
+					th.RecvCown = "&self.Cown"
+					th.ExtraCowns = extraCowns
+				}
 				var preamble []Stmt
 				for _, p := range params {
 					preamble = append(preamble, &AssignStmt{
@@ -2515,6 +2540,9 @@ func (l *lowerer) goType(t sema.Type) string {
 		return "*std.Thunk[any]"
 	case *sema.StructType:
 		if tt.Name != "" {
+			if tt.IsSingleton {
+				return "*_" + tt.Name + "Boc" // singleton boc instance type
+			}
 			if tt.IsInterface {
 				return tt.Name // Go interfaces are already reference types
 			}
@@ -2584,12 +2612,14 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 		case "Unit":
 			return "std.Unit"
 		default:
-			// Go interfaces are already reference types — no pointer needed.
 			sym := l.analyzer.LookupInFile(t.Name)
 			if sym != nil {
 				if st, ok := sym.Type.(*sema.StructType); ok {
+					if st.IsSingleton {
+						return "*_" + t.Name + "Boc" // singleton boc instance type
+					}
 					if st.IsInterface {
-						return t.Name
+						return t.Name // Go interfaces are already reference types
 					}
 					// Generic struct with no explicit type args: the struct's own
 					// type params are in scope (e.g. Pair in swap[K,V] → *Pair[K,V]).

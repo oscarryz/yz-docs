@@ -849,9 +849,11 @@ func (p *Parser) hasConditionArrow() bool {
 // ---------------------------------------------------------------------------
 
 // parseTypeExpr parses a type annotation.
+// Accepts TYPE_IDENT (struct bocs, built-ins), GENERIC_IDENT (type params),
+// and IDENT (lowercase singleton boc types, e.g. `bank` in `src bank`).
 func (p *Parser) parseTypeExpr() (ast.TypeExpr, error) {
 	switch p.cur().Type {
-	case token.TYPE_IDENT, token.GENERIC_IDENT:
+	case token.TYPE_IDENT, token.GENERIC_IDENT, token.IDENT:
 		return p.parseSimpleType()
 	case token.LBRACKET:
 		return p.parseArrayOrDictType()
@@ -1015,7 +1017,7 @@ func (p *Parser) peekIsType() bool {
 	}
 	next := p.tokens[p.pos+1]
 	switch next.Type {
-	case token.TYPE_IDENT, token.GENERIC_IDENT, token.LBRACKET, token.HASH:
+	case token.TYPE_IDENT, token.GENERIC_IDENT, token.IDENT, token.LBRACKET, token.HASH:
 		return true
 	}
 	return false

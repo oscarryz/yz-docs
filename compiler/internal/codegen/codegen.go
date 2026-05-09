@@ -367,7 +367,24 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		return sb.String()
 	}
 
-	// Cown-protected method body.
+	// Multi-cown: atomically acquire self + extra cowns via ScheduleMulti.
+	if len(th.ExtraCowns) > 0 {
+		cowns := append([]string{th.RecvCown}, th.ExtraCowns...)
+		var sb strings.Builder
+		sb.WriteString("std.ScheduleMulti([]*std.Cown{")
+		sb.WriteString(strings.Join(cowns, ", "))
+		sb.WriteString("}, func() ")
+		sb.WriteString(th.ResultType)
+		sb.WriteString(" {\n")
+		inner := g.sub(g.level + 1)
+		inner.emitBodyStmts(th.Body, true)
+		sb.WriteString(inner.sb.String())
+		sb.WriteString(g.ind())
+		sb.WriteString("})")
+		return sb.String()
+	}
+
+	// Single-cown method body.
 	waitIdx := thunkFindWaitIdx(th.Body)
 
 	if waitIdx == -1 {
