@@ -84,7 +84,7 @@ func TestGeneratePackageDecl(t *testing.T) {
 
 func TestGenerateRuntimeImport(t *testing.T) {
 	got := gen(t, `x: 42`)
-	contains(t, got, `std "yz/runtime/yzrt"`)
+	contains(t, got, `std "yz/runtime/rt"`)
 }
 
 // ---------------------------------------------------------------------------

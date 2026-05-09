@@ -1,7 +1,7 @@
 // Package yzrt is the Yz runtime library imported by generated Go code.
 // Generated code refers to these types as std.Int, std.String, etc.
 // (the "std" alias is set in the generated import block).
-package yzrt
+package rt
 
 import (
 	"fmt"

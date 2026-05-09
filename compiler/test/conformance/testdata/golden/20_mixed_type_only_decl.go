@@ -1,6 +1,6 @@
 package main
 
-import std "yz/runtime/yzrt"
+import std "yz/runtime/rt"
 
 type Named struct {
 	name std.String
