@@ -2,18 +2,25 @@ package main
 
 import std "yz/runtime/rt"
 
-func while(cond func() std.Bool, body func() std.Unit) *std.Thunk[std.Unit] {
+type _whileBoc struct {
+	std.Cown
+	cond func() std.Bool
+	body func() std.Unit
+}
+
+func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
-		if std.Go(func() std.Bool {
-			return cond()
-		}).GoBool() {
-			std.Go(func() std.Unit {
-				return body()
-			})
-			while(cond, body).Force()
+		self.cond = cond
+		self.body = body
+		if self.cond().GoBool() {
+			self.body()
+			While.Call(self.cond, self.body).Force()
 		}
 		return std.TheUnit
 	})
+}
+
+var While = &_whileBoc{
 }
 
 type _mainBoc struct {
@@ -26,7 +33,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			var n std.Int = std.NewInt(0)
 			_bg0.Go(func() any {
-				return while(func() std.Bool {
+				return While.Call(func() std.Bool {
 					return n.Lt(std.NewInt(3))
 				}, func() std.Unit {
 					n = n.Plus(std.NewInt(1))

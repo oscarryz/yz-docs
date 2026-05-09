@@ -2,16 +2,34 @@ package main
 
 import std "yz/runtime/rt"
 
-func greet(name std.String) *std.Thunk[std.Unit] {
+type _greetBoc struct {
+	std.Cown
+	name std.String
+}
+
+func (self *_greetBoc) Call(name std.String) *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
-		return std.Print(name)
+		self.name = name
+		return std.Print(self.name)
 	})
 }
 
-func shout(msg std.String) *std.Thunk[std.Unit] {
+var Greet = &_greetBoc{
+}
+
+type _shoutBoc struct {
+	std.Cown
+	msg std.String
+}
+
+func (self *_shoutBoc) Call(msg std.String) *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
-		return std.Print(msg)
+		self.msg = msg
+		return std.Print(self.msg)
 	})
+}
+
+var Shout = &_shoutBoc{
 }
 
 type _mainBoc struct {
@@ -23,10 +41,10 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			_bg0.Go(func() any {
-				return greet(std.NewString("Alice")).Force()
+				return Greet.Call(std.NewString("Alice")).Force()
 			})
 			_bg0.Go(func() any {
-				return shout(std.NewString("hello")).Force()
+				return Shout.Call(std.NewString("hello")).Force()
 			})
 			return std.TheUnit
 		}).Force()

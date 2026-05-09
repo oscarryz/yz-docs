@@ -25,10 +25,19 @@ func (self *Person) Greet() *std.Thunk[std.Unit] {
 	})
 }
 
-func greet_all(g Greeter) *std.Thunk[std.Unit] {
+type _greet_allBoc struct {
+	std.Cown
+	g Greeter
+}
+
+func (self *_greet_allBoc) Call(g Greeter) *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
-		return g.Greet().Force()
+		self.g = g
+		return self.g.Greet().Force()
 	})
+}
+
+var Greet_all = &_greet_allBoc{
 }
 
 type _mainBoc struct {
@@ -41,7 +50,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			var p *Person = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
 			_bg0.Go(func() any {
-				return greet_all(p).Force()
+				return Greet_all.Call(p).Force()
 			})
 			return std.TheUnit
 		}).Force()

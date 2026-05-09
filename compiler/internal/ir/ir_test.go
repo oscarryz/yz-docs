@@ -289,35 +289,35 @@ func TestLowerTypedDeclField(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLowerBocWithSigFuncDecl(t *testing.T) {
+	// BocWithSig is now a singleton struct + Call() method (boc uniformity).
 	f := lower(t, `greet #(name String) {
     print(name)
 }`)
 	if len(f.Decls) != 1 {
 		t.Fatalf("want 1 decl, got %d", len(f.Decls))
 	}
-	fn, ok := f.Decls[0].(*FuncDecl)
+	sd, ok := f.Decls[0].(*SingletonDecl)
 	if !ok {
-		t.Fatalf("want *FuncDecl, got %T", f.Decls[0])
+		t.Fatalf("want *SingletonDecl, got %T", f.Decls[0])
 	}
-	if fn.Name != "greet" {
-		t.Errorf("func name: got %q, want greet", fn.Name)
+	if sd.VarName != "Greet" {
+		t.Errorf("VarName: got %q, want Greet", sd.VarName)
 	}
-	if len(fn.Params) != 1 || fn.Params[0].Name != "name" || fn.Params[0].Type != "std.String" {
-		t.Errorf("params: got %v", fn.Params)
+	if sd.TypeName != "_greetBoc" {
+		t.Errorf("TypeName: got %q, want _greetBoc", sd.TypeName)
 	}
-	if len(fn.Results) != 1 || fn.Results[0] != "*std.Thunk[std.Unit]" {
-		t.Errorf("results: got %v, want [*std.Thunk[std.Unit]]", fn.Results)
+	if len(sd.Fields) != 1 || sd.Fields[0].Name != "name" || sd.Fields[0].Type != "std.String" {
+		t.Errorf("Fields: got %v", sd.Fields)
 	}
-	// Body must be ReturnStmt{ThunkExpr}
-	if len(fn.Body) != 1 {
-		t.Fatalf("body len: want 1, got %d", len(fn.Body))
+	if len(sd.Methods) != 1 || sd.Methods[0].Name != "Call" {
+		t.Errorf("Methods: got %v", sd.Methods)
 	}
-	rs, ok := fn.Body[0].(*ReturnStmt)
-	if !ok {
-		t.Fatalf("body[0]: want *ReturnStmt, got %T", fn.Body[0])
+	m := sd.Methods[0]
+	if len(m.Params) != 1 || m.Params[0].Name != "name" || m.Params[0].Type != "std.String" {
+		t.Errorf("Call params: got %v", m.Params)
 	}
-	if _, ok := rs.Value.(*ThunkExpr); !ok {
-		t.Errorf("ReturnStmt.Value: want *ThunkExpr, got %T", rs.Value)
+	if len(m.Results) != 1 || m.Results[0] != "*std.Thunk[std.Unit]" {
+		t.Errorf("Call results: got %v", m.Results)
 	}
 }
 
@@ -328,7 +328,7 @@ func TestLowerBocWithSigCallInMain(t *testing.T) {
 main: {
     greet("Alice")
 }`)
-	// Three decls: FuncDecl(greet) + SingletonDecl(_mainBoc) + FuncDecl(main shim)
+	// Three decls: SingletonDecl(greet) + SingletonDecl(_mainBoc) + FuncDecl(main shim)
 	if len(f.Decls) != 3 {
 		t.Fatalf("want 3 decls, got %d", len(f.Decls))
 	}
