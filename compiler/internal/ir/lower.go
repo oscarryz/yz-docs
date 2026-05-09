@@ -711,7 +711,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			expr := l.lowerExpr(e.Value)
 			if l.isBocMethodCall(e.Value) {
 				l.thunkVars[e.Name.Name] = true
-				inner = append(inner, &DeclStmt{Name: e.Name.Name, Type: "", Init: expr})
+				inner = append(inner, &DeclStmt{Name: e.Name.Name, IsThunk: true, Init: expr})
 			} else {
 				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: expr})
 			}
@@ -1002,7 +1002,7 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 			// Use := inference and mark for auto-forcing on use.
 			// The declared Yz type (e.g. String) is correct; the thunk is invisible to the user.
 			l.thunkVars[e.Name.Name] = true
-			return []Stmt{&DeclStmt{Name: e.Name.Name, Type: "", Init: expr}}
+			return []Stmt{&DeclStmt{Name: e.Name.Name, IsThunk: true, Init: expr}}
 		}
 		typ := l.goTypeFromTypeExpr(e.Type)
 		return []Stmt{&DeclStmt{Name: e.Name.Name, Type: typ, Init: expr}}
@@ -1026,6 +1026,8 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 					// RHS is a boc call — variable holds *Thunk[T].
 					// Use := inference and mark for auto-forcing on use.
 					l.thunkVars[n.Name] = true
+					stmts = append(stmts, &DeclStmt{Name: n.Name, IsThunk: true, Init: initExpr})
+					continue
 				} else {
 					typ = l.goTypeForVar(l.analyzer.ExprType(val))
 				}
@@ -2261,7 +2263,7 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 			expr := l.lowerExpr(e.Value)
 			if l.isBocMethodCall(e.Value) {
 				l.thunkVars[e.Name.Name] = true
-				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, Type: "", Init: expr})
+				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, IsThunk: true, Init: expr})
 			} else {
 				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, Init: expr})
 			}

@@ -140,10 +140,13 @@ func (*SwitchStmt) irStmt()  {}
 
 // DeclStmt declares a local variable.
 // If Type is empty, codegen uses `:=` (Go type inference).
+// IsThunk marks variables that hold *Thunk[T] (boc call results); the split-BocGroup
+// pattern hoists these to the outer scope so they remain accessible after Schedule completes.
 type DeclStmt struct {
-	Name string
-	Type string // may be empty for := inference
-	Init Expr
+	Name    string
+	Type    string // may be empty for := inference
+	Init    Expr
+	IsThunk bool
 }
 
 // AssignStmt mutates an existing variable or field: Target = Value.

@@ -5,7 +5,7 @@ counter: {
 }
 
 greet #(name String) {
-    print("Hello, `name`!")
+    print("Hello, ${name}!")
 }
 
 main: {
@@ -16,5 +16,5 @@ main: {
     counter.increment()
 
     greet("Yz")
-    print("count: `counter.value()`")
+    print("count: ${counter.value()}")
 }
