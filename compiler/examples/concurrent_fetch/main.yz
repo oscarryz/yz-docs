@@ -2,7 +2,7 @@
 // Yz thunks fire all four immediately — total time ~2 seconds.
 
 main: {
-    print("start: `time.now()`")
+    print("start: ${time.now()}")
 
     // All four fire immediately as concurrent goroutines.
     // a and b use inferred type; c and d declare the type explicitly.
@@ -22,5 +22,5 @@ main: {
     print("=== D ===")
     print(d)
 
-    print("done:  `time.now()`")
+    print("done:  ${time.now()}")
 }

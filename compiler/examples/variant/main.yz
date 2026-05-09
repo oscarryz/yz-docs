@@ -5,8 +5,8 @@ Pet: {
 
 describe #(pet Pet, String) {
     match pet
-        { Cat => "cat `pet.name` has `pet.lives` lives" },
-        { Dog => "dog `pet.name` is `pet.years` years old" }
+        { Cat => "cat ${pet.name} has ${pet.lives} lives" },
+        { Dog => "dog ${pet.name} is ${pet.years} years old" }
 }
 
 main: {
