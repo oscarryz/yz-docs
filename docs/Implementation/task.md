@@ -171,17 +171,17 @@ The old interpolation syntax `` `expr` `` inside strings is replaced by `${expr}
 - [ ] **Golden tests** — update any conformance test `.yz` files using backtick interpolation to `${}`
 - [ ] **Spec 01** — update lexical structure section describing string interpolation syntax
 
-### 2. `return`, `break`, `continue` — full semantics
+### 2. `return`, `break`, `continue` — frontend up to sema
 
 The spec (`docs/Features/return, break, continue.md`) now defines precise semantics. See also `docs/Features/Language Primitives.md`.
 
-- [ ] **Parser** — ensure `break` and `continue` are parsed as `BreakStmt` / `ContinueStmt` AST nodes (not just tokenized)
-- [ ] **Lowerer** — emit Go `break` for `break` in loop bodies
-- [ ] **Lowerer** — emit Go `continue` for `continue` in loop bodies
-- [ ] **Lowerer** — `continue` inside `match` arm: fall-through to next arm (design: likely emit a flag variable or restructure to labeled `goto`)
-- [ ] **Lowerer** — `return` inside anonymous boc (closure/callback): must exit the nearest enclosing *named* boc, transparent through anonymous bocs — requires non-local return (e.g. panic/recover or closure sentinel value threading); this is the complex case
+Codegen is deferred: `break`/`continue` only looked simple because `tryLowerWhile` was emitting Go `for` loops (see item 9). Once `while` goes through the normal recursive boc path, `break`/`continue` become non-local exits from a recursive call chain — the same class of hard problem as `return` through anonymous boc boundaries. None of the three have a clean codegen path until the concurrency model and recursive boc semantics are settled.
+
+- [ ] **Parser** — parse `break` and `continue` as `BreakStmt` / `ContinueStmt` AST nodes (tokens already exist)
+- [ ] **Sema** — validate context: `break`/`continue` only inside a loop body; `continue` in a match arm only inside a match; `return` tracks the nearest enclosing named boc
+- [ ] **Lowerer** — emit `panic("not yet implemented")` or a compile error for all three when encountered, so they fail loudly rather than being silently dropped
 - [ ] **Spec 07** — update control-flow spec to match semantics in `docs/Features/return, break, continue.md`
-- [ ] **Golden tests** — add golden tests for `break`, `continue`, and early `return` from inside a callback
+- [ ] **Golden tests** — add sema-level error tests for `break`/`continue` outside a loop, `return` type mismatch
 
 ### 3. Infostrings — content is a boc body
 
@@ -258,3 +258,12 @@ This item is **large and architectural** — it touches the runtime, codegen, an
 - [ ] **Codegen** — invocations that share no resources run in parallel automatically (scheduler handles this, not codegen)
 - [ ] **Sema** — resource set inference: determine which boc fields / values an invocation reads or writes, to populate the resource declaration (may start as conservative: all accessed values)
 - [ ] **Spec 08** — rewrite concurrency spec to describe BOC model (cowns, atomic acquisition, happens-before, deadlock freedom proof)
+
+### 9. Remove `while` built-in — let recursion be the implementation
+
+`while(cond, body)` is currently intercepted by `tryLowerWhile` in the lowerer and emitted as a Go `for` loop. This is a premature optimization: the language design says `while` is user-land recursion, not a primitive. The Go `for` shortcut also masks the true difficulty of `break`/`continue` (see item 2) and is the same category of mistake as `mix` being a keyword (see item 7) — a built-in standing in for something that should be expressed in Yz itself.
+
+- [ ] **Lowerer** — remove `tryLowerWhile` from `lower.go`; `while(cond, body)` becomes a regular boc call that goes through the normal recursive boc path
+- [ ] **Runtime** — remove `yzrt.While` function if re-introduced (it was already removed once; ensure it stays gone)
+- [ ] **Examples** — update `examples/while_*` to confirm they still work via the recursive path
+- [ ] **Golden tests** — update any conformance tests that relied on the `for`-loop output shape; the generated Go will now be recursive calls instead
