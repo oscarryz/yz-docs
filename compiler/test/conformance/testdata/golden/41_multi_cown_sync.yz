@@ -1,0 +1,21 @@
+// Multi-cown: sync atomically acquires bank.Cown and ledger.Cown before running.
+// bank and ledger have methods so sema registers them as StructType{IsSingleton}.
+bank: {
+    balance: 0
+    deposit #(amount Int) { balance = balance + amount }
+}
+ledger: {
+    total: 0
+    add #(amount Int) { total = total + amount }
+}
+
+sync #(b bank, l ledger) {
+    b.balance = b.balance + 1
+    l.total   = l.total   + 1
+}
+
+main: {
+    sync(bank, ledger)
+    print(bank.balance)
+    print(ledger.total)
+}

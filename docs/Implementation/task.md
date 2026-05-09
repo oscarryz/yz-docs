@@ -261,9 +261,13 @@ This item is **large and architectural** — it touches the runtime, codegen, an
 #### Phase B.1 — Queue-based cown scheduler (spawn-order guarantee) — COMPLETE
 - [x] **Runtime** — replaced mutex-based `Cown` with atomic lock-free queue scheduler matching BOC paper (Cheeseman et al., OOPSLA 2023) section 3 algorithm. Each `Cown` holds an atomic tail pointer to a linked list of `request` nodes; a `behaviour` runs when its count (one per required cown) reaches zero. `Schedule[T]` interface unchanged — no codegen changes. `releaseCown` uses CAS-then-spin to hand token to successor. Added `TestScheduleSerializes`, `TestSchedulePreservesOrder`, `TestScheduleTwoIndependentCowns` to `yzrt_test.go`.
 
-#### Phase B.2 — Multi-cown atomic acquisition — TODO
-- [ ] **Runtime** — add `ScheduleMulti[T](cowns []*Cown, fn func() T)`: registers behaviour on all cowns simultaneously; behaviour runs when all grant tokens; no sorting needed (queue handles per-cown ordering)
-- [ ] **Lowerer** — detect cown-typed arguments in boc calls (singleton boc instances passed as params); emit `ScheduleMulti` instead of `Schedule` when multiple cowns needed
+#### Phase B.2 — Multi-cown atomic acquisition — COMPLETE
+- [x] **Runtime** — add `ScheduleMulti[T](cowns []*Cown, fn func() T)`: registers behaviour on all cowns simultaneously; behaviour runs when all grant tokens; no sorting needed (queue handles per-cown ordering)
+- [x] **Lowerer** — detect cown-typed arguments in boc calls (singleton boc instances passed as params); emit `ScheduleMulti` instead of `Schedule` when multiple cowns needed
+- [x] **Parser** — accept lowercase IDENT as type expressions for singleton boc type annotations in params
+- [x] **IR** — add `ExtraCowns []string` to `ThunkExpr`; add `IsThunk bool` to `DeclStmt` for safe hoisting
+- [x] **Codegen** — emit `std.ScheduleMulti([]*std.Cown{...}, ...)` when ExtraCowns present; hoist IsThunk DeclStmts outside Schedule closure (split-BocGroup pattern extended)
+- [x] **Conformance** — test 41 `41_multi_cown_sync.yz`: sync boc acquires bank + ledger cowns atomically
 
 #### Full redesign (long-term)
 - [ ] **Runtime** — replace `yzrt.Thunk[T]` / `std.Go()` / `Force()` with a cown-based scheduler: each value wraps a cown (protected resource); invocations declare their resource set and are queued behind any current holder
