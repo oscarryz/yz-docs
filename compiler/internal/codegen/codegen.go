@@ -267,12 +267,6 @@ func (g *generator) emitStmt(s ir.Stmt) {
 		}
 	case *ir.ExprStmt:
 		g.linef("%s", g.expr(st.Expr))
-	case *ir.ForStmt:
-		g.linef("for %s.GoBool() {", g.expr(st.Cond))
-		g.level++
-		g.emitStmts(st.Body)
-		g.level--
-		g.line("}")
 	case *ir.IfStmt:
 		g.emitIfStmt(st)
 	case *ir.WaitStmt:
