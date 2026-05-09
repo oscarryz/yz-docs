@@ -134,7 +134,6 @@ func (*DeclStmt) irStmt()    {}
 func (*AssignStmt) irStmt()  {}
 func (*ReturnStmt) irStmt()  {}
 func (*ExprStmt) irStmt()    {}
-func (*ForStmt) irStmt()     {}
 func (*IfStmt) irStmt()      {}
 func (*WaitStmt) irStmt()    {}
 func (*SwitchStmt) irStmt()  {}
@@ -162,12 +161,6 @@ type ReturnStmt struct {
 // ExprStmt is a statement-level expression (side-effect call, spawn, etc.).
 type ExprStmt struct {
 	Expr Expr
-}
-
-// ForStmt is a condition-controlled loop (compiles Yz `while`).
-type ForStmt struct {
-	Cond Expr   // must produce std.Bool
-	Body []Stmt
 }
 
 // IfStmt is a conditional branch.

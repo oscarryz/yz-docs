@@ -263,7 +263,7 @@ This item is **large and architectural** — it touches the runtime, codegen, an
 
 `while(cond, body)` is currently intercepted by `tryLowerWhile` in the lowerer and emitted as a Go `for` loop. This is a premature optimization: the language design says `while` is user-land recursion, not a primitive. The Go `for` shortcut also masks the true difficulty of `break`/`continue` (see item 2) and is the same category of mistake as `mix` being a keyword (see item 7) — a built-in standing in for something that should be expressed in Yz itself.
 
-- [ ] **Lowerer** — remove `tryLowerWhile` from `lower.go`; `while(cond, body)` becomes a regular boc call that goes through the normal recursive boc path
-- [ ] **Runtime** — remove `yzrt.While` function if re-introduced (it was already removed once; ensure it stays gone)
-- [ ] **Examples** — update `examples/while_*` to confirm they still work via the recursive path
-- [ ] **Golden tests** — update any conformance tests that relied on the `for`-loop output shape; the generated Go will now be recursive calls instead
+- [x] **Lowerer** — remove `tryLowerWhile` from `lower.go`; `while(cond, body)` becomes a regular boc call that goes through the normal recursive boc path
+- [x] **Runtime** — remove `yzrt.While` function (removed from `yzrt/core.go` and `yzrt_test.go`)
+- [x] **IR** — remove `ForStmt` node from `ir.go` and its codegen case from `codegen.go`; remove `lowerBocAsExpr` (only used by `tryLowerWhile`)
+- [x] **Golden tests** — updated `05_while.yz` to define `while` as a top-level recursive `BocWithSig`; regenerated `05_while.go` — output is now a recursive Go function instead of a `for` loop
