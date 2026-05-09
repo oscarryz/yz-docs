@@ -285,7 +285,7 @@ func writeGeneratedGo(genDir string, sources map[string]string, projectDir strin
 		}
 	}
 
-	// Find the yz compiler module root so generated code can reference yz/runtime/yzrt.
+	// Find the yz compiler module root so generated code can reference yz/runtime/rt.
 	yzRoot, err := yzModuleDir()
 	if err != nil {
 		return fmt.Errorf("locating yz module: %w", err)

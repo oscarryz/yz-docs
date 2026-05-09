@@ -1,6 +1,6 @@
 package main
 
-import std "yz/runtime/yzrt"
+import std "yz/runtime/rt"
 
 func identity[V any](value V) *std.Thunk[V] {
 	return std.Go(func() V {

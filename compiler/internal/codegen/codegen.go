@@ -41,7 +41,7 @@ func (g *generator) sub(level int) *generator { return &generator{level: level} 
 
 func (g *generator) emitFile(f *ir.File) {
 	g.writef("package %s\n\n", f.PkgName)
-	g.write("import std \"yz/runtime/yzrt\"\n")
+	g.write("import std \"yz/runtime/rt\"\n")
 	if len(f.Imports) > 0 {
 		for _, imp := range f.Imports {
 			g.writef("import %q\n", imp)

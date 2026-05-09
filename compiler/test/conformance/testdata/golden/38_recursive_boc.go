@@ -1,6 +1,6 @@
 package main
 
-import std "yz/runtime/yzrt"
+import std "yz/runtime/rt"
 
 func countdown(n std.Int) *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {

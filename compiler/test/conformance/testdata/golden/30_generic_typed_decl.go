@@ -1,6 +1,6 @@
 package main
 
-import std "yz/runtime/yzrt"
+import std "yz/runtime/rt"
 
 type Box[T any] struct {
 	value T
