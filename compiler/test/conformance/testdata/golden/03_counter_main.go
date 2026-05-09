@@ -3,18 +3,19 @@ package main
 import std "yz/runtime/rt"
 
 type _counterBoc struct {
+	std.Cown
 	count std.Int
 }
 
 func (self *_counterBoc) Increment() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		self.count = self.count.Plus(std.NewInt(1))
 		return std.TheUnit
 	})
 }
 
 func (self *_counterBoc) Value() *std.Thunk[std.Int] {
-	return std.Go(func() std.Int {
+	return std.Schedule(&self.Cown, func() std.Int {
 		return self.count
 	})
 }
@@ -24,17 +25,21 @@ var Counter = &_counterBoc{
 }
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
-		_bg0.Go(func() any {
-			return Counter.Increment().Force()
-		})
-		_bg0.Go(func() any {
-			return Counter.Increment().Force()
-		})
+		std.Schedule(&self.Cown, func() std.Unit {
+			_bg0.Go(func() any {
+				return Counter.Increment().Force()
+			})
+			_bg0.Go(func() any {
+				return Counter.Increment().Force()
+			})
+			return std.TheUnit
+		}).Force()
 		_bg0.Wait()
 		std.Print(Counter.Value().Force())
 		return std.TheUnit

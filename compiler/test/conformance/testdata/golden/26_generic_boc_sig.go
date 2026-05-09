@@ -9,10 +9,11 @@ func identity[V any](value V) *std.Thunk[V] {
 }
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		x := identity(std.NewString("hello"))
 		std.Print(x.Force())
 		return std.TheUnit

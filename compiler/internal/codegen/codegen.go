@@ -167,9 +167,11 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 }
 
 func (g *generator) emitSingletonDecl(sd *ir.SingletonDecl) {
-	// Private struct type.
+	// Private struct type. Every singleton boc embeds std.Cown so method
+	// bodies can serialize through it via std.Schedule(&self.Cown, ...).
 	g.linef("type %s struct {", sd.TypeName)
 	g.level++
+	g.line("std.Cown")
 	for _, f := range sd.Fields {
 		g.linef("%s %s", f.Name, f.Type)
 	}
@@ -341,25 +343,119 @@ func (g *generator) exprList(exprs []ir.Expr) string {
 }
 
 // emitThunk generates std.Go(func() T { body }) or std.NewThunk(...).
+// When th.RecvCown is non-empty the body is serialized through the singleton's
+// cown using std.Schedule. If the body also contains a WaitStmt (BocGroup pattern),
+// the split-BocGroup pattern is used to avoid re-entrancy deadlocks: BocGroup
+// declarations are hoisted outside the Schedule closure, and BocGroup.Wait() plus
+// any subsequent statements run after the cown is released.
 func (g *generator) emitThunk(th *ir.ThunkExpr) string {
-	fn := "std.Go"
-	if !th.Spawn {
-		fn = "std.NewThunk"
+	if th.RecvCown == "" {
+		fn := "std.Go"
+		if !th.Spawn {
+			fn = "std.NewThunk"
+		}
+		var sb strings.Builder
+		sb.WriteString(fn)
+		sb.WriteString("(func() ")
+		sb.WriteString(th.ResultType)
+		sb.WriteString(" {\n")
+		inner := g.sub(g.level + 1)
+		inner.emitBodyStmts(th.Body, true)
+		sb.WriteString(inner.sb.String())
+		sb.WriteString(g.ind())
+		sb.WriteString("})")
+		return sb.String()
 	}
+
+	// Cown-protected method body.
+	waitIdx := thunkFindWaitIdx(th.Body)
+
+	if waitIdx == -1 {
+		// Simple method: no BocGroup — use Schedule directly.
+		var sb strings.Builder
+		sb.WriteString("std.Schedule(")
+		sb.WriteString(th.RecvCown)
+		sb.WriteString(", func() ")
+		sb.WriteString(th.ResultType)
+		sb.WriteString(" {\n")
+		inner := g.sub(g.level + 1)
+		inner.emitBodyStmts(th.Body, true)
+		sb.WriteString(inner.sb.String())
+		sb.WriteString(g.ind())
+		sb.WriteString("})")
+		return sb.String()
+	}
+
+	// Split-BocGroup pattern: cown released before waiting for children.
+	//
+	//   std.NewThunk(func() T {
+	//       _bg0 := &std.BocGroup{}      // hoisted BocGroup decl
+	//       std.Schedule(cown, func() std.Unit {
+	//           _bg0.Go(...)              // SpawnExprs stay inside Schedule
+	//           return std.TheUnit
+	//       }).Force()                   // releases cown
+	//       _bg0.Wait()                  // then wait for children
+	//       [post-Wait statements]
+	//   })
+	preWait := th.Body[:waitIdx]
+	postWait := th.Body[waitIdx:] // WaitStmt and everything after
+
+	// Separate BocGroup DeclStmts (hoisted) from the rest of the pre-Wait body.
+	var bocGroupDecls []ir.Stmt
+	var immediateBody []ir.Stmt
+	for _, s := range preWait {
+		if ds, ok := s.(*ir.DeclStmt); ok {
+			if _, isGroup := ds.Init.(*ir.NewGroupExpr); isGroup {
+				bocGroupDecls = append(bocGroupDecls, s)
+				continue
+			}
+		}
+		immediateBody = append(immediateBody, s)
+	}
+
 	var sb strings.Builder
-	sb.WriteString(fn)
-	sb.WriteString("(func() ")
+	sb.WriteString("std.NewThunk(func() ")
 	sb.WriteString(th.ResultType)
 	sb.WriteString(" {\n")
 
-	// Inner body at level+1.
-	inner := g.sub(g.level + 1)
-	inner.emitBodyStmts(th.Body, true)
-	sb.WriteString(inner.sb.String())
+	outer := g.sub(g.level + 1)
 
-	sb.WriteString(g.ind()) // closing brace at current indent
+	// Hoisted BocGroup declarations.
+	for _, s := range bocGroupDecls {
+		outer.emitStmt(s)
+	}
+
+	// Schedule for the immediate body (SpawnExprs); releases cown when done.
+	outer.write(outer.ind())
+	outer.write("std.Schedule(")
+	outer.write(th.RecvCown)
+	outer.write(", func() std.Unit {\n")
+	schedInner := outer.sub(outer.level + 1)
+	for _, s := range immediateBody {
+		schedInner.emitStmt(s)
+	}
+	schedInner.line("return std.TheUnit")
+	outer.write(schedInner.sb.String())
+	outer.write(outer.ind())
+	outer.write("}).Force()\n")
+
+	// WaitStmts and post-Wait statements (cown already released).
+	outer.emitBodyStmts(postWait, true)
+
+	sb.WriteString(outer.sb.String())
+	sb.WriteString(g.ind())
 	sb.WriteString("})")
 	return sb.String()
+}
+
+// thunkFindWaitIdx returns the index of the first WaitStmt in body, or -1.
+func thunkFindWaitIdx(body []ir.Stmt) int {
+	for i, s := range body {
+		if _, ok := s.(*ir.WaitStmt); ok {
+			return i
+		}
+	}
+	return -1
 }
 
 // emitClosure generates func(params) T { body }.

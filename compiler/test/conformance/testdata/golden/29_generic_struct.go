@@ -13,10 +13,11 @@ func NewBox[T any](value T) *Box[T] {
 }
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		b := NewBox(std.NewInt(42))
 		std.Print(b.value)
 		return std.TheUnit

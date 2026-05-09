@@ -3,10 +3,11 @@ package main
 import std "yz/runtime/rt"
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
 		doubled := std.ArrayMap(list, func(item std.Int) std.Int {
 			return item.Star(std.NewInt(2))

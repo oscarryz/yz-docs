@@ -13,7 +13,7 @@ func NewNamed(name std.String) *Named {
 }
 
 func (self *Named) Hi() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return std.Print(self.name)
 	})
 }

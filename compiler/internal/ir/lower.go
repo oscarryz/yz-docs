@@ -197,7 +197,7 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	}
 
 	prev := l.setReceiver("", nil)
-	bocBodyStmts := l.lowerBocBody(bocLit, resultType)
+	bocBodyStmts := l.lowerBocBody(bocLit, resultType, "")
 	l.restoreReceiver(prev)
 
 	var funcBody []Stmt
@@ -425,7 +425,7 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 	defer func() { l.contextName = prevCtx }()
 
 	innerStmts := l.lowerSingletonBodyStmts(b.Elements)
-	thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true}
+	thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown"}
 	callMethod := &MethodDecl{
 		RecvType: "*" + typeName,
 		RecvName: "self",
@@ -562,7 +562,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 		l.recvMethods = prevMethods
 		l.contextName = prevCtx
 
-		thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true}
+		thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown"}
 		callMethod := &MethodDecl{
 			RecvType: "*" + typeName,
 			RecvName: "self",
@@ -670,7 +670,7 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 
 	// Lower method body with receiver context.
 	prev := l.setReceiver("self", parentFields)
-	body := l.lowerBocBody(b, resultType)
+	body := l.lowerBocBody(b, resultType, "&self.Cown")
 	l.restoreReceiver(prev)
 
 	return &MethodDecl{
@@ -685,7 +685,10 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 
 // lowerBocBody lowers the contents of a boc into a single ThunkExpr statement.
 // All boc method bodies become `return std.Go(func() ResultType { ... })`.
-func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
+// When recvCown is non-empty the ThunkExpr carries it so codegen can emit
+// std.Schedule(recvCown, ...) instead of std.Go, serializing the body through
+// the singleton's cown.
+func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) []Stmt {
 	var inner []Stmt
 	elems := b.Elements
 	for i, elem := range elems {
@@ -748,6 +751,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType string) []Stmt {
 		ResultType: resultType,
 		Body:       inner,
 		Spawn:      true,
+		RecvCown:   recvCown,
 	}
 	return []Stmt{&ExprStmt{Expr: thunk}}
 }
@@ -1074,7 +1078,7 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 	}
 
 	prev := l.setReceiver("self", parentFields)
-	body := l.lowerBocBody(bws.Body, resultType)
+	body := l.lowerBocBody(bws.Body, resultType, "&self.Cown")
 	l.restoreReceiver(prev)
 	l.syncParams = prevSyncParams
 
@@ -1126,7 +1130,7 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
 	// Lower body as a boc (produces [ExprStmt{ThunkExpr}]).
 	// Params are regular Go variables — no receiver context needed.
 	prev := l.setReceiver("", nil)
-	bocBodyStmts := l.lowerBocBody(bws.Body, resultType)
+	bocBodyStmts := l.lowerBocBody(bws.Body, resultType, "")
 	l.restoreReceiver(prev)
 
 	// lowerBocBody returns [ExprStmt{ThunkExpr}]; promote to ReturnStmt.
@@ -1181,7 +1185,7 @@ func (l *lowerer) lowerBocWithSigAsLocal(bws *ast.BocWithSig) []Stmt {
 
 	// Lower body as a boc body — produces [ExprStmt{ThunkExpr}].
 	prev := l.setReceiver("", nil)
-	bocBodyStmts := l.lowerBocBody(bws.Body, resultType)
+	bocBodyStmts := l.lowerBocBody(bws.Body, resultType, "")
 	l.restoreReceiver(prev)
 
 	// Promote ExprStmt{ThunkExpr} → ReturnStmt{ThunkExpr}.
@@ -1287,7 +1291,7 @@ func (l *lowerer) liftLocalBoc(name string, methodParams []*ParamSpec, resultTyp
 	prevSelf := l.selfBocName
 	l.selfBocName = name
 	prev := l.setReceiver("self", map[string]bool{})
-	bodyStmts := l.lowerBocBody(body, resultType)
+	bodyStmts := l.lowerBocBody(body, resultType, "&self.Cown")
 	l.restoreReceiver(prev)
 	l.selfBocName = prevSelf
 

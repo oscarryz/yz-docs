@@ -3,10 +3,11 @@ package main
 import std "yz/runtime/rt"
 
 type _mainBoc struct {
+	std.Cown
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		std.Print(std.NewString("Hello, World!"))
 		return std.TheUnit
 	})
