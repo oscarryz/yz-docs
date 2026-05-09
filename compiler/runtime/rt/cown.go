@@ -66,6 +66,43 @@ func enqueueCown(c *Cown, req *request) {
 	}
 }
 
+// ScheduleMulti runs fn while exclusively holding all cowns atomically, then
+// releases them. Returns a Thunk that resolves once fn completes.
+//
+// The behaviour is enqueued on every cown simultaneously. It runs only after
+// every cown has granted it a token (atomic acquisition — no partial acquire).
+// No ordering of cowns is required; the per-cown queues ensure spawn-order
+// serialization on each cown independently.
+func ScheduleMulti[T any](cowns []*Cown, fn func() T) *Thunk[T] {
+	done := make(chan struct{})
+	var result T
+
+	n := len(cowns)
+	b := &behaviour{}
+	b.count.Store(int64(n))
+	reqs := make([]*request, n)
+	for i := range n {
+		reqs[i] = &request{beh: b}
+	}
+
+	b.run = func() {
+		result = fn()
+		close(done)
+		for i, c := range cowns {
+			releaseCown(c, reqs[i])
+		}
+	}
+
+	for i, c := range cowns {
+		enqueueCown(c, reqs[i])
+	}
+
+	return NewThunk(func() T {
+		<-done
+		return result
+	})
+}
+
 // releaseCown is called after a behaviour's fn completes.
 // It either marks c idle or passes the token to the next waiting behaviour.
 func releaseCown(c *Cown, req *request) {
