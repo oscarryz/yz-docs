@@ -20,7 +20,7 @@ main: {
           direction == 'forward' => horizontal_direction = horizontal_direction + magnitude
       }
   })
-  print('`vertical_direction * horizontal_direction`')
+  print('${vertical_direction * horizontal_direction}')
 }
 
 ```

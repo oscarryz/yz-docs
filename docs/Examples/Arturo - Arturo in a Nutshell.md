@@ -118,7 +118,7 @@ a: 2 > 3 ? { 'yes' }, { 'no' } // a: 'no'
 // "loops"
 arr: [1, 4, 5, 3]
 arr.each({ x Int
-    print('x = `x`')
+    print('x = ${x}')
 })
 // x = 1
 // x = 4
@@ -127,7 +127,7 @@ arr.each({ x Int
 
 // with index
 arr.each_with_index({ i Int; x Int
-    print('Item at position `i` => `x`')
+    print('Item at position ${i} => ${x}')
 })
 // item at position 0 => 1
 // item at position 1 => 4
@@ -137,7 +137,7 @@ arr.each_with_index({ i Int; x Int
 
 // ranges
 1.to(3).each({ x Int
-    print('`x`')
+    print('${x}')
 })
 // 1
 // 2
@@ -153,7 +153,7 @@ arr.each_with_index({ i Int; x Int
 // looping through a dictionary
 dict: ['name': 'John', 'surname': 'Doe']
 dict.each({ key String; value String
-    print('`key` -> `value`')
+    print('${key} -> ${value}')
 })
 
 // name -> John
@@ -162,7 +162,7 @@ dict.each({ key String; value String
 //while loops
 i: 0
 while({ i < 3 }, {
-    print('i = `i`')
+    print('i = ${i}')
     i = i + 1
 })
 // i = 0
@@ -188,7 +188,7 @@ int.parse(":(") // Option.None()
 
 // string interpolation
 x: 2
-print('x = `x`') // x = 2
+print('x = ${x}') // x = 2
 
 //--------
 // Blocks
@@ -207,7 +207,7 @@ arr[3]             // three
 x: 2
 arr[x]            // two
 arr[0] = 'nada'
-print('`arr`') // ['nada', 'one', 'two', 'three']
+print('${arr}') // ['nada', 'one', 'two', 'three']
 
 // adding elements
 arr: [String]()
@@ -222,7 +222,7 @@ arr.remove_at(0)     // ['three', 'four']
 
 // getting the size of an array
 arr: ['one', 'two', 'three', 'four']
-print("`arr.length()`") // 4
+print("${arr.length()}") // 4
 
 // getting a subarray
 arr: ['one', 'two', 'three', 'four']
@@ -278,10 +278,10 @@ Person: {
     surname String
     age Int
     print: {
-        print('NAME: `name`, SURNAME: `surname`, AGE: `age`')
+        print('NAME: ${name}, SURNAME: ${surname}, AGE: ${age}')
     }
     compare: { other Person; age - other.age }
-    say_hello: { print('Hello `name`') }
+    say_hello: { print('Hello ${name}') }
 }
 // "constructor"
 new_person: { name String; surname String; age Int
@@ -299,8 +299,8 @@ a.say_hello() // Hello John
 b.say_hello() // Hello Jane
 
 // access block variables
-print('First person name is `a.name`')
-print('Second person name is `b.name`')
+print('First person name is ${a.name}')
+print('Second person name is ${b.name}')
 
 // modifying values
 a.name = 'bob'

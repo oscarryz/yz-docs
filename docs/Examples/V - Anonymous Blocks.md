@@ -56,6 +56,6 @@ db.query("INSERT INTO products (product_name, price) VALUES ('Bagel', 1.25)")
 result: db.query('SELECT product_name, no_pennies(price) as total FROM products')
 result.each({ row vsql.Row
   total: row.get_f64('TOTAL')
-  print('`row.get_string("PRODUCT_NAME")` `total`')
+  print('${row.get_string("PRODUCT_NAME")} ${total}')
 })
 ```

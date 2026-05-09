@@ -46,7 +46,7 @@ squarer: {
 }
 printer: {
 	n Int
-	print('`n`')
+	print('${n}')
 }
 main: {
    squarer(counter(), printer)

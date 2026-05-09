@@ -12,14 +12,14 @@ Printer: {
 	print: {
 	    msg String
 		ink_level > 0 ? {
-			output.print('(`name`): `msg`')
+			output.print('(${name}): ${msg}')
 			ink_level = ink_level - 1
 			Result.Ok()
 		}, {
 			backup.Some ? { p Printer
 			   p.print(msg)
 			}, {
-			   Result.Err('Out of ink error `name`')
+			   Result.Err('Out of ink error ${name}')
 			}
 		}
 	}

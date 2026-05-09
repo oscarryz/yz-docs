@@ -20,24 +20,24 @@ main: {
     response: http.get(github_repositories_url).or_else(panic)
 
     repositories_result: json.decode(GitHubRepositoriesSearchAPI, response.body).or_else({ err Err
-	    panic('An error occurred during JSON parsing: `err`')
+	    panic('An error occurred during JSON parsing: ${err}')
     })
 
-    print('The total repository count is `repositories_result.total_count`')
+    print('The total repository count is ${repositories_result.total_count}')
 
     repositories_result.items.each({ index Int; item GitHubRepositoriesItem
 
 	   colored_description: chalk.fg(item.description, 'cyan')
 	   colored_star_count: chalk.fg(item.stargazers_count.str(), 'green')
 
-	   print('#`index + 1` `item.full_name`')
-	   print('  URL: `item.html_url`')
+	   print('#${index + 1} ${item.full_name}')
+	   print('  URL: ${item.html_url}')
 
        item.description != '' ? {
-		  print('  Description: `colored_description`')
+		  print('  Description: ${colored_description}')
 	   }, { }
 
-	    print('  Star count: `colored_star_count`')
+	    print('  Star count: ${colored_star_count}')
     })
     print(response.body)
 }

@@ -20,7 +20,7 @@ main: {
     v: [25, 13, 8, 1, 9, 22, 50, 2]
     v = bubble_sort(v)
     v.each({ i Int
-        print("`i`")
+        print("${i}")
     })
 }
 ```

@@ -40,7 +40,7 @@ geometry: {
         circles.each({ it Circle
             area = area + math.pi * it.r * it.r
         })
-        print("Total area: `area`")
+        print("Total area: ${area}")
     }
     main: {
         circles: [Circle(1.0), Circle(2.0)]

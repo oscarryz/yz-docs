@@ -49,9 +49,9 @@ Status: {
 
 classify_status #(status Status, Unit) {
   match status
-    { Success => print("Successful response (2xx): `status.code`") },
-    { Warning => print("Redirection (3xx): `status.code`") },
-    { Error   => print("Error ocurred: `status.mgs`(`status.code`)") },
+    { Success => print("Successful response (2xx): ${status.code}") },
+    { Warning => print("Redirection (3xx): ${status.code}") },
+    { Error   => print("Error ocurred: ${status.mgs}(${status.code})") },
     { print("Other status") },
 }
 ```
@@ -75,8 +75,8 @@ Pet: {
 // e.g. Cat(String,Int), or even the `()` e.g Cat()
 describe #(pet Pet, String) {
 	match pet
-    { Cat => "cat `pet.name` has `pet.lives` lives" },
-    { Dog => "dog `pet.name` has `pet.years` of age" },
+    { Cat => "cat ${pet.name} has ${pet.lives} lives" },
+    { Dog => "dog ${pet.name} has ${pet.years} of age" },
 }
 
 [Cat("Lila", 7), Dog("Fenton", 6), Cat("Molly", 9)]

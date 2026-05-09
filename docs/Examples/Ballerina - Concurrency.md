@@ -34,7 +34,7 @@ employee_count #(members [Person], String) {
 
 	// tbd if this constitutes usage, but if doesn't
 	// it can keep going and this value
-	"Employed members: `count`"
+	"Employed members: ${count}"
 }
 calculate_average: { quantities [Int](); employed_count Int
 	total: quantities.sum()
@@ -66,7 +66,7 @@ process #(members [Person], quantities [Int], Unit) {
 }
 employee_count #(members [Person], String) {
     count: members.filter({ p Person; p.employed }).length()
-	"Employed members: `count`"
+	"Employed members: ${count}"
 }
 calculate_average: { quantities [Int](); employed_count Int
 	total: quantities.sum()
@@ -92,7 +92,7 @@ process #(members [Person], quantities [Int], Unit) {
 	employed_count, count_msg: {
 	    employedMembers: members.filter({ p Person; p.employed })
 		count: employedMembers.length()
-		"Employed members: `count`"
+		"Employed members: ${count}"
     }()
 
 	avg, avg_msg: {
@@ -102,7 +102,7 @@ process #(members [Person], quantities [Int], Unit) {
 		}, {
 			total / employed_count
 		}
-		"Average: `avg`"
+		"Average: ${avg}"
 	}()
 	print(count_msg)
 	print(avg_msg)

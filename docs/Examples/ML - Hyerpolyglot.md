@@ -35,7 +35,7 @@ l:   list.length()
 nth: list[n]
 n:   [7, 8, 9].index_of(8) // 1
 //iterate
-list.each({ e Int; print('`e`') })
+list.each({ e Int; print('${e}') })
 
 
 doubled: [1, 2, 3, 4].map({ x Int; x * 2 })

@@ -22,12 +22,12 @@ main: {
 
     // Functions can be passed around without assigning them to variables
     res: run(5, { n Int; n + n })
-    print('`res`') // 10
+    print('${res}') // 10
 
     // You can even have array/map of functions
     fns: [sqr, cube]
     r: fns[0](10) // 100
-    print("`r`")
+    print("${r}")
 
     fns_map: [
         'sqr': sqr

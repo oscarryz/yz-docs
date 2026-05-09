@@ -11,13 +11,13 @@ com: {
                 foo_var = 20
 
                 foo Int = 7
-                foo_string_interpolation: "`foo_val`"
+                foo_string_interpolation: "${foo_val}"
                 foo_nullable Option(String) // there's no nulls, each type has to delclare their empty value or use std.option.Option
 				// hello (name String; result String)
                 hello: {
                    name String = 'world'
 		           result String
-                   result = "hello `name`"
+                   result = "hello ${name}"
                    result
                 }
                 print(hello("foo")) // Hello, foo
@@ -26,7 +26,7 @@ com: {
                 print(hello("foo", "nada")) //  second param is "nada"
 				vararg_ish: {
 					name [String]
-					print('Argument has `name.length()` elements')
+					print('Argument has ${name.length()} elements')
 				}
 				vararg_ish([])
 				vararg_ish(["1"])
@@ -47,7 +47,7 @@ com: {
                 notPositive: not({ n Int; n > 0 })
 
                 0.to(4).each({ i Int
-                    print("`notOdd(i)` `notEven(i)` `notZero(i)` `notPositive(i)`")
+                    print("${notOdd(i)} ${notEven(i)} ${notZero(i)} ${notPositive(i)}")
                 })
 
                 ExampleClass: {
@@ -77,13 +77,13 @@ com: {
                 foo_copy: std.copy(foo_data)
 
                 a, b, c: foo_data()
-                print("`a` `b` `c`") // 1,2,4
+                print("${a} ${b} ${c}") // 1,2,4
 
                 map_data: ["a": 1, "b": 2]
                 map_data.each({
 	                key String
 	                value Int
-                    print("`key` -> `value`")
+                    print("${key} -> ${value}")
                 })
 
 
@@ -110,7 +110,7 @@ myCompany: { // a singleton? a function
 
 main: {
   employee: Employee('Alice', 'alice@mycompany.com', myCompany.name)
-  print('`employee`')
+  print('${employee}')
 }
 
 // Safe

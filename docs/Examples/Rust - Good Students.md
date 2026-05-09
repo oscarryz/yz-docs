@@ -27,7 +27,7 @@ main: {
 	   .flatten()
 	   .filter({ student Student; student.gpa >= 3.5 })
 	   .collect()
-	   .each({ one Student; println("`one`") })
+	   .each({ one Student; println("${one}") })
 }
 
 ```

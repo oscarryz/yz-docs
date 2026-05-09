@@ -80,10 +80,10 @@ x = Option.Some("Hello") // use the Some constructor
 y: Option.None()  // Use the None constructor
 // check with x.Some or x.None that returns a boolean
 x.Some ? {
-  print("We've got a value `x.v`")
+  print("We've got a value ${x.v}")
 }
 x.None ? {
-  print("Trying to access would error `x.v`") // compilation error
+  print("Trying to access would error ${x.v}") // compilation error
 }
 // #to-do Finalize how the "explicit named constructors would work"
 
@@ -140,7 +140,7 @@ Hi: {
 }
 impl Hi for Int {
   sayHi #(String) {
-    "My name is `self`"
+    "My name is ${self}"
   }
 }
 
@@ -153,7 +153,7 @@ Hi: {
 }
 Int: {
   sayHi #(String) {
-    "My name is `self`"
+    "My name is ${self}"
   }
 }
 one Hi = 1

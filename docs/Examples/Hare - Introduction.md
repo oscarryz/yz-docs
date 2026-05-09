@@ -25,7 +25,7 @@ https://harelang.org/tutorials/introduction/
 path: '/tmp/xyz.txt'
 file: fs.create(path).or({
    e FileError
-   panic("Error opening: `path`. `e`")
+   panic("Error opening: ${path}. ${e}")
 })
 ```
 
