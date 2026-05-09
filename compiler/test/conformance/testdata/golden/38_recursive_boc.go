@@ -2,16 +2,25 @@ package main
 
 import std "yz/runtime/rt"
 
-func countdown(n std.Int) *std.Thunk[std.Unit] {
+type _countdownBoc struct {
+	std.Cown
+	n std.Int
+}
+
+func (self *_countdownBoc) Call(n std.Int) *std.Thunk[std.Unit] {
 	return std.Go(func() std.Unit {
-		if n.Eqeq(std.NewInt(0)).GoBool() {
+		self.n = n
+		if self.n.Eqeq(std.NewInt(0)).GoBool() {
 			std.Print(std.NewString("done"))
 		} else {
-			std.Print(n)
-			countdown(n.Minus(std.NewInt(1))).Force()
+			std.Print(self.n)
+			Countdown.Call(self.n.Minus(std.NewInt(1))).Force()
 		}
 		return std.TheUnit
 	})
+}
+
+var Countdown = &_countdownBoc{
 }
 
 type _mainBoc struct {
@@ -23,7 +32,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			_bg0.Go(func() any {
-				return countdown(std.NewInt(3)).Force()
+				return Countdown.Call(std.NewInt(3)).Force()
 			})
 			return std.TheUnit
 		}).Force()
