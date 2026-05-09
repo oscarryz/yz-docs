@@ -129,7 +129,8 @@ non_word_char       = /* any character that is NOT:
                          - a letter or digit
                          - a delimiter: { } ( ) [ ] : , ; . #
                          - whitespace
-                         - a quote: ' " `
+                         - a quote: ' "
+                         - the backtick ` (infostring delimiter)
                          - the lone character =  (assignment)
                        */
 ```
@@ -179,28 +180,30 @@ Yz has two string delimiters — single quotes and double quotes. They are equiv
 string_literal = single_quoted | double_quoted
 single_quoted  = "'" { string_char | '"' | interpolation } "'"
 double_quoted  = '"' { string_char | "'" | interpolation } '"'
-string_char    = /* any Unicode character except newline and the matching quote */
+string_char    = /* any Unicode character except the matching quote */
                | escape_sequence
 ```
 
 ### String Interpolation
 
-Backtick-delimited expressions inside strings are interpolated:
+Embed any expression inside a string using `${}`:
 
 ```yz
 name: "Alice"
-greeting: "Hello, `name`!"    // "Hello, Alice!"
-math: 'Result: `1 + 2`'       // "Result: 3"
+greeting: "Hello, ${name}!"    // "Hello, Alice!"
+math: 'Result: ${1 + 2}'       // "Result: 3"
 ```
 
 ```
-interpolation = '`' expression '`'
+interpolation = '$' '{' expression '}'
 ```
+
+Braces inside the expression are balanced — `${foo({x})}` works correctly.
 
 ### Escape Sequences
 
 ```
-escape_sequence = '\' ( 'n' | 't' | 'r' | '\\' | '\'' | '"' | '`' | '0' )
+escape_sequence = '\' ( 'n' | 't' | 'r' | '\\' | '\'' | '"' | '0' )
 ```
 
 | Sequence | Meaning |
@@ -211,7 +214,6 @@ escape_sequence = '\' ( 'n' | 't' | 'r' | '\\' | '\'' | '"' | '`' | '0' )
 | `\\` | Backslash |
 | `\'` | Single quote |
 | `\"` | Double quote |
-| `` \` `` | Literal backtick (no interpolation) |
 | `\0` | Null character |
 
 > **Open question:** Multi-line strings — whether strings can span multiple lines or if a raw/heredoc syntax is needed is TBD.

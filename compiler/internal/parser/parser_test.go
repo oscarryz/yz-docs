@@ -815,9 +815,9 @@ func TestParseConditionalExpression(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestParseStringInterpolationBasic(t *testing.T) {
-	// "Hello, `name`!" should parse as InterpolatedStringExpr with two parts:
+	// "Hello, ${name}!" should parse as InterpolatedStringExpr with two parts:
 	// text "Hello, ", expr name, text "!"
-	sf := parse(t, "x: \"Hello, `name`!\"")
+	sf := parse(t, "x: \"Hello, ${name}!\"")
 	d := asShortDecl(t, stmt(t, sf, 0))
 	interp, ok := d.Values[0].(*ast.InterpolatedStringExpr)
 	if !ok {
@@ -841,8 +841,8 @@ func TestParseStringInterpolationBasic(t *testing.T) {
 }
 
 func TestParseStringInterpolationExprOnly(t *testing.T) {
-	// "`x`" — only an expression, no surrounding text
-	sf := parse(t, "y: \"`x`\"")
+	// "${x}" — only an expression, no surrounding text
+	sf := parse(t, "y: \"${x}\"")
 	d := asShortDecl(t, stmt(t, sf, 0))
 	interp, ok := d.Values[0].(*ast.InterpolatedStringExpr)
 	if !ok {

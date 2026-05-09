@@ -1220,7 +1220,7 @@ type interpSegment struct {
 
 // splitStringInterp splits a raw STRING_LIT token value (including outer quotes)
 // into alternating text and expression segments. Returns nil when there is no
-// backtick interpolation in the literal.
+// ${} interpolation in the literal.
 func splitStringInterp(raw string) []interpSegment {
 	if len(raw) < 2 {
 		return nil
@@ -1244,22 +1244,30 @@ func splitStringInterp(raw string) []interpSegment {
 			continue
 		}
 
-		if ch == '`' {
+		if ch == '$' && i+1 < len(inner) && inner[i+1] == '{' {
 			hasInterp = true
 			// Flush accumulated text.
 			parts = append(parts, interpSegment{isExpr: false, content: cur.String()})
 			cur.Reset()
-			i++ // skip opening backtick
-			// Collect expression content up to the closing backtick.
-			for i < len(inner) && inner[i] != '`' {
-				cur.WriteByte(inner[i])
+			i += 2 // skip ${
+			// Collect expression content up to the matching }, tracking brace depth.
+			depth := 1
+			for i < len(inner) && depth > 0 {
+				if inner[i] == '{' {
+					depth++
+					cur.WriteByte(inner[i])
+				} else if inner[i] == '}' {
+					depth--
+					if depth > 0 {
+						cur.WriteByte(inner[i])
+					}
+				} else {
+					cur.WriteByte(inner[i])
+				}
 				i++
 			}
 			parts = append(parts, interpSegment{isExpr: true, content: cur.String()})
 			cur.Reset()
-			if i < len(inner) {
-				i++ // skip closing backtick
-			}
 			continue
 		}
 

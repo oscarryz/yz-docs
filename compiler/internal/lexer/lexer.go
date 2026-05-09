@@ -265,16 +265,21 @@ func (l *Lexer) scanString(startLine, startCol int) token.Token {
 			continue
 		}
 
-		if ch == '`' {
-			// String interpolation: consume ` expr `
-			lit = append(lit, '`')
-			l.advance()
+		if ch == '$' && l.peekRuneAt(1) == '{' {
+			// String interpolation: consume ${ expr }
+			lit = append(lit, '$', '{')
+			l.advance() // consume $
+			l.advance() // consume {
 			depth := 1
 			for !l.atEnd() && depth > 0 {
 				ic := l.peekRune()
-				if ic == '`' {
+				if ic == '{' {
+					depth++
+					lit = append(lit, '{')
+					l.advance()
+				} else if ic == '}' {
 					depth--
-					lit = append(lit, '`')
+					lit = append(lit, '}')
 					l.advance()
 				} else if ic == '\n' {
 					lit = append(lit, '\n')

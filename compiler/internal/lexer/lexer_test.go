@@ -152,11 +152,10 @@ func TestStringWithEscapes(t *testing.T) {
 }
 
 func TestStringWithInterpolation(t *testing.T) {
-	src := "\"Hello, `name`!\""
+	src := "\"Hello, ${name}!\""
 	assertTypes(t, src, []token.Type{token.STRING_LIT})
 	toks := lex(src)
-	// The full literal should contain the backtick interpolation
-	if toks[0].Literal != "\"Hello, `name`!\"" {
+	if toks[0].Literal != "\"Hello, ${name}!\"" {
 		t.Errorf("got literal %q", toks[0].Literal)
 	}
 }

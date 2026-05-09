@@ -1,7 +1,7 @@
 main: {
     name: "World"
     n: 42
-    print("Hello, `name`!")
-    print("Answer: `n`")
-    print("Sum: `n + 1`")
+    print("Hello, ${name}!")
+    print("Answer: ${n}")
+    print("Sum: ${n + 1}")
 }
