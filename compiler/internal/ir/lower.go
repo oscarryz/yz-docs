@@ -796,6 +796,17 @@ func (l *lowerer) lowerBodyShortDecl(d *ast.ShortDecl, isLast bool, resultType s
 }
 
 func (l *lowerer) lowerAssignment(asgn *ast.Assignment) Stmt {
+	// Cross-cown write: target is a field on a top-level singleton other than self.
+	// Wrap in std.Schedule(&CapName.Cown, ...).Force() to serialize the write.
+	if asgn.Target != nil {
+		if mem, ok := asgn.Target.(*ast.MemberExpr); ok {
+			if id, ok := mem.Object.(*ast.Ident); ok {
+				if sym := l.analyzer.LookupInFile(id.Name); sym != nil && l.isSingletonSym(sym) {
+					return l.lowerCrossCownWrite(id.Name, mem.Member.Name, asgn.Values)
+				}
+			}
+		}
+	}
 	var target Expr
 	if asgn.Target != nil {
 		target = l.lowerExpr(asgn.Target)
@@ -807,6 +818,43 @@ func (l *lowerer) lowerAssignment(asgn *ast.Assignment) Stmt {
 		val = l.lowerExpr(asgn.Values[0])
 	}
 	return &AssignStmt{Target: target, Value: val}
+}
+
+// isSingletonSym reports whether sym is a top-level singleton boc.
+func (l *lowerer) isSingletonSym(sym *sema.Symbol) bool {
+	if _, isBoc := sym.Type.(*sema.BocType); isBoc {
+		return true
+	}
+	if st, isStruct := sym.Type.(*sema.StructType); isStruct && st.IsSingleton {
+		return true
+	}
+	return false
+}
+
+// lowerCrossCownWrite generates a Schedule-wrapped field write:
+// std.Schedule(&CapName.Cown, func() std.Unit { CapName.field = val; return std.TheUnit }).Force()
+func (l *lowerer) lowerCrossCownWrite(singletonYzName, fieldName string, values []ast.Expr) Stmt {
+	goName := capitalize(singletonYzName)
+	var val Expr
+	if len(values) > 0 {
+		val = l.lowerExpr(values[0])
+	} else {
+		val = &UnitLit{}
+	}
+	body := []Stmt{
+		&AssignStmt{
+			Target: &FieldAccess{Object: &Ident{Name: goName}, Field: fieldName},
+			Value:  val,
+		},
+		&ReturnStmt{Value: &UnitLit{}},
+	}
+	thunk := &ThunkExpr{
+		ResultType: "std.Unit",
+		Body:       body,
+		Spawn:      true,
+		RecvCown:   "&" + goName + ".Cown",
+	}
+	return &ExprStmt{Expr: &ForceExpr{Thunk: thunk}}
 }
 
 // ---------------------------------------------------------------------------

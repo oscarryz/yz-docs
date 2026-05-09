@@ -1,0 +1,11 @@
+// Cross-cown: main writes directly to bank's balance field.
+// bank has a method so sema gives it StructType{IsSingleton:true} with balance as a field.
+bank: {
+    balance: 0
+    deposit #(amount Int) { balance = balance + amount }
+}
+
+main: {
+    bank.balance = 42
+    print(bank.balance)
+}
