@@ -251,6 +251,21 @@ Depends on: item 6 (compile-time bocs) landing first — `mix` functionality mov
 
 This item is **large and architectural** — it touches the runtime, codegen, and the thunk transparency mechanism. It should be broken into sub-phases when implementation begins.
 
+#### Phase A — Mutex cowns (data-race freedom) — COMPLETE
+- [x] **Runtime** — add `Cown` struct (embeds `sync.Mutex`) and `Schedule[T]` to `runtime/rt/cown.go`
+- [x] **Codegen** — emit `std.Cown` as embedded field in every singleton boc struct
+- [x] **Codegen** — change singleton method thunk from `std.Go(...)` to `std.Schedule(&self.Cown, ...)`; use split-BocGroup pattern (BocGroup.Wait() after Schedule) to avoid re-entrancy deadlock
+- [x] **BocWithSig singletons** — `Call(params...)` methods use `std.Go` (not `std.Schedule`) to avoid deadlock on recursive singletons (e.g. `countdown` calling itself)
+- [x] All 40 conformance goldens updated; `go test -race ./...` passes
+
+#### Phase B.1 — Queue-based cown scheduler (spawn-order guarantee) — COMPLETE
+- [x] **Runtime** — replaced mutex-based `Cown` with atomic lock-free queue scheduler matching BOC paper (Cheeseman et al., OOPSLA 2023) section 3 algorithm. Each `Cown` holds an atomic tail pointer to a linked list of `request` nodes; a `behaviour` runs when its count (one per required cown) reaches zero. `Schedule[T]` interface unchanged — no codegen changes. `releaseCown` uses CAS-then-spin to hand token to successor. Added `TestScheduleSerializes`, `TestSchedulePreservesOrder`, `TestScheduleTwoIndependentCowns` to `yzrt_test.go`.
+
+#### Phase B.2 — Multi-cown atomic acquisition — TODO
+- [ ] **Runtime** — add `ScheduleMulti[T](cowns []*Cown, fn func() T)`: registers behaviour on all cowns simultaneously; behaviour runs when all grant tokens; no sorting needed (queue handles per-cown ordering)
+- [ ] **Lowerer** — detect cown-typed arguments in boc calls (singleton boc instances passed as params); emit `ScheduleMulti` instead of `Schedule` when multiple cowns needed
+
+#### Full redesign (long-term)
 - [ ] **Runtime** — replace `yzrt.Thunk[T]` / `std.Go()` / `Force()` with a cown-based scheduler: each value wraps a cown (protected resource); invocations declare their resource set and are queued behind any current holder
 - [ ] **Runtime** — implement atomic multi-resource acquisition (no partial acquire, no deadlock)
 - [ ] **Runtime** — implement happens-before ordering: invocations sharing a resource run in spawn order
