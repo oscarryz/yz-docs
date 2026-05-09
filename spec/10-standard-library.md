@@ -219,7 +219,7 @@ parse_int: {
     match {
         valid => Result.Ok(parsed_value)
     }, {
-        Result.Err("invalid integer: `s`")
+        Result.Err("invalid integer: ${s}")
     }
 }
 ```

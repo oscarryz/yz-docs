@@ -162,7 +162,7 @@ When a boc type signature is immediately followed by a boc literal (no `=`), the
 
 ```yz
 greet #(name String, String) {
-    "Hello, `name`!"   // name from signature
+    "Hello, ${name}!"   // name from signature
 }
 ```
 
@@ -240,9 +240,9 @@ grade: match {
 
 // Variant match (with subject)
 match response {
-    Success => print("Data: `response.data`")
+    Success => print("Data: ${response.data}")
 }, {
-    Failure => print("Error: `response.error`")
+    Failure => print("Error: ${response.error}")
 }, {
     Timeout => print("Timed out")
 }
@@ -255,12 +255,12 @@ Yz has no built-in loop syntax. Loops are method calls on ranges and collections
 ```yz
 // Range iteration
 1.to(10).each({ i Int
-    print("`i`")
+    print("${i}")
 })
 
 // Array iteration
 names.each({ name String
-    print("`name`")
+    print("${name}")
 })
 
 // While loop (function, not syntax)
