@@ -1,0 +1,27 @@
+// currently doesn't work
+Account : {
+    balance Int
+    balance+= #(amount Int) {
+        balance = balance + amount
+    }
+    balance-= #(amount Int) {
+        balance = balance - amount
+    }
+}
+
+transfer #(src Account, dst Account, amount Int) {
+    src.balance >= amount ? {
+        src.balance-=(amount)
+        dst.balance+=(amount)
+    }, {
+       print("${src} does not have enough founds")
+    }
+}
+main: {
+   s1 : Account(100)
+   s2 : Account(50)
+   s3 : Account(0)
+   transfer(s1, s2, 20)
+   transfer(s2, s3, 70)
+   print("s3.balance = ${s3.balance}")
+}
