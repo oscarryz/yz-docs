@@ -3,103 +3,56 @@
 
 https://web.archive.org/web/20230329041616/https://www.golangprograms.com/go-language/concurrency.html
 
-```go
-package main
-
-import (
-	"hash/fnv"
-	"log"
-	"math/rand"
-	"os"
-	"sync"
-	"time"
-)
-
-// Number of philosophers is simply the length of this list.
-ph: ["Mark" "Russell" "Rocky" "Haris" "Root"]
-hunger: 3                // Number of times each philosopher eats
-think: time.second / 100 // Mean think time
-eat: time.second / 100   // Mean eat time
-
-fmt: log.new(os.Stdout  "" 0)
-
-dining sync.WaitGroup
-
-diningProblem:{
-    phName String
-    dominantHand sync.Mutex
-    otherHand sync.Mutex
-
-	print("{phName} Seated")
-	h : fnv.new64a()
-	h.Write(phName.to_byte_array())
-	rg: rand.new(rand.new_source(int64{h.Sum64()}))
-	rSleep : {
-	    t time.Duration
-	    time.sleep(t/2 + time.Duration(rg.Int63n(int64(t))))
-	}
-	h: hunger
-	while { h > 0 } {
-	   h = h - 1
-		fmt.Println(phName, "Hungry")
-		dominantHand.Lock() // pick up forks
-		otherHand.Lock()
-		fmt.Println(phName, "Eating")
-		rSleep(eat)
-		dominantHand.Unlock() // put down forks
-		otherHand.Unlock()
-		fmt.Println(phName, "Thinking")
-		rSleep(think)
-	}
-	fmt.Println(phName, "Satisfied")
-	dining.Done()
-	fmt.Println(phName, "Left the table")
+```yz
+Philosopher : {
+  name String
+  left Fork
+  right Fork
+  bites : 0
+  // To eat, a philosopher needs to gain
+  // access to the `left` and `right` forks
+  // -- also to `name` and `bites`, but those are not shared)
+  eat : {
+    left.pick_up()
+    right.pick_up()
+    println("${name} is eating...")
+    bites = bites + 1
+    left.put_down()
+    right.put_down()
+  }
+  // done eating needs to gain access to `bites`
+  done_eating? {
+    bites >= 3
+  }
+}
+// Simple structure with two methods, pick_up and put_down
+Fork : {
+  pick_up : {}
+  put_down : {}
 }
 
-main:{
-	fmt.Println("Table empty")
-	dining.Add(5)
-	fork0 : &sync.Mutex{}
-	forkLeft : fork0
-	for i := 1; i < len(ph); i++ {
-		forkRight := &sync.Mutex{}
-		go diningProblem(ph[i], forkLeft, forkRight)
-		forkLeft = forkRight
-	}
-	go diningProblem(ph[0], fork0, forkLeft)
-	dining.Wait() // wait for philosphers to finish
-	fmt.Println("Table empty")
-}
-```
+main: {
+  // Setup
+  //
+  // Each philosopher starts with a left fork.
+  philosophers: ["a", "b", "c", "d", "e"].map({ name String; Philosopher(name, Fork())})
+  // their right fork is the left of the next philosopher
+  philosophers.for_each({
+    idx Int
+    ri : idx == philosophers.len() -1  ? {0} : {idx + 1}
+    philosophers[idx].right = philosophers[ri].left
+  })
 
-
-
-
-```js
-ph: ['Mark', 'Russel', 'Rocky', 'Haris', 'Root']
-hunger: 3
-think: 100
-eat: 100
-
-dining_problem: {
-    ph_name String
-    dominant_hand ?
-    other_hand ?
-
-    print("${ph_name} Seated")
-    h: hunger
-    while({ h > 0 }, {
-        h = h - 1
-        print("${ph_name} Hungry")
-        dominant_hand.lock()
-        other_hand.lock()
-        print("${ph_name} Eating")
-        time.sleep(eat)
-        dominant_hand.unlock()
-        other_hand.unlock()
-        print("${ph_name} Thinking")
-        time.sleep(think)
+  // Run
+  //
+  // Each philosopher has a turn to each
+  // if done eating, gets removed from the list
+  while({philosopher.len() > 0 }, {
+    philosopher.each({
+      p Philosopher
+      p.eat()
+      p.done_eating ? {philosophers.remove(p)}
     })
-    print("${ph_name} Satisfied")
+  })
 }
 ```
