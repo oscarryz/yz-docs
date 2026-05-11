@@ -48,7 +48,6 @@ KeywordStmt    = ReturnStmt
 ReturnStmt     = "return" [ Expression ] .
 BreakStmt      = "break" .
 ContinueStmt   = "continue" .
-MixStmt        = "mix" Identifier .
 ```
 
 ## 2.4 Identifiers and Lists

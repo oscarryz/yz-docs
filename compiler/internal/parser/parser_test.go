@@ -657,15 +657,16 @@ func TestParseContinue(t *testing.T) {
 	}
 }
 
-func TestParseMix(t *testing.T) {
-	sf := parse(t, "mix Named")
+func TestMixIsIdent(t *testing.T) {
+	// mix is no longer a keyword — it parses as a regular identifier
+	sf := parse(t, "mix: 42")
 	n := stmt(t, sf, 0)
-	m, ok := n.(*ast.MixStmt)
+	sd, ok := n.(*ast.ShortDecl)
 	if !ok {
-		t.Fatalf("expected *ast.MixStmt, got %T", n)
+		t.Fatalf("expected *ast.ShortDecl, got %T", n)
 	}
-	if m.Name.Name != "Named" {
-		t.Errorf("mix name: got %q, want Named", m.Name.Name)
+	if sd.Names[0].Name != "mix" {
+		t.Errorf("name: got %q, want mix", sd.Names[0].Name)
 	}
 }
 

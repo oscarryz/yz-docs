@@ -118,14 +118,6 @@ type ContinueStmt struct{ Pos }
 
 func (s *ContinueStmt) stmtNode() {}
 
-// MixStmt is `mix Identifier` — flattens another boc's fields into the current boc.
-type MixStmt struct {
-	Pos
-	Name *Ident
-}
-
-func (s *MixStmt) stmtNode() {}
-
 // ---------------------------------------------------------------------------
 // Expressions
 // ---------------------------------------------------------------------------

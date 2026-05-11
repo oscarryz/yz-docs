@@ -258,8 +258,6 @@ func (a *Analyzer) analyzeNode(n ast.Node) Type {
 		return t
 	case *ast.BreakStmt, *ast.ContinueStmt:
 		return TypUnit
-	case *ast.MixStmt:
-		return TypUnit // handled inside analyzeStructBoc
 	case *ast.InfoString:
 		return TypUnit
 	case ast.Expr:
@@ -808,10 +806,6 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			}
 			lastExprTypes = nil
 
-		case *ast.MixStmt:
-			a.applyMix(e, st, fieldSet, name)
-			lastExprTypes = nil
-
 		case *ast.Ident:
 			// Generic type param declaration (T, E inside type boc body).
 			// Register as GenericType in current scope and record on the struct.
@@ -886,29 +880,6 @@ func (a *Analyzer) collectVariantCase(v *ast.VariantDef) VariantCase {
 		}
 	}
 	return vc
-}
-
-func (a *Analyzer) applyMix(ms *ast.MixStmt, st *StructType, fieldSet map[string]bool, hostName string) {
-	mixedSym := a.currentScope.Lookup(ms.Name.Name)
-	if mixedSym == nil {
-		a.errorfLen(ms.Name.Pos, len(ms.Name.Name), "undefined: %s", ms.Name.Name)
-		return
-	}
-	mixedSt, ok := mixedSym.Type.(*StructType)
-	if !ok {
-		a.errorf(ms.Name.Pos, "mix: %s is not a struct type", ms.Name.Name)
-		return
-	}
-	for _, f := range mixedSt.Fields {
-		if fieldSet[f.Name] {
-			a.errorf(ms.Pos, "mix conflict: field %q already defined (mix of %s into %s)",
-				f.Name, ms.Name.Name, hostName)
-			continue
-		}
-		fieldSet[f.Name] = true
-		st.Fields = append(st.Fields, f)
-		a.currentScope.Define(&Symbol{Name: f.Name, Type: f.Type})
-	}
 }
 
 func (a *Analyzer) analyzeVariantDef(v *ast.VariantDef) Type {

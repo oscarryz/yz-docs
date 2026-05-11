@@ -1,7 +1,7 @@
 #spec
 # 4. Type System
 
-This chapter defines Yz's type system: the kinds of types, structural compatibility rules, type variants, generics, and the `mix` composition mechanism.
+This chapter defines Yz's type system: the kinds of types, structural compatibility rules, type variants, and generics.
 
 ## 4.1 Overview
 
@@ -396,50 +396,7 @@ Pair: {
 p: Pair("name", 42)  // K = String, V = Int
 ```
 
-## 4.8 The `mix` Keyword
-
-`mix` implements **structural mixin composition**. It merges fields and methods from a source boc into the host boc.
-
-### Semantics
-
-```yz
-Timestamped: {
-    created_at Int
-    updated_at Int
-}
-
-Post: {
-    mix Timestamped
-    title String
-    body String
-}
-```
-
-After `mix`, `Post` has the structural type:
-```
-#(created_at Int, updated_at Int, title String, body String)
-```
-
-### Rules
-
-1. **Structural flattening**: Mixed fields become direct fields of the host — no nesting or delegation
-2. **Unqualified access**: Mixed fields are accessed directly (`post.created_at`, not `post.Timestamped.created_at`)
-3. **Stateful binding**: Mixed mutable fields are part of the host instance's state
-4. **Conflict = error**: If the host and the mixin define the same field name, it is a **compile-time error** — no silent shadowing
-
-### Example with Conflict
-
-```yz
-A: { name String }
-B: { name String; age Int }
-
-C: {
-    mix A
-    mix B  // COMPILE ERROR: 'name' is defined in both A and B
-}
-```
-
-## 4.9 Equality Semantics
+## 4.8 Equality Semantics
 
 The `==` method is defined on **every type** and performs **structural equality**:
 
@@ -449,7 +406,7 @@ The `==` method is defined on **every type** and performs **structural equality*
 - **Arrays**: Same length AND element-wise `==`
 - **Dictionaries**: Same keys AND value-wise `==`
 
-## 4.10 Type Summary
+## 4.9 Type Summary
 
 ```
 Types:
