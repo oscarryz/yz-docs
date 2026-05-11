@@ -505,6 +505,10 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 	// Collect statement elements (expressions, assignments) for the optional Call() method.
 	var stmtElems []ast.Node
 
+	// Pre-compute extra cowns from struct-typed fields so every method in this
+	// singleton acquires all field cowns atomically via ScheduleMulti.
+	extraCowns := l.structFieldCowns(b)
+
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
 		case *ast.ShortDecl:
@@ -517,6 +521,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 					l.recvMethods = methodNames
 					m := l.lowerMethod(e.Names[0].Name, "*"+typeName, inner, fieldNames, bocSemType)
 					l.recvMethods = prevMethods
+					applyExtraCowns(m, extraCowns)
 					sd.Methods = append(sd.Methods, m)
 					continue
 				}
@@ -546,6 +551,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 				l.recvMethods = methodNames
 				m := l.lowerBocWithSigAsMethod(e, "*"+typeName, fieldNames)
 				l.recvMethods = prevMethods
+				applyExtraCowns(m, extraCowns)
 				sd.Methods = append(sd.Methods, m)
 			}
 
@@ -635,6 +641,49 @@ func (l *lowerer) collectFieldNames(b *ast.BocLiteral) map[string]bool {
 // ---------------------------------------------------------------------------
 // Method lowering
 // ---------------------------------------------------------------------------
+
+// structFieldCowns returns "&self.fieldName.Cown" for every TypedDecl field in
+// the struct boc whose type resolves to a non-interface StructType (i.e., has
+// a std.Cown embedded). These are added to ThunkExpr.ExtraCowns so that method
+// bodies acquire all struct-typed fields' cowns atomically via ScheduleMulti.
+func (l *lowerer) structFieldCowns(b *ast.BocLiteral) []string {
+	var extra []string
+	for _, elem := range b.Elements {
+		td, ok := elem.(*ast.TypedDecl)
+		if !ok {
+			continue
+		}
+		ste, ok := td.Type.(*ast.SimpleTypeExpr)
+		if !ok {
+			continue
+		}
+		sym := l.analyzer.LookupInFile(ste.Name)
+		if sym == nil {
+			continue
+		}
+		if st, ok := sym.Type.(*sema.StructType); ok && !st.IsInterface {
+			extra = append(extra, "&self."+td.Name.Name+".Cown")
+		}
+	}
+	return extra
+}
+
+// applyExtraCowns sets ExtraCowns on the ThunkExpr inside a method body
+// returned by lowerBocBody (always [ExprStmt{ThunkExpr}]).
+func applyExtraCowns(md *MethodDecl, extraCowns []string) {
+	if len(extraCowns) == 0 || len(md.Body) != 1 {
+		return
+	}
+	es, ok := md.Body[0].(*ExprStmt)
+	if !ok {
+		return
+	}
+	th, ok := es.Expr.(*ThunkExpr)
+	if !ok {
+		return
+	}
+	th.ExtraCowns = extraCowns
+}
 
 func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFields map[string]bool, semType sema.Type) *MethodDecl {
 	// Collect params (TypedDecl with no value inside the body).
@@ -896,6 +945,11 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 	// Pre-scan method names so struct methods can call themselves (and each other) recursively.
 	methodNames := l.collectMethodNames(b)
 	prevRecvMethods := l.recvMethods
+
+	// Pre-compute extra cowns from struct-typed fields so every method acquires
+	// all field cowns atomically via ScheduleMulti.
+	extraCowns := l.structFieldCowns(b)
+
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
 		case *ast.TypedDecl:
@@ -913,6 +967,7 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 					l.recvMethods = methodNames
 					m := l.lowerMethod(e.Names[0].Name, recvType, inner, fieldNames, bocSemType)
 					l.recvMethods = prevRecvMethods
+					applyExtraCowns(m, extraCowns)
 					sd.Methods = append(sd.Methods, m)
 					continue
 				}
@@ -933,6 +988,7 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				l.recvMethods = methodNames
 				m := l.lowerBocWithSigAsMethod(e, recvType, fieldNames)
 				l.recvMethods = prevRecvMethods
+				applyExtraCowns(m, extraCowns)
 				sd.Methods = append(sd.Methods, m)
 			}
 		}

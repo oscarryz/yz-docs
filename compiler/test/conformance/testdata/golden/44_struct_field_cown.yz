@@ -1,0 +1,24 @@
+// Struct methods that access struct-typed fields must acquire those fields'
+// cowns atomically. Transfer.run acquires self.Cown + src.Cown + dst.Cown
+// via ScheduleMulti so concurrent transfers on disjoint accounts are safe.
+Account: {
+    balance Int
+}
+
+Transfer: {
+    src Account
+    dst Account
+    amount Int
+    run: {
+        src.balance = src.balance - amount
+        dst.balance = dst.balance + amount
+    }
+}
+
+main: {
+    alice: Account(100)
+    bob:   Account(0)
+    Transfer(alice, bob, 30).run()
+    print(alice.balance)
+    print(bob.balance)
+}
