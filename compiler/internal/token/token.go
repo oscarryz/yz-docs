@@ -26,7 +26,6 @@ const (
 	CONTINUE // continue
 	RETURN   // return
 	MATCH    // match
-	MIX      // mix
 
 	// Delimiters
 	LBRACE   // {
@@ -58,7 +57,6 @@ var typeNames = [...]string{
 	CONTINUE:      "CONTINUE",
 	RETURN:        "RETURN",
 	MATCH:         "MATCH",
-	MIX:           "MIX",
 	LBRACE:        "LBRACE",
 	RBRACE:        "RBRACE",
 	LPAREN:        "LPAREN",
@@ -86,7 +84,6 @@ var keywords = map[string]Type{
 	"continue": CONTINUE,
 	"return":   RETURN,
 	"match":    MATCH,
-	"mix":      MIX,
 }
 
 // LookupIdent classifies an identifier string. If the string is a keyword
