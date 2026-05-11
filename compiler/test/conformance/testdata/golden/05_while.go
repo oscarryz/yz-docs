@@ -30,8 +30,9 @@ type _mainBoc struct {
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
+		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
-			var n std.Int = std.NewInt(0)
+			n = std.NewInt(0)
 			_bg0.Go(func() any {
 				return While.Call(func() std.Bool {
 					return n.Lt(std.NewInt(3))
