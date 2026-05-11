@@ -62,7 +62,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			_bg0.Go(func() any {
-				return Sync.Call(Bank, Ledger).Force()
+				return (&_syncBoc{}).Call(Bank, Ledger).Force()
 			})
 			return std.TheUnit
 		}).Force()
