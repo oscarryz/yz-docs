@@ -1,3 +1,5 @@
+#implementation #open-question 
+
 - Add a dedicated callout (and a specific compiler error message) explaining the separate-package requirement for custom Compile implementations
 - Add a lint/warning for name collisions between single-field Schema implementations sharing the same derived key
 - Investigate an in-process fast path (shared library) for Compile execution to mitigate cold-build subprocess latency
