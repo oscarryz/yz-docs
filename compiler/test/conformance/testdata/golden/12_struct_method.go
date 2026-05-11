@@ -3,6 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Named struct {
+	std.Cown
 	name std.String
 }
 

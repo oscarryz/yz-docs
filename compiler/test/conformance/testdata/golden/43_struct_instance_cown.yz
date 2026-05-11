@@ -1,0 +1,14 @@
+// Like 03_counter_main but Counter is an instantiated struct type, not a singleton.
+// Two concurrent increment calls serialize through the instance's cown.
+Counter: {
+    count Int
+    increment: { count = count + 1 }
+    value: { count }
+}
+
+main: {
+    c: Counter(0)
+    c.increment()
+    c.increment()
+    print(c.value())
+}

@@ -8,6 +8,7 @@ type Greeter interface {
 
 
 type Person struct {
+	std.Cown
 	name std.String
 }
 

@@ -1208,7 +1208,7 @@ func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, 
 			if ste, ok := sp.Type.(*ast.SimpleTypeExpr); ok {
 				sym := l.analyzer.LookupInFile(ste.Name)
 				if sym != nil {
-					if st, ok2 := sym.Type.(*sema.StructType); ok2 && st.IsSingleton {
+					if st, ok2 := sym.Type.(*sema.StructType); ok2 && !st.IsInterface {
 						extraCowns = append(extraCowns, "&"+sp.Label+".Cown")
 					}
 				}

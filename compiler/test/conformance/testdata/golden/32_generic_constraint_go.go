@@ -3,6 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Wrapper[T interface{ ToStr() std.String }] struct {
+	std.Cown
 	value T
 }
 

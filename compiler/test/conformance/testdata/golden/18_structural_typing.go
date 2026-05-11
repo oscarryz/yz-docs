@@ -8,6 +8,7 @@ type Greeter interface {
 
 
 type Person struct {
+	std.Cown
 	name std.String
 	secret std.String
 }
@@ -47,8 +48,9 @@ type _mainBoc struct {
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
+		var p *Person
 		std.Schedule(&self.Cown, func() std.Unit {
-			var p *Person = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
+			p = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
 			_bg0.Go(func() any {
 				return Greet_all.Call(p).Force()
 			})
