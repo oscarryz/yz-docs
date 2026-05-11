@@ -115,6 +115,7 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 
 	g.linef("type %s%s struct {", sd.Name, typeConstraints)
 	g.level++
+	g.line("std.Cown")
 	for _, f := range sd.Fields {
 		g.linef("%s %s", f.Name, f.Type)
 	}
@@ -398,10 +399,19 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	preWait := th.Body[:waitIdx]
 	postWait := th.Body[waitIdx:] // WaitStmt and everything after
 
-	// Separate hoisted declarations from the rest of the pre-Wait body.
-	// Hoisted: BocGroup DeclStmts and thunkVar DeclStmts. Both must be accessible
-	// in the post-Wait section (after the Schedule closure releases the cown).
+	// Separate statements into three buckets:
+	//   hoistedDecls  — emitted before Schedule in the outer scope (BocGroup, thunkVars)
+	//   splitDecls    — declaration hoisted to outer scope; initialization emitted as
+	//                   an assignment inside Schedule (regular vars with explicit types
+	//                   that may be referenced in post-Wait statements)
+	//   immediateBody — everything else, emitted inside Schedule
+	type splitDecl struct {
+		name string
+		typ  string
+		init ir.Expr
+	}
 	var hoistedDecls []ir.Stmt
+	var splitDecls []splitDecl
 	var immediateBody []ir.Stmt
 	for _, s := range preWait {
 		if ds, ok := s.(*ir.DeclStmt); ok {
@@ -411,6 +421,11 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 			}
 			if ds.IsThunk {
 				hoistedDecls = append(hoistedDecls, s)
+				continue
+			}
+			// Regular var with explicit type: split so the name is visible after Schedule.
+			if ds.Type != "" {
+				splitDecls = append(splitDecls, splitDecl{ds.Name, ds.Type, ds.Init})
 				continue
 			}
 		}
@@ -428,6 +443,10 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	for _, s := range hoistedDecls {
 		outer.emitStmt(s)
 	}
+	// Hoisted split-var declarations (zero-value; assigned inside Schedule).
+	for _, sd := range splitDecls {
+		outer.linef("var %s %s", sd.name, sd.typ)
+	}
 
 	// Schedule for the immediate body (SpawnExprs); releases cown when done.
 	outer.write(outer.ind())
@@ -435,6 +454,10 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	outer.write(th.RecvCown)
 	outer.write(", func() std.Unit {\n")
 	schedInner := outer.sub(outer.level + 1)
+	// Assignments for split-var initializations.
+	for _, sd := range splitDecls {
+		schedInner.linef("%s = %s", sd.name, schedInner.expr(sd.init))
+	}
 	for _, s := range immediateBody {
 		schedInner.emitStmt(s)
 	}

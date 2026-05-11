@@ -3,6 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Pair[K any, V any] struct {
+	std.Cown
 	first K
 	second V
 }

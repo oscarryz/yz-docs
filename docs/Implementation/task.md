@@ -117,6 +117,8 @@ The compiler currently has three separate lowering paths for bocs depending on w
 
 - [x] **SWMR write semantics in codegen** — field writes from outside a boc (`a.b = v` in a different boc) are wrapped in `std.Schedule(&target.Cown, func() std.Unit { target.field = value; return std.TheUnit }).Force()`. Implemented in Phase C; golden test 42.
 
+- [x] **Phase D — Extend cowns to struct type instances** — struct bocs (`Foo: { ... }`) and their instances (`bar : Foo()`) must embed `std.Cown` just like singleton bocs do. Currently `emitStructDecl` omits `std.Cown`, so method bodies that reference `self.Cown` fail at `go build`. Also, multi-cown detection in `lowerBocWithSigAsSingleton` only recognizes singleton params, not regular struct params — so `transfer(src Account, dst Account, ...)` doesn't acquire both cowns atomically. Fix: (1) add `std.Cown` as first field in `emitStructDecl`; (2) extend multi-cown detection to include all non-interface struct types; (3) regenerate golden tests; (4) add a new golden test for struct-instance method concurrency (e.g. `account_balance`).
+
 ## Known Bugs
 - [x] Dict literals — fixed: now emits `std.NewDict[K,V]().Set(k,v)...` chain; golden test 24
 - [x] Array literals — already worked via variadic `std.NewArray(...)`; golden test 24
@@ -144,6 +146,8 @@ These are documented in the language spec/features and need compiler implementat
 - [ ] **Array append via `<<`** — `a << item` as sugar for `a.Append(item)` via non-word method invocation. `Array.Append` exists in yzrt. Need a golden test and lowerer to emit the `Append` call.
 
 - [ ] **Option/Result method chaining** — `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })` — documented in error-handling features. Requires implementing `or_else`, `and_then`, `or` methods on the Option/Result types in yzrt, plus lowerer support for chained calls on variant types.
+
+- [ ] **Non-word boc names** — bocs (methods on structs, standalone bocs) whose names are non-word identifiers: `balance+= #(amount Int) { ... }`, `balance-=`, `hola++`, etc. The lexer already produces `NON_WORD` tokens for these character sequences, but the parser currently only allows word identifiers as boc names in declarations. Fix: (1) parser: accept a `NON_WORD` token as a valid boc name in `ShortDecl` and `BocWithSig` forms; (2) lowerer: map the non-word name to a valid Go method name using the same symbol table used for operator methods (e.g. `+=` → `PlusEq`, `++` → `PlusPlus`); (3) call sites: `obj.balance+=(x)` must lower to `obj.BalancePlusEq(x)`; (4) add a golden test (e.g. the `account_balance` example). Needed to unblock `examples/account_balance/main.yz`.
 
 - [ ] **`to_str()` method on user types** — examples use `n.to_string()` but yzrt uses `ToStr()` (mapped from `to_str()`). Ensure the compiler correctly maps `to_str()` calls on user-defined types; update examples to use `to_str()` not `to_string()`.
 

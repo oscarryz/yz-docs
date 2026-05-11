@@ -3,6 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Container[T any] struct {
+	std.Cown
 	value T
 }
 
