@@ -84,7 +84,6 @@ break
 continue
 return
 match
-mix
 ```
 
 > **Note:** `true` and `false` are not keywords — they are constants of type `Bool` defined in the standard library.
@@ -337,7 +336,7 @@ Tokens:
   int_literal        : [0-9]+
   decimal_literal    : [0-9]+ '.' [0-9]+
   string_literal     : "'" ... "'" | '"' ... '"'
-  keyword            : 'break' | 'continue' | 'return' | 'match' | 'mix'
+  keyword            : 'break' | 'continue' | 'return' | 'match'
 
 Delimiters:
   { } ( ) [ ] : = , ; . # =>

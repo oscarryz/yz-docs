@@ -370,38 +370,6 @@ func TestIncompatibleTypes(t *testing.T) {
 // 07 — Mix
 // ---------------------------------------------------------------------------
 
-func TestMixConflictError(t *testing.T) {
-	expectError(t, `A: { name String }
-B: { name String; age Int }
-C: {
-    mix A
-    mix B
-}`, "conflict")
-}
-
-func TestMixSuccess(t *testing.T) {
-	a := mustAnalyze(t, `Timestamps: {
-    created_at Int
-    updated_at Int
-}
-Post: {
-    mix Timestamps
-    title String
-}`)
-	sym := a.LookupInFile("Post")
-	if sym == nil {
-		t.Fatal("'Post' not found")
-	}
-	st, ok := sym.Type.(*StructType)
-	if !ok {
-		t.Fatalf("Post: got %T, want *StructType", sym.Type)
-	}
-	// Post should have all 3 fields after mix.
-	if len(st.Fields) != 3 {
-		t.Fatalf("Post fields: got %d, want 3 (created_at, updated_at, title)", len(st.Fields))
-	}
-}
-
 // ---------------------------------------------------------------------------
 // 08 — FQN
 // ---------------------------------------------------------------------------

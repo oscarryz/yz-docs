@@ -1,7 +1,0 @@
-Named: {
-    name String
-}
-Person: {
-    mix Named
-    last_name String
-}

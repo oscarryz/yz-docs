@@ -102,9 +102,13 @@ func TestGenericIdentifiers(t *testing.T) {
 }
 
 func TestKeywords(t *testing.T) {
-	assertTypes(t, "break continue return match mix", []token.Type{
-		token.BREAK, token.CONTINUE, token.RETURN, token.MATCH, token.MIX,
+	assertTypes(t, "break continue return match", []token.Type{
+		token.BREAK, token.CONTINUE, token.RETURN, token.MATCH,
 	})
+}
+
+func TestMixIsIdent(t *testing.T) {
+	assertTypes(t, "mix", []token.Type{token.IDENT})
 }
 
 // -----------------------------------------------------------------------

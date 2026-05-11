@@ -172,7 +172,6 @@ The exact expected stdout output:
 | `type_mismatch` | Assigning incompatible types |
 | `undefined_var` | Using undeclared variable |
 | `undefined_method` | Calling non-existent method |
-| `mix_conflict` | Conflicting field names in mix |
 | `missing_param` | Required parameter not provided |
 | `return_type_mismatch` | Return type doesn't match signature |
 

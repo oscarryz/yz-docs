@@ -22,8 +22,6 @@ Yz distinguishes between statements and expressions:
 | `return` | | `return value` |
 | `break` | | `break` |
 | `continue` | | `continue` |
-| `mix` | | `mix Named` |
-
 ### Expressions
 
 Everything else is an expression. Expressions include:

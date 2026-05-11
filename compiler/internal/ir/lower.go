@@ -609,7 +609,7 @@ func (l *lowerer) collectMethodNames(b *ast.BocLiteral) map[string]bool {
 
 // collectFieldNames returns the set of field names (non-boc ShortDecls and TypedDecls
 // without values) in the boc literal, for use in method body lowering.
-// MixStmt fields are also included so methods can reference them as self.field.
+// Fields are collected so methods can reference them as self.field.
 func (l *lowerer) collectFieldNames(b *ast.BocLiteral) map[string]bool {
 	fields := map[string]bool{}
 	for _, elem := range b.Elements {
@@ -626,19 +626,6 @@ func (l *lowerer) collectFieldNames(b *ast.BocLiteral) map[string]bool {
 		case *ast.TypedDecl:
 			if e.Value == nil {
 				fields[e.Name.Name] = true
-			}
-		case *ast.MixStmt:
-			sym := l.analyzer.LookupInFile(e.Name.Name)
-			if sym == nil {
-				break
-			}
-			if mixedSt, ok := sym.Type.(*sema.StructType); ok {
-				for _, f := range mixedSt.Fields {
-					if _, isBoc := f.Type.(*sema.BocType); isBoc {
-						continue // method, not a data field
-					}
-					fields[f.Name] = true
-				}
 			}
 		}
 	}
@@ -938,28 +925,6 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				typ := l.goType(l.analyzer.ExprType(l.valueAt(e.Values, i)))
 				sd.Fields = append(sd.Fields, &FieldSpec{Name: n.Name, Type: typ, Init: initExpr})
 			}
-		case *ast.MixStmt:
-			sym := l.analyzer.LookupInFile(e.Name.Name)
-			if sym == nil {
-				break
-			}
-			mixedSt, ok := sym.Type.(*sema.StructType)
-			if !ok {
-				break
-			}
-			var subFields []*FieldSpec
-			for _, f := range mixedSt.Fields {
-				if _, isBoc := f.Type.(*sema.BocType); isBoc {
-					continue // method, not a data field
-				}
-				subFields = append(subFields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
-			}
-			sd.Fields = append(sd.Fields, &FieldSpec{
-				Name:           e.Name.Name,
-				Embedded:       true,
-				EmbeddedFields: subFields,
-			})
-
 		case *ast.Ident:
 			// TypeParams already pre-populated above; nothing else to do here.
 

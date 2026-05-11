@@ -94,8 +94,6 @@ func (p *Parser) parseStatement() (ast.Node, error) {
 	case token.RETURN:
 		return p.parseReturn()
 
-	case token.MIX:
-		return p.parseMix()
 	}
 
 	// Check for info string: a string literal that immediately precedes a declaration.
@@ -157,16 +155,6 @@ func (p *Parser) parseReturn() (*ast.ReturnStmt, error) {
 		return nil, err
 	}
 	return &ast.ReturnStmt{Pos: pos, Value: val}, nil
-}
-
-func (p *Parser) parseMix() (*ast.MixStmt, error) {
-	pos := p.posOf(p.cur())
-	p.advance() // consume 'mix'
-	if !p.atAnyIdent() {
-		return nil, p.errorf("expected identifier after 'mix'")
-	}
-	name := p.parseIdent()
-	return &ast.MixStmt{Pos: pos, Name: name}, nil
 }
 
 // ---------------------------------------------------------------------------
