@@ -1,27 +1,43 @@
-// currently doesn't work
-Account : {
+// Bank account transfers — Yz version of the BOC paper example.
+// Cheeseman et al. "When Concurrency Matters: Behaviour-Oriented Concurrency"
+// OOPSLA 2023.  https://marioskogias.github.io/docs/boc.pdf
+
+Account: {
     balance Int
-    balance+= #(amount Int) {
-        balance = balance + amount
-    }
-    balance-= #(amount Int) {
-        balance = balance - amount
+}
+
+Transfer: {
+    src Account
+    dst Account
+    amount Int
+    run: {
+        src.balance >= amount ? {
+            src.balance = src.balance - amount
+            dst.balance = dst.balance + amount
+        }, {
+            print("insufficient funds: need ${amount}, have ${src.balance}")
+        }
     }
 }
 
-transfer #(src Account, dst Account, amount Int) {
-    src.balance >= amount ? {
-        src.balance-=(amount)
-        dst.balance+=(amount)
-    }, {
-       print("${src} does not have enough founds")
-    }
-}
 main: {
-   s1 : Account(100)
-   s2 : Account(50)
-   s3 : Account(0)
-   transfer(s1, s2, 20)
-   transfer(s2, s3, 70)
-   print("s3.balance = ${s3.balance}")
+    alice: Account(100)
+    bob:   Account(0)
+    carol: Account(50)
+    dave:  Account(0)
+    erin:  Account(200)
+    frank: Account(0)
+
+    Transfer(alice, bob,   30).run()
+    Transfer(bob,   alice, 10).run()
+    Transfer(bob,   carol, 20).run()
+    Transfer(carol, dave,  40).run()
+    Transfer(erin,  frank, 75).run()
+
+    print("alice: ${alice.balance}")
+    print("bob:   ${bob.balance}")
+    print("carol: ${carol.balance}")
+    print("dave:  ${dave.balance}")
+    print("erin:  ${erin.balance}")
+    print("frank: ${frank.balance}")
 }
