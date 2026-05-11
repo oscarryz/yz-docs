@@ -1,0 +1,18 @@
+// BocWithSig with struct-typed params: each call creates a fresh instance and
+// acquires src.Cown + dst.Cown atomically via ScheduleMulti.
+Account: {
+    balance Int
+}
+
+transfer #(src Account, dst Account, amount Int) {
+    src.balance = src.balance - amount
+    dst.balance = dst.balance + amount
+}
+
+main: {
+    alice: Account(100)
+    bob:   Account(0)
+    transfer(alice, bob, 30)
+    print(alice.balance)
+    print(bob.balance)
+}
