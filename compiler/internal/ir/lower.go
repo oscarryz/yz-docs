@@ -1815,7 +1815,9 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			if _, isStruct := sym.Type.(*sema.StructType); isStruct {
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
-			// BocWithSig singletons: call as Singleton.Call(args).
+			// BocWithSig singletons: each call creates a fresh instance so its
+			// self.Cown is uncontested. Effective serialization comes only from
+			// any struct-typed params' cowns (acquired via ScheduleMulti).
 			// Generic BocWithSig (typeParams) kept as FuncDecl — plain call.
 			if bws, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
 				if bws.Sig != nil {
@@ -1825,7 +1827,7 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 					return &FuncCall{Func: callee, Args: args}
 				}
 				return &MethodCall{
-					Recv:   &Ident{Name: capitalize(id.Name)},
+					Recv:   &Ident{Name: "(&_" + id.Name + "Boc{})"},
 					Method: "Call",
 					Args:   args,
 				}

@@ -52,7 +52,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			p = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
 			_bg0.Go(func() any {
-				return Greet_all.Call(p).Force()
+				return (&_greet_allBoc{}).Call(p).Force()
 			})
 			return std.TheUnit
 		}).Force()

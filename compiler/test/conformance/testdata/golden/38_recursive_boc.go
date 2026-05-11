@@ -14,7 +14,7 @@ func (self *_countdownBoc) Call(n std.Int) *std.Thunk[std.Unit] {
 			std.Print(std.NewString("done"))
 		} else {
 			std.Print(self.n)
-			Countdown.Call(self.n.Minus(std.NewInt(1))).Force()
+			(&_countdownBoc{}).Call(self.n.Minus(std.NewInt(1))).Force()
 		}
 		return std.TheUnit
 	})
@@ -32,7 +32,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			_bg0.Go(func() any {
-				return Countdown.Call(std.NewInt(3)).Force()
+				return (&_countdownBoc{}).Call(std.NewInt(3)).Force()
 			})
 			return std.TheUnit
 		}).Force()
