@@ -33,13 +33,14 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
 			n = std.NewInt(0)
+			_st0 := (&_whileBoc{}).Call(func() std.Bool {
+				return n.Lt(std.NewInt(3))
+			}, func() std.Unit {
+				n = n.Plus(std.NewInt(1))
+				return std.TheUnit
+			})
 			_bg0.Go(func() any {
-				return (&_whileBoc{}).Call(func() std.Bool {
-					return n.Lt(std.NewInt(3))
-				}, func() std.Unit {
-					n = n.Plus(std.NewInt(1))
-					return std.TheUnit
-				}).Force()
+				return _st0.Force()
 			})
 			return std.TheUnit
 		}).Force()

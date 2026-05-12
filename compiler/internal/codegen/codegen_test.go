@@ -232,8 +232,9 @@ main: {
 }`)
 	contains(t, got,
 		"_bg0 := &std.BocGroup{}",
+		"_st0 := Counter.Increment()",
 		"_bg0.Go(func() any {",
-		"Counter.Increment().Force()",
+		"_st0.Force()",
 		"_bg0.Wait()",
 		"std.Print(Counter.Value().Force())",
 	)
