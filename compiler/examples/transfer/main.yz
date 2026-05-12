@@ -2,21 +2,18 @@
 // Cheeseman et al. "When Concurrency Matters: Behaviour-Oriented Concurrency"
 // OOPSLA 2023.  https://marioskogias.github.io/docs/boc.pdf
 
+
 Account: {
     balance Int
 }
 
-Transfer: {
-    src Account
-    dst Account
-    amount Int
-    run: {
-        src.balance >= amount ? {
-            src.balance = src.balance - amount
-            dst.balance = dst.balance + amount
-        }, {
-            print("insufficient funds: need ${amount}, have ${src.balance}")
-        }
+// In order to run, transfer has to acquire atomically src and dst
+transfer #(src Account, dst Account, amount Int) {
+    src.balance >= amount ? {
+        src.balance = src.balance - amount
+        dst.balance = dst.balance + amount
+    }, {
+        print("insufficient funds: need ${amount}, have ${src.balance}")
     }
 }
 
@@ -28,11 +25,12 @@ main: {
     erin:  Account(200)
     frank: Account(0)
 
-    Transfer(alice, bob,   30).run()
-    Transfer(bob,   alice, 10).run()
-    Transfer(bob,   carol, 20).run()
-    Transfer(carol, dave,  40).run()
-    Transfer(erin,  frank, 75).run()
+    transfer(alice, bob,   30)
+    transfer(bob,   alice, 10)
+    transfer(bob,   carol, 20)
+    transfer(carol, dave,  40)
+    // erin and frank are not used elsewhere they can start right away
+    transfer(erin,  frank, 75)
 
     print("alice: ${alice.balance}")
     print("bob:   ${bob.balance}")

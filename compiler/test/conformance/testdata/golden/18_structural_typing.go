@@ -51,8 +51,9 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var p *Person
 		std.Schedule(&self.Cown, func() std.Unit {
 			p = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
+			_st0 := (&_greet_allBoc{}).Call(p)
 			_bg0.Go(func() any {
-				return (&_greet_allBoc{}).Call(p).Force()
+				return _st0.Force()
 			})
 			return std.TheUnit
 		}).Force()

@@ -46,8 +46,9 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			alice = NewAccount(std.NewInt(100))
 			bob = NewAccount(std.NewInt(0))
+			_st0 := (&_transferBoc{}).Call(alice, bob, std.NewInt(30))
 			_bg0.Go(func() any {
-				return (&_transferBoc{}).Call(alice, bob, std.NewInt(30)).Force()
+				return _st0.Force()
 			})
 			return std.TheUnit
 		}).Force()

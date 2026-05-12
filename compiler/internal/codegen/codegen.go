@@ -458,7 +458,28 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	for _, sd := range splitDecls {
 		schedInner.linef("%s = %s", sd.name, schedInner.expr(sd.init))
 	}
+	// Emit immediateBody inside the Schedule closure.
+	// For SpawnExprs whose body is [Return(Force(expr))], hoist the thunk expression
+	// out of the goroutine so cown registration happens serially in source order.
+	// This ensures behaviours queue on cowns in the order they appear in source,
+	// matching the BOC paper's "when() calls happen sequentially" guarantee.
+	spawnHoistIdx := 0
 	for _, s := range immediateBody {
+		es, isExpr := s.(*ir.ExprStmt)
+		if isExpr {
+			if sp, isSpawn := es.Expr.(*ir.SpawnExpr); isSpawn {
+				if inner, ok := spawnForceInner(sp); ok {
+					// Hoist the thunk expression (Run() call) before _bg0.Go.
+					tv := fmt.Sprintf("_st%d", spawnHoistIdx)
+					spawnHoistIdx++
+					schedInner.linef("%s := %s", tv, schedInner.expr(inner))
+					schedInner.linef("%s.Go(func() any {", sp.GroupVar)
+					schedInner.linef("\treturn %s.Force()", tv)
+					schedInner.linef("})")
+					continue
+				}
+			}
+		}
 		schedInner.emitStmt(s)
 	}
 	schedInner.line("return std.TheUnit")
@@ -473,6 +494,27 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	sb.WriteString(g.ind())
 	sb.WriteString("})")
 	return sb.String()
+}
+
+// spawnForceInner returns the inner thunk expression from a SpawnExpr whose
+// body is exactly [ReturnStmt{ForceExpr{expr}}] where expr is not a bare Ident
+// (i.e., not already a pre-computed thunk var). Returns (expr, true) on match.
+func spawnForceInner(sp *ir.SpawnExpr) (ir.Expr, bool) {
+	if len(sp.Body) != 1 {
+		return nil, false
+	}
+	rs, ok := sp.Body[0].(*ir.ReturnStmt)
+	if !ok || rs.Value == nil {
+		return nil, false
+	}
+	fe, ok := rs.Value.(*ir.ForceExpr)
+	if !ok {
+		return nil, false
+	}
+	if _, isIdent := fe.Thunk.(*ir.Ident); isIdent {
+		return nil, false // already a thunk var; no hoisting needed
+	}
+	return fe.Thunk, true
 }
 
 // thunkFindWaitIdx returns the index of the first WaitStmt in body, or -1.

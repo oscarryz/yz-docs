@@ -25,11 +25,13 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
+			_st0 := (&_greetBoc{}).Call(std.NewString("Alice"))
 			_bg0.Go(func() any {
-				return (&_greetBoc{}).Call(std.NewString("Alice")).Force()
+				return _st0.Force()
 			})
+			_st1 := (&_greetBoc{}).Call(std.NewString("Bob"))
 			_bg0.Go(func() any {
-				return (&_greetBoc{}).Call(std.NewString("Bob")).Force()
+				return _st1.Force()
 			})
 			return std.TheUnit
 		}).Force()

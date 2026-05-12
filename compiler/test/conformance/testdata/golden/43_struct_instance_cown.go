@@ -36,11 +36,13 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var c *Counter
 		std.Schedule(&self.Cown, func() std.Unit {
 			c = NewCounter(std.NewInt(0))
+			_st0 := c.Increment()
 			_bg0.Go(func() any {
-				return c.Increment().Force()
+				return _st0.Force()
 			})
+			_st1 := c.Increment()
 			_bg0.Go(func() any {
-				return c.Increment().Force()
+				return _st1.Force()
 			})
 			return std.TheUnit
 		}).Force()
