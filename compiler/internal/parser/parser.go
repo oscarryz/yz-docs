@@ -176,9 +176,10 @@ func (p *Parser) isMultiNameStart() bool {
 	return result
 }
 
-// isBocWithSigStart returns true when the current token is an ident followed by HASH.
+// isBocWithSigStart returns true when the current token is an ident or non-word
+// operator followed by HASH — e.g. `name #(...)` or `++ #(...)`.
 func (p *Parser) isBocWithSigStart() bool {
-	if !p.atAnyIdent() {
+	if !p.atAnyIdent() && !p.at(token.NON_WORD) {
 		return false
 	}
 	save := p.pos
@@ -306,9 +307,17 @@ func (p *Parser) parseTypedDecl() (*ast.TypedDecl, error) {
 }
 
 // parseBocWithSig parses `name #(params) [body | = body]`.
+// name may be a word identifier or a non-word operator symbol (e.g. `++`).
 func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
 	pos := p.curPos()
-	name := p.parseIdent()
+	var name *ast.Ident
+	if p.at(token.NON_WORD) {
+		tok := p.cur()
+		p.advance()
+		name = &ast.Ident{Pos: p.posOf(tok), Name: tok.Literal, TokType: token.NON_WORD}
+	} else {
+		name = p.parseIdent()
+	}
 
 	// consume '#'
 	if !p.at(token.HASH) {
@@ -455,10 +464,16 @@ func (p *Parser) parsePostfix() (ast.Expr, error) {
 		switch p.cur().Type {
 		case token.DOT:
 			p.advance()
-			if !p.atAnyIdent() {
+			var member *ast.Ident
+			if p.at(token.NON_WORD) {
+				tok := p.cur()
+				p.advance()
+				member = &ast.Ident{Pos: p.posOf(tok), Name: tok.Literal, TokType: token.NON_WORD}
+			} else if p.atAnyIdent() {
+				member = p.parseIdent()
+			} else {
 				return nil, p.errorf("expected identifier after '.'")
 			}
-			member := p.parseIdent()
 			base = &ast.MemberExpr{Pos: member.Pos, Object: base, Member: member}
 
 		case token.LPAREN:
@@ -524,6 +539,11 @@ func (p *Parser) parsePrimary() (ast.Expr, error) {
 
 	case token.IDENT, token.TYPE_IDENT, token.GENERIC_IDENT:
 		return p.parseIdent(), nil
+
+	case token.NON_WORD:
+		tok := p.cur()
+		p.advance()
+		return &ast.Ident{Pos: p.posOf(tok), Name: tok.Literal, TokType: token.NON_WORD}, nil
 
 	case token.LBRACE:
 		return p.parseBocLiteral()

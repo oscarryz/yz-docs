@@ -685,6 +685,16 @@ func applyExtraCowns(md *MethodDecl, extraCowns []string) {
 	th.ExtraCowns = extraCowns
 }
 
+// All three Yz forms for declaring a method on a struct/singleton are equivalent.
+// The AST node differs, but the IR produced by these lowerers is identical:
+//
+//   f: { name String; String; "${name}" }          → ShortDecl(BocLiteral) → lowerMethod
+//   f #(name String, String) = { "${name}" }       → BocWithSig(BodyOnly=true)  → lowerBocWithSigAsMethod
+//   f #(name String, String) { "${name}" }         → BocWithSig(BodyOnly=false) → lowerBocWithSigAsMethod
+//
+// If you change how one form lowers (params, receiver, return type, thunk wrapping),
+// apply the same change to the others. There is no `self` or `this` in Yz — the
+// receiver name used in Go output is an implementation detail of the lowerer.
 func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFields map[string]bool, semType sema.Type) *MethodDecl {
 	// Collect params (TypedDecl with no value inside the body).
 	var params []*ParamSpec
@@ -720,7 +730,7 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 	return &MethodDecl{
 		RecvType: recvType,
 		RecvName: "self",
-		Name:     capitalize(name),
+		Name:     goMethodNameStr(name),
 		Params:   params,
 		Results:  []string{thunkResult},
 		Body:     body,
@@ -1168,7 +1178,7 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 	return &MethodDecl{
 		RecvType: recvType,
 		RecvName: "self",
-		Name:     capitalize(bws.Name.Name),
+		Name:     goMethodName(bws.Name),
 		Params:   params,
 		Results:  []string{"*std.Thunk[" + resultType + "]"},
 		Body:     body,
@@ -1610,6 +1620,13 @@ func lowerMethodName(yzName string) string {
 	if goName, ok := yzMethodToGoName[yzName]; ok {
 		return goName
 	}
+	// Non-word names (starting with a symbol) map via NonWordMethodName: ++ → Plusplus.
+	if yzName != "" {
+		first := rune(yzName[0])
+		if first != '_' && !unicode.IsLetter(first) && !unicode.IsDigit(first) {
+			return capitalize(sema.NonWordMethodName(yzName))
+		}
+	}
 	// Convert snake_case to PascalCase: has_prefix → HasPrefix, to_upper → ToUpper.
 	parts := strings.Split(yzName, "_")
 	var b strings.Builder
@@ -1939,6 +1956,11 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 // *Thunk in Go — either a singleton boc method call (counter.value()) or a
 // direct BocWithSig function call (greet("Alice")).
 func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
+	// Non-word infix operator on a struct: `a ++ b` → a.Plusplus(b) → *Thunk[T].
+	if bin, ok := e.(*ast.BinaryExpr); ok {
+		_, isStruct := l.analyzer.ExprType(bin.Left).(*sema.StructType)
+		return isStruct
+	}
 	c, ok := e.(*ast.CallExpr)
 	if !ok {
 		return false
@@ -2746,6 +2768,29 @@ func capitalize(name string) string {
 		return name
 	}
 	return strings.ToUpper(name[:1]) + name[1:]
+}
+
+// goMethodName returns the Go-safe method name for an Yz method name.
+// For word identifiers it capitalizes; for non-word operators it maps
+// through NonWordMethodName (e.g. "++" → "Plusplus").
+func goMethodName(ident *ast.Ident) string {
+	if ident.TokType == token.NON_WORD {
+		return capitalize(sema.NonWordMethodName(ident.Name))
+	}
+	return capitalize(ident.Name)
+}
+
+// goMethodNameStr is like goMethodName but takes a plain string.
+// Detects non-word names by their first character.
+func goMethodNameStr(name string) string {
+	if name == "" {
+		return name
+	}
+	first := []rune(name)[0]
+	if first == '_' || unicode.IsLetter(first) {
+		return capitalize(name)
+	}
+	return capitalize(sema.NonWordMethodName(name))
 }
 
 func (l *lowerer) valueAt(vals []ast.Expr, i int) ast.Expr {
