@@ -1,0 +1,46 @@
+// Bank account transfers — Yz version of the BOC paper example.
+// Cheeseman et al. "When Concurrency Matters: Behaviour-Oriented Concurrency"
+// OOPSLA 2023.  https://marioskogias.github.io/docs/boc.pdf
+
+Account: {
+    balance Int
+}
+
+// This version uses a Transfer type and creates instances to perform the transfer
+// The effect is the same as if this was a simple boc, because the resources
+// have to be acquired atomically to run
+Transfer: {
+    src Account
+    dst Account
+    amount Int
+    run: {
+        src.balance >= amount ? {
+            src.balance = src.balance - amount
+            dst.balance = dst.balance + amount
+        }, {
+            print("insufficient funds: need ${amount}, have ${src.balance}")
+        }
+    }
+}
+
+main: {
+    alice: Account(100)
+    bob:   Account(0)
+    carol: Account(50)
+    dave:  Account(0)
+    erin:  Account(200)
+    frank: Account(0)
+
+    Transfer(alice, bob,   30).run()
+    Transfer(bob,   alice, 10).run()
+    Transfer(bob,   carol, 20).run()
+    Transfer(carol, dave,  40).run()
+    Transfer(erin,  frank, 75).run()
+
+    print("alice: ${alice.balance}")
+    print("bob:   ${bob.balance}")
+    print("carol: ${carol.balance}")
+    print("dave:  ${dave.balance}")
+    print("erin:  ${erin.balance}")
+    print("frank: ${frank.balance}")
+}
