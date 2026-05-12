@@ -1615,28 +1615,13 @@ var yzMethodToGoName = map[string]string{
 }
 
 // lowerMethodName converts a Yz method name to the exported Go method name that
-// the yzrt package uses. Falls back to capitalize for names with no special mapping.
+// the yzrt package uses. Entries in yzMethodToGoName take priority (e.g.
+// to_string → ToStr); everything else goes through goIdentGoName.
 func lowerMethodName(yzName string) string {
 	if goName, ok := yzMethodToGoName[yzName]; ok {
 		return goName
 	}
-	// Non-word names (starting with a symbol) map via NonWordMethodName: ++ → Plusplus.
-	if yzName != "" {
-		first := rune(yzName[0])
-		if first != '_' && !unicode.IsLetter(first) && !unicode.IsDigit(first) {
-			return capitalize(sema.NonWordMethodName(yzName))
-		}
-	}
-	// Convert snake_case to PascalCase: has_prefix → HasPrefix, to_upper → ToUpper.
-	parts := strings.Split(yzName, "_")
-	var b strings.Builder
-	for _, p := range parts {
-		if p == "" {
-			continue
-		}
-		b.WriteString(strings.ToUpper(p[:1]) + p[1:])
-	}
-	return b.String()
+	return goIdentGoName(yzName)
 }
 
 // builtinConstraintSig maps Yz method names to Go interface method signature
@@ -2770,27 +2755,49 @@ func capitalize(name string) string {
 	return strings.ToUpper(name[:1]) + name[1:]
 }
 
-// goMethodName returns the Go-safe method name for an Yz method name.
-// For word identifiers it capitalizes; for non-word operators it maps
-// through NonWordMethodName (e.g. "++" → "Plusplus").
-func goMethodName(ident *ast.Ident) string {
-	if ident.TokType == token.NON_WORD {
-		return capitalize(sema.NonWordMethodName(ident.Name))
+// goIdentGoName converts any Yz identifier to an exported Go identifier.
+// Splits into alternating word/symbol segments and maps each:
+//
+//	balance-=  →  BalanceMinusEq   (word + symbol segments)
+//	++         →  Plusplus         (pure symbol)
+//	hello      →  Hello            (pure word)
+//	>=         →  Gteq             (symbol, via lookup table)
+func goIdentGoName(name string) string {
+	if name == "" {
+		return ""
 	}
-	return capitalize(ident.Name)
+	runes := []rune(name)
+	var result strings.Builder
+	i := 0
+	for i < len(runes) {
+		ch := runes[i]
+		if unicode.IsLetter(ch) || ch == '_' || unicode.IsDigit(ch) {
+			j := i
+			for j < len(runes) && (unicode.IsLetter(runes[j]) || runes[j] == '_' || unicode.IsDigit(runes[j])) {
+				j++
+			}
+			result.WriteString(capitalize(string(runes[i:j])))
+			i = j
+		} else {
+			j := i
+			for j < len(runes) && !unicode.IsLetter(runes[j]) && runes[j] != '_' && !unicode.IsDigit(runes[j]) {
+				j++
+			}
+			result.WriteString(capitalize(sema.NonWordMethodName(string(runes[i:j]))))
+			i = j
+		}
+	}
+	return result.String()
+}
+
+// goMethodName returns the Go-safe exported method name for an Yz identifier.
+func goMethodName(ident *ast.Ident) string {
+	return goIdentGoName(ident.Name)
 }
 
 // goMethodNameStr is like goMethodName but takes a plain string.
-// Detects non-word names by their first character.
 func goMethodNameStr(name string) string {
-	if name == "" {
-		return name
-	}
-	first := []rune(name)[0]
-	if first == '_' || unicode.IsLetter(first) {
-		return capitalize(name)
-	}
-	return capitalize(sema.NonWordMethodName(name))
+	return goIdentGoName(name)
 }
 
 func (l *lowerer) valueAt(vals []ast.Expr, i int) ast.Expr {

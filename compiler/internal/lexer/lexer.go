@@ -188,12 +188,10 @@ func (l *Lexer) skipBlockComment() {
 func (l *Lexer) scanIdentifier(startLine, startCol int) token.Token {
 	start := l.pos
 	for !l.atEnd() {
-		ch := l.peekRune()
-		if isLetter(ch) || isDigit(ch) {
-			l.advance()
-		} else {
+		if isHardDelim(l.peekRune()) {
 			break
 		}
+		l.advance()
 	}
 	lit := string(l.src[start:l.pos])
 	typ := token.LookupIdent(lit)
@@ -351,10 +349,12 @@ func (l *Lexer) scanPunctOrNonWord(startLine, startCol int) token.Token {
 		return token.Token{Type: token.HASH, Literal: "#", Line: startLine, Col: startCol}
 	}
 
-	// '=' can be:
-	//   '='  alone → ASSIGN
-	//   '=>' → FAT_ARROW
-	//   '==', '!=', etc. are non-word (handled by falling through below)
+	// '=' is not a hard delimiter but has special handling:
+	//   =>  → FAT_ARROW
+	//   ==  → NON_WORD (equality method)
+	//   lone = (surrounded by spaces) → ASSIGN
+	// Everything else containing '=' (>=, <=, !=, balance-=, …) is scanned
+	// naturally as a non-word identifier via scanNonWord.
 	if ch == '=' {
 		next := l.peekRuneAt(1)
 		if next == '>' {
@@ -362,18 +362,18 @@ func (l *Lexer) scanPunctOrNonWord(startLine, startCol int) token.Token {
 			l.advance()
 			return token.Token{Type: token.FAT_ARROW, Literal: "=>", Line: startLine, Col: startCol}
 		}
-		if !isNonWordChar(next) || l.pos+1 >= len(l.src) {
-			// Lone '=' → assignment
+		if next == '=' {
 			l.advance()
-			return token.Token{Type: token.ASSIGN, Literal: "=", Line: startLine, Col: startCol}
+			l.advance()
+			return token.Token{Type: token.NON_WORD, Literal: "==", Line: startLine, Col: startCol}
 		}
-		// Otherwise fall through to scan as non-word (e.g. ==)
+		l.advance()
+		return token.Token{Type: token.ASSIGN, Literal: "=", Line: startLine, Col: startCol}
 	}
 
-	// Non-word identifier: sequence of non-word characters
-	if isNonWordChar(ch) {
-		return l.scanNonWord(startLine, startCol)
-	}
+	// Non-word identifier: any sequence that is not a hard delimiter.
+	// Since '=' is not hard, identifiers may contain it: balance-=, >=, !=, …
+	return l.scanNonWord(startLine, startCol)
 
 	// Unknown character
 	l.advance()
@@ -383,21 +383,7 @@ func (l *Lexer) scanPunctOrNonWord(startLine, startCol int) token.Token {
 func (l *Lexer) scanNonWord(startLine, startCol int) token.Token {
 	start := l.pos
 	for !l.atEnd() {
-		ch := l.peekRune()
-		// '=>' at the very start of the sequence is a FAT_ARROW delimiter, not a non-word.
-		// But '=' followed by '>' in the MIDDLE of a sequence (e.g. '!=>', '<=>') is part
-		// of the non-word identifier — consume both characters and continue.
-		if ch == '=' && l.peekRuneAt(1) == '>' {
-			if l.pos == start {
-				// Nothing consumed yet: caller (scanPunctOrNonWord) handles this as FAT_ARROW.
-				break
-			}
-			// Mid-sequence: include '=' and '>' in the non-word.
-			l.advance() // consume '='
-			l.advance() // consume '>'
-			continue
-		}
-		if !isNonWordChar(ch) {
+		if !isSymbolChar(l.peekRune()) {
 			break
 		}
 		l.advance()
@@ -414,6 +400,16 @@ func (l *Lexer) scanNonWord(startLine, startCol int) token.Token {
 // Character classification
 // ---------------------------------------------------------------------------
 
+// isSymbolChar returns true for characters valid in a symbol-start identifier
+// (non-word path). Stops at letters, digits, underscores, and hard delimiters,
+// so -42 → '-' + 42 and -x → '-' + x. '=' is allowed (e.g. >=, balance-=).
+func isSymbolChar(ch rune) bool {
+	if unicode.IsLetter(ch) || ch == '_' || unicode.IsDigit(ch) {
+		return false
+	}
+	return !isHardDelim(ch)
+}
+
 // isLetter returns true for Unicode letters and underscore.
 func isLetter(ch rune) bool {
 	return ch == '_' || unicode.IsLetter(ch)
@@ -424,29 +420,20 @@ func isDigit(ch rune) bool {
 	return ch >= '0' && ch <= '9'
 }
 
-// isNonWordChar returns true if ch is a valid non-word identifier character.
-// Per spec §1.9, a non-word char is anything that is NOT:
-//   - a letter or digit
-//   - a delimiter: { } ( ) [ ] : , ; . #
-//   - whitespace
-//   - a quote: ' " `
-//   - the lone character = (handled by the caller)
-//   - the character > when preceded by = (=> fat arrow, handled by caller)
-func isNonWordChar(ch rune) bool {
-	if unicode.IsLetter(ch) || unicode.IsDigit(ch) {
-		return false
-	}
-	if unicode.IsSpace(ch) {
-		return false
-	}
+// isHardDelim returns true for characters that always split tokens even without
+// surrounding whitespace. An identifier scans until it hits one of these or
+// whitespace. Everything else — including + - * = letters digits — only splits
+// when separated by whitespace. In particular '=' is NOT a hard delimiter:
+// balance-= is one identifier, and foo = bar needs spaces for assignment.
+func isHardDelim(ch rune) bool {
 	switch ch {
 	case '{', '}', '(', ')', '[', ']',
 		':', ',', ';', '.', '#',
 		'\'', '"', '`',
 		0: // EOF sentinel
-		return false
+		return true
 	}
-	return true
+	return unicode.IsSpace(ch)
 }
 
 // ---------------------------------------------------------------------------
