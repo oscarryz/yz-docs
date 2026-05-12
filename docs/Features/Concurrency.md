@@ -107,6 +107,18 @@ load #(id String, User)   // returns User — always
 The synchronization is transparent. You write sequential-looking code and the runtime handles
 the interleaving.
 
+This extends to boc calls that share resources with the caller. The return value is still
+just the declared type — the runtime manages the ordering:
+
+```js
+balance #(acc Account) { acc.balance }
+
+report #(acc Account) {
+    b: balance(acc)      // b is Int — same resource, no special handling needed
+    print("balance: ${b}")
+}
+```
+
 ---
 
 ## Structured Concurrency
