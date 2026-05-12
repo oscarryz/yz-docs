@@ -1,0 +1,11 @@
+// Non-word method name: ++ defined on a struct, called infix as a ++ b.
+Greeter: {
+    name String
+    ++ #(other String, String) { "${name} and ${other}" }
+}
+
+main: {
+    a: Greeter("Ann")
+    c: a ++ "Taylor"
+    print(c)
+}
