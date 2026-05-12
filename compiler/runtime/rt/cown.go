@@ -103,6 +103,21 @@ func ScheduleMulti[T any](cowns []*Cown, fn func() T) *Thunk[T] {
 	})
 }
 
+// ScheduleFlatten runs fn inside a cown-protected section (via ScheduleMulti),
+// expects fn to return a *Thunk[T] representing the post-release continuation,
+// then flattens *Thunk[*Thunk[T]] → *Thunk[T].
+//
+// Use when a method body needs to force a sub-boc that competes for the same
+// cowns: register the sub-boc inside fn (while holding cowns), return a
+// NewThunk continuation that forces the sub-boc after cowns are released, then
+// reacquires cowns for the rest of the body via a nested ScheduleMulti.
+func ScheduleFlatten[T any](cowns []*Cown, fn func() *Thunk[T]) *Thunk[T] {
+	outer := ScheduleMulti(cowns, fn)
+	return NewThunk(func() T {
+		return outer.Force().Force()
+	})
+}
+
 // releaseCown is called after a behaviour's fn completes.
 // It either marks c idle or passes the token to the next waiting behaviour.
 func releaseCown(c *Cown, req *request) {
