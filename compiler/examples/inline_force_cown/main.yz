@@ -1,0 +1,27 @@
+// Cown suspension — inline force of a sub-boc that needs the same cown.
+//
+// loader returns the account it receives. checker calls loader(acc) inline
+// and then prints the balance. Because checker holds acc.Cown and loader
+// also needs acc.Cown, this would deadlock without ScheduleFlatten.
+//
+// Three concurrent calls are launched from main:
+//   check(a) — first call on account a
+//   check(a) — second call on account a  (serialized after the first)
+//   check(b) — call on account b         (independent, may run in parallel)
+
+Account: { balance Int }
+
+loader #(acc Account) { acc }
+
+checker #(acc Account) {
+    loaded: loader(acc)
+    print(loaded.balance)
+}
+
+main: {
+    a: Account(100)
+    b: Account(200)
+    checker(a)
+    checker(a)
+    checker(b)
+}

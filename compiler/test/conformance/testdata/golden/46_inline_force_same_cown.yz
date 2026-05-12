@@ -1,0 +1,19 @@
+// Inline force of a sub-boc that needs the same cown.
+// loader #(acc Account) takes acc as a cown-bearing param.
+// user #(acc Account) calls loader(acc) and forces the result inline.
+// Without ScheduleFlatten this deadlocks; with it the cown is released,
+// loader runs, then user reacquires for the continuation.
+
+Account: { balance Int }
+
+loader #(acc Account) { acc }
+
+user #(acc Account) {
+    loaded: loader(acc)
+    print(loaded.balance)
+}
+
+main: {
+    a: Account(42)
+    user(a)
+}

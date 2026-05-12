@@ -810,6 +810,10 @@ func (l *lowerer) lowerBodyShortDecl(d *ast.ShortDecl, isLast bool, resultType s
 		name := d.Names[0]
 		val := d.Values[0]
 		expr := l.lowerExpr(val)
+		if l.isBocMethodCall(val) {
+			l.thunkVars[name.Name] = true
+			return &DeclStmt{Name: name.Name, IsThunk: true, Init: expr}
+		}
 		typ := l.goTypeForVar(l.analyzer.ExprType(val))
 		if isLast {
 			// Last expr in body: declare AND return if it's an expression.
