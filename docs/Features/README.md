@@ -12,7 +12,6 @@
 - [Structural typing.md](Structural%20typing.md) — Structural (duck-typing) compatibility between bocs
 - [Generics.md](docs/Features/Replaced%20features/Generics.md) — Generic type parameters
 - [Type variants.md](Type%20variants.md) — Sum types and variant constructors
-- [mix.md](mix.md) — Code composition: merge fields and methods from another boc
 - [Concurrency.md](Concurrency.md) — Async by default, lazy evaluation, and structured concurrency
 - [Conditional Bocs.md](Conditional%20Bocs.md) — Boolean conditionals, `match`, and pattern matching
 - [Array.md](Array.md) — Arrays: literals, indexed access, filter/each/map, and append
@@ -28,5 +27,3 @@
 - [Code organization.md](Code%20organization.md) — Files, packages, and modules
 - [Info strings.md](Info%20strings.md) — Documentation strings attached to declarations
 - [Comments.md](Comments.md) — Code comments
-- [Single Writer.md](Single%20Writer.md) — Concurrency safety: each object has one logical writer
-- [Gotchas.md](Gotchas.md) — Common mistakes and the patterns that fix them

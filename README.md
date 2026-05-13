@@ -3,29 +3,6 @@
 
 > **Note**: [Yz compiler](./compiler) is work in progress. All examples and features described here represent the intended design.
 
-## Table of Contents
-
-1. [Quick Example](#quick-example)
-2. [Core Concepts](#core-concepts)
-3. [Basic Syntax](#basic-syntax)
-4. [Blocks of Code (Bocs)](#blocks-of-code-bocs)
-5. [Types and Variables](#types-and-variables)
-6. [Creating New Types](#creating-new-types)
-7. [Generics](#generics)
-8. [Type Variants](#type-variants)
-9. [Structural Typing](#structural-typing)
-10. [Arrays and Dictionaries](#arrays-and-dictionaries)
-11. [Concurrency](#concurrency)
-12. [Error Handling](#error-handling)
-13. [Control Flow](#control-flow)
-14. [Trailing Block Syntax](#trailing-block-syntax)
-15. [Non-Word Method Invocation](#non-word-method-invocation)
-16. [Info Strings](#info-strings)
-17. [Code Organization](#code-organization)
-18. [Examples](#examples)
-19. [Reserved Words and Symbols](#reserved-words-and-symbols)
-20. [Design Philosophy](#design-philosophy)
-21. [Repository structure](#repository-structure)
 
 ## Quick Example
 
@@ -35,62 +12,38 @@ factorial: { n Int
   n > 0 ? { n * factorial(n - 1) },
           { 1 }
 }
-print("`factorial(5)`")  // prints 120
+print("${factorial(5)}")  // prints 120
 ```
 
-Yz is a programming language that explores simplifying concurrency, data, objects, methods, functions, closures, and classes under a single artifact: **blocks of code**. The language aims to provide a unified abstraction that can serve multiple roles traditionally handled by separate language constructs.
+Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, concurrent behaviours, and protected resources are all blocks. Rather than separate constructs for each role, you compose everything from one idea.
 
-## Core Concepts
-
-### Blocks of Code (Bocs)
-
-The fundamental unit in Yz is a **block of code** (boc). Everything is a block:
-- Variables are blocks
-- Functions are blocks  
-- Objects are blocks
-- Classes are blocks
-- Modules are blocks
-- Actors are blocks
-
-A block is a series of expressions between `{` and `}`:
+A block is a series of expressions between `{` and `}`, and the same block can act as data, behaviour, or both:
 
 ```javascript
-{
-  message: "Hello"
-  recipient: "World"
-  print("`message`, `recipient`!")
-}
-```
-
-### Unified Abstraction
-
-Blocks serve multiple roles:
-
-```javascript
-// As data (object-like)
+// As data
 person: {
   name: "Alice"
   age: 30
 }
 
-// As behavior (function-like)  
+// As behaviour
 greet: {
   name String
-  print("Hello, `name`!")
+  print("Hello, ${name}!")
 }
 
-// As both (object with methods)
+// As both
 counter: {
   count: 0
-  increment: {
-    count = count + 1
-  }
+  increment: { count = count + 1 }
 }
 ```
 
 ## Basic Syntax
 
 ### Comments
+
+*→ [Details](docs/Features/Comments.md)*
 
 ```javascript
 // Single line comment
@@ -101,6 +54,8 @@ counter: {
 ```
 
 ### Variables
+
+*→ [Details](docs/Features/Variables.md)*
 
 ```javascript
 // Long form declaration
@@ -113,16 +68,32 @@ name: "World"
 age Int
 ```
 
+### Strings
+
+*→ [Details](docs/Features/Strings.md)*
+
+Both `"double"` and `'single'` quotes create strings; they are interchangeable:
+
+```javascript
+a: "Hello"
+b: 'Hello'  // identical
+```
+
 ### String Interpolation
 
-Use backticks for string interpolation:
+*→ [Details](docs/Features/String interpolation.md)*
+
+Use `${...}` inside a string literal for interpolation:
 
 ```javascript
 name: "Alice"
-greeting: "Hello, `name`!"  // "Hello, Alice!"
+greeting: "Hello, ${name}!"   // "Hello, Alice!"
+greeting: 'Hello, ${name}!'   // same
 ```
 
 ## Blocks of Code (Bocs)
+
+*→ [Details](docs/Features/Bocs.md)*
 
 ### Basic Block Structure
 
@@ -166,7 +137,7 @@ Block variables can be accessed using `.` notation and modified before execution
 greet: { 
   message String = "Hello"
   to_whom: "World"
-  print("`message`, `to_whom`")
+  print("${message}, ${to_whom}")
 }
 
 // Change variables before execution
@@ -177,62 +148,106 @@ greet() // prints "Hello, Everybody!"
 greet.message // returns "Hello"
 ```
 
-### Block Parameters
+### Block Parameters and Return Values
 
-Variables in blocks serve as both parameters and return values:
-
-```javascript
-multiply: {
-  x Int
-  y Int
-  x * y
-}
-
-result: multiply(5, 3)  // result = 15
-```
-
-### Named Parameters
+In Yz there is no separate concept of "parameter" or "return value" — they are just variables. A variable declared without a value is a required input; one declared with a value is optional (defaults apply). The last expression(s) in the body are the output.
 
 ```javascript
-divide: {
-  numerator Int
-  denominator Int
-  numerator / denominator
+greet: {
+  message String       // required — caller must provide
+  to_whom: "World"     // optional — defaults to "World"
+  "${message}, ${to_whom}!"  // return value
 }
 
-result: divide(numerator: 10, denominator: 2)  // result = 5
+greet("Hello")            // "Hello, World!"
+greet("Hi", "Alice")      // "Hi, Alice!"
+greet(to_whom: "Bob", message: "Hey")  // named args, any order
 ```
 
-### Default Values
-
-Parameters can have default values:
+Because parameters are fields, they are accessible before and after the call:
 
 ```javascript
-f: {
-  a Int
-  b: 0  // b has default value of 0
-}
-
-f(1)     // b defaults to 0
-f(1, 2)  // assigning 2 to b
+greet.to_whom = "Everyone"
+greet("Hello")    // "Hello, Everyone!"
+greet.message     // "Hello" — readable after call
 ```
 
-### Multiple Return Values
-
-The last n expressions can be used as return values:
+The last N expressions are the return values — no `return` keyword needed:
 
 ```javascript
 swap: {
   a String
   b String
-  b  // Second to last
-  a  // Last
+  b    // second-to-last — first return value
+  a    // last — second return value
 }
 
-x: "hello"
-y: "world"
-x, y = swap(x, y)  // x = "world", y = "hello"
+x, y = swap("hello", "world")  // x = "world", y = "hello"
 ```
+
+## Concurrency
+
+*→ [Details](docs/Features/Concurrency.md)*
+
+### Async by Default
+
+Every block call is asynchronous. The value is resolved by the time it is used:
+
+```javascript
+// These run concurrently
+fetch_user("alice")
+fetch_orders("alice")
+
+user: fetch_user("alice")
+print(user) // blocks here only if fetch_user hasn't completed yet
+```
+
+### Structured Concurrency
+
+A boc does not complete until all bocs it spawned have completed:
+
+```javascript
+process_data: {
+  // Both operations start concurrently
+  img: fetch_image("123")
+  usr: fetch_user("alice")
+
+  // process_data will not complete until create_profile completes
+  create_profile(img, usr)
+}
+```
+
+### Exclusive Access (BOC Model)
+
+Every value in Yz is a protected concurrent resource — a **cown** (concurrent owner). Only one running boc can hold a cown at a time; all others queue behind it. Cowns are acquired atomically: a boc that needs multiple resources gets all of them at once or waits until it can.
+
+```javascript
+Account: {
+  balance Int
+  balance+= #(amount Int) { balance = balance + amount }
+  balance-= #(amount Int) { balance = balance - amount }
+}
+
+// transfer acquires src and dst atomically before running
+transfer #(src Account, dst Account, amount Int) {
+  src.balance >= amount ? {
+    src.balance-=(amount)
+    dst.balance+=(amount)
+  }, {
+    print("insufficient funds")
+  }
+}
+
+main: {
+  alice: Account(100)
+  bob:   Account(0)
+
+  transfer(alice, bob, 30)  // acquires alice + bob
+  transfer(bob, alice, 10)  // waits — bob is taken by the first transfer
+}
+```
+
+Two bocs that need **different** resources run in parallel automatically. Two bocs that share a resource serialize in the order they were spawned. No locks, no `synchronized`, no `async/await`.
 
 ## Types and Variables
 
@@ -259,47 +274,60 @@ words: ["hello", "world"]
 ages [String:Int] = ["Alice": 30, "Bob": 25]
 
 // Bocs
-greet #(msg String,String) {
-    "Hello `msg`"
+greet: { msg String
+    "Hello ${msg}"
 }
-
-hi: {
-   42
-}
+hi: { 42 }
 ```
 
 ### Block Signatures
 
-Block types are defined by their signature:
+*→ [Details](docs/Features/Block type.md)*
+
+There are four ways to declare a block, from most implicit to most explicit.
+
+**1. Identifier + inferred boc** — signature is inferred from the body:
 
 ```javascript
-// Block that takes two Ints and returns an Int
+add: {
+  x Int
+  y Int
+  x + y       // return type Int inferred from last expression
+}
+get_answer: { 42 }
+do_something: { print("Done") }
+```
+
+**2. Identifier + explicit boc type** — declares the signature without a body (assigned later):
+
+```javascript
+add #(x Int, y Int, Int)   // takes two Ints, returns Int
+get_answer #(Int)           // no inputs, returns Int
+do_something #()            // no inputs, no return
+```
+
+**3. Identifier + explicit boc type + body (assigned separately):**
+
+```javascript
+add #(x Int, y Int, Int)
+add = {
+  x Int
+  y Int
+  x + y
+}
+```
+
+**4. Typed block — identifier + explicit signature + inline body:**
+
+```javascript
 add #(x Int, y Int, Int) {
   x + y
 }
-
-// Block with just return type
 get_answer #(Int) { 42 }
-
-// Block with no parameters or return
-do_something #() {
-  print("Done")
-}
+do_something #() { print("Done") }
 ```
 
-The signature is inferred when using the short declaration + assignment operator `:`
-
-```js
-add : {
-   x Int
-   y Int
-   x + y
-}
-get_answer : { 42 }
-do_something: {
-   print("Done")
-}
-```
+This last form is the most common for named blocks that need an explicit signature.
 
 ### Block Signature Declaration and Assignment
 
@@ -331,6 +359,8 @@ greet("uno", "dos", "tres")
 
 ## Creating New Types
 
+*→ [Details](docs/Features/Define new types.md)*
+
 ### Type Declaration
 
 Uppercase names define new types:
@@ -340,12 +370,14 @@ Person : {
   name String
   age Int
   greet: {
-    print("Hello, I'm `name`")
+    print("Hello, I'm ${name}")
   }
 }
 ```
 
 ### Creating Instances
+
+*→ [Details](docs/Features/Create instances.md)*
 
 ```javascript
 alice: Person(name: "Alice", age: 30)
@@ -381,43 +413,6 @@ create_block: {
 x: create_block() 
 x.name = "X"
 x() // just returns `X`
-```
-
-### Type vs Block Factory
-
-The difference between declaring a new type and returning a block:
-
-```javascript
-// Type declaration
-Person: {
-  name String
-}
-
-// Block factory
-create_named: {
-  {
-    name String
-  }
-}
-
-// Both create a copy of a block with a String
-// x is a block that has a variable name of type String
-x #(name String)
-// can be assigned the value of `create_named()`
-x = create_named() // Yes
-// or the block created with the type Person
-x = Person() // works too
-
-// But the latter is more natural to create custom types
-// e.g., using a type `Person`
-greet #(p Person) = {
-  print("Hello `p.name`") 
-}
-// vs 
-// using the block signature `(name String)`
-greet #(p #(name String)) = {
-  print("Hello `p.name`")
-}
 ```
 
 ### Type Signatures for Custom Types
@@ -458,24 +453,38 @@ text: identity("hi")    // text: String
 
 ### Constrained Generics
 
-The constraints are inferred from the usage:
+Constraints are inferred from usage by default:
+
 ```javascript
 printable: {
-  value T  // T must have a print method
+  value T  // T must have a print method — inferred from usage below
   value.print()
 }
 
 Person: {
    name String
-   print : {
-     print("My name is `name`")
+   print: {
+     print("My name is ${name}")
    }
 }
 printable(Person("Yz"))
-printable("oh oh") // "oh oh" doesn't have a `print` block
+printable("oh oh") // error: String doesn't have a `print` block
 ```
 
+Constraints can also be declared explicitly as an optional annotation:
+
+```javascript
+serialize: {
+  value T Serializable  // T must satisfy the Serializable interface
+  value.to_json()
+}
+```
+
+An explicit constraint is checked at the call site; an inferred constraint is checked at usage inside the body. Both forms are valid.
+
 ## Type Variants
+
+*→ [Details](docs/Features/Type variants.md)*
 
 Type variants provide sum type functionality:
 
@@ -491,7 +500,7 @@ nothing: Option.None()
 
 // Pattern matching with match
 result: match maybe_number {
-  Some => "Got value: `maybe_number.value`"
+  Some => "Got value: ${maybe_number.value}"
 }, {
   None => "No value"
 }
@@ -515,9 +524,9 @@ NetworkResponse: {
 handle_response: {
   response NetworkResponse
   match response {
-    Success => print("Data: `response.data`")
+    Success => print("Data: ${response.data}")
   }, {
-    Failure => print("Error: `response.error`")  
+    Failure => print("Error: ${response.error}")  
   }, {
     Timeout => print("Request timed out")
   }
@@ -525,6 +534,8 @@ handle_response: {
 ```
 
 ## Structural Typing
+
+*→ [Details](docs/Features/Structural typing.md)*
 
 Yz uses structural typing - types match based on structure, not names:
 
@@ -555,6 +566,8 @@ process_coordinates(v)  // Works - Vector has x, y Int
 
 ### Arrays
 
+*→ [Details](docs/Features/Array.md)*
+
 ```javascript
 // Type declaration
 a [Int]
@@ -584,6 +597,8 @@ a[0] = "Hola"
 
 
 ### Dictionaries (Associative Arrays)
+
+*→ [Details](docs/Features/Associative arrays.md)*
 
 ```javascript
 // Type
@@ -616,57 +631,9 @@ d[1] // Some(2)
 d[5] // None()
 ```
 
-## Concurrency
-
-### Async by Default
-
-Every block call is asynchronous, the value will be resolved by the time it is used:
-
-```javascript
-// These run concurrently
-fetch_user("alice")
-fetch_orders("alice")
-
-user: fetch_user("alice")  
-print(user) // might be resolved by then, it will block if it hasn't completed.
-```
-
-### Structured Concurrency
-
-Blocks synchronize at the end of their enclosing scope:
-
-```javascript
-process_data: {
-  // Both operations start concurrently
-  img: fetch_image("123")
-  usr: fetch_user("alice")
-  
-  // The `process_data` will not complete
-  // until `create_profile` completes. 
-  // It will block execution until it does. 
-  create_profile(img, usr)
-}
-```
-
-### Single Writer Principle
-
-Each variable has only one writer (its declaring block):
-
-```javascript
-counter: {
-  count: 0  // counter owns count
-}
-
-increment: {
-  counter.count = counter.count + 1  // Modified through counter
-}
-
-decrement: {
-  counter.count = counter.count - 1  // Also modified through counter  
-}
-```
-
 ## Error Handling
+
+*→ [Details](docs/Features/Error handling.md)*
 
 Yz uses `Result` and `Option` types for error handling:
 
@@ -683,7 +650,7 @@ divide: {
 
 result: divide(10, 2).or_else({
   error Error
-  print("Error: `error`")
+  print("Error: ${error}")
   0  // Default value
 })
 ```
@@ -701,159 +668,64 @@ process_file: {
       validate_data(data)  
     }
     .or_else { error Error
-      print("Processing failed: `error`")
+      print("Processing failed: ${error}")
     }
 }
 ```
 
 ## Control Flow
 
-### Conditional Expressions
+*→ [Details](docs/Features/Conditional Bocs.md)*
+
+*→ [Details](docs/Features/return, break, continue.md)*
 
 ```javascript
+// ? is a method on Bool — true-branch, false-branch
 max: {
   a Int
   b Int
-  a > b ? { a },{ b }
+  a > b ? { a }, { b }
 }
 
-status: user.age >= 18 ? { "adult" },{ "minor" }
-```
-
-### Bool Type Control Flow
-
-The `Bool` type has methods that allow you to decide between two options:
-
-```javascript
-// Returns a Bool instance 
-f #(Bool) {
-   1 < 2
-}
-r: f() 
-// the method `?` decides between two bocs
-r  ? {
-   print("it was true")
-}, {
-   print("it was false")
-}
-```
-
-### Option Type Control Flow
-
-```javascript
-o #(Option(String)) {
-    Some("hi")
-}
-f #(Option(String)) {
-   None()
-}
-
-// the `or` method returns the value or an alternative
-print(o.or("bye"))
-```
-
-### Match expressions
-
-```javascript
-describe_number: {
+// match — first branch whose condition is true runs
+describe: {
   n Int
-  match  { 
-	  n < 0  => "negative"
-  },{ 
-	  n == 0 => "zero"
-  },{ 
-	  n > 0  => "positive" 
+  match {
+    n < 0  => "negative"
+  }, {
+    n == 0 => "zero"
+  }, {
+    n > 0  => "positive"
   }
 }
-```
 
-### Match with Type Variants
-
-When passing a parameter to `match` the type variant will be matched:
-
-```javascript
+// match on a type variant
 x Option(String) = ...
-match x 
-  { Option.Some() => print("We have `x.value`")},
-  { Option.None() => print("We have nothing")}
-```
+match x {
+  Option.Some => print("Got ${x.value}")
+}, {
+  Option.None => print("Nothing")
+}
 
-### Generic Match Syntax
+// iteration
+1.to(10).each { i Int; print("${i}") }
 
-```javascript
-match 
-{ cond_1() => action_1() },
-{ cond_2() => action_2() },
-{ default_action() }
-```
-
-### Loops
-
-```javascript
-// Range iteration
-1.to(10).each({ i Int
-  print("`i`")
-})
-
-// Array iteration
 names: ["Alice", "Bob", "Charlie"]
-names.each({ name String
-  print("Hello, `name`!")
-})
+names.each { name String; print("Hello, ${name}!") }
 
-// "While" loops
-factorial: {
-  n Int
-  result: 1
-  current: n
-  while({ current > 1 }, {
-    result = result * current
-    current = current - 1
-  })
-  result
-}
-```
+while({ current > 0 }, { current = current - 1 })
 
-### Control Flow Keywords
-
-```javascript
-// Early return
+// return, break, continue work as in most languages
 check: {
-   age Int
-   age < 21 ? {
-       message: 'You have to be over 21 to access this site'
-	   return
-   }
-   message: 'Welcome to the site'
-}
-
-// Break from loops
-max_from_list: {
-  list [Int]
-  m Int
-  list.for_each {
-    item Int
-    item < 0 ? {
-      break // will exit the loop 
-    }
-    m = max(max, item)
-  }
-  m
-}
-
-// Continue in loops
-n Int
-match {
-   n % 3 == 0 => print("Fizz")
-   continue // evaluated the following condition
-}, {
-	n % 5 == 0 => print("Buzz")
-}, {
-	print("`n`")
+  age Int
+  age < 21 ? { return }
+  print("Welcome")
 }
 ```
 
 ## Trailing Block Syntax
+
+*→ [Details](docs/Features/Trailing block syntax.md)*
 
 When the only argument to a method is a block literal, the parentheses can be omitted. Write the block directly after the method name on the same line:
 
@@ -872,6 +744,8 @@ The `{` must appear on the same line as the method name (a newline causes ASI to
 
 ## Non-Word Method Invocation
 
+*→ [Details](docs/Features/Non-Word invocation.md)*
+
 When boc name is non-word, we can invoke it without `.` and `parenthesis` as long as it has at least one parameter.
 
 ```js
@@ -888,117 +762,29 @@ e << 1 // same as e.<<(1)
 
 ## Info Strings
 
-Information Strings. You can add a string before any element and will be available by calling `std.info(element)` 
+*→ [Details](docs/Features/Info strings.md)*
+
+An infostring is a boc body delimited by backticks placed immediately before a definition. Its content is valid Yz — compiled but never executed — and can be used at compile time to augment or extend the language:
 
 ```javascript
-`A message`
-message: 'Hello'
-info(message).text // A message
-```
+`
+compile_time: [JSON, Embed]
+`
+Movie : {
+    title  String
 
-You can add blocks there too, these block don't need to be valid yz code, but different tools might require them to be.
+    `json: "release_date"`
+    year   Int
 
-```typescript
-"
-Prints the classics "Hello, World!" program to the screen
+    `json: "ignore"`
+    internal_id String
 
-variables: {
-  what String = 'Hello' // what message to display
-  who  String = 'World' // what to say
-}
-
-tests: {
-  assert say_hello()== "Hello, World!" // Uses defaults      
-  assert say_hello 'Hola' == "Hola, World!" // Overrides first variable 'what'
-  assert say_hello who: 'there' == "Hello, there!" // Explicitly overrides variable 'who'
-  assert say_hello who: 'home' what: 'Welcome'  == "Welcome, home!" // "Named parameters"
-}
-version: 1.0
-author: 'Yz developers'
-"
-say_hello: {
-   // Any element can have an info string
-  'What message to display'
-  what: 'Hello' 
-
-   // Can have validation info
-   // Or serialization info
-  "
-   validation: "\w*"
-   json_field: 'xyz'
-  "
-  who:  'World' 
-  // Could also be used as running examples
-  // that will be validated with yzc test  
-  "
-  Example: print 'Hello' 'world'
-  Output: Hello, world!
-  "
-  print('`what`, `who`!')
+    `embed: "icon.png"`
+    image Image
 }
 ```
 
-To retrieve it use the `std.info` block and pass the element
-
-```javascript
-info: std.info(say_hello)
-print(info.text)  // Prints the classics "Hello, World!"... etc.etc
-info.tests()     // Runs the tests
-info.version     // 1.0
-info.examples()  // run the examples 
-```
-
-## Code Organization
-
-### Simple Projects
-
-For simple projects, the `yz` build tool will compile each individual file and will create an executable if they are named `main.yz`, have a `main` method, or have free floating code. You can also pass the filename to process a single file. If no entry point is found, they are considered libraries and no executable will be created.
-
-### Larger Projects
-
-If a `yz` file contains a `configuration` structure, then it will be used to create the executable. You can also create this configuration structure by invoking the build tool `init` _`project_name`_, which can create additional folders: 
-
-```
-yz init project_name
-project_name/
-   project_name.yz
-   doc/
-   src/
-   lib/
-   test/
-   vendor/
-```
-
-### Configuration File
-
-A configuration file is a `.yz` file that contains information like version, entry point and dependencies:
-
-```javascript
-version: '0.1.0'
-entry: 'main.yz'
-src_path: ['./src/' './vendor/' './lib/']
-vendor: ['./vendor']
-dependencies: []
-```
-
-### Dependencies
-
-To add a dependency use `yz install printer`, the dependency will be added to the dependency section
-
-```js
-dependencies: [
-     printer: {version: "1.0.0"   url: 'https://example.org/print.git'} 
-]
-```
-
-### Filesystem Block Name Resolution
-
-The compiler resolves block names to filesystem files using the `src_path` variable using the following strategy:
-
-1. File name including subdirectories will create a block, even if it is empty, excluding directories defined in the project's `src_path` variable
-   `./src/house/front/Host.yz` will create the `house.front.Host` block
-
-2. Files and subdirectories can be used to create blocks and nested blocks for better code organization.
+`compile_time` lists the extensions to run on the annotated boc. Each extension reads only the variable it owns (`json`, `embed`, …). Referenced names are resolved at compile time — a typo is a compile error.
 
 ## Examples
 
@@ -1023,6 +809,37 @@ counter: Counter()
 counter.increment()
 counter.increment()
 print(counter.get())  // prints 2
+```
+
+### Bank Account Transfers
+
+Five concurrent transfers. Some share accounts (serialized), others don't (parallel). No locks written anywhere.
+
+```javascript
+Account: {
+  balance Int
+  balance+= #(amount Int) { balance = balance + amount }
+  balance-= #(amount Int) { balance = balance - amount }
+}
+
+transfer #(src Account, dst Account, amount Int) {
+  src.balance >= amount ? {
+    src.balance-=(amount)
+    dst.balance+=(amount)
+  }, {
+    print("insufficient funds: need ${amount}, have ${src.balance}")
+  }
+}
+
+main: {
+  alice: Account(100)
+  bob:   Account(0)
+  carol: Account(50)
+
+  transfer(alice, bob,   30)  // alice + bob
+  transfer(bob,   alice, 10)  // serialized after above
+  transfer(bob,   carol, 20)  // serialized after above
+}
 ```
 
 ### Binary Tree
@@ -1054,31 +871,36 @@ tree = tree.insert(5).insert(3).insert(7)
 ### HTTP Server Concept
 
 ```javascript
+`
+compile_time: [http.HttpServer]
+port: 8080
+`
 Server: {
-  port Int
-  routes [String:#(Request, Response)]
-  
-  listen: {
-    // Server implementation would go here
-    print("Server listening on port `port`")
+
+  `route: "/hello"`
+  hello #(r Request, w Response) {
+    Response(body: "Hello, World!")
   }
-  
-  route: {
-    path String
-    handler #(Request, Response)
-    routes[path] = handler
+
+  `route: "/users/${id}"`
+  get_user #(r Request, w Response) {
+    id: r.params.id
+    Response(body: "User: ${id}")
+  }
+
+  `route: "/users"; method: http.Post`
+  create_user #(r Request, w Response) {
+    Response(body: "Created")
   }
 }
 
-server: Server(8080)
-server.route("/hello", {
-  request Request
-  Response(body: "Hello, World!")
-})
+server: Server()
 server.listen()
 ```
 
 ## Reserved Words and Symbols
+
+*→ [Details](docs/Features/Reserved words and characters and symbols.md)*
 
 The following cannot be identifiers or part of an identifier:
 
@@ -1087,7 +909,6 @@ break
 continue
 return
 match
-mix
 =>
 :
 `
@@ -1101,18 +922,9 @@ mix
 
 `=` might be part of an identifier, but there are also `=` and `==` operators.
 
-## Design Philosophy
-
-Yz operates on the principle that most programming constructs can be unified under the concept of blocks of code. A block can:
-- Store data (like objects/structs)
-- Execute code (like functions/methods)
-- Run concurrently (like actors)
-- Define types (like classes)
-
-This documentation provides a comprehensive overview of the Yz programming language design. The language aims to simplify concurrent programming while maintaining type safety through its innovative "blocks of code" abstraction that unifies many traditionally separate language constructs.
-
 ## Repository Structure
 
 - **`compiler/`** — Go implementation of the Yz compiler. Includes the lexer, parser, AST, lowerer, and code generator. Emits Go source and invokes `go build` to produce binaries.
 - **`docs/`** — Additional documentation, design notes, and implementation decisions.
+  - **[`docs/Features/`](docs/Features/README.md)** — Full feature reference, one page per language feature.
 - **`spec/`** — Language specification split across numbered sections (01–11), describing syntax, semantics, and type system.
