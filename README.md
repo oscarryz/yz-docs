@@ -9,13 +9,13 @@
 ```javascript
 // Factorial in Yz
 factorial: { n Int
-  n > 0 ? { n * factorial(n - 1) },
+  n > 0 ? { n * factorial(n - 1) },  // ? is conditional: true-branch, false-branch
           { 1 }
 }
 print("${factorial(5)}")  // prints 120
 ```
 
-Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, concurrent behaviours, and protected resources are all blocks. Rather than separate constructs for each role, you compose everything from one idea.
+Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, [concurrent behaviours](#async-by-default) and [protected resources](#exclusive-access-boc-model) are all blocks. Rather than separate constructs for each role, you compose everything from one idea.
 
 A block is a series of expressions between `{` and `}`, and the same block can act as data, behaviour, or both:
 
@@ -81,7 +81,7 @@ b: 'Hello'  // identical
 
 ### String Interpolation
 
-*→ [Details](docs/Features/String interpolation.md)*
+*→ [Details](docs/Features/String%20interpolation.md)*
 
 Use `${...}` inside a string literal for interpolation:
 
@@ -282,7 +282,7 @@ hi: { 42 }
 
 ### Block Signatures
 
-*→ [Details](docs/Features/Block type.md)*
+*→ [Details](docs/Features/Block%20type.md)*
 
 There are four ways to declare a block, from most implicit to most explicit.
 
@@ -359,7 +359,7 @@ greet("uno", "dos", "tres")
 
 ## Creating New Types
 
-*→ [Details](docs/Features/Define new types.md)*
+*→ [Details](docs/Features/Define%20new%20types.md)*
 
 ### Type Declaration
 
@@ -377,7 +377,7 @@ Person : {
 
 ### Creating Instances
 
-*→ [Details](docs/Features/Create instances.md)*
+*→ [Details](docs/Features/Create%20instances.md)*
 
 ```javascript
 alice: Person(name: "Alice", age: 30)
@@ -484,7 +484,7 @@ An explicit constraint is checked at the call site; an inferred constraint is ch
 
 ## Type Variants
 
-*→ [Details](docs/Features/Type variants.md)*
+*→ [Details](docs/Features/Type%20variants.md)*
 
 Type variants provide sum type functionality:
 
@@ -535,7 +535,7 @@ handle_response: {
 
 ## Structural Typing
 
-*→ [Details](docs/Features/Structural typing.md)*
+*→ [Details](docs/Features/Structural%20typing.md)*
 
 Yz uses structural typing - types match based on structure, not names:
 
@@ -598,7 +598,7 @@ a[0] = "Hola"
 
 ### Dictionaries (Associative Arrays)
 
-*→ [Details](docs/Features/Associative arrays.md)*
+*→ [Details](docs/Features/Associative%20arrays.md)*
 
 ```javascript
 // Type
@@ -633,7 +633,7 @@ d[5] // None()
 
 ## Error Handling
 
-*→ [Details](docs/Features/Error handling.md)*
+*→ [Details](docs/Features/Error%20handling.md)*
 
 Yz uses `Result` and `Option` types for error handling:
 
@@ -675,9 +675,9 @@ process_file: {
 
 ## Control Flow
 
-*→ [Details](docs/Features/Conditional Bocs.md)*
+*→ [Details](docs/Features/Conditional%20Bocs.md)*
 
-*→ [Details](docs/Features/return, break, continue.md)*
+*→ [Details](docs/Features/return%2C%20break%2C%20continue.md)*
 
 ```javascript
 // ? is a method on Bool — true-branch, false-branch
@@ -725,7 +725,7 @@ check: {
 
 ## Trailing Block Syntax
 
-*→ [Details](docs/Features/Trailing block syntax.md)*
+*→ [Details](docs/Features/Trailing%20block%20syntax.md)*
 
 When the only argument to a method is a block literal, the parentheses can be omitted. Write the block directly after the method name on the same line:
 
@@ -744,7 +744,7 @@ The `{` must appear on the same line as the method name (a newline causes ASI to
 
 ## Non-Word Method Invocation
 
-*→ [Details](docs/Features/Non-Word invocation.md)*
+*→ [Details](docs/Features/Non-Word%20invocation.md)*
 
 When boc name is non-word, we can invoke it without `.` and `parenthesis` as long as it has at least one parameter.
 
@@ -762,7 +762,7 @@ e << 1 // same as e.<<(1)
 
 ## Info Strings
 
-*→ [Details](docs/Features/Info strings.md)*
+*→ [Details](docs/Features/Info%20strings.md)*
 
 An infostring is a boc body delimited by backticks placed immediately before a definition. Its content is valid Yz — compiled but never executed — and can be used at compile time to augment or extend the language:
 
@@ -900,7 +900,7 @@ server.listen()
 
 ## Reserved Words and Symbols
 
-*→ [Details](docs/Features/Reserved words and characters and symbols.md)*
+*→ [Details](docs/Features/Reserved%20words%20and%20characters%20and%20symbols.md)*
 
 The following cannot be identifiers or part of an identifier:
 
