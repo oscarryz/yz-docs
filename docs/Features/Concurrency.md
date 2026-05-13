@@ -64,7 +64,9 @@ time. Two invocations can never concurrently mutate the same state.
 
 **Deadlock freedom** — because all resources are acquired atomically, the circular waiting
 that causes deadlock cannot take place. There is no "acquire one resource, then wait for
-another."
+another." Method calls on already-held resources execute inline without re-acquiring, so
+calling `src.balance-=(amount)` from inside a multi-cown body that already holds `src`
+is safe and correct.
 
 **Determinism** — for any two invocations sharing a resource, their execution order is
 always the same: the one spawned first runs first. A program's observable behaviour is
