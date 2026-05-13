@@ -12,14 +12,16 @@ No locks, no `synchronized`, no `async/await`. The runtime enforces the right or
 ```js
 Account: {
     balance Int
+    balance+= #(amount Int) { balance = balance + amount }
+    balance-= #(amount Int) { balance = balance - amount }
 }
 
-// In order to run, transfer must acquire src and dst atomically.
+// transfer acquires src and dst atomically.
 // If two transfers share an account, they serialize. If they don't, they run in parallel.
 transfer #(src Account, dst Account, amount Int) {
     src.balance >= amount ? {
-        src.balance = src.balance - amount
-        dst.balance = dst.balance + amount
+        src.balance-=(amount)
+        dst.balance+=(amount)
     }, {
         print("insufficient funds: need ${amount}, have ${src.balance}")
     }
@@ -51,7 +53,7 @@ main: {
 ### Output
 
 ```
-alice: 60
+alice: 80
 bob:   0
 carol: 30
 dave:  40
@@ -79,19 +81,25 @@ The parallelism and serialization are directly visible in `go tool trace`:
 
 ![Annotated goroutine trace](boc_trace_annotated.png)
 
-**Parallel (0–10 ms)**
-- **G17** (Proc 0, pink): `transfer(alice, bob, 30)` — acquires alice + bob, runs body
-- **G22** (Proc 9, pink): `transfer(erin, frank, 75)` — acquires erin + frank, runs body
+**Parallel (0–14 ms)**
+- **G26** (Proc 6): `transfer(alice, bob, 30)` — acquires alice + bob, runs body
+- **G31** (Proc 9): `transfer(erin, frank, 75)` — acquires erin + frank, runs body
 
 These two fire at the same time because their cown sets are disjoint.
 
-**Serial (10–40 ms, Proc 0 only)**
-- **G11** (~10–20 ms): `transfer(bob, alice, 10)` — alice + bob now free; executes next
-- **G12** (~20–30 ms): `transfer(bob, carol, 20)` — bob free; executes next
-- **G13** (~30–40 ms): `transfer(carol, dave, 40)` — carol free; executes last
+**Serial (14–44 ms, Proc 6 only)**
+- **G33** (~14–24 ms): `transfer(bob, alice, 10)` — alice + bob now free; executes next
+- **G34** (~24–34 ms): `transfer(bob, carol, 20)` — bob free; executes next
+- **G35** (~34–44 ms): `transfer(carol, dave, 40)` — carol free; executes last
 
 The three serial transfers queue behind each other because they share at least one account
 with their predecessor. No explicit locking is written — the BOC runtime enforces it.
+
+The `balance-=` and `balance+=` method calls inside `transfer` run **inline** within the
+same atomic scope — the runtime detects that their cowns are already held and skips
+re-acquisition. This is invisible to the programmer but visible in the trace: each
+`ScheduleMulti` goroutine runs for the full 10 ms busy-wait with no extra goroutines
+spawned for the method calls.
 
 ### Alternative syntax: Transfer as a struct
 
@@ -106,8 +114,8 @@ Transfer: {
     amount Int
     run: {
         src.balance >= amount ? {
-            src.balance = src.balance - amount
-            dst.balance = dst.balance + amount
+            src.balance-=(amount)
+            dst.balance+=(amount)
         }, {
             print("insufficient funds: need ${amount}, have ${src.balance}")
         }
