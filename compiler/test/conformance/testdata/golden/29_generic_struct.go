@@ -17,11 +17,15 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) call() std.Unit {
+	b := NewBox(std.NewInt(42))
+	std.Print(b.value)
+	return std.TheUnit
+}
+
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		b := NewBox(std.NewInt(42))
-		std.Print(b.value)
-		return std.TheUnit
+		return self.call()
 	})
 }
 

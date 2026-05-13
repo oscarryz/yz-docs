@@ -20,9 +20,13 @@ func NewPerson(name std.String, secret std.String) *Person {
 	}
 }
 
+func (self *Person) greet() std.Unit {
+	return std.Print(self.name)
+}
+
 func (self *Person) Greet() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		return std.Print(self.name)
+		return self.greet()
 	})
 }
 

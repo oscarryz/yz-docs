@@ -13,16 +13,24 @@ func NewCounter(count std.Int) *Counter {
 	}
 }
 
+func (self *Counter) increment() std.Unit {
+	self.count = self.count.Plus(std.NewInt(1))
+	return std.TheUnit
+}
+
 func (self *Counter) Increment() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		self.count = self.count.Plus(std.NewInt(1))
-		return std.TheUnit
+		return self.increment()
 	})
+}
+
+func (self *Counter) value() std.Int {
+	return self.count
 }
 
 func (self *Counter) Value() *std.Thunk[std.Int] {
 	return std.Schedule(&self.Cown, func() std.Int {
-		return self.count
+		return self.value()
 	})
 }
 

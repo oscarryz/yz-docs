@@ -13,9 +13,13 @@ func NewWrapper[T interface{ ToStr() std.String }](value T) *Wrapper[T] {
 	}
 }
 
+func (self *Wrapper[T]) describe() std.String {
+	return self.value.ToStr()
+}
+
 func (self *Wrapper[T]) Describe() *std.Thunk[std.String] {
 	return std.Schedule(&self.Cown, func() std.String {
-		return self.value.ToStr()
+		return self.describe()
 	})
 }
 
@@ -23,11 +27,15 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) call() std.Unit {
+	w := NewWrapper(std.NewString("hello"))
+	std.Print(w.Describe().Force())
+	return std.TheUnit
+}
+
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		w := NewWrapper(std.NewString("hello"))
-		std.Print(w.Describe().Force())
-		return std.TheUnit
+		return self.call()
 	})
 }
 
