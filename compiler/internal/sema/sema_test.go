@@ -563,3 +563,33 @@ func TestVariantConstructorRegistered(t *testing.T) {
 		t.Errorf("Cat return name: got %q, want Pet", retSt.Name)
 	}
 }
+
+// TestInterpUndefinedPos verifies that a reference to an undefined variable
+// inside a string interpolation reports the correct source position, not 1:1.
+func TestInterpUndefinedPos(t *testing.T) {
+	// Line 2: `  print("hello ${undefined_var} world")`
+	// Opening `"` is at col 9 (1-based), inner starts at col 10,
+	// "hello ${" is 8 chars, so undefined_var starts at col 18.
+	_, err := analyzeSource(t, "main: {\n  print(\"hello ${undefined_var} world\")\n}")
+	if err == nil {
+		t.Fatal("expected undefined error for undefined_var")
+	}
+	errs := err.(SemaErrors)
+	var found *SemaError
+	for _, e := range errs {
+		if strings.Contains(e.Msg, "undefined_var") {
+			found = e
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("no error mentioning undefined_var; got: %v", err)
+	}
+	if found.Line != 2 {
+		t.Errorf("want line 2, got %d", found.Line)
+	}
+	if found.Col < 10 {
+		t.Errorf("want col >= 10 (inside interpolation), got col %d", found.Col)
+	}
+	t.Logf("error correctly at L%d:C%d: %s", found.Line, found.Col, found.Msg)
+}
