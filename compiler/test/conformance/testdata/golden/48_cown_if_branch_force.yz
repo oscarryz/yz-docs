@@ -1,0 +1,24 @@
+// Multi-cown body with conditional calling sub-boc methods on cown-bearing params.
+// Without ScheduleFlatten the Force() inside the if branches deadlocks because
+// the sub-boc tries to re-acquire the cown already held by ScheduleMulti.
+
+Box: {
+    val Int
+    set #(v Int) {
+        val = v
+    }
+}
+
+cond_set #(a Box, flag Bool) {
+    flag ? {
+        a.set(1)
+    }, {
+        a.set(0)
+    }
+}
+
+main: {
+    b: Box(0)
+    cond_set(b, true)
+    print(b.val)
+}

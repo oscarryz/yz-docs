@@ -32,16 +32,20 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) call() std.Unit {
+	x := NewOptionSome(std.NewString("hello"))
+	switch x._variant {
+	case _OptionSome:
+		std.Print(x.value)
+	case _OptionNone:
+		std.Print(std.NewString("nothing"))
+	}
+	return std.TheUnit
+}
+
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		x := NewOptionSome(std.NewString("hello"))
-		switch x._variant {
-		case _OptionSome:
-			std.Print(x.value)
-		case _OptionNone:
-			std.Print(std.NewString("nothing"))
-		}
-		return std.TheUnit
+		return self.call()
 	})
 }
 
