@@ -7,16 +7,24 @@ type _counterBoc struct {
 	count std.Int
 }
 
+func (self *_counterBoc) increment() std.Unit {
+	self.count = self.count.Plus(std.NewInt(1))
+	return std.TheUnit
+}
+
 func (self *_counterBoc) Increment() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		self.count = self.count.Plus(std.NewInt(1))
-		return std.TheUnit
+		return self.increment()
 	})
+}
+
+func (self *_counterBoc) value() std.Int {
+	return self.count
 }
 
 func (self *_counterBoc) Value() *std.Thunk[std.Int] {
 	return std.Schedule(&self.Cown, func() std.Int {
-		return self.count
+		return self.value()
 	})
 }
 

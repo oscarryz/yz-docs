@@ -7,10 +7,14 @@ type _counterBoc struct {
 	count std.Int
 }
 
+func (self *_counterBoc) increment() std.Unit {
+	self.count = self.count.Plus(std.NewInt(1))
+	return std.TheUnit
+}
+
 func (self *_counterBoc) Increment() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		self.count = self.count.Plus(std.NewInt(1))
-		return std.TheUnit
+		return self.increment()
 	})
 }
 
@@ -22,14 +26,18 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) call() std.Unit {
+	var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
+	list.Each(func(item std.Int) std.Unit {
+		Counter.Increment().Force()
+		return std.Print(item)
+	})
+	return std.TheUnit
+}
+
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
-		list.Each(func(item std.Int) std.Unit {
-			Counter.Increment().Force()
-			return std.Print(item)
-		})
-		return std.TheUnit
+		return self.call()
 	})
 }
 

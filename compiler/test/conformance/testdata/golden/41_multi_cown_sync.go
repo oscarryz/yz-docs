@@ -7,10 +7,14 @@ type _bankBoc struct {
 	balance std.Int
 }
 
+func (self *_bankBoc) deposit(amount std.Int) std.Unit {
+	self.balance = self.balance.Plus(amount)
+	return std.TheUnit
+}
+
 func (self *_bankBoc) Deposit(amount std.Int) *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		self.balance = self.balance.Plus(amount)
-		return std.TheUnit
+		return self.deposit(amount)
 	})
 }
 
@@ -23,10 +27,14 @@ type _ledgerBoc struct {
 	total std.Int
 }
 
+func (self *_ledgerBoc) add(amount std.Int) std.Unit {
+	self.total = self.total.Plus(amount)
+	return std.TheUnit
+}
+
 func (self *_ledgerBoc) Add(amount std.Int) *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
-		self.total = self.total.Plus(amount)
-		return std.TheUnit
+		return self.add(amount)
 	})
 }
 

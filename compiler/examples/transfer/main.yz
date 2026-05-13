@@ -5,13 +5,18 @@
 
 Account: {
     balance Int
+    balance+= #(amount Int) {
+        balance = balance + amount
+    }
+    balance-= #(amount Int) {
+        balance = balance - amount
+    }
 }
 
-// In order to run, transfer has to acquire atomically src and dst
 transfer #(src Account, dst Account, amount Int) {
     src.balance >= amount ? {
-        src.balance = src.balance - amount
-        dst.balance = dst.balance + amount
+        src.balance-=(amount)
+        dst.balance+=(amount)
     }, {
         print("insufficient funds: need ${amount}, have ${src.balance}")
     }
