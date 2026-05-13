@@ -46,6 +46,12 @@ func New(src []byte) *Parser {
 	return &Parser{tokens: toks}
 }
 
+// NewWithOffset creates a Parser whose tokens are reported starting at (line, col).
+func NewWithOffset(src []byte, line, col int) *Parser {
+	toks := lexer.TokenizeWithOffset(src, line, col)
+	return &Parser{tokens: toks}
+}
+
 // ParseFile parses an entire source file and returns the root SourceFile node.
 func (p *Parser) ParseFile() (*ast.SourceFile, error) {
 	sf := &ast.SourceFile{Pos: p.curPos()}
@@ -533,7 +539,8 @@ func (p *Parser) parsePrimary() (ast.Expr, error) {
 	case token.STRING_LIT:
 		p.advance()
 		if segs := splitStringInterp(tok.Literal); segs != nil {
-			return p.buildInterpExpr(p.posOf(tok), segs)
+			inner := tok.Literal[1 : len(tok.Literal)-1]
+			return p.buildInterpExpr(p.posOf(tok), segs, inner)
 		}
 		return &ast.StringLit{Pos: p.posOf(tok), Value: tok.Literal}, nil
 
@@ -1224,8 +1231,9 @@ func (p *Parser) posOf(tok token.Token) ast.Pos {
 
 // interpSegment is one raw slice from splitting a STRING_LIT.
 type interpSegment struct {
-	isExpr  bool
-	content string // raw text (escape sequences intact) or expression source
+	isExpr    bool
+	content   string // raw text (escape sequences intact) or expression source
+	srcOffset int    // for expr segments: byte offset of content start within inner
 }
 
 // splitStringInterp splits a raw STRING_LIT token value (including outer quotes)
@@ -1260,6 +1268,7 @@ func splitStringInterp(raw string) []interpSegment {
 			parts = append(parts, interpSegment{isExpr: false, content: cur.String()})
 			cur.Reset()
 			i += 2 // skip ${
+			exprStart := i
 			// Collect expression content up to the matching }, tracking brace depth.
 			depth := 1
 			for i < len(inner) && depth > 0 {
@@ -1276,7 +1285,7 @@ func splitStringInterp(raw string) []interpSegment {
 				}
 				i++
 			}
-			parts = append(parts, interpSegment{isExpr: true, content: cur.String()})
+			parts = append(parts, interpSegment{isExpr: true, content: cur.String(), srcOffset: exprStart})
 			cur.Reset()
 			continue
 		}
@@ -1294,12 +1303,16 @@ func splitStringInterp(raw string) []interpSegment {
 }
 
 // buildInterpExpr converts raw interpSegments into an InterpolatedStringExpr node.
-// Expression segments are parsed using a sub-parser.
-func (p *Parser) buildInterpExpr(pos ast.Pos, segs []interpSegment) (*ast.InterpolatedStringExpr, error) {
+// Expression segments are parsed using a sub-parser starting at the correct source position.
+// inner is the string content between the outer quotes of the original token.
+func (p *Parser) buildInterpExpr(pos ast.Pos, segs []interpSegment, inner string) (*ast.InterpolatedStringExpr, error) {
 	node := &ast.InterpolatedStringExpr{Pos: pos}
+	// Inner content starts one column after the opening quote.
+	innerStart := ast.Pos{Line: pos.Line, Col: pos.Col + 1}
 	for _, seg := range segs {
 		if seg.isExpr {
-			sub := New([]byte(seg.content))
+			exprPos := advancePosThrough(innerStart, inner[:seg.srcOffset])
+			sub := NewWithOffset([]byte(seg.content), exprPos.Line, exprPos.Col)
 			e, err := sub.parseExpr()
 			if err != nil {
 				return nil, fmt.Errorf("string interpolation: %w", err)
@@ -1314,6 +1327,21 @@ func (p *Parser) buildInterpExpr(pos ast.Pos, segs []interpSegment) (*ast.Interp
 		}
 	}
 	return node, nil
+}
+
+// advancePosThrough advances a source position by walking through content,
+// counting newlines and columns.
+func advancePosThrough(start ast.Pos, content string) ast.Pos {
+	line, col := start.Line, start.Col
+	for i := 0; i < len(content); i++ {
+		if content[i] == '\n' {
+			line++
+			col = 1
+		} else {
+			col++
+		}
+	}
+	return ast.Pos{Line: line, Col: col}
 }
 
 func (p *Parser) errorf(format string, args ...any) *ParseError {

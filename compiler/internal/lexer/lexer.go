@@ -29,16 +29,25 @@ type Lexer struct {
 
 // New creates a Lexer for the given source.
 func New(src []byte) *Lexer {
-	return &Lexer{
-		src:  src,
-		line: 1,
-		col:  1,
-	}
+	return &Lexer{src: src, line: 1, col: 1}
+}
+
+// NewWithOffset creates a Lexer whose first token is reported at (line, col).
+func NewWithOffset(src []byte, line, col int) *Lexer {
+	return &Lexer{src: src, line: line, col: col}
 }
 
 // Tokenize returns all tokens from the source, ending with EOF.
 func Tokenize(src []byte) []token.Token {
-	l := New(src)
+	return tokenize(New(src))
+}
+
+// TokenizeWithOffset tokenizes src with the first token reported at (line, col).
+func TokenizeWithOffset(src []byte, line, col int) []token.Token {
+	return tokenize(NewWithOffset(src, line, col))
+}
+
+func tokenize(l *Lexer) []token.Token {
 	var tokens []token.Token
 	for {
 		tok := l.Next()
