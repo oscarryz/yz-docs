@@ -95,12 +95,6 @@ These two fire at the same time because their cown sets are disjoint.
 The three serial transfers queue behind each other because they share at least one account
 with their predecessor. No explicit locking is written — the BOC runtime enforces it.
 
-The `balance-=` and `balance+=` method calls inside `transfer` run **inline** within the
-same atomic scope — the runtime detects that their cowns are already held and skips
-re-acquisition. This is invisible to the programmer but visible in the trace: each
-`ScheduleMulti` goroutine runs for the full 10 ms busy-wait with no extra goroutines
-spawned for the method calls.
-
 ### Alternative syntax: Transfer as a struct
 
 The same semantics are available with a named struct type. Each instance holds its
