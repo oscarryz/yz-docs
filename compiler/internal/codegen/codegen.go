@@ -416,6 +416,13 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		if thunkFindInlineThunkVar(th.Body) >= 0 {
 			return g.emitScheduleFlatten(th)
 		}
+		// If the body contains a WaitStmt (implicit BocGroup from E.1), the BocGroup
+		// must be hoisted outside ScheduleMulti and waited after cown release to avoid
+		// deadlock (goroutines queued inside ScheduleMulti can't acquire the cown until
+		// after ScheduleMulti's closure returns and releases it).
+		if waitIdx := thunkFindWaitIdx(th.Body); waitIdx >= 0 {
+			return g.emitScheduleMultiSplit(th, heldCowns, waitIdx)
+		}
 		// If the body contains an IfStmt with non-reentrant forces (sub-boc methods
 		// whose cown is NOT already held), use ScheduleFlattenIf.
 		if bodyHasNonReentrantIfWithForce(th.Body, heldCowns) {
@@ -880,6 +887,107 @@ func (g *generator) emitScheduleFlattenIf(th *ir.ThunkExpr) string {
 	inner.line("return _flatCont")
 
 	sb.WriteString(inner.sb.String())
+	sb.WriteString(g.ind())
+	sb.WriteString("})")
+	return sb.String()
+}
+
+// emitScheduleMultiSplit handles multi-cown method bodies that contain an
+// implicit BocGroup (from Phase E.1). The BocGroup declaration is hoisted
+// outside the ScheduleMulti closure so that goroutines queued inside can
+// acquire the held cowns after ScheduleMulti releases them. WaitStmt and any
+// post-Wait statements run after ScheduleMulti's .Force() releases the cowns.
+//
+//	std.NewThunk(func() T {
+//	    _bg0 := &std.BocGroup{}   // hoisted
+//	    std.ScheduleMulti([]*std.Cown{...}, func() std.Unit {
+//	        ...body (SpawnExprs register with _bg0)...
+//	        return std.TheUnit
+//	    }).Force()                 // releases cowns
+//	    _bg0.Wait()                // then wait for children
+//	    [post-Wait stmts]
+//	})
+func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, heldCowns map[string]bool, waitIdx int) string {
+	preWait := th.Body[:waitIdx]
+	postWait := th.Body[waitIdx:] // WaitStmt and everything after
+
+	type splitDecl struct {
+		name string
+		typ  string
+		init ir.Expr
+	}
+	var hoistedDecls []ir.Stmt
+	var splitDecls []splitDecl
+	var immediateBody []ir.Stmt
+	for _, s := range preWait {
+		if ds, ok := s.(*ir.DeclStmt); ok {
+			if _, isGroup := ds.Init.(*ir.NewGroupExpr); isGroup {
+				hoistedDecls = append(hoistedDecls, s)
+				continue
+			}
+			if ds.IsThunk {
+				hoistedDecls = append(hoistedDecls, s)
+				continue
+			}
+			if ds.Type != "" {
+				splitDecls = append(splitDecls, splitDecl{ds.Name, ds.Type, ds.Init})
+				continue
+			}
+		}
+		immediateBody = append(immediateBody, s)
+	}
+
+	cowns := append([]string{th.RecvCown}, th.ExtraCowns...)
+
+	var sb strings.Builder
+	sb.WriteString("std.NewThunk(func() ")
+	sb.WriteString(th.ResultType)
+	sb.WriteString(" {\n")
+
+	outer := g.sub(g.level + 1)
+
+	for _, s := range hoistedDecls {
+		outer.emitStmt(s)
+	}
+	for _, sd := range splitDecls {
+		outer.linef("var %s %s", sd.name, sd.typ)
+	}
+
+	outer.write(outer.ind())
+	outer.write("std.ScheduleMulti([]*std.Cown{")
+	outer.write(strings.Join(cowns, ", "))
+	outer.write("}, func() std.Unit {\n")
+	schedInner := outer.sub(outer.level + 1)
+	schedInner.heldCowns = heldCowns
+	for _, sd := range splitDecls {
+		schedInner.linef("%s = %s", sd.name, schedInner.expr(sd.init))
+	}
+	spawnHoistIdx := 0
+	for _, s := range immediateBody {
+		es, isExpr := s.(*ir.ExprStmt)
+		if isExpr {
+			if sp, isSpawn := es.Expr.(*ir.SpawnExpr); isSpawn {
+				if inner, ok := spawnForceInner(sp); ok {
+					tv := fmt.Sprintf("_st%d", spawnHoistIdx)
+					spawnHoistIdx++
+					schedInner.linef("%s := %s", tv, schedInner.expr(inner))
+					schedInner.linef("%s.Go(func() any {", sp.GroupVar)
+					schedInner.linef("\treturn %s.Force()", tv)
+					schedInner.linef("})")
+					continue
+				}
+			}
+		}
+		schedInner.emitStmt(s)
+	}
+	schedInner.line("return std.TheUnit")
+	outer.write(schedInner.sb.String())
+	outer.write(outer.ind())
+	outer.write("}).Force()\n")
+
+	outer.emitBodyStmts(postWait, true)
+
+	sb.WriteString(outer.sb.String())
 	sb.WriteString(g.ind())
 	sb.WriteString("})")
 	return sb.String()

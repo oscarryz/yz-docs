@@ -31,14 +31,23 @@ type _cond_setBoc struct {
 }
 
 func (self *_cond_setBoc) Call(a *Box, flag std.Bool) *std.Thunk[std.Unit] {
-	return std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
-		self.a = a
-		self.flag = flag
-		if self.flag.GoBool() {
-			self.a.set(std.NewInt(1))
-		} else {
-			self.a.set(std.NewInt(0))
-		}
+	return std.NewThunk(func() std.Unit {
+		_bg0 := &std.BocGroup{}
+		std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
+			self.a = a
+			self.flag = flag
+			if self.flag.GoBool() {
+				_bg0.Go(func() any {
+					return self.a.Set(std.NewInt(1)).Force()
+				})
+			} else {
+				_bg0.Go(func() any {
+					return self.a.Set(std.NewInt(0)).Force()
+				})
+			}
+			return std.TheUnit
+		}).Force()
+		_bg0.Wait()
 		return std.TheUnit
 	})
 }

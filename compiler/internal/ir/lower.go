@@ -75,6 +75,12 @@ type lowerer struct {
 	// contextName is the name of the enclosing function/boc (e.g. "main").
 	// Used to generate unique FQN-based struct names for lifted local bocs.
 	contextName string
+
+	// bocGroupCtx holds the name of the BocGroup variable currently in scope
+	// for the enclosing lowerBocBody call. When set, statement-position boc
+	// calls inside conditional branches register with this group (SpawnExpr)
+	// instead of being forced inline (ForceExpr).
+	bocGroupCtx string
 }
 
 // ---------------------------------------------------------------------------
@@ -742,9 +748,27 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 // When recvCown is non-empty the ThunkExpr carries it so codegen can emit
 // std.Schedule(recvCown, ...) instead of std.Go, serializing the body through
 // the singleton's cown.
+//
+// If any statement-position boc call exists in the body (including inside
+// conditional branches), an implicit BocGroup is created. All such calls are
+// registered as SpawnExprs on that group. A WaitStmt is appended before the
+// final return. For recvCown bodies this triggers the split-BocGroup pattern in
+// emitThunk (cown released before Wait), fixing cown-recursive deadlocks.
 func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) []Stmt {
 	var inner []Stmt
 	elems := b.Elements
+
+	// Allocate a top-level BocGroup if any statement-position boc calls exist.
+	bgVar := ""
+	if l.bodyHasBocCallsInStmtPos(elems) {
+		bgVar = fmt.Sprintf("_bg%d", len(inner)) // unique within this scope
+		inner = append(inner, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
+	}
+
+	prevBocGroupCtx := l.bocGroupCtx
+	l.bocGroupCtx = bgVar
+	defer func() { l.bocGroupCtx = prevBocGroupCtx }()
+
 	for i, elem := range elems {
 		isLast := i == len(elems)-1
 		switch e := elem.(type) {
@@ -778,13 +802,17 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			inner = append(inner, &ReturnStmt{Value: val})
 		case ast.Expr:
 			if is, ok := l.tryLowerConditional(e); ok {
+				// Conditional always becomes an IfStmt; return is handled by ensure-return.
 				inner = append(inner, is)
-				if isLast {
-					inner = append(inner, &ReturnStmt{Value: &UnitLit{}})
-				}
 			} else if !isLast {
 				if ms, ok := l.tryLowerMatch(e); ok {
 					inner = append(inner, ms)
+				} else if l.isBocMethodCall(e) && bgVar != "" {
+					// Statement-position boc call: register with top-level BocGroup.
+					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+						GroupVar: bgVar,
+						Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: l.lowerExpr(e)}}},
+					}})
 				} else {
 					inner = append(inner, &ExprStmt{Expr: l.lowerExprForced(e)})
 				}
@@ -794,6 +822,11 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 		default:
 			// Other statements — skip for now.
 		}
+	}
+
+	// Append WaitStmt for the implicit BocGroup before the final return.
+	if bgVar != "" {
+		inner = append(inner, &WaitStmt{GroupVar: bgVar})
 	}
 
 	// Ensure there's always a return.
@@ -2011,6 +2044,83 @@ func (l *lowerer) lowerExprForced(e ast.Expr) Expr {
 	return expr
 }
 
+// lowerExprOrSpawn lowers e for statement position. When bocGroupCtx is set and
+// e is a boc call, it registers the call as a SpawnExpr on the active BocGroup
+// instead of forcing it inline. Falls back to ForceExpr when no group is active.
+func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
+	expr := l.lowerExpr(e)
+	if !l.isBocMethodCall(e) {
+		return expr
+	}
+	if l.bocGroupCtx != "" {
+		return &SpawnExpr{
+			GroupVar: l.bocGroupCtx,
+			Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: expr}}},
+		}
+	}
+	return &ForceExpr{Thunk: expr}
+}
+
+// bodyHasBocCallsInStmtPos reports whether any element in elems is a
+// statement-position boc call — either a direct boc call (non-last) or a
+// conditional/match whose branches contain boc calls.
+func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
+	for i, elem := range elems {
+		e, ok := elem.(ast.Expr)
+		if !ok {
+			continue
+		}
+		isLast := i == len(elems)-1
+		if !isLast && l.isBocMethodCall(e) {
+			return true
+		}
+		if cond, ok := e.(*ast.ConditionalExpr); ok {
+			if l.branchSliceHasBocCalls(branchElements(cond.TrueCase)) {
+				return true
+			}
+			if l.branchSliceHasBocCalls(branchElements(cond.FalseCase)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// branchSliceHasBocCalls reports whether any element in a branch body is a boc
+// call (all positions in branch bodies are statement-position).
+func (l *lowerer) branchSliceHasBocCalls(elems []ast.Node) bool {
+	for _, elem := range elems {
+		e, ok := elem.(ast.Expr)
+		if !ok {
+			continue
+		}
+		if l.isBocMethodCall(e) {
+			return true
+		}
+		if cond, ok := e.(*ast.ConditionalExpr); ok {
+			if l.branchSliceHasBocCalls(branchElements(cond.TrueCase)) {
+				return true
+			}
+			if l.branchSliceHasBocCalls(branchElements(cond.FalseCase)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// branchElements returns the element slice for a boc literal branch expression,
+// or wraps a single non-boc expression in a slice.
+func branchElements(e ast.Expr) []ast.Node {
+	if b, ok := e.(*ast.BocLiteral); ok {
+		return b.Elements
+	}
+	if e == nil {
+		return nil
+	}
+	return []ast.Node{e}
+}
+
 // isSingletonBoc reports whether expr is an Ident that refers to a
 // singleton boc (a lowercase boc defined at file scope).
 func (l *lowerer) isSingletonBoc(expr Expr) bool {
@@ -2288,7 +2398,7 @@ func (l *lowerer) lowerBocAsStmts2(elements []ast.Node) []Stmt {
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
 			} else {
-				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprForced(e)})
+				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprOrSpawn(e)})
 			}
 		}
 	}
@@ -2311,7 +2421,7 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
 			} else {
-				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprForced(e)})
+				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprOrSpawn(e)})
 			}
 		}
 	}
@@ -2359,6 +2469,11 @@ func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
 // Unlike lowerBocBody, it does NOT wrap in a ThunkExpr.
 // TypedDecl with nil Value (params) are skipped — already captured in ClosureExpr.Params.
 func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stmt {
+	// Closures have their own scope; they don't inherit the enclosing BocGroup.
+	prevBocGroupCtx := l.bocGroupCtx
+	l.bocGroupCtx = ""
+	defer func() { l.bocGroupCtx = prevBocGroupCtx }()
+
 	var stmts []Stmt
 	for i, elem := range elements {
 		isLast := i == len(elements)-1
