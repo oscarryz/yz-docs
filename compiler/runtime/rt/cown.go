@@ -20,8 +20,12 @@ type behaviour struct {
 
 // Cown is the runtime representation of a concurrent owner.
 // Every singleton boc struct embeds one. A nil `last` means the cown is idle.
+// currentReq holds the request node that is currently executing on this cown;
+// set before fn() is called and cleared after, so ScheduleAsSuccessor can
+// locate the right insertion point without a separate lookup.
 type Cown struct {
-	last atomic.Pointer[request]
+	last       atomic.Pointer[request]
+	currentReq atomic.Pointer[request]
 }
 
 // Schedule runs fn while exclusively holding c, then releases c.
@@ -38,7 +42,9 @@ func Schedule[T any](c *Cown, fn func() T) *Thunk[T] {
 	b.count.Store(1)
 	req := &request{beh: b}
 	b.run = func() {
+		c.currentReq.Store(req)
 		result = fn()
+		c.currentReq.Store(nil)
 		close(done)
 		releaseCown(c, req)
 	}
@@ -86,7 +92,13 @@ func ScheduleMulti[T any](cowns []*Cown, fn func() T) *Thunk[T] {
 	}
 
 	b.run = func() {
+		for i, c := range cowns {
+			c.currentReq.Store(reqs[i])
+		}
 		result = fn()
+		for _, c := range cowns {
+			c.currentReq.Store(nil)
+		}
 		close(done)
 		for i, c := range cowns {
 			releaseCown(c, reqs[i])
@@ -116,6 +128,64 @@ func ScheduleFlatten[T any](cowns []*Cown, fn func() *Thunk[T]) *Thunk[T] {
 	return NewThunk(func() T {
 		return outer.Force().Force()
 	})
+}
+
+// ScheduleAsSuccessor schedules fn to run on c as the IMMEDIATE SUCCESSOR of
+// the currently-executing behaviour on c — before any externally-waiting
+// behaviours already queued on c. Must be called from within a behaviour that
+// already holds c (via Schedule or ScheduleMulti).
+//
+// This preserves spawn-order happens-before: sub-boc calls registered while
+// holding c execute before behaviours that were queued on c from outside.
+func ScheduleAsSuccessor[T any](c *Cown, fn func() T) *Thunk[T] {
+	done := make(chan struct{})
+	var result T
+
+	b := &behaviour{}
+	b.count.Store(1)
+	newReq := &request{beh: b}
+	b.run = func() {
+		c.currentReq.Store(newReq)
+		result = fn()
+		c.currentReq.Store(nil)
+		close(done)
+		releaseCown(c, newReq)
+	}
+
+	cur := c.currentReq.Load()
+	insertSuccessor(c, cur, newReq)
+
+	return NewThunk(func() T {
+		<-done
+		return result
+	})
+}
+
+// insertSuccessor inserts newReq as the immediate successor of cur in c's queue.
+// cur is the currently-executing request; it may or may not be the tail.
+func insertSuccessor(c *Cown, cur, newReq *request) {
+	for {
+		next := cur.next.Load()
+		if next == nil {
+			// cur may be the tail. Try to update c.last to newReq atomically.
+			if c.last.CompareAndSwap(cur, newReq) {
+				// We claimed the tail; link cur → newReq.
+				cur.next.Store(newReq)
+				return
+			}
+			// Another enqueuer swapped c.last before us; spin until it links
+			// cur.next so we can read the interleaved node.
+			runtime.Gosched()
+			continue
+		}
+		// cur.next is already set — insert between cur and next.
+		if cur.next.CompareAndSwap(next, newReq) {
+			newReq.next.Store(next)
+			return
+		}
+		// cur.next changed underneath us — retry.
+		runtime.Gosched()
+	}
 }
 
 // releaseCown is called after a behaviour's fn completes.

@@ -24,33 +24,24 @@ func (self *Box) Set(v std.Int) *std.Thunk[std.Unit] {
 	})
 }
 
-type _cond_setBoc struct {
+type _assignBoc struct {
 	std.Cown
-	a *Box
-	flag std.Bool
+	b *Box
+	v std.Int
 }
 
-func (self *_cond_setBoc) Call(a *Box, flag std.Bool) *std.Thunk[std.Unit] {
+func (self *_assignBoc) Call(b *Box, v std.Int) *std.Thunk[std.Unit] {
 	return func() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
-		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
-			self.a = a
-			self.flag = flag
-			if self.flag.GoBool() {
-				_st0 := std.ScheduleAsSuccessor(&self.a.Cown, func() std.Unit {
-					return self.a.set(std.NewInt(1))
-				})
-				_bg0.Go(func() any {
-					return _st0.Force()
-				})
-			} else {
-				_st0 := std.ScheduleAsSuccessor(&self.a.Cown, func() std.Unit {
-					return self.a.set(std.NewInt(0))
-				})
-				_bg0.Go(func() any {
-					return _st0.Force()
-				})
-			}
+		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &b.Cown}, func() std.Unit {
+			self.b = b
+			self.v = v
+			_st0 := std.ScheduleAsSuccessor(&self.b.Cown, func() std.Unit {
+				return self.b.set(self.v)
+			})
+			_bg0.Go(func() any {
+				return _st0.Force()
+			})
 			return std.TheUnit
 		})
 		return std.NewThunk(func() std.Unit {
@@ -61,7 +52,7 @@ func (self *_cond_setBoc) Call(a *Box, flag std.Bool) *std.Thunk[std.Unit] {
 	}()
 }
 
-var Cond_set = &_cond_setBoc{
+var Assign = &_assignBoc{
 }
 
 type _mainBoc struct {
@@ -71,17 +62,17 @@ type _mainBoc struct {
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
-		var b *Box
+		var box *Box
 		std.Schedule(&self.Cown, func() std.Unit {
-			b = NewBox(std.NewInt(0))
-			_st0 := (&_cond_setBoc{}).Call(b, std.NewBool(true))
+			box = NewBox(std.NewInt(0))
+			_st0 := (&_assignBoc{}).Call(box, std.NewInt(42))
 			_bg0.Go(func() any {
 				return _st0.Force()
 			})
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		std.Print(b.val)
+		std.Print(box.val)
 		return std.TheUnit
 	})
 }
