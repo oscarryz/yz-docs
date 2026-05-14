@@ -12,10 +12,14 @@ func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) *std.Thu
 	return std.Go(func() std.Unit {
 		self.cond = cond
 		self.body = body
+		_bg0 := &std.BocGroup{}
 		if self.cond().GoBool() {
 			self.body()
-			(&_whileBoc{}).Call(self.cond, self.body).Force()
+			_bg0.Go(func() any {
+				return (&_whileBoc{}).Call(self.cond, self.body).Force()
+			})
 		}
+		_bg0.Wait()
 		return std.TheUnit
 	})
 }
