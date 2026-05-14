@@ -141,35 +141,7 @@ This provides:
 2. **Error propagation** — errors in inner bocs propagate to the parent
 3. **Predictable lifetimes** — a boc's scope determines its children's lifetimes
 
-## 8.6 Single-Writer Principle (SWMR)
-
-Yz uses the **Single Writer, Multiple Reader** model for field access:
-
-| Operation | Who | How |
-|---|---|---|
-| Read `a.field` | Any boc | Direct — no queue, no async overhead |
-| Write `a.field = v` from inside `a` | `a`'s own behaviours | Direct — cown already held |
-| Write `a.field = v` from outside `a` | Any other boc | Wrapped in `Schedule(&a.Cown, ...)` |
-
-Only the cown's owner can write a field directly. Reads from outside are unrestricted and synchronous. Writes from outside are automatically scheduled through the target's cown — the compiler generates this wrapping transparently.
-
-```yz
-counter: {
-    count: 0
-    increment: { count = count + 1 }  // direct — cown is held
-}
-
-// From outside:
-x: counter.count          // direct read — no serialization needed
-counter.count = 5         // compiler wraps in Schedule(&Counter.Cown, ...)
-counter.increment()       // behaviour — runs when Counter's cown is free
-```
-
-**Tradeoff**: reads may see slightly stale values (a queued write hasn't applied yet). Multi-field reads are not atomically consistent — use a method that reads both fields within one behaviour turn when consistency is needed.
-
-**Prefer methods over direct field writes**: calling `counter.increment()` is idiomatic Yz. Direct cross-cown field writes (`counter.count = 5`) are legal but bypass the method's encapsulation.
-
-## 8.7 Inter-Boc Communication
+## 8.6 Inter-Boc Communication
 
 Bocs communicate by calling each other's methods. Each call is a behaviour scheduled on the target's cown:
 
@@ -191,20 +163,20 @@ consumer: {
 producer(consumer)   // producer schedules receives on consumer's cown
 ```
 
-## 8.8 Concurrency Implementation (Go Backend)
+## 8.7 Concurrency Implementation (Go Backend)
 
 | Yz Concept | Go Implementation |
 |-----------|-------------------|
 | Singleton boc (cown) | Struct with embedded `std.Cown` (lock-free atomic queue) |
 | Method call (behaviour) | `std.Schedule(&self.Cown, func() T { ... })` |
 | Multi-cown behaviour | `std.ScheduleMulti([]*std.Cown{...}, func() T { ... })` |
-| Cross-cown field write | `std.Schedule(&Target.Cown, func() Unit { Target.field = val })` |
+| Sub-boc call on held cown | `std.ScheduleAsSuccessor(&held.Cown, fn)` — inserted before external waiters |
 | Thunk | `*std.Thunk[T]` — lazy wrapper forced at IO boundary |
 | Materialization | `.Force()` call on `*Thunk[T]` |
 | Structured concurrency | `std.BocGroup` + `WaitGroup` on child goroutines |
 | Cown acquisition order | Atomic queue per cown; behaviours run when all queues grant |
 
-## 8.9 Summary
+## 8.8 Summary
 
 ```
 Concurrency Model:
@@ -216,14 +188,14 @@ Concurrency Model:
   Acquisition:       Atomic — all cowns acquired at once or none
   Ordering:          Spawn order for behaviours sharing a cown
   Parallelism:       Behaviours with disjoint cowns run freely in parallel
-  State safety:      Single-writer — only the cown owner writes its fields
+  State safety:      Exclusive cown access — all field writes go through cown queue
   Deadlock:          Impossible — atomic multi-cown acquisition
   Data races:        Impossible — exclusive cown access
   Structured:        Parent waits for all spawned behaviours before completing
   Runtime:           Goroutines + lock-free cown queue (Go backend)
 ```
 
-## 8.10 Theoretical Background
+## 8.9 Theoretical Background
 
 The concurrency model in Yz is a direct application of **Behaviour-Oriented Concurrency** developed at Imperial College London and Microsoft Research. In that model, protected resources are called **cowns** and asynchronous units of work are called **behaviours** — Yz uses the same terms and the same formal guarantees.
 

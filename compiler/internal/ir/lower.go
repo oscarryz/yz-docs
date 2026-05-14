@@ -814,7 +814,17 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					inner = append(inner, &ExprStmt{Expr: l.lowerExprForced(e)})
 				}
 			} else {
-				inner = append(inner, &ReturnStmt{Value: l.lowerExprForced(e)})
+				// Last element: if a BocGroup is active and the call is on a cown-bearing
+				// struct instance, spawn it asynchronously so it goes through
+				// ScheduleAsSuccessor in codegen. The body returns std.TheUnit implicitly.
+				if bgVar != "" && l.isStructInstanceMethodCall(e) {
+					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+						GroupVar: bgVar,
+						Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: l.lowerExpr(e)}}},
+					}})
+				} else {
+					inner = append(inner, &ReturnStmt{Value: l.lowerExprForced(e)})
+				}
 			}
 		default:
 			// Other statements — skip for now.
@@ -2030,6 +2040,22 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	return false
 }
 
+// isStructInstanceMethodCall reports whether e is a method call on a
+// non-singleton struct instance — a cown-per-instance type whose cown will be
+// acquired by ScheduleMulti, making the call a candidate for ScheduleAsSuccessor.
+func (l *lowerer) isStructInstanceMethodCall(e ast.Expr) bool {
+	c, ok := e.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	mem, ok := c.Callee.(*ast.MemberExpr)
+	if !ok {
+		return false
+	}
+	st, isStruct := l.analyzer.ExprType(mem.Object).(*sema.StructType)
+	return isStruct && !st.IsSingleton && !st.IsInterface
+}
+
 // lowerExprForced lowers e and wraps the result in ForceExpr when e is a boc
 // method call (which returns *Thunk[T] and must be materialized at the call site).
 func (l *lowerer) lowerExprForced(e ast.Expr) Expr {
@@ -2058,8 +2084,9 @@ func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 }
 
 // bodyHasBocCallsInStmtPos reports whether any element in elems is a
-// statement-position boc call — either a direct boc call (non-last) or a
-// conditional/match whose branches contain boc calls.
+// statement-position boc call — either a direct boc call (non-last), a
+// conditional/match whose branches contain boc calls, or a last element that
+// is a method call on a cown-bearing struct instance (requires ScheduleAsSuccessor).
 func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
 	for i, elem := range elems {
 		e, ok := elem.(ast.Expr)
@@ -2068,6 +2095,9 @@ func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
 		}
 		isLast := i == len(elems)-1
 		if !isLast && l.isBocMethodCall(e) {
+			return true
+		}
+		if isLast && l.isStructInstanceMethodCall(e) {
 			return true
 		}
 		if cond, ok := e.(*ast.ConditionalExpr); ok {

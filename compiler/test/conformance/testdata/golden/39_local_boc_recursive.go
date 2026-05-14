@@ -14,8 +14,9 @@ func (self *_mainBoc) F(n std.Int) *std.Thunk[std.Unit] {
 				std.Print(std.NewString("fin"))
 			} else {
 				std.Print(n)
+				_st0 := self.F(n.Minus(std.NewInt(1)))
 				_bg0.Go(func() any {
-					return self.F(n.Minus(std.NewInt(1))).Force()
+					return _st0.Force()
 				})
 			}
 			return std.TheUnit
