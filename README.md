@@ -1,9 +1,7 @@
 #readme 
 # The Yz Programming Language
 
-> **Note**: [Yz compiler](./compiler) is work in progress. All examples and features described here represent the intended design.
-
-
+> <sub> <i>The <a href="./compiler">Yz compiler</a> is work in progress. All examples and features described here represent the intended design.</i></sub>
 ## Quick Example
 
 ```javascript
@@ -15,9 +13,9 @@ factorial: { n Int
 print("${factorial(5)}")  // prints 120
 ```
 
-Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, [concurrent behaviours](#async-by-default) and [protected resources](#exclusive-access-boc-model) are all blocks. Rather than separate constructs for each role, you compose everything from one idea.
+Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, [concurrent execution](#async-by-default) are all blocks. 
 
-A block is a series of expressions between `{` and `}`, and the same block can act as data, behaviour, or both:
+A block is a series of expressions between `{` and `}`, and the same block can act as data, be executed, or both:
 
 ```javascript
 // As data
@@ -25,25 +23,27 @@ person: {
   name: "Alice"
   age: 30
 }
+print("${person.name}")
 
 // As behaviour
 greet: {
   name String
   print("Hello, ${name}!")
 }
+greet("World")
 
 // As both
 counter: {
   count: 0
   increment: { count = count + 1 }
 }
+counter.increment()
+print("${counter.count}")
 ```
 
 ## Basic Syntax
 
-### Comments
-
-*→ [Details](docs/Features/Comments.md)*
+### [Comments](docs/Features/Comments.md)
 
 ```javascript
 // Single line comment
@@ -53,9 +53,7 @@ counter: {
 */
 ```
 
-### Variables
-
-*→ [Details](docs/Features/Variables.md)*
+### [Variables](docs/Features/Variables.md)
 
 ```javascript
 // Long form declaration
@@ -68,9 +66,7 @@ name: "World"
 age Int
 ```
 
-### Strings
-
-*→ [Details](docs/Features/Strings.md)*
+### [Strings](docs/Features/Strings.md)
 
 Both `"double"` and `'single'` quotes create strings; they are interchangeable:
 
@@ -79,9 +75,7 @@ a: "Hello"
 b: 'Hello'  // identical
 ```
 
-### String Interpolation
-
-*→ [Details](docs/Features/String%20interpolation.md)*
+### [String Interpolation](docs/Features/String%20interpolation.md)
 
 Use `${...}` inside a string literal for interpolation:
 
@@ -91,9 +85,7 @@ greeting: "Hello, ${name}!"   // "Hello, Alice!"
 greeting: 'Hello, ${name}!'   // same
 ```
 
-## Blocks of Code (Bocs)
-
-*→ [Details](docs/Features/Bocs.md)*
+## [Blocks of Code (Bocs)](docs/Features/Bocs.md)
 
 ### Basic Block Structure
 
@@ -185,9 +177,9 @@ swap: {
 x, y = swap("hello", "world")  // x = "world", y = "hello"
 ```
 
-## Concurrency
+## [Concurrency](docs/Features/Concurrency.md)
 
-*→ [Details](docs/Features/Concurrency.md)*
+The concurrency model is an adaptation of the [Behaviour-Oriented Concurrency](https://marioskogias.github.io/docs/boc.pdf) model.
 
 ### Async by Default
 
@@ -217,7 +209,7 @@ process_data: {
 }
 ```
 
-### Exclusive Access (BOC Model)
+### Exclusive Access 
 
 Every value in Yz is a protected concurrent resource — a **cown** (concurrent owner). Only one running boc can hold a cown at a time; all others queue behind it. Cowns are acquired atomically: a boc that needs multiple resources gets all of them at once or waits until it can.
 
@@ -280,58 +272,14 @@ greet: { msg String
 hi: { 42 }
 ```
 
-### Block Signatures
+### [Block Signatures](docs/Features/Block%20type.md)
 
-*→ [Details](docs/Features/Block%20type.md)*
-
-There are four ways to declare a block, from most implicit to most explicit.
-
-**1. Identifier + inferred boc** — signature is inferred from the body:
-
-```javascript
-add: {
-  x Int
-  y Int
-  x + y       // return type Int inferred from last expression
-}
-get_answer: { 42 }
-do_something: { print("Done") }
+A `#(...)` represents a block signature or a _boc type_, this is useful to use bocs in parameters, or arrays
+```js
+hell_world #(String) // a boc that returns a String
 ```
 
-**2. Identifier + explicit boc type** — declares the signature without a body (assigned later):
-
-```javascript
-add #(x Int, y Int, Int)   // takes two Ints, returns Int
-get_answer #(Int)           // no inputs, returns Int
-do_something #()            // no inputs, no return
-```
-
-**3. Identifier + explicit boc type + body (assigned separately):**
-
-```javascript
-add #(x Int, y Int, Int)
-add = {
-  x Int
-  y Int
-  x + y
-}
-```
-
-**4. Typed block — identifier + explicit signature + inline body:**
-
-```javascript
-add #(x Int, y Int, Int) {
-  x + y
-}
-get_answer #(Int) { 42 }
-do_something #() { print("Done") }
-```
-
-This last form is the most common for named blocks that need an explicit signature.
-
-### Block Signature Declaration and Assignment
-
-Blocks can be declared with signatures and assigned later:
+The block body has to be assigned to use the boc:
 
 ```javascript
 // Declare signature
@@ -346,20 +294,16 @@ greet = {
 
 // Type signature can omit variable names
 greet #(String, String, String) 
-greet() // compilation error, needs to be assigned a value
+greet() // Need to be assigned before used
 
 greet = {
   a String 
   b String
   c String
 }
-greet() // compilation error, a, b, c need a default value or one assigned
-greet("uno", "dos", "tres")
 ```
 
-## Creating New Types
-
-*→ [Details](docs/Features/Define%20new%20types.md)*
+## [Creating New Types ](docs/Features/Define%20new%20types.md)
 
 ### Type Declaration
 
@@ -375,9 +319,7 @@ Person : {
 }
 ```
 
-### Creating Instances
-
-*→ [Details](docs/Features/Create%20instances.md)*
+### [Creating Instances](docs/Features/Create%20instances.md)
 
 ```javascript
 alice: Person(name: "Alice", age: 30)
@@ -387,40 +329,14 @@ bob: Person("Bob", 25)
 alice.greet()  // "Hello, I'm Alice"
 ```
 
-### Multi-field Types
-
-```javascript
-Person : {
-  name String
-  last_name String
-}
-alice: Person("Alice", "Adams") 
-
-// The same rules of named args and default values apply
-```
-
-### Blocks Returning Blocks
-
-A block can return another block:
-
-```javascript
-// A block can return another block
-create_block: {
-  {
-    name String 
-  }
-}
-x: create_block() 
-x.name = "X"
-x() // just returns `X`
-```
-
 ### Type Signatures for Custom Types
 
 ```javascript
 // Explicit signature
 Point #(x Int, y Int) {
-  distance_to_origin: {
+  // `secret` is not part of the 
+  // signature and thus "private" 
+  secret: {
     sqrt(x * x + y * y)
   }
 }
@@ -439,7 +355,7 @@ int_box: Box(42)        // T becomes Int
 string_box: Box("Hi")   // T becomes String
 ```
 
-### Generic Functions
+### Generic invocations 
 
 ```javascript
 identity: {
@@ -447,7 +363,7 @@ identity: {
   value  // Returns whatever type was passed in
 }
 
-number: identity(42)    // number: Int
+number: identity(Int, 42)    // number: Int
 text: identity("hi")    // text: String
 ```
 
@@ -482,9 +398,7 @@ serialize: {
 
 An explicit constraint is checked at the call site; an inferred constraint is checked at usage inside the body. Both forms are valid.
 
-## Type Variants
-
-*→ [Details](docs/Features/Type%20variants.md)*
+## [Type Variants](docs/Features/Type%20variants.md)
 
 Type variants provide sum type functionality:
 
@@ -533,9 +447,7 @@ handle_response: {
 }
 ```
 
-## Structural Typing
-
-*→ [Details](docs/Features/Structural%20typing.md)*
+## [Structural Typing](docs/Features/Structural%20typing.md)
 
 Yz uses structural typing - types match based on structure, not names:
 
@@ -564,9 +476,7 @@ process_coordinates(v)  // Works - Vector has x, y Int
 
 ## Arrays and Dictionaries
 
-### Arrays
-
-*→ [Details](docs/Features/Array.md)*
+### [Arrays](docs/Features/Array.md)
 
 ```javascript
 // Type declaration
@@ -590,15 +500,13 @@ a [T] = [1, 2, 3]
 a : [T]()
 
 // Array operations
-a << 'Hello' // or a.add 'Hello'
+a << 'Hello' // or a.add('Hello')
 print(a[0]) // access element 0 of the array
 a[0] = "Hola"
 ```
 
 
-### Dictionaries (Associative Arrays)
-
-*→ [Details](docs/Features/Associative%20arrays.md)*
+### [Dictionaries (Associative Arrays)](docs/Features/Associative%20arrays.md)
 
 ```javascript
 // Type
@@ -631,9 +539,7 @@ d[1] // Some(2)
 d[5] // None()
 ```
 
-## Error Handling
-
-*→ [Details](docs/Features/Error%20handling.md)*
+## [Error Handling](docs/Features/Error%20handling.md)
 
 Yz uses `Result` and `Option` types for error handling:
 
@@ -642,14 +548,14 @@ divide: {
   a Int
   b Int
   b == 0 ? {
-    Err("Division by zero")
+    Result.Err("Division by zero")
   } {
-    Ok(a / b)
+    Result.Ok(a / b)
   }
 }
 
 result: divide(10, 2).or_else({
-  error Error
+  error Result.Error
   print("Error: ${error}")
   0  // Default value
 })
@@ -660,24 +566,19 @@ result: divide(10, 2).or_else({
 ```javascript
 process_file: {
   filename String
+  // read_file returns `Result(String,Error)`
   read_file(filename)
-    .and_then { content String
-      parse_content(content)
-    }
-    .and_then { data Data
-      validate_data(data)  
-    }
-    .or_else { error Error
-      print("Processing failed: ${error}")
-    }
+	// .and_then is a Result method
+    .and_then {  content String; parse_content(content) }
+    .and_then { data Data;  validate_data(data)   }
+    .or_else { error Error;  print("Processing failed: ${error}") }
 }
 ```
 
 ## Control Flow
 
-*→ [Details](docs/Features/Conditional%20Bocs.md)*
-
-*→ [Details](docs/Features/return%2C%20break%2C%20continue.md)*
+- [Conditional Bocs + `match`](docs/Features/Conditional%20Bocs.md)
+- [return, break, continue](docs/Features/return%2C%20break%2C%20continue.md)
 
 ```javascript
 // ? is a method on Bool — true-branch, false-branch
@@ -723,9 +624,7 @@ check: {
 }
 ```
 
-## Trailing Block Syntax
-
-*→ [Details](docs/Features/Trailing%20block%20syntax.md)*
+## [Trailing Block Syntax](docs/Features/Trailing%20block%20syntax.md)
 
 When the only argument to a method is a block literal, the parentheses can be omitted. Write the block directly after the method name on the same line:
 
@@ -742,15 +641,13 @@ list.filter { item Int; item > 10 }
 
 The `{` must appear on the same line as the method name (a newline causes ASI to insert a semicolon, and the block becomes a separate statement).
 
-## Non-Word Method Invocation
+## [Non-Word Method Invocation](docs/Features/Non-Word%20invocation.md)
 
-*→ [Details](docs/Features/Non-Word%20invocation.md)*
-
-When boc name is non-word, we can invoke it without `.` and `parenthesis` as long as it has at least one parameter.
+When boc name is non-word, we can invoke it without `. ident ()`  as long as it has at least one parameter.
 
 ```js
 Example: { 
-   // the "<<" variable
+   // the "<<" variable is a non-word identifier
    << : { 
 	   n Int
 	   printnln(n)
@@ -760,11 +657,9 @@ e : Example()
 e << 1 // same as e.<<(1)
 ```
 
-## Info Strings
+## [Info Strings](docs/Features/Info%20strings.md)
 
-*→ [Details](docs/Features/Info%20strings.md)*
-
-An infostring is a boc body delimited by backticks placed immediately before a definition. Its content is valid Yz — compiled but never executed — and can be used at compile time to augment or extend the language:
+An info string is a boc body delimited by backticks placed immediately before a definition. Its content is valid Yz — compiled but never executed — and can be used at compile time to augment or extend the language:
 
 ```javascript
 `
@@ -784,7 +679,7 @@ Movie : {
 }
 ```
 
-`compile_time` lists the extensions to run on the annotated boc. Each extension reads only the variable it owns (`json`, `embed`, …). Referenced names are resolved at compile time — a typo is a compile error.
+`compile_time` lists the extensions to run on the annotated boc. Each extension reads only the variable it owns (`json`, `embed`, …). Referenced names are resolved at compile time — a typo inside the definition is a compile error.
 
 ## Examples
 
@@ -813,7 +708,7 @@ print(counter.get())  // prints 2
 
 ### Bank Account Transfers
 
-Five concurrent transfers. Some share accounts (serialized), others don't (parallel). No locks written anywhere.
+Concurrent transfers. Some share accounts (serialized), others don't (parallel). No locks written anywhere.
 
 ```javascript
 Account: {
@@ -835,10 +730,11 @@ main: {
   alice: Account(100)
   bob:   Account(0)
   carol: Account(50)
+  daniel: Account(50)
 
   transfer(alice, bob,   30)  // alice + bob
   transfer(bob,   alice, 10)  // serialized after above
-  transfer(bob,   carol, 20)  // serialized after above
+  transfer(daniel,   carol, 20)  // run's freely
 }
 ```
 
@@ -882,10 +778,11 @@ Server: {
     Response(body: "Hello, World!")
   }
 
-  `route: "/users/${id}"`
+  `route: "/users/{id}"`
   get_user #(r Request, w Response) {
     id: r.params.id
-    Response(body: "User: ${id}")
+	user: find_user(id)
+    Response(body: "User: ${user.name}")
   }
 
   `route: "/users"; method: http.Post`
@@ -898,11 +795,9 @@ server: Server()
 server.listen()
 ```
 
-## Reserved Words and Symbols
+## [Reserved Words and Symbols ](docs/Features/Reserved%20words%20and%20characters%20and%20symbols.md)
 
-*→ [Details](docs/Features/Reserved%20words%20and%20characters%20and%20symbols.md)*
-
-The following cannot be identifiers or part of an identifier:
+In Yz, almost anything can be part of an identifier, except for the following reserved words and symbols: 
 
 ```
 break
@@ -924,7 +819,6 @@ match
 
 ## Repository Structure
 
-- **`compiler/`** — Go implementation of the Yz compiler. Includes the lexer, parser, AST, lowerer, and code generator. Emits Go source and invokes `go build` to produce binaries.
 - **`docs/`** — Additional documentation, design notes, and implementation decisions.
-  - **[`docs/Features/`](docs/Features/README.md)** — Full feature reference, one page per language feature.
+- **`compiler/`** — Go implementation of the Yz compiler. Includes the lexer, parser, AST, lowerer, and code generator. Emits Go source and invokes `go build` to produce binaries.
 - **`spec/`** — Language specification split across numbered sections (01–11), describing syntax, semantics, and type system.
