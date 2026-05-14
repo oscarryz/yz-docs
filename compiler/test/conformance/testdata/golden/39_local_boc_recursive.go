@@ -6,19 +6,22 @@ type _mainBoc struct {
 	std.Cown
 }
 
-func (self *_mainBoc) f(n std.Int) std.Unit {
-	if n.Eqeq(std.NewInt(0)).GoBool() {
-		std.Print(std.NewString("fin"))
-	} else {
-		std.Print(n)
-		self.F(n.Minus(std.NewInt(1))).Force()
-	}
-	return std.TheUnit
-}
-
 func (self *_mainBoc) F(n std.Int) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
-		return self.f(n)
+	return std.NewThunk(func() std.Unit {
+		_bg0 := &std.BocGroup{}
+		std.Schedule(&self.Cown, func() std.Unit {
+			if n.Eqeq(std.NewInt(0)).GoBool() {
+				std.Print(std.NewString("fin"))
+			} else {
+				std.Print(n)
+				_bg0.Go(func() any {
+					return self.F(n.Minus(std.NewInt(1))).Force()
+				})
+			}
+			return std.TheUnit
+		}).Force()
+		_bg0.Wait()
+		return std.TheUnit
 	})
 }
 
