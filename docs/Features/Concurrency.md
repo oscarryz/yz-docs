@@ -187,6 +187,40 @@ second.
 > **Incorrect scheduling hurts performance but never correctness.** The program is
 > always data-race free and deadlock free regardless of invocation order.
 
+
+> TODO include the following clarification
+```
+It is deterministic and the order is determined for the
+  use of the resources (cows), if main uses x twice, the happens-before takes place
+
+  main: {
+     ...
+     foo(x) // 1
+     foo(x) // 2
+     foo(y) // 3
+  }
+
+  2 runs after 1, because they both use x
+  3 runs in parallel
+
+  If foo itself does something similar
+
+
+  foo : {
+     x Bar // x it the parameter
+
+     bar(x)  // same Bar
+     bar(Bar()) // different bar
+  }
+
+  Then foo releases the cown `x`, bar will acquire it first because it happens-before the second `foo` call in main, wins it, uses
+  it, and releases it. foo regains it again if it needs it (in this sample it doesn't) and then completes, all while bar(Fo()) is
+  running in parallel because the new Bar() was uncontested
+
+  When the 1st foo returns the second acquires it
+```
+
+
 ---
 
 ## Producer-Consumer

@@ -33,8 +33,15 @@ main: {
 	}
 	f := ir.Lower(sf, a, "main")
 	for _, decl := range f.Decls {
-		if md, ok := decl.(*ir.MethodDecl); ok && md.Name == "Call" {
-			fmt.Printf("Method %s on %s:\n", md.Name, md.Receiver)
+		sd, ok := decl.(*ir.SingletonDecl)
+		if !ok {
+			continue
+		}
+		for _, md := range sd.Methods {
+			if md.Name != "Call" {
+				continue
+			}
+			fmt.Printf("Method %s on %s:\n", md.Name, md.RecvType)
 			for _, stmt := range md.Body {
 				if es, ok := stmt.(*ir.ExprStmt); ok {
 					if th, ok := es.Expr.(*ir.ThunkExpr); ok {

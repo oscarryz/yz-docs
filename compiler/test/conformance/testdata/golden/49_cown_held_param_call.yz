@@ -1,0 +1,24 @@
+// Multi-cown body calling a method on a held cown param.
+// The sub-boc (b.set) must be scheduled via ScheduleAsSuccessor so it runs as
+// the immediate successor of the current ScheduleMulti holder — before any
+// external waiters already queued on b. This preserves spawn-order
+// happens-before: anything spawned inside the first call runs before the
+// second call from the parent, regardless of when the second call registered
+// in the cown queue.
+
+Box: {
+    val Int
+    set #(v Int) {
+        val = v
+    }
+}
+
+assign #(b Box, v Int) {
+    b.set(v)
+}
+
+main: {
+    box: Box(0)
+    assign(box, 42)
+    print(box.val)
+}
