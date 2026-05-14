@@ -758,10 +758,9 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 	var inner []Stmt
 	elems := b.Elements
 
-	// Allocate a top-level BocGroup if any statement-position boc calls exist.
 	bgVar := ""
 	if l.bodyHasBocCallsInStmtPos(elems) {
-		bgVar = fmt.Sprintf("_bg%d", len(inner)) // unique within this scope
+		bgVar = "_bg0"
 		inner = append(inner, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
 	}
 
@@ -802,13 +801,11 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			inner = append(inner, &ReturnStmt{Value: val})
 		case ast.Expr:
 			if is, ok := l.tryLowerConditional(e); ok {
-				// Conditional always becomes an IfStmt; return is handled by ensure-return.
 				inner = append(inner, is)
 			} else if !isLast {
 				if ms, ok := l.tryLowerMatch(e); ok {
 					inner = append(inner, ms)
 				} else if l.isBocMethodCall(e) && bgVar != "" {
-					// Statement-position boc call: register with top-level BocGroup.
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
 						GroupVar: bgVar,
 						Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: l.lowerExpr(e)}}},
@@ -824,7 +821,6 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 		}
 	}
 
-	// Append WaitStmt for the implicit BocGroup before the final return.
 	if bgVar != "" {
 		inner = append(inner, &WaitStmt{GroupVar: bgVar})
 	}
