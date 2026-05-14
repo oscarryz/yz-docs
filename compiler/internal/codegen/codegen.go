@@ -281,18 +281,15 @@ func (g *generator) emitStmt(s ir.Stmt) {
 			g.linef("return %s", g.expr(st.Value))
 		}
 	case *ir.ExprStmt:
-		// When inside a multi-cown ScheduleMulti body and the statement is a
-		// ForceExpr wrapping a MethodCall on a held cown, emit the sync body call
-		// directly instead of going through std.Schedule (which would deadlock or
-		// break atomicity ordering).
-		if fe, ok := st.Expr.(*ir.ForceExpr); ok && len(g.heldCowns) > 0 {
-			if mc, ok := fe.Thunk.(*ir.MethodCall); ok {
+		// When a held cown's method is called (ForceExpr or SpawnExpr wrapping a
+		// MethodCall), emit the lowercase sync body directly — going through
+		// std.Schedule would deadlock or break atomicity ordering.
+		if len(g.heldCowns) > 0 {
+			if mc := reentrantMethodCall(st.Expr, g.heldCowns); mc != nil {
 				recvStr := simpleExprStr(mc.Recv)
-				if recvStr != "" && g.heldCowns["&"+recvStr+".Cown"] {
-					syncName := strings.ToLower(mc.Method[:1]) + mc.Method[1:]
-					g.linef("%s.%s(%s)", recvStr, syncName, g.exprList(mc.Args))
-					return
-				}
+				syncName := strings.ToLower(mc.Method[:1]) + mc.Method[1:]
+				g.linef("%s.%s(%s)", recvStr, syncName, g.exprList(mc.Args))
+				return
 			}
 		}
 		g.linef("%s", g.expr(st.Expr))
@@ -369,6 +366,62 @@ func (g *generator) exprList(exprs []ir.Expr) string {
 	return strings.Join(parts, ", ")
 }
 
+// splitDecl is a variable declaration split across the outer and inner scopes of
+// the split-BocGroup pattern: `var name type` goes in the outer scope (visible
+// after Schedule/ScheduleMulti) and `name = init` goes inside the closure.
+type splitDecl struct {
+	name string
+	typ  string
+	init ir.Expr
+}
+
+// partitionWaitBody buckets pre-Wait statements into the three categories used
+// by the split-BocGroup emission pattern.
+func partitionWaitBody(preWait []ir.Stmt) (hoisted []ir.Stmt, splits []splitDecl, immediate []ir.Stmt) {
+	for _, s := range preWait {
+		if ds, ok := s.(*ir.DeclStmt); ok {
+			if _, isGroup := ds.Init.(*ir.NewGroupExpr); isGroup {
+				hoisted = append(hoisted, s)
+				continue
+			}
+			if ds.IsThunk {
+				hoisted = append(hoisted, s)
+				continue
+			}
+			// Regular var with explicit type: split so the name is visible after Schedule.
+			if ds.Type != "" {
+				splits = append(splits, splitDecl{ds.Name, ds.Type, ds.Init})
+				continue
+			}
+		}
+		immediate = append(immediate, s)
+	}
+	return
+}
+
+// emitImmediateBody emits body into g, hoisting thunk expressions out of
+// SpawnExprs so cown registration happens in source order — matching the BOC
+// paper's guarantee that when() calls queue on cowns sequentially.
+func (g *generator) emitImmediateBody(body []ir.Stmt) {
+	hoistIdx := 0
+	for _, s := range body {
+		if es, ok := s.(*ir.ExprStmt); ok {
+			if sp, ok := es.Expr.(*ir.SpawnExpr); ok {
+				if inner, ok := spawnForceInner(sp); ok {
+					tv := fmt.Sprintf("_st%d", hoistIdx)
+					hoistIdx++
+					g.linef("%s := %s", tv, g.expr(inner))
+					g.linef("%s.Go(func() any {", sp.GroupVar)
+					g.linef("\treturn %s.Force()", tv)
+					g.linef("})")
+					continue
+				}
+			}
+		}
+		g.emitStmt(s)
+	}
+}
+
 // emitThunk generates std.Go(func() T { body }) or std.NewThunk(...).
 // When th.RecvCown is non-empty the body is serialized through the singleton's
 // cown using std.Schedule. If the body also contains a WaitStmt (BocGroup pattern),
@@ -416,12 +469,18 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		if thunkFindInlineThunkVar(th.Body) >= 0 {
 			return g.emitScheduleFlatten(th)
 		}
-		// If the body contains a WaitStmt (implicit BocGroup from E.1), the BocGroup
-		// must be hoisted outside ScheduleMulti and waited after cown release to avoid
-		// deadlock (goroutines queued inside ScheduleMulti can't acquire the cown until
-		// after ScheduleMulti's closure returns and releases it).
+		// If the body contains a WaitStmt and has genuinely non-reentrant SpawnExprs
+		// (goroutines whose cown is not already held), use the split-BocGroup pattern:
+		// hoist BocGroup outside ScheduleMulti and Wait after cown release. Without
+		// this, goroutines queued inside ScheduleMulti cannot acquire the cown until
+		// ScheduleMulti releases it, but ScheduleMulti is blocked waiting on them.
+		// When all SpawnExprs are reentrant, fall through to the clean path where
+		// emitStmt converts them to inline sync calls — preserving eager ScheduleMulti
+		// return (which keeps cown-queue ordering for callers that hoist the thunk).
 		if waitIdx := thunkFindWaitIdx(th.Body); waitIdx >= 0 {
-			return g.emitScheduleMultiSplit(th, heldCowns, waitIdx)
+			if bodyHasNonReentrantSpawn(th.Body[:waitIdx], heldCowns) {
+				return g.emitScheduleMultiSplit(th, heldCowns, waitIdx)
+			}
 		}
 		// If the body contains an IfStmt with non-reentrant forces (sub-boc methods
 		// whose cown is NOT already held), use ScheduleFlattenIf.
@@ -479,38 +538,7 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	preWait := th.Body[:waitIdx]
 	postWait := th.Body[waitIdx:] // WaitStmt and everything after
 
-	// Separate statements into three buckets:
-	//   hoistedDecls  — emitted before Schedule in the outer scope (BocGroup, thunkVars)
-	//   splitDecls    — declaration hoisted to outer scope; initialization emitted as
-	//                   an assignment inside Schedule (regular vars with explicit types
-	//                   that may be referenced in post-Wait statements)
-	//   immediateBody — everything else, emitted inside Schedule
-	type splitDecl struct {
-		name string
-		typ  string
-		init ir.Expr
-	}
-	var hoistedDecls []ir.Stmt
-	var splitDecls []splitDecl
-	var immediateBody []ir.Stmt
-	for _, s := range preWait {
-		if ds, ok := s.(*ir.DeclStmt); ok {
-			if _, isGroup := ds.Init.(*ir.NewGroupExpr); isGroup {
-				hoistedDecls = append(hoistedDecls, s)
-				continue
-			}
-			if ds.IsThunk {
-				hoistedDecls = append(hoistedDecls, s)
-				continue
-			}
-			// Regular var with explicit type: split so the name is visible after Schedule.
-			if ds.Type != "" {
-				splitDecls = append(splitDecls, splitDecl{ds.Name, ds.Type, ds.Init})
-				continue
-			}
-		}
-		immediateBody = append(immediateBody, s)
-	}
+	hoistedDecls, splitDecls, immediateBody := partitionWaitBody(preWait)
 
 	var sb strings.Builder
 	sb.WriteString("std.NewThunk(func() ")
@@ -519,55 +547,27 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 
 	outer := g.sub(g.level + 1)
 
-	// Hoisted declarations (BocGroup vars and thunkVars).
 	for _, s := range hoistedDecls {
 		outer.emitStmt(s)
 	}
-	// Hoisted split-var declarations (zero-value; assigned inside Schedule).
 	for _, sd := range splitDecls {
 		outer.linef("var %s %s", sd.name, sd.typ)
 	}
 
-	// Schedule for the immediate body (SpawnExprs); releases cown when done.
 	outer.write(outer.ind())
 	outer.write("std.Schedule(")
 	outer.write(th.RecvCown)
 	outer.write(", func() std.Unit {\n")
 	schedInner := outer.sub(outer.level + 1)
-	// Assignments for split-var initializations.
 	for _, sd := range splitDecls {
 		schedInner.linef("%s = %s", sd.name, schedInner.expr(sd.init))
 	}
-	// Emit immediateBody inside the Schedule closure.
-	// For SpawnExprs whose body is [Return(Force(expr))], hoist the thunk expression
-	// out of the goroutine so cown registration happens serially in source order.
-	// This ensures behaviours queue on cowns in the order they appear in source,
-	// matching the BOC paper's "when() calls happen sequentially" guarantee.
-	spawnHoistIdx := 0
-	for _, s := range immediateBody {
-		es, isExpr := s.(*ir.ExprStmt)
-		if isExpr {
-			if sp, isSpawn := es.Expr.(*ir.SpawnExpr); isSpawn {
-				if inner, ok := spawnForceInner(sp); ok {
-					// Hoist the thunk expression (Run() call) before _bg0.Go.
-					tv := fmt.Sprintf("_st%d", spawnHoistIdx)
-					spawnHoistIdx++
-					schedInner.linef("%s := %s", tv, schedInner.expr(inner))
-					schedInner.linef("%s.Go(func() any {", sp.GroupVar)
-					schedInner.linef("\treturn %s.Force()", tv)
-					schedInner.linef("})")
-					continue
-				}
-			}
-		}
-		schedInner.emitStmt(s)
-	}
+	schedInner.emitImmediateBody(immediateBody)
 	schedInner.line("return std.TheUnit")
 	outer.write(schedInner.sb.String())
 	outer.write(outer.ind())
 	outer.write("}).Force()\n")
 
-	// WaitStmts and post-Wait statements (cown already released).
 	outer.emitBodyStmts(postWait, true)
 
 	sb.WriteString(outer.sb.String())
@@ -690,6 +690,58 @@ func stmtsHaveNonReentrantForce(stmts []ir.Stmt, heldCowns map[string]bool) bool
 					}
 				}
 				return true // non-reentrant or non-MethodCall force
+			}
+		}
+	}
+	return false
+}
+
+// reentrantMethodCall returns the MethodCall from a ForceExpr or a SpawnExpr
+// whose single body is Return{Force{MethodCall}}, when the receiver's cown is
+// in heldCowns. Returns nil if the expression is not a reentrant method call.
+func reentrantMethodCall(expr ir.Expr, heldCowns map[string]bool) *ir.MethodCall {
+	var mc *ir.MethodCall
+	switch ex := expr.(type) {
+	case *ir.ForceExpr:
+		if m, ok := ex.Thunk.(*ir.MethodCall); ok {
+			mc = m
+		}
+	case *ir.SpawnExpr:
+		if len(ex.Body) == 1 {
+			if rs, ok := ex.Body[0].(*ir.ReturnStmt); ok && rs.Value != nil {
+				if fe, ok := rs.Value.(*ir.ForceExpr); ok {
+					if m, ok := fe.Thunk.(*ir.MethodCall); ok {
+						mc = m
+					}
+				}
+			}
+		}
+	}
+	if mc == nil {
+		return nil
+	}
+	recvStr := simpleExprStr(mc.Recv)
+	if recvStr == "" || !heldCowns["&"+recvStr+".Cown"] {
+		return nil
+	}
+	return mc
+}
+
+// bodyHasNonReentrantSpawn reports whether any SpawnExpr in stmts (including
+// inside IfStmt branches) targets a cown not in heldCowns — i.e., the goroutine
+// cannot be replaced by a sync call and genuinely needs to run after cown release.
+func bodyHasNonReentrantSpawn(stmts []ir.Stmt, heldCowns map[string]bool) bool {
+	for _, s := range stmts {
+		switch st := s.(type) {
+		case *ir.ExprStmt:
+			if sp, ok := st.Expr.(*ir.SpawnExpr); ok {
+				if reentrantMethodCall(sp, heldCowns) == nil {
+					return true // non-reentrant or non-trivial spawn
+				}
+			}
+		case *ir.IfStmt:
+			if bodyHasNonReentrantSpawn(st.Then, heldCowns) || bodyHasNonReentrantSpawn(st.Else, heldCowns) {
+				return true
 			}
 		}
 	}
@@ -911,31 +963,7 @@ func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, heldCowns map[strin
 	preWait := th.Body[:waitIdx]
 	postWait := th.Body[waitIdx:] // WaitStmt and everything after
 
-	type splitDecl struct {
-		name string
-		typ  string
-		init ir.Expr
-	}
-	var hoistedDecls []ir.Stmt
-	var splitDecls []splitDecl
-	var immediateBody []ir.Stmt
-	for _, s := range preWait {
-		if ds, ok := s.(*ir.DeclStmt); ok {
-			if _, isGroup := ds.Init.(*ir.NewGroupExpr); isGroup {
-				hoistedDecls = append(hoistedDecls, s)
-				continue
-			}
-			if ds.IsThunk {
-				hoistedDecls = append(hoistedDecls, s)
-				continue
-			}
-			if ds.Type != "" {
-				splitDecls = append(splitDecls, splitDecl{ds.Name, ds.Type, ds.Init})
-				continue
-			}
-		}
-		immediateBody = append(immediateBody, s)
-	}
+	hoistedDecls, splitDecls, immediateBody := partitionWaitBody(preWait)
 
 	cowns := append([]string{th.RecvCown}, th.ExtraCowns...)
 
@@ -962,24 +990,7 @@ func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, heldCowns map[strin
 	for _, sd := range splitDecls {
 		schedInner.linef("%s = %s", sd.name, schedInner.expr(sd.init))
 	}
-	spawnHoistIdx := 0
-	for _, s := range immediateBody {
-		es, isExpr := s.(*ir.ExprStmt)
-		if isExpr {
-			if sp, isSpawn := es.Expr.(*ir.SpawnExpr); isSpawn {
-				if inner, ok := spawnForceInner(sp); ok {
-					tv := fmt.Sprintf("_st%d", spawnHoistIdx)
-					spawnHoistIdx++
-					schedInner.linef("%s := %s", tv, schedInner.expr(inner))
-					schedInner.linef("%s.Go(func() any {", sp.GroupVar)
-					schedInner.linef("\treturn %s.Force()", tv)
-					schedInner.linef("})")
-					continue
-				}
-			}
-		}
-		schedInner.emitStmt(s)
-	}
+	schedInner.emitImmediateBody(immediateBody)
 	schedInner.line("return std.TheUnit")
 	outer.write(schedInner.sb.String())
 	outer.write(outer.ind())
