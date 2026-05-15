@@ -20,8 +20,9 @@ func Generate(f *ir.File) string {
 // ---------------------------------------------------------------------------
 
 type generator struct {
-	sb    strings.Builder
-	level int // current indentation level (tabs)
+	sb        strings.Builder
+	level     int              // current indentation level (tabs)
+	heldCowns map[string]bool // non-nil when inside a ScheduleMulti body
 }
 
 func (g *generator) write(s string)                    { g.sb.WriteString(s) }
@@ -33,7 +34,9 @@ func (g *generator) linef(f string, a ...any)          { g.write(g.ind()); g.wri
 
 // sub returns a new generator pre-set to the given indentation level,
 // used for emitting multi-line closures embedded in expressions.
-func (g *generator) sub(level int) *generator { return &generator{level: level} }
+// heldCowns is inherited so that closure bodies emitted via sub() see the
+// same held-cown context as the enclosing ScheduleMulti body.
+func (g *generator) sub(level int) *generator { return &generator{level: level, heldCowns: g.heldCowns} }
 
 // ---------------------------------------------------------------------------
 // File
@@ -496,7 +499,16 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		sb.WriteString(th.ResultType)
 		sb.WriteString(" {\n")
 		inner := g.sub(g.level + 1)
-		inner.emitBodyStmts(th.Body, true)
+		// Inside a ScheduleMulti body (g.heldCowns set), synchronous Unit closures
+		// inherit the held-cown context so that boc calls on held cowns emit
+		// ScheduleAsSuccessor rather than Schedule. This is the correct behaviour
+		// when ? branches are lowered as closure arguments instead of IfStmt nodes.
+		if g.heldCowns != nil && !th.Spawn && th.ResultType == "std.Unit" {
+			inner.emitImmediateBody(th.Body, g.heldCowns)
+			inner.line("return std.TheUnit")
+		} else {
+			inner.emitBodyStmts(th.Body, true)
+		}
 		sb.WriteString(inner.sb.String())
 		sb.WriteString(g.ind())
 		sb.WriteString("})")
@@ -811,6 +823,7 @@ func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, waitIdx int) string
 	outer.write(strings.Join(cowns, ", "))
 	outer.write("}, func() std.Unit {\n")
 	schedInner := outer.sub(outer.level + 1)
+	schedInner.heldCowns = heldCowns // propagate into closure arguments emitted within this body
 	for _, sd := range splitDecls {
 		schedInner.linef("%s = %s", sd.name, schedInner.expr(sd.init))
 	}

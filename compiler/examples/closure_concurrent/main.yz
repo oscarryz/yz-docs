@@ -1,0 +1,36 @@
+// Concurrent closure held-cown example.
+//
+// apply takes a Box and a closure fn. Because apply's ScheduleMulti holds
+// both apply.Cown and box.Cown, a closure that calls box.set() must use the
+// sync body directly — otherwise it would deadlock trying to re-acquire
+// box.Cown that is already held.
+//
+// Three independent applies (b1, b2, b3) run fully in parallel.
+// A fourth apply on b1 is serialized after the first — it must wait for
+// b1.Cown to be released before it can acquire it.
+//
+// Expected output (order of first three lines may vary):
+//   10  ← or 20 or 30, the three concurrent ones finish in any order
+//   20
+//   30
+//   99  ← always last: b1 overwritten after the first apply(b1,...) finishes
+
+Box: { val Int; set #(v Int) { val = v } }
+
+apply #(a Box, fn #()) {
+    fn()
+}
+
+main: {
+    b1: Box(0)
+    b2: Box(0)
+    b3: Box(0)
+    apply(b1, { b1.set(10) })   // ─┐ all three run in parallel
+    apply(b2, { b2.set(20) })   //  │
+    apply(b3, { b3.set(30) })   // ─┘
+    apply(b1, { b1.set(99) })   // waits for the first apply(b1,...) to finish
+    print(b1.val)
+    print(b2.val)
+    print(b3.val)
+    print(b1.val)
+}
