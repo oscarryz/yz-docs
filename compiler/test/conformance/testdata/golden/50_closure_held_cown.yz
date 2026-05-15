@@ -1,0 +1,13 @@
+Box: { val Int; set #(v Int) { val = v } }
+
+apply #(a Box, fn #()) {
+    fn()
+}
+
+main: {
+    box: Box(0)
+    apply(box, {
+        box.set(42)
+    })
+    print(box.val)
+}

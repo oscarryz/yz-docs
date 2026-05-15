@@ -81,6 +81,13 @@ type lowerer struct {
 	// calls inside conditional branches register with this group (SpawnExpr)
 	// instead of being forced inline (ForceExpr).
 	bocGroupCtx string
+
+	// closureHeldCowns is set by lowerCall when processing a BocWithSig call
+	// that holds cown-bearing struct params via ScheduleMulti. Keys are cown
+	// addresses ("&varName.Cown"). Closure arguments lowered while this is set
+	// emit sync-body calls (lowercase method, no Force) for those cowns so the
+	// closure can be called safely while the cown is held.
+	closureHeldCowns map[string]bool
 }
 
 // ---------------------------------------------------------------------------
@@ -1840,6 +1847,16 @@ func (l *lowerer) tryLowerCrossPackageSingletonMethod(c *ast.CallExpr) (Expr, bo
 }
 
 func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
+	// Pre-scan: if this is a BocWithSig call with cown-bearing struct params,
+	// set closureHeldCowns so that closure arguments lowered below can emit
+	// sync-body calls (no cown acquisition) instead of .Force() calls that
+	// would deadlock when called while the cown is held.
+	if heldCowns := l.bocWithSigHeldCowns(c); len(heldCowns) > 0 {
+		prev := l.closureHeldCowns
+		l.closureHeldCowns = heldCowns
+		defer func() { l.closureHeldCowns = prev }()
+	}
+
 	// Check for known builtins first — they emit as direct std.Xxx calls.
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		if goName, isBuiltin := builtinGoName[id.Name]; isBuiltin {
@@ -2054,6 +2071,98 @@ func (l *lowerer) isStructInstanceMethodCall(e ast.Expr) bool {
 	}
 	st, isStruct := l.analyzer.ExprType(mem.Object).(*sema.StructType)
 	return isStruct && !st.IsSingleton && !st.IsInterface
+}
+
+// bocWithSigHeldCowns scans a BocWithSig call's params to find which actual
+// argument variables correspond to cown-bearing struct params. Returns a set of
+// "&varName.Cown" addresses that will be held (via ScheduleMulti) when any
+// closure argument to this call is invoked.
+func (l *lowerer) bocWithSigHeldCowns(c *ast.CallExpr) map[string]bool {
+	id, ok := c.Callee.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	sym := l.analyzer.LookupInFile(id.Name)
+	if sym == nil {
+		return nil
+	}
+	bws, isBWS := sym.Node.(*ast.BocWithSig)
+	if !isBWS || bws.Sig == nil {
+		return nil
+	}
+
+	// Collect named input params (same filter as lowerBocWithSig).
+	var inputs []*ast.BocParam
+	for _, p := range bws.Sig.Params {
+		if p.Variant == nil && p.Label != "" {
+			inputs = append(inputs, p)
+		}
+	}
+
+	held := map[string]bool{}
+	for i, p := range inputs {
+		if i >= len(c.Args) {
+			break
+		}
+		ste, ok := p.Type.(*ast.SimpleTypeExpr)
+		if !ok {
+			continue
+		}
+		typeSym := l.analyzer.LookupInFile(ste.Name)
+		if typeSym == nil {
+			continue
+		}
+		st, isStruct := typeSym.Type.(*sema.StructType)
+		if !isStruct || st.IsSingleton || st.IsInterface {
+			continue
+		}
+		// The actual arg's cown will be held when any closure arg is called.
+		argIdent, ok := c.Args[i].Value.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		held["&"+argIdent.Name+".Cown"] = true
+	}
+	return held
+}
+
+// trySyncExpr checks whether e is a method call on a variable whose cown is in
+// closureHeldCowns. If yes, returns a MethodCall node using the sync body name
+// (lowercase first letter of the exported Go name) so the codegen emits a direct
+// sync call — no cown acquisition, no Force(). Returns nil when not applicable.
+func (l *lowerer) trySyncExpr(e ast.Expr) Expr {
+	if l.closureHeldCowns == nil {
+		return nil
+	}
+	c, ok := e.(*ast.CallExpr)
+	if !ok {
+		return nil
+	}
+	mem, ok := c.Callee.(*ast.MemberExpr)
+	if !ok {
+		return nil
+	}
+	recvIdent, ok := mem.Object.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	if !l.closureHeldCowns["&"+recvIdent.Name+".Cown"] {
+		return nil
+	}
+	// Verify the receiver is a cown-bearing struct instance.
+	st, isStruct := l.analyzer.ExprType(mem.Object).(*sema.StructType)
+	if !isStruct || st.IsSingleton || st.IsInterface {
+		return nil
+	}
+	// Derive the sync body method name: lowercase first letter of exported Go name.
+	exportedName := lowerMethodName(mem.Member.Name)
+	syncName := strings.ToLower(exportedName[:1]) + exportedName[1:]
+	recv := l.lowerExpr(mem.Object)
+	var args []Expr
+	for _, arg := range c.Args {
+		args = append(args, l.lowerExpr(arg.Value))
+	}
+	return &MethodCall{Recv: recv, Method: syncName, Args: args}
 }
 
 // lowerExprForced lowers e and wraps the result in ForceExpr when e is a boc
@@ -2532,10 +2641,19 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 					stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
 				}
 			} else if isLast {
-				stmts = append(stmts, &ReturnStmt{Value: l.lowerExprForced(e)})
+				// If this is a method call on a held-cown receiver, emit the sync
+				// body directly (no cown acquisition) to avoid a deadlock when the
+				// closure is called while the cown is held by the caller's ScheduleMulti.
+				if synced := l.trySyncExpr(e); synced != nil {
+					stmts = append(stmts, &ReturnStmt{Value: synced})
+				} else {
+					stmts = append(stmts, &ReturnStmt{Value: l.lowerExprForced(e)})
+				}
 			} else {
 				if ms, ok := l.tryLowerMatch(e); ok {
 					stmts = append(stmts, ms)
+				} else if synced := l.trySyncExpr(e); synced != nil {
+					stmts = append(stmts, &ExprStmt{Expr: synced})
 				} else {
 					stmts = append(stmts, &ExprStmt{Expr: l.lowerExprForced(e)})
 				}
