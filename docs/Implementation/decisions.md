@@ -106,3 +106,9 @@ Resolved progressively during planning sessions (2026-03-04 through 2026-04-03).
 | 40 | Conditional expression | `cond ? { trueCase }, { falseCase }` is a `ConditionalExpr` node. In **statement position** it lowers to an `if/else` block. In **expression position** it lowers to a `Qm()` method call on the boolean value. |
 | 41 | Condition match | `match { cond => body }, { cond => body }, { default }` — in **expression position** lowers to an immediately-invoked closure (`func() T { if/else if/else }()`). In **statement position** lowers to a plain `if/else if/else` chain. |
 | 42 | Source paths | The default source path is `.` (project root). If explicit source paths are configured (e.g. `src/`, `lib/`, `vendor/`), then `.` is **not** included — the configured paths replace it, not supplement it. |
+
+## Compile-time Annotations (Deferred)
+
+| # | Decision | Resolution |
+|---|----------|------------|
+| 48 | Tracer infostring | `compile-time: [Tracer] output:'trace.out'` as an infostring on a boc would instruct `yzc` to emit `runtime/trace` instrumentation (`trace.NewTask`, `trace.WithRegion`) around every `ScheduleMulti` and closure call in the generated Go. This allows BOC execution to be visualised with `go tool trace` without modifying Yz source. **Deferred**: infostring parsing and codegen hooks are not yet implemented. Reference implementation: `compiler/examples/closure_concurrent/trace_harness/main.go`. |
