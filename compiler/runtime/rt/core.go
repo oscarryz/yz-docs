@@ -47,6 +47,10 @@ func Info(v any) InfoResult {
 // WaitGroup helper for structured concurrency
 // ---------------------------------------------------------------------------
 
+// Waitable is implemented by lazy scalar types (Int, String, Bool, Decimal, Unit).
+// GoWait uses this to block until a lazy value's goroutine completes.
+type Waitable interface{ Await() }
+
 // BocGroup manages structured concurrency for a single boc invocation.
 // Each spawned child boc registers itself; the parent waits at the end.
 type BocGroup struct {
@@ -69,6 +73,16 @@ func (g *BocGroup) Go(fn func() any) *Thunk[any] {
 		return th.val
 	}
 	return th
+}
+
+// GoWait spawns a goroutine that forces w (a lazy scalar value), registering
+// it with this group so Wait() blocks until the computation completes.
+func (g *BocGroup) GoWait(w Waitable) {
+	g.wg.Add(1)
+	go func() {
+		defer g.wg.Done()
+		w.Await()
+	}()
 }
 
 // Wait blocks until all goroutines registered with this group complete.

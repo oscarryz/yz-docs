@@ -1,0 +1,21 @@
+counter: {
+    count: 0
+    increment #(amount Int) {
+        print("incrementing ${amount}")
+        count = count + amount
+    }
+    value: { count }
+}
+p: {
+    call: {
+        print("about to print")
+    }
+}
+main: {
+    counter.increment(1)
+    n Int = counter.value()
+    counter.increment(n)
+    m Int = counter.value()
+    p.call()
+    print("${m}")
+}

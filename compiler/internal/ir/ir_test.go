@@ -227,12 +227,12 @@ func TestLowerMethodReturnsThunk(t *testing.T) {
 	if valueMethod == nil {
 		t.Fatal("method 'value' not found")
 	}
-	// Results should be "*std.Thunk[std.Int]"
+	// E.2: scalar return types use the scalar type directly (no *Thunk wrapper).
 	if len(valueMethod.Results) != 1 {
 		t.Fatalf("results: want 1, got %d", len(valueMethod.Results))
 	}
-	if valueMethod.Results[0] != "*std.Thunk[std.Int]" {
-		t.Errorf("result type: got %q, want *std.Thunk[std.Int]", valueMethod.Results[0])
+	if valueMethod.Results[0] != "std.Int" {
+		t.Errorf("result type: got %q, want std.Int", valueMethod.Results[0])
 	}
 }
 
@@ -316,7 +316,8 @@ func TestLowerBocWithSigFuncDecl(t *testing.T) {
 	if len(m.Params) != 1 || m.Params[0].Name != "name" || m.Params[0].Type != "std.String" {
 		t.Errorf("Call params: got %v", m.Params)
 	}
-	if len(m.Results) != 1 || m.Results[0] != "*std.Thunk[std.Unit]" {
+	// E.2: std.Unit is a scalar type — no *Thunk wrapper needed.
+	if len(m.Results) != 1 || m.Results[0] != "std.Unit" {
 		t.Errorf("Call results: got %v", m.Results)
 	}
 }

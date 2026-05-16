@@ -17,8 +17,8 @@ func (self *Named) hi() std.Unit {
 	return std.Print(self.name)
 }
 
-func (self *Named) Hi() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *Named) Hi() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.hi()
-	})
+	}))
 }

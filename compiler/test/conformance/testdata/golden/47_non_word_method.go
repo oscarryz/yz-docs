@@ -17,10 +17,10 @@ func (self *Greeter) plusplus(other std.String) std.String {
 	return std.NewString(std.Stringify(self.name)).Plus(std.NewString(" and ")).Plus(std.NewString(std.Stringify(other)))
 }
 
-func (self *Greeter) Plusplus(other std.String) *std.Thunk[std.String] {
-	return std.Schedule(&self.Cown, func() std.String {
+func (self *Greeter) Plusplus(other std.String) std.String {
+	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		return self.plusplus(other)
-	})
+	}))
 }
 
 type _mainBoc struct {
@@ -34,10 +34,10 @@ func (self *_mainBoc) call() std.Unit {
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

@@ -91,6 +91,53 @@ type lowerer struct {
 }
 
 // ---------------------------------------------------------------------------
+// Scalar type helpers (Phase E.2)
+// ---------------------------------------------------------------------------
+
+// IsScalarGoType reports whether goType is one of the five intrinsically lazy
+// scalar types (std.Int, std.String, std.Bool, std.Decimal, std.Unit). These
+// types carry lazy state internally, so no *Thunk[T] wrapper is needed.
+func IsScalarGoType(goType string) bool {
+	switch goType {
+	case "std.Int", "std.String", "std.Bool", "std.Decimal", "std.Unit":
+		return true
+	}
+	return false
+}
+
+// ThunkOrScalar returns goType for scalar types (they hold lazy computations
+// internally) and "*std.Thunk[goType]" for non-scalar types.
+func ThunkOrScalar(goType string) string {
+	if IsScalarGoType(goType) {
+		return goType
+	}
+	return "*std.Thunk[" + goType + "]"
+}
+
+// LazyWrapFunc returns the std.LazyX constructor name for scalar types, or ""
+// for non-scalar types. Used to wrap *Thunk[T] results into lazy scalar values.
+func LazyWrapFunc(goType string) string {
+	switch goType {
+	case "std.Int":
+		return "std.LazyInt"
+	case "std.String":
+		return "std.LazyString"
+	case "std.Bool":
+		return "std.LazyBool"
+	case "std.Decimal":
+		return "std.LazyDecimal"
+	case "std.Unit":
+		return "std.LazyUnit"
+	}
+	return ""
+}
+
+// bocCallIsScalar reports whether boc call expression e returns a scalar Go type.
+func (l *lowerer) bocCallIsScalar(e ast.Expr) bool {
+	return IsScalarGoType(l.goType(l.analyzer.ExprType(e)))
+}
+
+// ---------------------------------------------------------------------------
 // File
 // ---------------------------------------------------------------------------
 
@@ -196,7 +243,7 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	} else if len(bt.Returns) > 0 {
 		resultType = l.goType(bt.Returns[0])
 	}
-	thunkResult := "*std.Thunk[" + resultType + "]"
+	thunkResult := ThunkOrScalar(resultType)
 
 	// Collect params from the body's leading TypedDecls.
 	var params []*ParamSpec
@@ -446,13 +493,13 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 	defer func() { l.contextName = prevCtx }()
 
 	innerStmts := l.lowerSingletonBodyStmts(b.Elements)
-	thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown"}
+	thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown", LazyWrap: "std.LazyUnit"}
 	callMethod := &MethodDecl{
 		RecvType: "*" + typeName,
 		RecvName: "self",
 		Name:     "Call",
 		Params:   nil,
-		Results:  []string{"*std.Thunk[std.Unit]"},
+		Results:  []string{"std.Unit"},
 		Body:     []Stmt{&ExprStmt{Expr: thunk}},
 	}
 	sd.Methods = append(sd.Methods, callMethod)
@@ -477,12 +524,18 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 		stmts = append(stmts, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
 		for _, call := range pendingBocCalls {
 			callExpr := l.lowerExpr(call)
-			stmts = append(stmts, &ExprStmt{
-				Expr: &SpawnExpr{
+			if l.bocCallIsScalar(call) {
+				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{
+					GroupVar: bgVar,
+					Body:     []Stmt{&ReturnStmt{Value: callExpr}},
+					IsScalar: true,
+				}})
+			} else {
+				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{
 					GroupVar: bgVar,
 					Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: callExpr}}},
-				},
-			})
+				}})
+			}
 		}
 		stmts = append(stmts, &WaitStmt{GroupVar: bgVar})
 		pendingBocCalls = nil
@@ -589,13 +642,13 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 		l.recvMethods = prevMethods
 		l.contextName = prevCtx
 
-		thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown"}
+		thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown", LazyWrap: "std.LazyUnit"}
 		callMethod := &MethodDecl{
 			RecvType: "*" + typeName,
 			RecvName: "self",
 			Name:     "Call",
 			Params:   nil,
-			Results:  []string{"*std.Thunk[std.Unit]"},
+			Results:  []string{"std.Unit"},
 			Body:     []Stmt{&ExprStmt{Expr: thunk}},
 		}
 		sd.Methods = append(sd.Methods, callMethod)
@@ -733,7 +786,7 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 			resultType = l.goType(st.Returns[0])
 		}
 	}
-	thunkResult := "*std.Thunk[" + resultType + "]"
+	thunkResult := ThunkOrScalar(resultType)
 
 	// Lower method body with receiver context.
 	prev := l.setReceiver("self", parentFields)
@@ -786,8 +839,11 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			}
 			expr := l.lowerExpr(e.Value)
 			if l.isBocMethodCall(e.Value) {
-				l.thunkVars[e.Name.Name] = true
-				inner = append(inner, &DeclStmt{Name: e.Name.Name, IsThunk: true, Init: expr})
+				isScalar := l.bocCallIsScalar(e.Value)
+				if !isScalar {
+					l.thunkVars[e.Name.Name] = true
+				}
+				inner = append(inner, &DeclStmt{Name: e.Name.Name, IsThunk: true, IsScalarThunk: isScalar, Init: expr})
 			} else {
 				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: expr})
 			}
@@ -813,10 +869,19 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 				if ms, ok := l.tryLowerMatch(e); ok {
 					inner = append(inner, ms)
 				} else if l.isBocMethodCall(e) && bgVar != "" {
-					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
-						GroupVar: bgVar,
-						Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: l.lowerExpr(e)}}},
-					}})
+					callExpr := l.lowerExpr(e)
+					if l.bocCallIsScalar(e) {
+						inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+							GroupVar: bgVar,
+							Body:     []Stmt{&ReturnStmt{Value: callExpr}},
+							IsScalar: true,
+						}})
+					} else {
+						inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+							GroupVar: bgVar,
+							Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: callExpr}}},
+						}})
+					}
 				} else {
 					inner = append(inner, &ExprStmt{Expr: l.lowerExprForced(e)})
 				}
@@ -825,10 +890,19 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 				// struct instance, spawn it asynchronously so it goes through
 				// ScheduleAsSuccessor in codegen. The body returns std.TheUnit implicitly.
 				if bgVar != "" && l.isStructInstanceMethodCall(e) {
-					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
-						GroupVar: bgVar,
-						Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: l.lowerExpr(e)}}},
-					}})
+					callExpr := l.lowerExpr(e)
+					if l.bocCallIsScalar(e) {
+						inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+							GroupVar: bgVar,
+							Body:     []Stmt{&ReturnStmt{Value: callExpr}},
+							IsScalar: true,
+						}})
+					} else {
+						inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+							GroupVar: bgVar,
+							Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: callExpr}}},
+						}})
+					}
 				} else {
 					inner = append(inner, &ReturnStmt{Value: l.lowerExprForced(e)})
 				}
@@ -852,6 +926,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 		Body:       inner,
 		Spawn:      true,
 		RecvCown:   recvCown,
+		LazyWrap:   LazyWrapFunc(resultType),
 	}
 	return []Stmt{&ExprStmt{Expr: thunk}}
 }
@@ -867,8 +942,11 @@ func (l *lowerer) lowerBodyShortDecl(d *ast.ShortDecl, isLast bool, resultType s
 		val := d.Values[0]
 		expr := l.lowerExpr(val)
 		if l.isBocMethodCall(val) {
-			l.thunkVars[name.Name] = true
-			return &DeclStmt{Name: name.Name, IsThunk: true, Init: expr}
+			isScalar := l.bocCallIsScalar(val)
+			if !isScalar {
+				l.thunkVars[name.Name] = true
+			}
+			return &DeclStmt{Name: name.Name, IsThunk: true, IsScalarThunk: isScalar, Init: expr}
 		}
 		typ := l.goTypeForVar(l.analyzer.ExprType(val))
 		if isLast {
@@ -1127,11 +1205,14 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		}
 		expr := l.lowerExpr(e.Value)
 		if l.isBocMethodCall(e.Value) {
-			// RHS is a boc call — variable holds *Thunk[T] at runtime.
-			// Use := inference and mark for auto-forcing on use.
+			// RHS is a boc call — variable holds *Thunk[T] or a lazy scalar at runtime.
+			// Use := inference; for non-scalar results, mark for auto-forcing on use.
 			// The declared Yz type (e.g. String) is correct; the thunk is invisible to the user.
-			l.thunkVars[e.Name.Name] = true
-			return []Stmt{&DeclStmt{Name: e.Name.Name, IsThunk: true, Init: expr}}
+			isScalar := l.bocCallIsScalar(e.Value)
+			if !isScalar {
+				l.thunkVars[e.Name.Name] = true
+			}
+			return []Stmt{&DeclStmt{Name: e.Name.Name, IsThunk: true, IsScalarThunk: isScalar, Init: expr}}
 		}
 		typ := l.goTypeFromTypeExpr(e.Type)
 		return []Stmt{&DeclStmt{Name: e.Name.Name, Type: typ, Init: expr}}
@@ -1152,10 +1233,12 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 			if i < len(e.Values) {
 				val := e.Values[i]
 				if l.isBocMethodCall(val) {
-					// RHS is a boc call — variable holds *Thunk[T].
-					// Use := inference and mark for auto-forcing on use.
-					l.thunkVars[n.Name] = true
-					stmts = append(stmts, &DeclStmt{Name: n.Name, IsThunk: true, Init: initExpr})
+					// RHS is a boc call — variable holds *Thunk[T] or a lazy scalar.
+					isScalar := l.bocCallIsScalar(val)
+					if !isScalar {
+						l.thunkVars[n.Name] = true
+					}
+					stmts = append(stmts, &DeclStmt{Name: n.Name, IsThunk: true, IsScalarThunk: isScalar, Init: initExpr})
 					continue
 				} else {
 					typ = l.goTypeForVar(l.analyzer.ExprType(val))
@@ -1226,7 +1309,7 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 		RecvName: "self",
 		Name:     goMethodName(bws.Name),
 		Params:   params,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{ThunkOrScalar(resultType)},
 		Body:     body,
 	}
 }
@@ -1276,7 +1359,7 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
 			Name:       bws.Name.Name,
 			TypeParams: typeParams,
 			Params:     params,
-			Results:    []string{"*std.Thunk[" + resultType + "]"},
+			Results:    []string{ThunkOrScalar(resultType)},
 			Body:       funcBody,
 		}
 	}
@@ -1372,7 +1455,7 @@ func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, 
 		RecvName: "self",
 		Name:     "Call",
 		Params:   params,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{ThunkOrScalar(resultType)},
 		Body:     callBody,
 	}
 	return &SingletonDecl{
@@ -1394,7 +1477,7 @@ func (l *lowerer) lowerBocWithSigAsLocal(bws *ast.BocWithSig) []Stmt {
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
 	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
-	thunkResult := "*std.Thunk[" + resultType + "]"
+	thunkResult := ThunkOrScalar(resultType)
 
 	// Collect input params from sig (shorthand) or body leading TypedDecls (body-only).
 	var params []*ParamSpec
@@ -1531,7 +1614,7 @@ func (l *lowerer) liftLocalBoc(name string, methodParams []*ParamSpec, resultTyp
 		RecvName: "self",
 		Name:     "Call",
 		Params:   methodParams,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{ThunkOrScalar(resultType)},
 		Body:     bodyStmts,
 	}
 
@@ -2169,7 +2252,7 @@ func (l *lowerer) trySyncExpr(e ast.Expr) Expr {
 // method call (which returns *Thunk[T] and must be materialized at the call site).
 func (l *lowerer) lowerExprForced(e ast.Expr) Expr {
 	expr := l.lowerExpr(e)
-	if l.isBocMethodCall(e) {
+	if l.isBocMethodCall(e) && !l.bocCallIsScalar(e) {
 		return &ForceExpr{Thunk: expr}
 	}
 	return expr
@@ -2183,11 +2266,18 @@ func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 	if !l.isBocMethodCall(e) {
 		return expr
 	}
+	isScalar := l.bocCallIsScalar(e)
 	if l.bocGroupCtx != "" {
+		if isScalar {
+			return &SpawnExpr{GroupVar: l.bocGroupCtx, Body: []Stmt{&ReturnStmt{Value: expr}}, IsScalar: true}
+		}
 		return &SpawnExpr{
 			GroupVar: l.bocGroupCtx,
 			Body:     []Stmt{&ReturnStmt{Value: &ForceExpr{Thunk: expr}}},
 		}
+	}
+	if isScalar {
+		return expr
 	}
 	return &ForceExpr{Thunk: expr}
 }
@@ -2619,8 +2709,11 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 			}
 			expr := l.lowerExpr(e.Value)
 			if l.isBocMethodCall(e.Value) {
-				l.thunkVars[e.Name.Name] = true
-				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, IsThunk: true, Init: expr})
+				isScalar := l.bocCallIsScalar(e.Value)
+				if !isScalar {
+					l.thunkVars[e.Name.Name] = true
+				}
+				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, IsThunk: true, IsScalarThunk: isScalar, Init: expr})
 			} else {
 				stmts = append(stmts, &DeclStmt{Name: e.Name.Name, Init: expr})
 			}

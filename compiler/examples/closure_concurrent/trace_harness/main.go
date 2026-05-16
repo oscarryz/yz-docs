@@ -57,10 +57,10 @@ func (self *Box) set(v std.Int) std.Unit {
 	return std.TheUnit
 }
 
-func (self *Box) Set(v std.Int) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *Box) Set(v std.Int) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.set(v)
-	})
+	}))
 }
 
 // ── apply ─────────────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ type _applyBoc struct {
 	fn func() std.Unit
 }
 
-func (self *_applyBoc) call(label string, a *Box, fn func() std.Unit) *std.Thunk[std.Unit] {
+func (self *_applyBoc) call(label string, a *Box, fn func() std.Unit) std.Unit {
 	taskCtx, task := trace.NewTask(context.Background(), "apply("+label+")")
 	_bg0 := &std.BocGroup{}
 	_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
@@ -90,20 +90,20 @@ func (self *_applyBoc) call(label string, a *Box, fn func() std.Unit) *std.Thunk
 		})
 		return std.TheUnit
 	})
-	return std.NewThunk(func() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_sched.Force()
 		_bg0.Wait()
 		task.End()
 		return std.TheUnit
-	})
+	}))
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
 
 type _mainBoc struct{ std.Cown }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var b1, b2, b3 *Box
 
@@ -117,26 +117,26 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 				busyWork()
 				return b1.set(std.NewInt(10))
 			})
-			_bg0.Go(func() any { return _st0.Force() })
+			_bg0.GoWait(_st0)
 
 			_st1 := (&_applyBoc{}).call("b2=20", b2, func() std.Unit {
 				busyWork()
 				return b2.set(std.NewInt(20))
 			})
-			_bg0.Go(func() any { return _st1.Force() })
+			_bg0.GoWait(_st1)
 
 			_st2 := (&_applyBoc{}).call("b3=30", b3, func() std.Unit {
 				busyWork()
 				return b3.set(std.NewInt(30))
 			})
-			_bg0.Go(func() any { return _st2.Force() })
+			_bg0.GoWait(_st2)
 
 			// Shared cown: also targets b1 — serialized after apply(b1=10).
 			_st3 := (&_applyBoc{}).call("b1=99", b1, func() std.Unit {
 				busyWork()
 				return b1.set(std.NewInt(99))
 			})
-			_bg0.Go(func() any { return _st3.Force() })
+			_bg0.GoWait(_st3)
 
 			return std.TheUnit
 		}).Force()
@@ -147,7 +147,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		fmt.Printf("b2.val = %v\n", b2.val) // 20
 		fmt.Printf("b3.val = %v\n", b3.val) // 30
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}
