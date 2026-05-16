@@ -40,7 +40,7 @@ func (a Array[T]) Append(v T) Array[T] {
 }
 
 // Length returns the number of elements.
-func (a Array[T]) Length() Int { return Int{int64(len(a.elems))} }
+func (a Array[T]) Length() Int { return Int{val: int64(len(a.elems))} }
 
 // GoSlice returns the underlying Go slice (for interop / codegen helpers).
 func (a Array[T]) GoSlice() []T { return a.elems }
@@ -139,7 +139,7 @@ func (d Dict[K, V]) Has(k K) Bool {
 }
 
 // Length returns the number of key-value pairs.
-func (d Dict[K, V]) Length() Int { return Int{int64(len(d.m))} }
+func (d Dict[K, V]) Length() Int { return Int{val: int64(len(d.m))} }
 
 // GoMap returns the underlying Go map (for interop / codegen helpers).
 func (d Dict[K, V]) GoMap() map[K]V { return d.m }
@@ -161,7 +161,7 @@ func NewRange(from, to int64) Range { return Range{from: from, to: to} }
 // Each calls fn for every integer in the range.
 func (r Range) Each(fn func(Int)) {
 	for i := r.from; i < r.to; i++ {
-		fn(Int{i})
+		fn(Int{val: i})
 	}
 }
 
@@ -173,7 +173,7 @@ func (r Range) ToArray() Array[Int] {
 	}
 	elems := make([]Int, size)
 	for i := int64(0); i < size; i++ {
-		elems[i] = Int{r.from + i}
+		elems[i] = Int{val: r.from + i}
 	}
 	return Array[Int]{elems: elems}
 }
@@ -181,9 +181,9 @@ func (r Range) ToArray() Array[Int] {
 // Length returns the number of integers in the range.
 func (r Range) Length() Int {
 	if r.to <= r.from {
-		return Int{0}
+		return Int{val: 0}
 	}
-	return Int{r.to - r.from}
+	return Int{val: r.to - r.from}
 }
 
 func (r Range) String() string { return fmt.Sprintf("%d..%d", r.from, r.to) }

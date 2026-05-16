@@ -139,11 +139,11 @@ func TestGenerateMethodThunk(t *testing.T) {
     count: 0
     value: { count }
 }`)
+	// E.2: scalar return type; method wrapped in LazyInt.
 	contains(t, got,
-		"func (self *_counterBoc) Value()",
-		"*std.Thunk[std.Int]",
-		"return std.Schedule(&self.Cown, func() std.Int {",
-		"return self.count",
+		"func (self *_counterBoc) Value() std.Int",
+		"std.LazyInt(std.Schedule(&self.Cown, func() std.Int {",
+		"return self.value()",
 	)
 }
 
@@ -230,13 +230,12 @@ main: {
     counter.increment()
     print(counter.value())
 }`)
+	// E.2: scalar spawns use GoWait; print no longer needs .Force().
 	contains(t, got,
 		"_bg0 := &std.BocGroup{}",
-		"_st0 := Counter.Increment()",
-		"_bg0.Go(func() any {",
-		"_st0.Force()",
+		"_bg0.GoWait(Counter.Increment())",
 		"_bg0.Wait()",
-		"std.Print(Counter.Value().Force())",
+		"std.Print(Counter.Value())",
 	)
 }
 
