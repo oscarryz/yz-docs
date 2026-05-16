@@ -118,9 +118,9 @@ sync(bank, ledger)   // atomically acquires bank's and ledger's cowns
 |---|---|---|
 | `foo: { field T; method: {...} }` | Yes — singleton cown | Yes |
 | `Foo: { field T; ... }` (struct type) | Yes — one cown per instance | Yes per instance |
-| `foo #(param T) { ... }` (BocWithSig) | No | Fully parallel |
+| `foo #(param T) { ... }` (boc declaration) | No | Fully parallel |
 
-BocWithSig forms (`foo #(params) { body }`) are stateless — each call is an independent goroutine with no cown, no serialization.
+Boc declaration forms (`foo #(params) { body }`) are stateless — each call is an independent goroutine with no cown, no serialization.
 
 ## 8.5 Structured Concurrency
 

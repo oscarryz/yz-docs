@@ -79,7 +79,7 @@ Library authors writing hot utilities use the thin dispatcher pattern (lowercase
 
 **Option C (Uppercase = fresh instance)**: this IS the answer, already in the language.
 
-**Option D (BocWithSig `#(...)` as the function form)**: partially right — `#(...)` params are local to each call — but it encodes the distinction as a naming convention inside the signature rather than at the boc level. Subsumed by the clearer Uppercase convention.
+**Option D (boc declaration `#(...)` as the function form)**: partially right — `#(...)` params are local to each call — but it encodes the distinction as a naming convention inside the signature rather than at the boc level. Subsumed by the clearer Uppercase convention.
 
 ## Related
 

@@ -119,7 +119,7 @@ Recursive descent. Key grammar points:
 - **Expression**: `UnaryExpr { NON_WORD UnaryExpr }` — flat, left-to-right
 - **Multiple assignment**: `IdentifierList "=" ExpressionList` — only lowercase `IDENT` on LHS
 - **Boc literal**: `"{" { BocElement sep } "}"` — sep is `;` (ASI) or `,`
-- **BocWithSig**: `name #(params) { body }` — params available in body without redeclaration (sema concern). `name #(params) = { body }` — body must redeclare params.
+- **Boc declaration** (`BocWithSig` AST node): `name #(params) { body }` — params available in body without redeclaration (sema concern). `name #(params) = { body }` (boc expanded form) — body must redeclare params.
 - **Match**: two forms (with/without subject expression)
 - **Commas as separators**: commas act as statement separators in boc bodies alongside semicolons (supports `T, E,` generic params and match arm lists)
 - **`=>` non-word rule**: standalone `=>` is always FAT_ARROW; `!=>`, `<=>` etc. are single NON_WORD tokens
@@ -132,7 +132,7 @@ Recursive descent. Key grammar points:
 - **Scope**: linked list of scope frames, lexical lookup with shadowing
 - **Type checker**: structural compatibility, width subtyping
 - **Inference**: variable types from RHS, return types from last expression, generic params from usage
-- **BocWithSig param scoping**: when the `name #(params) { body }` form is used (no `=`), sema adds the signature params into the body's scope so they are available without redeclaration
+- **Boc declaration param scoping**: when the `name #(params) { body }` form is used (no `=`), sema adds the signature params into the body's scope so they are available without redeclaration
 - **Variants**: track discriminant tags per variant constructor
 - **Access**: `#()` hides everything not in the signature
 - **FQN resolution**: resolve each boc's fully-qualified name from source path + nesting; detect collisions across source roots

@@ -151,10 +151,10 @@ BocElement     = Declaration
 VariantDef     = type_identifier "(" [ BocParamList ] ")" .
 ```
 
-### Boc with Signature (Type + Body)
+### Boc Declaration (Signature + Body)
 
 ```ebnf
-BocWithSig     = BocType [ BocLiteral ] .
+BocDecl        = BocType [ BocLiteral ] .
 ```
 
 When a boc type signature is immediately followed by a boc literal (no `=`), the parameters declared in the signature are available inside the body without redeclaration:

@@ -122,7 +122,7 @@ Transfer(erin, frank, 75).run()
 ```
 
 The cown acquisition covers `self.src` and `self.dst` — the same guarantee as the
-boc-with-sig version, but expressed as an object.
+boc declaration version, but expressed as an object.
 
 ## See Also 
 - Yz Concurrency  -  [Concurrency](Concurrency.md)
