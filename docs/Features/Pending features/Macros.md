@@ -1,1 +1,1 @@
-#open-question [[docs/Questions/solved/Macros]]
+#open-question  [Macros](docs/Questions/solved/Macros.md)

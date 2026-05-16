@@ -1,4 +1,4 @@
-#open-question 
+#solved 
 
 E.g. numbers will be of block `Int` and strings of type `String`
 

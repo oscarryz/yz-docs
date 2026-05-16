@@ -1,5 +1,5 @@
 #rejected
-#resolved
+#solved
 
 # Stateless bocs and pure functions
 
