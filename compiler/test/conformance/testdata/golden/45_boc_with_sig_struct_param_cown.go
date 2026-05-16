@@ -20,15 +20,15 @@ type _transferBoc struct {
 	amount std.Int
 }
 
-func (self *_transferBoc) Call(src *Account, dst *Account, amount std.Int) std.Unit {
-	return std.LazyUnit(std.ScheduleMulti([]*std.Cown{&self.Cown, &src.Cown, &dst.Cown}, func() std.Unit {
+func (self *_transferBoc) Call(src *Account, dst *Account, amount std.Int) *std.Thunk[std.Unit] {
+	return std.ScheduleMulti([]*std.Cown{&self.Cown, &src.Cown, &dst.Cown}, func() std.Unit {
 		self.src = src
 		self.dst = dst
 		self.amount = amount
 		self.src.balance = self.src.balance.Minus(self.amount)
 		self.dst.balance = self.dst.balance.Plus(self.amount)
 		return std.TheUnit
-	}))
+	})
 }
 
 var Transfer = &_transferBoc{
@@ -38,8 +38,8 @@ type _mainBoc struct {
 	std.Cown
 }
 
-func (self *_mainBoc) Call() std.Unit {
-	return std.LazyUnit(std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var alice *Account
 		var bob *Account
@@ -53,7 +53,7 @@ func (self *_mainBoc) Call() std.Unit {
 		std.Print(alice.balance)
 		std.Print(bob.balance)
 		return std.TheUnit
-	}))
+	})
 }
 
 var Main = &_mainBoc{}

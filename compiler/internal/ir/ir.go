@@ -134,17 +134,14 @@ func (*SwitchStmt) irStmt()  {}
 
 // DeclStmt declares a local variable.
 // If Type is empty, codegen uses `:=` (Go type inference).
-// IsThunk marks variables that hold *Thunk[T] or a lazy scalar (boc call results); the
-// split-BocGroup pattern hoists these to the outer scope so they remain accessible after
+// IsThunk marks variables that hold *Thunk[T] (boc call results in ScheduleFlatten context);
+// the split-BocGroup pattern hoists these to the outer scope so they remain accessible after
 // Schedule completes.
-// IsScalarThunk is set when IsThunk is true and the type is a scalar lazy type (std.Int, etc.)
-// rather than *Thunk[T]. These do NOT trigger ScheduleFlatten and do NOT need ForceExpr at use sites.
 type DeclStmt struct {
-	Name          string
-	Type          string // may be empty for := inference
-	Init          Expr
-	IsThunk       bool
-	IsScalarThunk bool // true when IsThunk and the value is a lazy scalar, not *Thunk[T]
+	Name    string
+	Type    string // may be empty for := inference
+	Init    Expr
+	IsThunk bool
 }
 
 // AssignStmt mutates an existing variable or field: Target = Value.
@@ -260,15 +257,12 @@ type IndexExpr struct {
 // to atomically acquire multiple cowns before running the body.
 // If the body contains a WaitStmt (BocGroup pattern) and ExtraCowns is empty,
 // the split-BocGroup pattern is used (BocGroup hoisted, Wait after cown release).
-// LazyWrap, when non-empty, is the std.LazyX function to wrap the emitted expression
-// (e.g. "std.LazyInt" converts *Thunk[std.Int] to a lazy std.Int).
 type ThunkExpr struct {
 	ResultType string   // e.g. "std.Int" or "std.Unit"
 	Body       []Stmt   // the closure body
 	Spawn      bool     // true → std.Go, false → std.NewThunk
 	RecvCown   string   // if non-empty: use std.Schedule(RecvCown, ...) instead of std.Go
 	ExtraCowns []string // additional cowns for ScheduleMulti (requires RecvCown to be set)
-	LazyWrap   string   // if non-empty: wrap emitted expr in LazyWrap(...) for scalar returns
 }
 
 // ForceExpr materializes a thunk: Thunk.Force().
@@ -284,14 +278,13 @@ type ClosureExpr struct {
 	Body       []Stmt
 }
 
-// SpawnExpr is g.Go(func() any { body }) — launch a goroutine in a BocGroup.
-// The result is typed as *std.Thunk[any]; the caller force-casts if needed.
-// When IsScalar is true, the spawned value is a lazy scalar type; codegen emits
-// _bg0.GoWait(val) instead of _bg0.Go(func() any { return val.Force() }).
+// SpawnExpr registers a boc-call goroutine on a BocGroup.
+// When StoreVar is empty, codegen emits _bg.GoWait(thunk) — for Unit returns.
+// When StoreVar is non-empty, codegen emits std.GoStore(_bg, thunk, &StoreVar) — for value returns.
 type SpawnExpr struct {
 	GroupVar string // the *std.BocGroup local var
 	Body     []Stmt
-	IsScalar bool // true: value is lazy scalar; emit GoWait instead of Go
+	StoreVar string // if non-empty: emit GoStore; if empty: emit GoWait
 }
 
 // NewGroupExpr creates a new BocGroup: &std.BocGroup{}.

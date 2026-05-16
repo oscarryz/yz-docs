@@ -12,20 +12,20 @@ func (self *_counterBoc) increment() std.Unit {
 	return std.TheUnit
 }
 
-func (self *_counterBoc) Increment() std.Unit {
-	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
+func (self *_counterBoc) Increment() *std.Thunk[std.Unit] {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return self.increment()
-	}))
+	})
 }
 
 func (self *_counterBoc) value() std.Int {
 	return self.count
 }
 
-func (self *_counterBoc) Value() std.Int {
-	return std.LazyInt(std.Schedule(&self.Cown, func() std.Int {
+func (self *_counterBoc) Value() *std.Thunk[std.Int] {
+	return std.Schedule(&self.Cown, func() std.Int {
 		return self.value()
-	}))
+	})
 }
 
 var Counter = &_counterBoc{
