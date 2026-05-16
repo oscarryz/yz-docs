@@ -12,16 +12,18 @@ type _mainBoc struct {
 	std.Cown
 }
 
-func (self *_mainBoc) call() std.Unit {
-	x := identity(std.NewString("hello"))
-	std.Print(x.Force())
-	return std.TheUnit
-}
-
-func (self *_mainBoc) Call() std.Unit {
-	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
-		return self.call()
-	}))
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.NewThunk(func() std.Unit {
+		var x V
+		_bgs_x := &std.BocGroup{}
+		std.Schedule(&self.Cown, func() std.Unit {
+			std.GoStore(_bgs_x, identity(std.NewString("hello")), &x)
+			return std.TheUnit
+		}).Force()
+		_bgs_x.Wait()
+		std.Print(x)
+		return std.TheUnit
+	})
 }
 
 var Main = &_mainBoc{}

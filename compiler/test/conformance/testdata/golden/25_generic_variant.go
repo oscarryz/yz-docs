@@ -43,10 +43,10 @@ func (self *_mainBoc) call() std.Unit {
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() std.Unit {
-	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	}))
+	})
 }
 
 var Main = &_mainBoc{}
