@@ -41,7 +41,7 @@ The Behaviour-Oriented Concurrency model (Cheeseman et al., OOPSLA 2023) centers
 
 ### Primitive values are not cowns
 
-In the paper, every object can be a cown. In Yz's implementation, **only singleton boc instances** are cowns. Primitive values (`std.Int`, `std.String`, etc.) are plain Go values protected by the enclosing singleton cown. You never hold a `std.Int` across goroutines without holding its owner singleton; therefore no extra protection is needed at the primitive level.
+In the paper, every object can be a cown. In Yz's implementation, **all boc instances** are cowns — both singleton bocs (lowercase, one global instance per FQN) and struct boc instances (uppercase, e.g. `Account`). Each instance carries an embedded `std.Cown`. Primitive values (`std.Int`, `std.String`, etc.) are plain Go values that are not cowns themselves; they are protected by the cown of the boc instance that owns them. You only read or write a primitive field from inside a `Schedule`/`ScheduleMulti` body that holds the enclosing boc's cown, or after all concurrent work on that boc is complete (after `BocGroup.Wait()`). Therefore no extra protection is needed at the primitive level.
 
 ### Thunks and cowns coexist
 

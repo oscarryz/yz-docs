@@ -34,3 +34,19 @@ make test
 # Clean build artifacts
 make clean
 ```
+
+## Contributing
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>: <description>
+
+feat: add range iteration for HOF closures
+fix: emit compile error for Unit-returning boc assignment
+docs: update concurrency design doc
+test: add golden test for associated types
+refactor: unify boc lowering paths
+```
+
+Common types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`.

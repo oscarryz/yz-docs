@@ -39,6 +39,7 @@ Resolved progressively during planning sessions (2026-03-04 through 2026-04-03).
 | 21 | All boc invocations | **Every boc invocation runs in a goroutine.** There is no special async/thunk syntax — all calls are non-blocking by default. |
 | 22 | Lazy thunk | The result of a boc invocation is a **lazy thunk** that materializes on first use. `result: add(1, 2)` is non-blocking; `result` materializes when it is first needed (e.g. passed to `print`, used in arithmetic). |
 | 23 | Structured concurrency | A boc is not considered complete until **all child bocs it spawned have completed**. This provides implicit structured concurrency: the parent eventually waits for all descendants, even though the invocations are non-blocking. IO and network operations naturally trigger thunk materialization. |
+| 49 | Concurrency implementation model | Concurrency is implemented using **Behaviour-Oriented Concurrency (BOC)** (Cheeseman et al., OOPSLA 2023). Every boc instance (singleton or struct) embeds a `std.Cown`; behaviours acquire all needed cowns atomically before running; ordering per cown is determined by spawn order via a lock-free queue. The thunk/goroutine model (items 21–23) is preserved: cown acquisition is transparent to callers. |
 
 ## Entry Point
 
@@ -60,15 +61,15 @@ Resolved progressively during planning sessions (2026-03-04 through 2026-04-03).
 
 ## Runtime Semantics
 
-| # | Decision | Resolution |
-|---|----------|------------|
-| 11 | Unhandled errors | **Panic** (crash) |
-| 12 | `nil` | **No `nil` concept.** `nil` is a valid identifier but has no special meaning. Use `Result`/`Option` instead. |
-| 13 | `&&`/`||` short-circuit | They are regular methods, **not** compiler-special-cased. Short-circuit behavior is natural because the argument is a **boc** (lazy). e.g., `a \|\| { expensive() }` — the boc is only called if `a` is false. |
-| 14 | Dependency config | No TOML. Use a **`.yz` file** (e.g., `project.yz`) implementing a project interface. Minimal format TBD. |
-| 28 | Type representation | **All types are structs** in the generated Go runtime — there are no primitive Go types. `age Int` in Yz compiles to a field of type `std.Int` (a Go struct). Literals are also boxed: `1` in source code becomes `std.NewInt(1)` in generated Go. |
-| 29 | Literal boxing | Boxing of literals (e.g. `1` → `std.Int`) is done by the **codegen phase**, not the runtime. |
-| 30 | Standard library naming | The standard library types are named **`std.Int`**, **`std.Decimal`**, **`std.String`**, **`std.Bool`**, **`std.Unit`** — not `YzInt`, `YzDecimal`, etc. The runtime Go package is `yz/runtime/yzrt`; the types it exports use the `std.*` naming convention from the Yz perspective. |
+| #   | Decision                | Resolution                                                                                                                                                                                                                                                                            |     |     |
+| --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- |
+| 11  | Unhandled errors        | **Panic** (crash)                                                                                                                                                                                                                                                                     |     |     |
+| 12  | `nil`                   | **No `nil` concept.** `nil` is a valid identifier but has no special meaning. Use `Result`/`Option` instead.                                                                                                                                                                          |     |     |
+| 13  | `&&` and `\|\|`         | They are regular methods, **not** compiler-special-cased. Short-circuit behavior is natural because the argument is a **boc** (lazy). e.g., `a \|\| { expensive() }` — the boc is only called if `a` is false.                                                                        |     |     |
+| 14  | Dependency config       | No TOML. Use a **`.yz` file** (e.g., `project.yz`) implementing a project interface. Minimal format TBD.                                                                                                                                                                              |     |     |
+| 28  | Type representation     | **All types are structs** in the generated Go runtime — there are no primitive Go types. `age Int` in Yz compiles to a field of type `std.Int` (a Go struct). Literals are also boxed: `1` in source code becomes `std.NewInt(1)` in generated Go.                                    |     |     |
+| 29  | Literal boxing          | Boxing of literals (e.g. `1` → `std.Int`) is done by the **codegen phase**, not the runtime.                                                                                                                                                                                          |     |     |
+| 30  | Standard library naming | The standard library types are named **`std.Int`**, **`std.Decimal`**, **`std.String`**, **`std.Bool`**, **`std.Unit`** — not `YzInt`, `YzDecimal`, etc. The runtime Go package is `yz/runtime/yzrt`; the types it exports use the `std.*` naming convention from the Yz perspective. |     |     |
 
 ## Code Generation
 
@@ -80,14 +81,16 @@ Resolved progressively during planning sessions (2026-03-04 through 2026-04-03).
 | 34 | FQN → Go mapping | A boc's FQN maps to a Go package path. `house.front.Host` → Go package `yzapp/house/front`, type `Host`. Singleton bocs (e.g. `house.yz`) become package-level vars and functions in their Go package. UDTs (uppercase) become Go types with constructors. |
 | 35 | FQN reference in code | Cross-file references always use the **full FQN** (e.g. `house.front.Host()`). To use short names, `mix house.front` brings the contents of that namespace into scope so `Host()` works directly. |
 
-## `mix` Semantics
+## `mix` Semantics — REMOVED
+
+`mix` is no longer a language keyword. Decisions 36–39 below document how it was implemented; they are superseded by the compile-time boc mechanism (item 6 in Yz 0.2.0). The lexer, parser, sema, and codegen paths for `mix` have been deleted.
 
 | # | Decision | Resolution |
 |---|----------|------------|
-| 36 | Conflict rule | **Option A — strict:** any name conflict is a compilation error, whether between two `mix` statements or between a `mix` and the host's own definitions. There is no "host wins" override. |
-| 37 | Constructor composition | When a type boc mixes in another (`mix Named`), the host's constructor **calls the mixed-in constructor** (`NewNamed(...)`) and passes the relevant arguments. Mixed-in fields are included as parameters to the host constructor, in mix-declaration order before the host's own fields. |
-| 38 | Codegen via embedding | Mixed-in bocs are emitted as **Go embedded structs**. Fields and methods are promoted unqualified. The host struct body contains just the type name (no field name), and the constructor initializes it with `TypeName: *NewTypeName(...)`. |
-| 39 | Cross-file mix | `mix` of a type from another file uses the full FQN: `mix house.front.Named`. |
+| 36 | Conflict rule | ~~**Option A — strict:** any name conflict is a compilation error.~~ Superseded — `mix` removed. |
+| 37 | Constructor composition | ~~When a type boc mixes in another, the host constructor calls the mixed-in constructor.~~ Superseded — `mix` removed. |
+| 38 | Codegen via embedding | ~~Mixed-in bocs are emitted as Go embedded structs.~~ Superseded — `mix` removed. |
+| 39 | Cross-file mix | ~~`mix house.front.Named` uses the full FQN.~~ Superseded — `mix` removed. |
 
 ## Generics
 
@@ -97,15 +100,22 @@ Resolved progressively during planning sessions (2026-03-04 through 2026-04-03).
 | 44 | Generic type construction | The type argument is **inferred from constructor arguments**: `Box(42)` → `Box[Int]`, `Box("hello")` → `Box[String]`. No explicit type argument at the call site is needed. This matches how Go, Rust, and Scala handle generic function/constructor calls. |
 | 45 | Generic type annotation at use site | To annotate a variable's type explicitly, use `TypeName(TypeArg)` in type position: `s Box(String) = Box("hello")`. The `()` syntax in a type annotation position means "parameterized with", analogous to `Box<String>` or `Box[String]` in other languages. This is distinct from a constructor call in expression position. |
 | 46 | Deferred generic forms | `Box(String)` as a type-only constructor (create an empty Box[String] without a value, then set fields later) is deferred — it requires passing a type as a runtime constructor argument, which has no parallel in mainstream languages and is complex to lower to Go. |
-| 47 | Generic constraint strategy | **Option 4 — compiler infers constraints automatically, reports all violations at once.** No explicit constraint syntax (no `T: Comparable`). The sema pass scans generic type method bodies: any call or operator on a T-typed value records that method as a requirement on T. At each constructor call site (`Container(item)`), the compiler binds T to the concrete type and checks ALL inferred requirements. Every missing method is reported in a single error. Generated Go still uses `[T any]`; Go-level constraint generation (emitting proper interface constraints) is a future step. |
+| 47 | Generic constraint strategy | **Option 4 — compiler infers constraints automatically, reports all violations at once**, plus optional explicit upper-bound constraint. Explicit form: `a T Serializable` in a param list or boc body declares that `T` must satisfy the `Serializable` interface; the compiler validates this at every instantiation site. Explicit and inferred constraints are unioned — explicit declaration is additive, not a replacement. The sema pass scans generic type method bodies: any call or operator on a T-typed value records that method as a requirement on T. At each constructor call site (`Container(item)`), the compiler binds T to the concrete type and checks ALL requirements. Every missing method is reported in a single error. Generated Go still uses `[T any]`; Go-level constraint generation (emitting proper interface constraints) is a future step. |
 
 ## Control Flow
 
 | # | Decision | Resolution |
 |---|----------|------------|
-| 40 | Conditional expression | `cond ? { trueCase }, { falseCase }` is a `ConditionalExpr` node. In **statement position** it lowers to an `if/else` block. In **expression position** it lowers to a `Qm()` method call on the boolean value. |
+| 40 | Conditional expression | `cond ? { trueCase }, { falseCase }` is a `ConditionalExpr` node. **Current implementation:** in statement position lowers to an `if/else` block; in expression position lowers to a `Qm()` method call on the boolean value. **Future direction (rejected as permanent design):** `?` becomes a plain method on `Bool` defined in Yz — no compiler special-casing. The current lowering is a bootstrapping shortcut until `Bool` is defined in Yz via uppering. |
 | 41 | Condition match | `match { cond => body }, { cond => body }, { default }` — in **expression position** lowers to an immediately-invoked closure (`func() T { if/else if/else }()`). In **statement position** lowers to a plain `if/else if/else` chain. |
 | 42 | Source paths | The default source path is `.` (project root). If explicit source paths are configured (e.g. `src/`, `lib/`, `vendor/`), then `.` is **not** included — the configured paths replace it, not supplement it. |
+
+## Associated Types
+
+| # | Decision | Resolution |
+|---|----------|------------|
+| 50 | Associated type syntax | Associated types use **path-dependent syntax** — no new grammar is needed. `process(g Graph, n g.Node)` means "`n` has the type of the `node` field in the concrete type of `g`". The compiler resolves `g.Node` at the call site by looking up the `Node` member on the concrete type bound to `g`. This is analogous to Scala path-dependent types and gives the architectural power of associated types (clean signatures, 1-to-1 mapping) without extra keywords like `type` or `::`. |
+| 51 | Associated type checking | Structural typing governs satisfaction: any boc that has a field or boc named `Node` (matching the expected type) satisfies the constraint. No explicit `implements` declaration. The sema pass resolves path-dependent type references during type inference by following the value-to-type path. |
 
 ## Compile-time Annotations (Deferred)
 
