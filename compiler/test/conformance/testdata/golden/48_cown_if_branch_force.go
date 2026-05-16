@@ -37,9 +37,9 @@ func (self *_cond_setBoc) Call(a *Box, flag std.Bool) *std.Thunk[std.Unit] {
 			self.a = a
 			self.flag = flag
 			if self.flag.GoBool() {
-				_bg0.GoWait(self.a.Set(std.NewInt(1)))
+				self.a.set(std.NewInt(1))
 			} else {
-				_bg0.GoWait(self.a.Set(std.NewInt(0)))
+				self.a.set(std.NewInt(0))
 			}
 			return std.TheUnit
 		})

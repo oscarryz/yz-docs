@@ -820,6 +820,8 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			} else if !isLast {
 				if ms, ok := l.tryLowerMatch(e); ok {
 					inner = append(inner, ms)
+				} else if synced := l.trySyncExpr(e); synced != nil {
+					inner = append(inner, &ExprStmt{Expr: synced})
 				} else if l.isBocMethodCall(e) && bgVar != "" {
 					callExpr := l.lowerExpr(e)
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
@@ -1341,7 +1343,7 @@ func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, 
 			if ste, ok := sp.Type.(*ast.SimpleTypeExpr); ok {
 				sym := l.analyzer.LookupInFile(ste.Name)
 				if sym != nil {
-					if st, ok2 := sym.Type.(*sema.StructType); ok2 && !st.IsInterface {
+					if st, ok2 := sym.Type.(*sema.StructType); ok2 && !st.IsInterface && !st.IsVariant {
 						extraCowns = append(extraCowns, "&"+sp.Label+".Cown")
 					}
 				}
@@ -1352,9 +1354,23 @@ func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, 
 	// Lower body with receiver context so param references → self.param.
 	// RecvCown="" uses std.Go — avoids re-entrancy deadlock for recursive singletons
 	// unless cown-typed params are present (in which case ScheduleMulti is used).
+	//
+	// Set closureHeldCowns so that method calls on held cown params inside the body
+	// are lowered as reentrant (sync) calls — not GoWait goroutines that run after
+	// the cowns are released. Without this, T2 can acquire the cowns before T1's
+	// inner balance-updates complete.
+	prevHeld := l.closureHeldCowns
+	if len(extraCowns) > 0 {
+		held := map[string]bool{}
+		for _, c := range extraCowns {
+			held[c] = true
+		}
+		l.closureHeldCowns = held
+	}
 	prev := l.setReceiver("self", paramNames)
 	bocBodyStmts := l.lowerBocBody(body, resultType, "")
 	l.restoreReceiver(prev)
+	l.closureHeldCowns = prevHeld
 	l.syncParams = prevSyncParams
 
 	// Unwrap [ExprStmt{ThunkExpr}] and prepend self.param = param assignments.
@@ -2565,6 +2581,8 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 				stmts = append(stmts, is)
 			} else if ms, ok := l.tryLowerMatch(e); ok {
 				stmts = append(stmts, ms)
+			} else if synced := l.trySyncExpr(e); synced != nil {
+				stmts = append(stmts, &ExprStmt{Expr: synced})
 			} else {
 				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprOrSpawn(e)})
 			}
