@@ -81,7 +81,7 @@ func (p *Parser) ParseFile() (*ast.SourceFile, error) {
 //
 //   - BREAK / CONTINUE / RETURN / MIX → keyword stmt
 //   - IDENT/TYPE_IDENT/GENERIC_IDENT followed by COLON → ShortDecl (possibly multi-name)
-//   - IDENT/TYPE_IDENT/GENERIC_IDENT followed by HASH → BocWithSig
+//   - IDENT/TYPE_IDENT/GENERIC_IDENT followed by HASH → BocDecl
 //   - IDENT/TYPE_IDENT followed by a type → TypedDecl
 //   - IDENT list followed by ASSIGN → multi-assignment
 //   - Otherwise → expression (which may itself be an assignment target)
@@ -113,9 +113,9 @@ func (p *Parser) parseStatement() (ast.Node, error) {
 		return p.parseMultiNameStmt()
 	}
 
-	// Check for BocWithSig: `name #(...)` or `name #(...) { ... }` or `name #(...) = { ... }`
-	if p.isBocWithSigStart() {
-		return p.parseBocWithSig()
+	// Check for BocDecl: `name #(...)` or `name #(...) { ... }` or `name #(...) = { ... }`
+	if p.isBocDeclStart() {
+		return p.parseBocDecl()
 	}
 
 	// Check for TypedDecl: `name TypeName` or `name TypeName = expr`
@@ -182,9 +182,9 @@ func (p *Parser) isMultiNameStart() bool {
 	return result
 }
 
-// isBocWithSigStart returns true when the current token is an ident or non-word
+// isBocDeclStart returns true when the current token is an ident or non-word
 // operator followed by HASH — e.g. `name #(...)` or `++ #(...)`.
-func (p *Parser) isBocWithSigStart() bool {
+func (p *Parser) isBocDeclStart() bool {
 	if !p.atAnyIdent() && !p.at(token.NON_WORD) {
 		return false
 	}
@@ -312,9 +312,9 @@ func (p *Parser) parseTypedDecl() (*ast.TypedDecl, error) {
 	return &ast.TypedDecl{Pos: pos, Name: name, Type: typ, Value: val}, nil
 }
 
-// parseBocWithSig parses `name #(params) [body | = body]`.
+// parseBocDecl parses `name #(params) [body | = body]`.
 // name may be a word identifier or a non-word operator symbol (e.g. `++`).
-func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
+func (p *Parser) parseBocDecl() (*ast.BocDecl, error) {
 	pos := p.curPos()
 	var name *ast.Ident
 	if p.at(token.NON_WORD) {
@@ -336,7 +336,7 @@ func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
 		return nil, err
 	}
 
-	// BocWithSig bodies are always value bocs (function/method bodies), never
+	// BocDecl bodies are always value bocs (function/method bodies), never
 	// type bocs. Reset inTypeBoc so parseBocElement does not route constructor
 	// calls like Pair(a, b) to parseVariantDef inside method bodies.
 	prevInTypeBoc := p.inTypeBoc
@@ -364,7 +364,7 @@ func (p *Parser) parseBocWithSig() (*ast.BocWithSig, error) {
 	}
 	p.inTypeBoc = prevInTypeBoc
 
-	return &ast.BocWithSig{Pos: pos, Name: name, Sig: sig, Body: body, BodyOnly: bodyOnly}, nil
+	return &ast.BocDecl{Pos: pos, Name: name, Sig: sig, Body: body, BodyOnly: bodyOnly}, nil
 }
 
 // parseInfoStringAndDecl parses an info string and attaches it to the next decl.

@@ -235,7 +235,7 @@ type BocLiteral struct {
 
 func (e *BocLiteral) exprNode() {}
 
-// BocWithSig is `name #(params) [body]` in two forms:
+// BocDecl is `name #(params) [body]` in two forms:
 //
 //   - Shorthand: `name #(params) { body }` — params auto-scoped into body;
 //     unlabeled types at the end of the param list are return-type annotations.
@@ -245,7 +245,7 @@ func (e *BocLiteral) exprNode() {}
 //     return-type annotations); return type is inferred from body's last expr.
 //
 // The sema phase enforces the matching rules; the parser just captures both.
-type BocWithSig struct {
+type BocDecl struct {
 	Pos
 	Name     *Ident
 	Sig      *BocTypeExpr
@@ -253,7 +253,7 @@ type BocWithSig struct {
 	BodyOnly bool        // true when `= { body }` form (body redeclares params)
 }
 
-func (e *BocWithSig) stmtNode() {}
+func (e *BocDecl) stmtNode() {}
 
 // InterpPart is one segment of an InterpolatedStringExpr.
 // Either a literal text fragment or an embedded expression.

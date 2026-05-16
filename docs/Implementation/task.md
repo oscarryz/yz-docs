@@ -107,7 +107,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 ### Infrastructure
 
 - [ ] **[YZC-0021] Directory and file bocs** — defer until in-file nesting works; extend FQN tree to directories and files as bocs
-- [ ] **[YZC-0032] Rename `BocWithSig` in compiler code** — AST node `BocWithSig`, sema path `analyzeBocWithSig`, lowerer path `lowerBocWithSig`, and all related identifiers should be renamed to `BocDecl` / `analyzeBocDecl` / `lowerBocDecl` to match the settled terminology; also rename the `BocWithSig` → `BocDecl` grammar production in spec/02
+- [x] **[YZC-0032] Rename `BocWithSig` in compiler code** — AST node `BocWithSig`, sema path `analyzeBocWithSig`, lowerer path `lowerBocWithSig`, and all related identifiers should be renamed to `BocDecl` / `analyzeBocDecl` / `lowerBocDecl` to match the settled terminology; also rename the `BocWithSig` → `BocDecl` grammar production in spec/02
 - [ ] **[YZC-0022] Multiple source roots** — `src/` + `lib/` as independent FQN mount points; compiler accepts list of source roots; builds one FQN forest per root
 - [ ] **[YZC-0023] Cancellation / non-local return** — non-local `return` across goroutine boundaries conflicts with structured concurrency; see `docs/Questions/How to cancel a running block.md`
 

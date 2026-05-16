@@ -285,11 +285,11 @@ func TestLowerTypedDeclField(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// 09 — BocWithSig becomes FuncDecl with params and *Thunk return
+// 09 — BocDecl becomes FuncDecl with params and *Thunk return
 // ---------------------------------------------------------------------------
 
-func TestLowerBocWithSigFuncDecl(t *testing.T) {
-	// BocWithSig is now a singleton struct + Call() method (boc uniformity).
+func TestLowerBocDeclFuncDecl(t *testing.T) {
+	// BocDecl is now a singleton struct + Call() method (boc uniformity).
 	f := lower(t, `greet #(name String) {
     print(name)
 }`)
@@ -322,7 +322,7 @@ func TestLowerBocWithSigFuncDecl(t *testing.T) {
 	}
 }
 
-func TestLowerBocWithSigCallInMain(t *testing.T) {
+func TestLowerBocDeclCallInMain(t *testing.T) {
 	f := lower(t, `greet #(name String) {
     print(name)
 }
