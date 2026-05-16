@@ -12,29 +12,35 @@ var Http = &_httpBoc{}
 type _httpBoc struct{}
 
 // Get fetches the given URI and returns the response body as a String.
-func (h *_httpBoc) Get(uri String) String {
-	resp, err := ghttp.Get(uri.GoString())
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	return NewString(string(body))
+// The fetch runs in a spawned goroutine so concurrent http.get calls overlap.
+func (h *_httpBoc) Get(uri String) *Thunk[String] {
+	return Go(func() String {
+		resp, err := ghttp.Get(uri.GoString())
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		return NewString(string(body))
+	})
 }
 
 // Post sends a POST request with the given body and returns the response body as a String.
-func (h *_httpBoc) Post(uri String, body String) String {
-	resp, err := ghttp.Post(uri.GoString(), "application/json", strings.NewReader(body.GoString()))
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	return NewString(string(respBody))
+// The request runs in a spawned goroutine so concurrent http.post calls overlap.
+func (h *_httpBoc) Post(uri String, body String) *Thunk[String] {
+	return Go(func() String {
+		resp, err := ghttp.Post(uri.GoString(), "application/json", strings.NewReader(body.GoString()))
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		return NewString(string(respBody))
+	})
 }
