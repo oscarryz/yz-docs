@@ -9,15 +9,15 @@ type _mainBoc struct {
 func (self *_mainBoc) call() std.Unit {
 	a := std.Http.Get(std.NewString("https://httpbin.org/get"))
 	b := std.Http.Get(std.NewString("https://httpbin.org/uuid"))
-	std.Print(a.Force())
-	std.Print(b.Force())
+	std.Print(a)
+	std.Print(b)
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

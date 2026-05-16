@@ -149,6 +149,14 @@ These two changes address fundamental correctness issues in the generated code a
 
 - [ ] **Unused variables in generated Go** — Yz allows unused variables but Go does not. Fix: after lowering all statements in a scope (main boc, method body), scan the emitted IR for declared variable names (`DeclStmt.Name`) that never appear as `Ident` references in subsequent IR nodes. Append `_ = varName` (`AssignStmt` with blank target) for each unused name. Applies to `lowerMainBoc`, `lowerBocBody`, and `lowerClosureBody`. No change to sema or parser; pure IR post-processing. Add a golden test with a declared-but-unused variable.
 
+- [ ] **Double return** using time.sleep(1) results in go source attempting to return two vaues e.g. foo: { time.sleep(1); 1 } 
+results in return std.TheUnit; return std.Int(1) // or something similar
+
+- [ ] **Standalone boc** `p : { print("hello"); }; p() ` doesn't work, currently it has to be `p : { call: { print("hi") } }; p.call() `
+- [ ] **Variants are broken** Variants were not included on the BOC paradigm see examples/variants
+
+- [ ] **Cross package is broken** It broke sometime during BOC migration
+ 
 ## Documentation Gaps — Features Documented but Not Yet Implemented
 
 These are documented in the language spec/features and need compiler implementation:

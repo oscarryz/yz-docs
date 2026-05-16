@@ -17,10 +17,10 @@ func (self *Wrapper[T]) describe() std.String {
 	return self.value.ToStr()
 }
 
-func (self *Wrapper[T]) Describe() *std.Thunk[std.String] {
-	return std.Schedule(&self.Cown, func() std.String {
+func (self *Wrapper[T]) Describe() std.String {
+	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		return self.describe()
-	})
+	}))
 }
 
 type _mainBoc struct {
@@ -29,14 +29,14 @@ type _mainBoc struct {
 
 func (self *_mainBoc) call() std.Unit {
 	w := NewWrapper(std.NewString("hello"))
-	std.Print(w.Describe().Force())
+	std.Print(w.Describe())
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	})
+	}))
 }
 
 var Main = &_mainBoc{}
