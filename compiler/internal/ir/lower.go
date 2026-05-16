@@ -777,29 +777,49 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 				continue // param — already collected
 			}
 			expr := l.lowerExpr(e.Value)
-			if l.isBocMethodCall(e.Value) {
+			if synced := l.trySyncExpr(e.Value); synced != nil {
+				// Held-cown reentrant call: emit directly, no goroutine.
+				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: synced})
+			} else if l.isBocMethodCall(e.Value) {
 				goType := l.goType(l.analyzer.ExprType(e.Value))
-				inner = append(inner, &DeclStmt{Name: e.Name.Name, Type: goType})
-				if bgVar != "" {
-					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
-						GroupVar: bgVar,
-						StoreVar: e.Name.Name,
-						Body:     []Stmt{&ReturnStmt{Value: expr}},
-					}})
-				}
+				// Use a per-variable BocGroup and insert WaitStmt immediately
+				// after GoStore so that subsequent statements referencing this
+				// variable land in postWait (after cown release) rather than
+				// inside the ScheduleMulti closure where the value is still nil.
+				perBg := "_bgs_" + e.Name.Name
+				inner = append(inner,
+					&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
+					&DeclStmt{Name: e.Name.Name, Type: goType},
+					&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
+					&WaitStmt{GroupVar: perBg},
+				)
 			} else {
 				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: expr})
 			}
 		case *ast.ShortDecl:
-			if len(e.Names) == 1 && len(e.Values) == 1 && l.isBocMethodCall(e.Values[0]) && bgVar != "" {
+			if len(e.Names) == 1 && len(e.Values) == 1 && l.isBocMethodCall(e.Values[0]) {
 				callExpr := l.lowerExpr(e.Values[0])
 				goType := l.goType(l.analyzer.ExprType(e.Values[0]))
-				inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Type: goType})
-				inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
-					GroupVar: bgVar,
-					StoreVar: e.Names[0].Name,
-					Body:     []Stmt{&ReturnStmt{Value: callExpr}},
-				}})
+				if synced := l.trySyncExpr(e.Values[0]); synced != nil {
+					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Init: synced})
+				} else if bgVar != "" {
+					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Type: goType})
+					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+						GroupVar: bgVar,
+						StoreVar: e.Names[0].Name,
+						Body:     []Stmt{&ReturnStmt{Value: callExpr}},
+					}})
+				} else {
+					// No shared BocGroup: per-variable group with immediate Wait so
+					// dependent statements land in postWait (after cown release).
+					perBg := "_bgs_" + e.Names[0].Name
+					inner = append(inner,
+						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
+						&DeclStmt{Name: e.Names[0].Name, Type: goType},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Names[0].Name, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
+						&WaitStmt{GroupVar: perBg},
+					)
+				}
 			} else if isLast && len(e.Names) == 1 && len(e.Values) == 1 {
 				// Last short decl in body — could be an expression-result.
 				inner = append(inner, l.lowerBodyShortDecl(e, true, resultType)...)
