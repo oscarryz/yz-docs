@@ -267,10 +267,10 @@ func TestNestedBocScoping(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// 05 — BocWithSig special form
+// 05 — BocDecl special form
 // ---------------------------------------------------------------------------
 
-func TestBocWithSigParamsInScope(t *testing.T) {
+func TestBocDeclParamsInScope(t *testing.T) {
 	// greet #(name String) { name }
 	// 'name' should be in scope in the body without re-declaration.
 	a := mustAnalyze(t, `greet #(name String) { name }`)
@@ -291,7 +291,7 @@ func TestBocWithSigParamsInScope(t *testing.T) {
 	}
 }
 
-func TestBocWithSigReturnType(t *testing.T) {
+func TestBocDeclReturnType(t *testing.T) {
 	// greet #(name String, String) — return type is explicit
 	// (the anonymous String at end of param list is the return type)
 	a := mustAnalyze(t, `greet #(name String, String) { name }`)

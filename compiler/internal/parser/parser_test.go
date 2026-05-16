@@ -426,13 +426,13 @@ func TestParseShortDeclWithBoc(t *testing.T) {
 // 07 — Boc with signature
 // ---------------------------------------------------------------------------
 
-func TestParseBocWithSigOnly(t *testing.T) {
+func TestParseBocDeclOnly(t *testing.T) {
 	// greet #(name String)  — signature only, no body
 	sf := parse(t, "greet #(name String)")
 	n := stmt(t, sf, 0)
-	bws, ok := n.(*ast.BocWithSig)
+	bws, ok := n.(*ast.BocDecl)
 	if !ok {
-		t.Fatalf("expected *ast.BocWithSig, got %T", n)
+		t.Fatalf("expected *ast.BocDecl, got %T", n)
 	}
 	if bws.Name.Name != "greet" {
 		t.Errorf("name: got %q, want greet", bws.Name.Name)
@@ -448,14 +448,14 @@ func TestParseBocWithSigOnly(t *testing.T) {
 	}
 }
 
-func TestParseBocWithSigAndBody(t *testing.T) {
+func TestParseBocDeclAndBody(t *testing.T) {
 	// greet #(name String) { name }
 	// Body does NOT need to redeclare name.
 	sf := parse(t, "greet #(name String) { name }")
 	n := stmt(t, sf, 0)
-	bws, ok := n.(*ast.BocWithSig)
+	bws, ok := n.(*ast.BocDecl)
 	if !ok {
-		t.Fatalf("expected *ast.BocWithSig, got %T", n)
+		t.Fatalf("expected *ast.BocDecl, got %T", n)
 	}
 	if bws.Body == nil {
 		t.Fatal("expected body")
@@ -469,13 +469,13 @@ func TestParseBocWithSigAndBody(t *testing.T) {
 	}
 }
 
-func TestParseBocWithSigAssignForm(t *testing.T) {
+func TestParseBocDeclAssignForm(t *testing.T) {
 	// greet #(name String) = { name String }
 	sf := parse(t, "greet #(name String) = { name String }")
 	n := stmt(t, sf, 0)
-	bws, ok := n.(*ast.BocWithSig)
+	bws, ok := n.(*ast.BocDecl)
 	if !ok {
-		t.Fatalf("expected *ast.BocWithSig, got %T", n)
+		t.Fatalf("expected *ast.BocDecl, got %T", n)
 	}
 	if bws.Body == nil {
 		t.Fatal("expected body")

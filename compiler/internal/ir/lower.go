@@ -39,7 +39,7 @@ type lowerer struct {
 	recvFields map[string]bool // fields accessible via receiver
 
 	// localBocVars tracks local function-literal variables declared via
-	// BocWithSig inside a boc body (e.g. `foo #(String) { "hello" }`).
+	// BocDecl inside a boc body (e.g. `foo #(String) { "hello" }`).
 	// Their generated function literal already returns *Thunk[T], so calling
 	// foo() must NOT be wrapped in an extra ThunkExpr — just emit foo()
 	// directly and let the caller force it.
@@ -76,7 +76,7 @@ type lowerer struct {
 	// instead of being forced inline (ForceExpr).
 	bocGroupCtx string
 
-	// closureHeldCowns is set by lowerCall when processing a BocWithSig call
+	// closureHeldCowns is set by lowerCall when processing a BocDecl call
 	// that holds cown-bearing struct params via ScheduleMulti. Keys are cown
 	// addresses ("&varName.Cown"). Closure arguments lowered while this is set
 	// emit sync-body calls (lowercase method, no Force) for those cowns so the
@@ -140,12 +140,12 @@ func (l *lowerer) lowerTopLevel(node ast.Node) Decl {
 	switch n := node.(type) {
 	case *ast.ShortDecl:
 		return l.lowerTopShortDecl(n)
-	case *ast.BocWithSig:
+	case *ast.BocDecl:
 		// Uppercase name + no body → type-only declaration: emit struct without constructor.
 		if n.Body == nil && isUppercase(n.Name.Name) {
 			return l.lowerTypeOnlyDecl(n)
 		}
-		return l.lowerBocWithSig(n)
+		return l.lowerBocDecl(n)
 	case *ast.Assignment:
 		return l.lowerTopAssignment(n)
 	default:
@@ -184,7 +184,7 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	// Use AST sig for return type to preserve generic TypeArgs; also collect type params.
 	var typeParams []string
 	resultType := "std.Unit"
-	if bws, ok := sym.Node.(*ast.BocWithSig); ok {
+	if bws, ok := sym.Node.(*ast.BocDecl); ok {
 		resultType = l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
 		typeParams = collectSigTypeParams(bws.Sig)
 	} else if len(bt.Returns) > 0 {
@@ -226,19 +226,19 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 		}
 	}
 
-	// Non-generic: lower as singleton struct (same model as lowerBocWithSig).
+	// Non-generic: lower as singleton struct (same model as lowerBocDecl).
 	var sig *ast.BocTypeExpr
-	if bws, ok := sym.Node.(*ast.BocWithSig); ok {
+	if bws, ok := sym.Node.(*ast.BocDecl); ok {
 		sig = bws.Sig
 	}
-	return l.lowerBocWithSigAsSingleton(id.Name, sig, bocLit, params, resultType)
+	return l.lowerBocDeclAsSingleton(id.Name, sig, bocLit, params, resultType)
 }
 
 // lowerTypeOnlyDecl lowers `Name #(params)` (no body) into a Go struct
 // declaration without a constructor. The struct type exists so it can be used
 // as a parameter/variable type; instances cannot be created until a body is
 // attached (structural typing is enforced by sema).
-func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocWithSig) Decl {
+func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocDecl) Decl {
 	semType := l.analyzer.ExprType(bws)
 	st, ok := semType.(*sema.StructType)
 	if !ok {
@@ -351,11 +351,11 @@ func (l *lowerer) bocFieldMethod(typeName, fieldName string, bt *sema.BocType) *
 }
 
 // fillDefaults fills in lowered default expressions for omitted optional params
-// in a BocWithSig call. sigParams is the raw AST param list from the signature.
+// in a BocDecl call. sigParams is the raw AST param list from the signature.
 // loweredArgs is the already-lowered positional args from the call site.
 // Any trailing params that have a Default expression are filled in automatically.
 func (l *lowerer) fillDefaults(loweredArgs []Expr, sigParams []*ast.BocParam) []Expr {
-	// Collect named input params (same filter as lowerBocWithSig).
+	// Collect named input params (same filter as lowerBocDecl).
 	var inputs []*ast.BocParam
 	for _, p := range sigParams {
 		if p.Variant == nil && p.Label != "" {
@@ -390,7 +390,7 @@ func (l *lowerer) lowerTopShortDecl(d *ast.ShortDecl) Decl {
 		return l.lowerSimpleTopDecl(name.Name, d.Values[0])
 	}
 
-	// name #(params) { body } is BocWithSig; plain name: { body } lands here.
+	// name #(params) { body } is BocDecl; plain name: { body } lands here.
 	if isUppercase(name.Name) {
 		return l.lowerStructBoc(name.Name, bocLit)
 	}
@@ -550,11 +550,11 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 			}
 			sd.Fields = append(sd.Fields, &FieldSpec{Name: e.Name.Name, Type: typ, Init: initExpr})
 
-		case *ast.BocWithSig:
+		case *ast.BocDecl:
 			if e.Body != nil {
 				prevMethods := l.recvMethods
 				l.recvMethods = methodNames
-				m := l.lowerBocWithSigAsMethod(e, "*"+typeName, fieldNames)
+				m := l.lowerBocDeclAsMethod(e, "*"+typeName, fieldNames)
 				l.recvMethods = prevMethods
 				applyExtraCowns(m, extraCowns)
 				sd.Methods = append(sd.Methods, m)
@@ -596,7 +596,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 	return sd
 }
 
-// collectMethodNames returns the set of method names (ShortDecl+BocLiteral and BocWithSig
+// collectMethodNames returns the set of method names (ShortDecl+BocLiteral and BocDecl
 // with body) in the boc literal. Used to resolve unqualified method calls inside
 // method bodies as self.Method().
 func (l *lowerer) collectMethodNames(b *ast.BocLiteral) map[string]bool {
@@ -609,7 +609,7 @@ func (l *lowerer) collectMethodNames(b *ast.BocLiteral) map[string]bool {
 					methods[e.Names[0].Name] = true
 				}
 			}
-		case *ast.BocWithSig:
+		case *ast.BocDecl:
 			if e.Body != nil {
 				methods[e.Name.Name] = true
 			}
@@ -694,8 +694,8 @@ func applyExtraCowns(md *MethodDecl, extraCowns []string) {
 // The AST node differs, but the IR produced by these lowerers is identical:
 //
 //   f: { name String; String; "${name}" }          → ShortDecl(BocLiteral) → lowerMethod
-//   f #(name String, String) = { "${name}" }       → BocWithSig(BodyOnly=true)  → lowerBocWithSigAsMethod
-//   f #(name String, String) { "${name}" }         → BocWithSig(BodyOnly=false) → lowerBocWithSigAsMethod
+//   f #(name String, String) = { "${name}" }       → BocDecl(BodyOnly=true)  → lowerBocDeclAsMethod
+//   f #(name String, String) { "${name}" }         → BocDecl(BodyOnly=false) → lowerBocDeclAsMethod
 //
 // If you change how one form lowers (params, receiver, return type, thunk wrapping),
 // apply the same change to the others. There is no `self` or `this` in Yz — the
@@ -770,8 +770,8 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 	for i, elem := range elems {
 		isLast := i == len(elems)-1
 		switch e := elem.(type) {
-		case *ast.BocWithSig:
-			inner = append(inner, l.lowerBocWithSigAsLocal(e)...)
+		case *ast.BocDecl:
+			inner = append(inner, l.lowerBocDeclAsLocal(e)...)
 		case *ast.TypedDecl:
 			if e.Value == nil {
 				continue // param — already collected
@@ -1075,10 +1075,10 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 		case *ast.Ident:
 			// TypeParams already pre-populated above; nothing else to do here.
 
-		case *ast.BocWithSig:
+		case *ast.BocDecl:
 			if e.Body != nil {
 				l.recvMethods = methodNames
-				m := l.lowerBocWithSigAsMethod(e, recvType, fieldNames)
+				m := l.lowerBocDeclAsMethod(e, recvType, fieldNames)
 				l.recvMethods = prevRecvMethods
 				applyExtraCowns(m, extraCowns)
 				sd.Methods = append(sd.Methods, m)
@@ -1146,13 +1146,13 @@ func (l *lowerer) lowerVariantBoc(name string, b *ast.BocLiteral) *StructDecl {
 
 func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 	switch e := node.(type) {
-	case *ast.BocWithSig:
+	case *ast.BocDecl:
 		// Local boc variable: `foo #(String) { "hello" }` or `foo #(String) = { "hello" }`.
 		// Lift to a package-level struct with a Call() method.
 		if e.Body != nil && !isUppercase(e.Name.Name) {
-			return l.lowerLocalBWS(e)
+			return l.lowerLocalBocDecl(e)
 		}
-		return l.lowerBocWithSigAsLocal(e)
+		return l.lowerBocDeclAsLocal(e)
 	case *ast.TypedDecl:
 		if e.Value == nil {
 			return nil // parameter-style declaration without init — skip
@@ -1225,13 +1225,13 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 }
 
 // ---------------------------------------------------------------------------
-// BocWithSig
+// BocDecl
 // ---------------------------------------------------------------------------
 
-// lowerBocWithSigAsMethod lowers a BocWithSig that appears inside a singleton
+// lowerBocDeclAsMethod lowers a BocDecl that appears inside a singleton
 // or struct boc body as a receiver method. Params come from the signature;
 // the body is lowered with receiver context so field names resolve to self.xxx.
-func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, parentFields map[string]bool) *MethodDecl {
+func (l *lowerer) lowerBocDeclAsMethod(bws *ast.BocDecl, recvType string, parentFields map[string]bool) *MethodDecl {
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
 
@@ -1270,7 +1270,7 @@ func (l *lowerer) lowerBocWithSigAsMethod(bws *ast.BocWithSig, recvType string, 
 	}
 }
 
-func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
+func (l *lowerer) lowerBocDecl(bws *ast.BocDecl) Decl {
 	if bws.Body == nil {
 		return nil
 	}
@@ -1296,7 +1296,7 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
 		params = l.sigParams(bws.Sig, bt)
 	}
 
-	// Generic BocWithSig: Go methods can't have free type params not on the receiver.
+	// Generic BocDecl: Go methods can't have free type params not on the receiver.
 	// Keep as FuncDecl until generic singletons are supported.
 	if len(typeParams) > 0 {
 		prev := l.setReceiver("", nil)
@@ -1320,13 +1320,13 @@ func (l *lowerer) lowerBocWithSig(bws *ast.BocWithSig) Decl {
 		}
 	}
 
-	return l.lowerBocWithSigAsSingleton(bws.Name.Name, bws.Sig, bws.Body, params, resultType)
+	return l.lowerBocDeclAsSingleton(bws.Name.Name, bws.Sig, bws.Body, params, resultType)
 }
 
-// lowerBocWithSigAsSingleton lowers a non-generic BocWithSig into a singleton
+// lowerBocDeclAsSingleton lowers a non-generic BocDecl into a singleton
 // struct + package-level var + Call(params...) method. The Call() body uses
 // std.Go (not std.Schedule) to avoid re-entrancy deadlocks for recursive singletons.
-func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, body *ast.BocLiteral, params []*ParamSpec, resultType string) *SingletonDecl {
+func (l *lowerer) lowerBocDeclAsSingleton(name string, sig *ast.BocTypeExpr, body *ast.BocLiteral, params []*ParamSpec, resultType string) *SingletonDecl {
 	// Struct fields from params (no Init — set inside Call() at invocation time).
 	var fields []*FieldSpec
 	for _, p := range params {
@@ -1436,11 +1436,11 @@ func (l *lowerer) lowerBocWithSigAsSingleton(name string, sig *ast.BocTypeExpr, 
 	}
 }
 
-// lowerBocWithSigAsLocal lowers a BocWithSig that appears inside a boc body
+// lowerBocDeclAsLocal lowers a BocDecl that appears inside a boc body
 // (main or a method) as a local function variable. The variable holds a
 // function literal that returns *Thunk[T], so calling foo() is async just
-// like calling a top-level BocWithSig.
-func (l *lowerer) lowerBocWithSigAsLocal(bws *ast.BocWithSig) []Stmt {
+// like calling a top-level BocDecl.
+func (l *lowerer) lowerBocDeclAsLocal(bws *ast.BocDecl) []Stmt {
 	if bws.Body == nil {
 		return nil
 	}
@@ -1487,11 +1487,11 @@ func (l *lowerer) lowerBocWithSigAsLocal(bws *ast.BocWithSig) []Stmt {
 	return []Stmt{&DeclStmt{Name: bws.Name.Name, Type: "", Init: init}}
 }
 
-// lowerLocalBWS lifts a BocWithSig that appears inside a boc body (main or
+// lowerLocalBocDecl lifts a BocDecl that appears inside a boc body (main or
 // a method) as a package-level struct with a Call() method.  This replaces
 // the old closure-literal approach and gives every local boc a proper struct,
 // matching the "everything is a boc" design.
-func (l *lowerer) lowerLocalBWS(bws *ast.BocWithSig) []Stmt {
+func (l *lowerer) lowerLocalBocDecl(bws *ast.BocDecl) []Stmt {
 	if bws.Body == nil {
 		return nil
 	}
@@ -1668,14 +1668,14 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 
 // lowerName resolves an identifier: if it's a receiver field, emit self.field.
 // Singleton boc vars are capitalized so they are exported for cross-package access.
-// BocWithSig functions remain lowercase (they become Go functions, not vars).
+// BocDecl functions remain lowercase (they become Go functions, not vars).
 func (l *lowerer) lowerName(name string) Expr {
 	if l.recvName != "" && l.recvFields[name] {
 		return &FieldAccess{Object: &Ident{Name: l.recvName}, Field: name}
 	}
 	// Capitalize singleton boc var references.
-	// Singletons may be BocType (body boc or BocWithSig) or StructType{IsSingleton:true}.
-	// Generic BocWithSig (typeParams>0) stays as a FuncDecl — don't capitalize.
+	// Singletons may be BocType (body boc or BocDecl) or StructType{IsSingleton:true}.
+	// Generic BocDecl (typeParams>0) stays as a FuncDecl — don't capitalize.
 	sym := l.analyzer.LookupInFile(name)
 	if sym != nil {
 		isSingleton := false
@@ -1685,8 +1685,8 @@ func (l *lowerer) lowerName(name string) Expr {
 			isSingleton = true
 		}
 		if isSingleton {
-			// Generic BocWithSig is kept as FuncDecl — don't capitalize.
-			if bws, isBWS := sym.Node.(*ast.BocWithSig); isBWS && len(collectSigTypeParams(bws.Sig)) > 0 {
+			// Generic BocDecl is kept as FuncDecl — don't capitalize.
+			if bws, isBD := sym.Node.(*ast.BocDecl); isBD && len(collectSigTypeParams(bws.Sig)) > 0 {
 				return &Ident{Name: name}
 			}
 			return &Ident{Name: capitalize(name)}
@@ -1797,7 +1797,7 @@ func (l *lowerer) tryLowerFQNCall(c *ast.CallExpr) (Expr, bool) {
 	if _, isStruct := exportedSym.Type.(*sema.StructType); isStruct {
 		return &FuncCall{Func: &Ident{Name: pkg.PkgAlias + ".New" + symName}, Args: args}, true
 	}
-	// Singleton boc or BocWithSig: pkg.func(args)
+	// Singleton boc or BocDecl: pkg.func(args)
 	return &FuncCall{Func: &Ident{Name: pkg.PkgAlias + "." + symName}, Args: args}, true
 }
 
@@ -1896,11 +1896,11 @@ func (l *lowerer) tryLowerCrossPackageSingletonMethod(c *ast.CallExpr) (Expr, bo
 }
 
 func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
-	// Pre-scan: if this is a BocWithSig call with cown-bearing struct params,
+	// Pre-scan: if this is a BocDecl call with cown-bearing struct params,
 	// set closureHeldCowns so that closure arguments lowered below can emit
 	// sync-body calls (no cown acquisition) instead of .Force() calls that
 	// would deadlock when called while the cown is held.
-	if heldCowns := l.bocWithSigHeldCowns(c); len(heldCowns) > 0 {
+	if heldCowns := l.bocDeclHeldCowns(c); len(heldCowns) > 0 {
 		prev := l.closureHeldCowns
 		l.closureHeldCowns = heldCowns
 		defer func() { l.closureHeldCowns = prev }()
@@ -1982,11 +1982,11 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			if _, isStruct := sym.Type.(*sema.StructType); isStruct {
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
-			// BocWithSig singletons: each call creates a fresh instance so its
+			// BocDecl singletons: each call creates a fresh instance so its
 			// self.Cown is uncontested. Effective serialization comes only from
 			// any struct-typed params' cowns (acquired via ScheduleMulti).
-			// Generic BocWithSig (typeParams) kept as FuncDecl — plain call.
-			if bws, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
+			// Generic BocDecl (typeParams) kept as FuncDecl — plain call.
+			if bws, isBD := sym.Node.(*ast.BocDecl); isBD {
 				if bws.Sig != nil {
 					args = l.fillDefaults(args, bws.Sig.Params)
 				}
@@ -2002,7 +2002,7 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		}
 	}
 
-	// Local BocWithSig function literal — already returns *Thunk[T], emit direct call.
+	// Local BocDecl function literal — already returns *Thunk[T], emit direct call.
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		if l.localBocVars[id.Name] {
 			return &FuncCall{Func: callee, Args: args}
@@ -2044,7 +2044,7 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 
 // isBocMethodCall reports whether an AST expression is a call that returns a
 // *Thunk in Go — either a singleton boc method call (counter.value()) or a
-// direct BocWithSig function call (greet("Alice")).
+// direct BocDecl function call (greet("Alice")).
 func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	// Non-word infix operator on a struct: `a ++ b` → a.Plusplus(b) → *Thunk[T].
 	if bin, ok := e.(*ast.BinaryExpr); ok {
@@ -2083,7 +2083,7 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		_, isBoc := sym.Type.(*sema.BocType)
 		return isBoc
 	}
-	// Direct BocWithSig call: greet("Alice")
+	// Direct BocDecl call: greet("Alice")
 	if id, ok := c.Callee.(*ast.Ident); ok {
 		if l.localBocVars[id.Name] {
 			return true
@@ -2098,7 +2098,7 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		}
 		sym := l.analyzer.LookupInFile(id.Name)
 		if sym != nil {
-			if _, isBWS := sym.Node.(*ast.BocWithSig); isBWS {
+			if _, isBD := sym.Node.(*ast.BocDecl); isBD {
 				return true
 			}
 		}
@@ -2122,11 +2122,11 @@ func (l *lowerer) isStructInstanceMethodCall(e ast.Expr) bool {
 	return isStruct && !st.IsSingleton && !st.IsInterface
 }
 
-// bocWithSigHeldCowns scans a BocWithSig call's params to find which actual
+// bocDeclHeldCowns scans a BocDecl call's params to find which actual
 // argument variables correspond to cown-bearing struct params. Returns a set of
 // "&varName.Cown" addresses that will be held (via ScheduleMulti) when any
 // closure argument to this call is invoked.
-func (l *lowerer) bocWithSigHeldCowns(c *ast.CallExpr) map[string]bool {
+func (l *lowerer) bocDeclHeldCowns(c *ast.CallExpr) map[string]bool {
 	id, ok := c.Callee.(*ast.Ident)
 	if !ok {
 		return nil
@@ -2135,12 +2135,12 @@ func (l *lowerer) bocWithSigHeldCowns(c *ast.CallExpr) map[string]bool {
 	if sym == nil {
 		return nil
 	}
-	bws, isBWS := sym.Node.(*ast.BocWithSig)
-	if !isBWS || bws.Sig == nil {
+	bws, isBD := sym.Node.(*ast.BocDecl)
+	if !isBD || bws.Sig == nil {
 		return nil
 	}
 
-	// Collect named input params (same filter as lowerBocWithSig).
+	// Collect named input params (same filter as lowerBocDecl).
 	var inputs []*ast.BocParam
 	for _, p := range bws.Sig.Params {
 		if p.Variant == nil && p.Label != "" {
@@ -2816,7 +2816,7 @@ func (l *lowerer) restoreReceiver(prev receiverState) {
 // Generic type-param helpers
 // ---------------------------------------------------------------------------
 
-// sigParams builds the Go parameter list for a BocWithSig (shorthand or method form).
+// sigParams builds the Go parameter list for a BocDecl (shorthand or method form).
 // It uses sema BocType for ordering and filtering (handles shortdecl/default params
 // that have no explicit AST type), but prefers AST type expressions when they carry
 // generic TypeArgs (e.g. Option(V) → *Option[V]).
@@ -2885,7 +2885,7 @@ func collectGenericIdentsFromType(te ast.TypeExpr, seen map[string]bool, result 
 	}
 }
 
-// getResultTypeFromSig extracts the return Go type string from a BocWithSig.
+// getResultTypeFromSig extracts the return Go type string from a BocDecl.
 // It prefers the explicit return type annotation in the AST sig (which preserves
 // generic TypeArgs) over the sema-inferred return type.
 // bodyOnly must be true for the `name #(sig) = { body }` form, where ALL sig

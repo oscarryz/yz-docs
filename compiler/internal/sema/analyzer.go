@@ -65,7 +65,7 @@ type Analyzer struct {
 	activeConstraints map[string][]*GenericConstraint
 
 	// activeContext is "StructName.methodName" for constraint attribution.
-	// Updated before each BocWithSig method body is analyzed.
+	// Updated before each BocDecl method body is analyzed.
 	activeContext string
 }
 
@@ -245,8 +245,8 @@ func (a *Analyzer) analyzeNode(n ast.Node) Type {
 		return a.analyzeTypedDecl(node)
 	case *ast.Assignment:
 		return a.analyzeAssignment(node)
-	case *ast.BocWithSig:
-		return a.analyzeBocWithSig(node)
+	case *ast.BocDecl:
+		return a.analyzeBocDeclNode(node)
 	case *ast.VariantDef:
 		return a.analyzeVariantDef(node)
 	case *ast.ReturnStmt:
@@ -297,12 +297,12 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 }
 
 // hasInnerBocsOrMethods reports whether a boc literal contains any inner
-// body-form bocs (ShortDecl with BocLiteral value) or BocWithSig methods.
+// body-form bocs (ShortDecl with BocLiteral value) or BocDecl methods.
 // These require StructType recording for correct field-access type-checking.
 func hasInnerBocsOrMethods(bocLit *ast.BocLiteral) bool {
 	for _, elem := range bocLit.Elements {
 		switch e := elem.(type) {
-		case *ast.BocWithSig:
+		case *ast.BocDecl:
 			if e.Body != nil {
 				return true
 			}
@@ -498,13 +498,13 @@ func (a *Analyzer) resolveTargetType(target ast.Expr) Type {
 }
 
 // ---------------------------------------------------------------------------
-// BocWithSig
+// BocDecl
 // ---------------------------------------------------------------------------
 
-func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
+func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 	// Resolve all params from the signature.
 	// In body-only form (= { body }), all params are inputs (no isReturn logic).
-	allParams := a.resolveBocSigParams(bws.Sig, bws.BodyOnly)
+	allParams := a.resolveBocSigParams(bd.Sig, bd.BodyOnly)
 
 	// Separate input params from anonymous return-type entries.
 	var inputParams []BocParam
@@ -521,7 +521,7 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 	// `Name #(name String, age Int)` registers Name as a StructType with those
 	// fields. No implementation is generated; any structurally compatible boc
 	// literal satisfies the type.
-	if bws.Body == nil && (bws.Name.TokType == token.TYPE_IDENT || bws.Name.TokType == token.GENERIC_IDENT) {
+	if bd.Body == nil && (bd.Name.TokType == token.TYPE_IDENT || bd.Name.TokType == token.GENERIC_IDENT) {
 		// If every input param is a BocType, this is an interface declaration.
 		allBoc := len(inputParams) > 0
 		for _, p := range inputParams {
@@ -530,21 +530,21 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 				break
 			}
 		}
-		st := &StructType{Name: bws.Name.Name, IsInterface: allBoc}
+		st := &StructType{Name: bd.Name.Name, IsInterface: allBoc}
 		for _, p := range inputParams {
 			if p.Label != "" {
 				st.Fields = append(st.Fields, StructField{Name: p.Label, Type: p.Type})
 			}
 		}
-		fqn := a.currentFQN(bws.Name.Name)
-		sym := &Symbol{Name: bws.Name.Name, Type: st, FQN: fqn, Node: bws}
+		fqn := a.currentFQN(bd.Name.Name)
+		sym := &Symbol{Name: bd.Name.Name, Type: st, FQN: fqn, Node: bd}
 		a.define(sym)
-		a.setType(bws, st)
+		a.setType(bd, st)
 		return st
 	}
 
 	var returns []Type
-	if bws.Body != nil {
+	if bd.Body != nil {
 		// Pre-register the symbol before analyzing the body so recursive calls
 		// inside the body can resolve the function's own name.
 		// Use sig-declared return types if available; otherwise default to Unit.
@@ -553,22 +553,22 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 		if len(preReturns) == 0 {
 			preReturns = []Type{TypUnit}
 		}
-		preFQN := a.currentFQN(bws.Name.Name)
+		preFQN := a.currentFQN(bd.Name.Name)
 		preSym := &Symbol{
-			Name: bws.Name.Name,
+			Name: bd.Name.Name,
 			Type: &BocType{Params: inputParams, Returns: preReturns},
 			FQN:  preFQN,
-			Node: bws,
+			Node: bd,
 		}
 		a.define(preSym)
 
 		prev := a.pushScope()
-		prevFQN := a.pushFQN(bws.Name.Name)
-		if bws.BodyOnly {
+		prevFQN := a.pushFQN(bd.Name.Name)
+		if bd.BodyOnly {
 			// Body-only form: extract named params from body's initial TypedDecls.
 			// The body redeclares its own params; sig provides types (and names
 			// when labeled) for validation.
-			bodyParams, n := a.extractBodyParams(bws.Body.Elements, inputParams)
+			bodyParams, n := a.extractBodyParams(bd.Body.Elements, inputParams)
 			if bodyParams != nil {
 				inputParams = bodyParams
 			} else if n == 0 && len(inputParams) > 0 {
@@ -584,7 +584,7 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 					// All sig params are anonymous types — re-interpret as shorthand form:
 					// trailing unlabeled type = return type, no input params.
 					// This makes `foo #(String) = { "hello" }` identical to `foo #(String) { "hello" }`.
-					shorthandParams := a.resolveBocSigParams(bws.Sig, false)
+					shorthandParams := a.resolveBocSigParams(bd.Sig, false)
 					inputParams = nil
 					explicitReturns = nil
 					for _, p := range shorthandParams {
@@ -596,9 +596,9 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 					}
 				} else {
 					// Labeled params must be redeclared in body — report the original error.
-					if len(bws.Body.Elements) > 0 {
-						a.errorf(bws.Body.Elements[0].Position(),
-							"expected parameter declaration (name Type), got %T", bws.Body.Elements[0])
+					if len(bd.Body.Elements) > 0 {
+						a.errorf(bd.Body.Elements[0].Position(),
+							"expected parameter declaration (name Type), got %T", bd.Body.Elements[0])
 					}
 				}
 			}
@@ -608,7 +608,7 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 				}
 			}
 			// Analyze body starting after the param declarations.
-			bodyElems := bws.Body.Elements
+			bodyElems := bd.Body.Elements
 			if n > 0 && n <= len(bodyElems) {
 				bodyElems = bodyElems[n:]
 			}
@@ -620,7 +620,7 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 					a.currentScope.Define(&Symbol{Name: p.Label, Type: p.Type})
 				}
 			}
-			returns = a.analyzeBocBody(bws.Body.Elements)
+			returns = a.analyzeBocBody(bd.Body.Elements)
 		}
 		a.popFQN(prevFQN)
 		a.popScope(prev)
@@ -635,10 +635,10 @@ func (a *Analyzer) analyzeBocWithSig(bws *ast.BocWithSig) Type {
 	}
 
 	bocType := &BocType{Params: inputParams, Returns: returns}
-	fqn := a.currentFQN(bws.Name.Name)
-	sym := &Symbol{Name: bws.Name.Name, Type: bocType, FQN: fqn, Node: bws}
+	fqn := a.currentFQN(bd.Name.Name)
+	sym := &Symbol{Name: bd.Name.Name, Type: bocType, FQN: fqn, Node: bd}
 	a.define(sym)
-	a.setType(bws, bocType)
+	a.setType(bd, bocType)
 	return bocType
 }
 
@@ -752,7 +752,7 @@ func (a *Analyzer) analyzeBocBody(elements []ast.Node) []Type {
 // analyzeStructBoc analyzes a boc literal as a struct type, returning the
 // struct type and the last-expression types (body return types).
 // It is used for both uppercase struct declarations and lowercase singleton
-// bocs that have inner structure (inner bocs or BocWithSig methods).
+// bocs that have inner structure (inner bocs or BocDecl methods).
 func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType, []Type) {
 	st := &StructType{Name: name}
 	fieldSet := make(map[string]bool)
@@ -816,13 +816,13 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
 			lastExprTypes = nil
 
-		case *ast.BocWithSig:
+		case *ast.BocDecl:
 			// Set the constraint attribution context before analyzing the method body
 			// so that any T-method calls recorded during analysis are tagged correctly.
 			if a.activeConstraints != nil {
 				a.activeContext = name + "." + e.Name.Name
 			}
-			typ := a.analyzeBocWithSig(e)
+			typ := a.analyzeBocDeclNode(e)
 			if !fieldSet[e.Name.Name] {
 				fieldSet[e.Name.Name] = true
 				st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: typ})
