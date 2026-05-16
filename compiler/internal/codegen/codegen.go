@@ -85,7 +85,7 @@ func (g *generator) emitInterfaceDecl(id *ir.InterfaceDecl) {
 		for _, p := range m.Params {
 			params = append(params, p.Name+" "+p.Type)
 		}
-		g.linef("%s(%s) %s", m.Name, strings.Join(params, ", "), ir.ThunkOrScalar(m.ResultType))
+		g.linef("%s(%s) *std.Thunk[%s]", m.Name, strings.Join(params, ", "), m.ResultType)
 	}
 	g.level--
 	g.line("}")
@@ -210,19 +210,11 @@ func (g *generator) emitMethodDecl(md *ir.MethodDecl) {
 		}
 		g.linef("func (%s %s) %s(%s)%s {", md.RecvName, md.RecvType, md.Name, params, result)
 		g.level++
-		if th.LazyWrap != "" {
-			g.writef("%sreturn %s(std.Schedule(%s, func() %s {\n", g.ind(), th.LazyWrap, th.RecvCown, th.ResultType)
-		} else {
-			g.writef("%sreturn std.Schedule(%s, func() %s {\n", g.ind(), th.RecvCown, th.ResultType)
-		}
+		g.writef("%sreturn std.Schedule(%s, func() %s {\n", g.ind(), th.RecvCown, th.ResultType)
 		g.level++
 		g.linef("return %s.%s(%s)", md.RecvName, syncName, strings.Join(names, ", "))
 		g.level--
-		if th.LazyWrap != "" {
-			g.line("}))")
-		} else {
-			g.line("})")
-		}
+		g.line("})")
 		g.level--
 		g.line("}")
 		return
@@ -279,6 +271,8 @@ func (g *generator) emitStmt(s ir.Stmt) {
 	case *ir.DeclStmt:
 		if st.Type == "" {
 			g.linef("%s := %s", st.Name, g.expr(st.Init))
+		} else if st.Init == nil {
+			g.linef("var %s %s", st.Name, st.Type)
 		} else {
 			g.linef("var %s %s = %s", st.Name, st.Type, g.expr(st.Init))
 		}
@@ -383,7 +377,9 @@ func partitionWaitBody(preWait []ir.Stmt) (hoisted []ir.Stmt, splits []splitDecl
 				hoisted = append(hoisted, s)
 				continue
 			}
-			if ds.IsThunk {
+			// GoStore target: Type set, Init nil — var declared for SpawnExpr{StoreVar}.
+			// Hoist to outer scope so the name is visible after Schedule completes.
+			if ds.Type != "" && ds.Init == nil {
 				hoisted = append(hoisted, s)
 				continue
 			}
@@ -489,22 +485,12 @@ func (g *generator) emitImmediateElse(elseStmts []ir.Stmt, heldCowns map[string]
 	g.line("}")
 }
 
-// wrapLazy applies th.LazyWrap wrapping if set: "std.LazyInt(inner)".
-func wrapLazy(lazyWrap, inner string) string {
-	if lazyWrap == "" {
-		return inner
-	}
-	return lazyWrap + "(" + inner + ")"
-}
-
 // emitThunk generates std.Go(func() T { body }) or std.NewThunk(...).
 // When th.RecvCown is non-empty the body is serialized through the singleton's
 // cown using std.Schedule. If the body also contains a WaitStmt (BocGroup pattern),
 // the split-BocGroup pattern is used to avoid re-entrancy deadlocks: BocGroup
 // declarations are hoisted outside the Schedule closure, and BocGroup.Wait() plus
 // any subsequent statements run after the cown is released.
-// When th.LazyWrap is set, the entire emitted expression is wrapped in that call
-// (e.g. "std.LazyInt(std.Schedule(...))") to produce a lazy scalar value.
 func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	if th.RecvCown == "" {
 		fn := "std.Go"
@@ -530,7 +516,7 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		sb.WriteString(inner.sb.String())
 		sb.WriteString(g.ind())
 		sb.WriteString("})")
-		return wrapLazy(th.LazyWrap, sb.String())
+		return sb.String()
 	}
 
 	// Multi-cown: atomically acquire self + extra cowns via ScheduleMulti.
@@ -538,13 +524,13 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		// If the body contains an inline-forced thunkVar (partial-reentrant: the
 		// sub-boc needs its own cown plus a held cown), use ScheduleFlatten.
 		if thunkFindInlineThunkVar(th.Body) >= 0 {
-			return wrapLazy(th.LazyWrap, g.emitScheduleFlatten(th))
+			return g.emitScheduleFlatten(th)
 		}
 		// If the body contains a WaitStmt (from Phase E.1 implicit BocGroup), use
 		// the IIFE split-BocGroup pattern so SpawnExprs establish their cown queue
 		// positions eagerly while ScheduleMulti holds the cowns.
 		if waitIdx := thunkFindWaitIdx(th.Body); waitIdx >= 0 {
-			return wrapLazy(th.LazyWrap, g.emitScheduleMultiSplit(th, waitIdx))
+			return g.emitScheduleMultiSplit(th, waitIdx)
 		}
 		// Clean ScheduleMulti path: no sub-boc goroutines, body accesses fields directly.
 		cowns := append([]string{th.RecvCown}, th.ExtraCowns...)
@@ -559,7 +545,7 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		sb.WriteString(inner.sb.String())
 		sb.WriteString(g.ind())
 		sb.WriteString("})")
-		return wrapLazy(th.LazyWrap, sb.String())
+		return sb.String()
 	}
 
 	// Single-cown method body.
@@ -578,7 +564,7 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		sb.WriteString(inner.sb.String())
 		sb.WriteString(g.ind())
 		sb.WriteString("})")
-		return wrapLazy(th.LazyWrap, sb.String())
+		return sb.String()
 	}
 
 	// Split-BocGroup pattern: cown released before waiting for children.
@@ -630,7 +616,7 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	sb.WriteString(outer.sb.String())
 	sb.WriteString(g.ind())
 	sb.WriteString("})")
-	return wrapLazy(th.LazyWrap, sb.String())
+	return sb.String()
 }
 
 // spawnForceInner returns the inner thunk expression from a SpawnExpr whose
@@ -664,20 +650,11 @@ func thunkFindWaitIdx(body []ir.Stmt) int {
 	return -1
 }
 
-// thunkFindInlineThunkVar returns the index of the first DeclStmt{IsThunk:true,
-// IsScalarThunk:false} in body (before any WaitStmt), or -1. Such a declaration
-// means the thunk will be forced inline inside the cown closure, which deadlocks
-// when the sub-boc needs the same cowns. Use emitScheduleFlatten in that case.
-// Scalar thunks (IsScalarThunk:true) are never forced inline and don't deadlock.
+// thunkFindInlineThunkVar returns -1 always in Phase E.3.
+// Previously detected DeclStmt{IsThunk:true} vars that would be forced inline
+// inside a cown closure. With E.3, boc-call vars are always GoStore'd via
+// SpawnExpr{StoreVar} and never forced inline, so ScheduleFlatten is no longer needed.
 func thunkFindInlineThunkVar(body []ir.Stmt) int {
-	for i, s := range body {
-		if _, ok := s.(*ir.WaitStmt); ok {
-			break // past the WaitStmt the cown is already released — safe
-		}
-		if ds, ok := s.(*ir.DeclStmt); ok && ds.IsThunk && !ds.IsScalarThunk {
-			return i
-		}
-	}
 	return -1
 }
 
@@ -888,7 +865,7 @@ func stripForceStmt(s ir.Stmt, name string) ir.Stmt {
 	case *ir.ExprStmt:
 		return &ir.ExprStmt{Expr: stripForceExprNode(st.Expr, name)}
 	case *ir.DeclStmt:
-		return &ir.DeclStmt{Name: st.Name, Type: st.Type, IsThunk: st.IsThunk, Init: stripForceExprNode(st.Init, name)}
+		return &ir.DeclStmt{Name: st.Name, Type: st.Type, Init: stripForceExprNode(st.Init, name)}
 	case *ir.AssignStmt:
 		return &ir.AssignStmt{Target: stripForceExprNode(st.Target, name), Value: stripForceExprNode(st.Value, name)}
 	default:
@@ -948,12 +925,18 @@ func (g *generator) emitClosure(c *ir.ClosureExpr) string {
 	return sb.String()
 }
 
-// emitSpawn generates groupVar.Go(func() any { body }).
+// emitSpawn generates the appropriate BocGroup spawn call.
+// When StoreVar is set: std.GoStore(groupVar, thunk, &storeVar) — value-returning boc.
+// When StoreVar is empty and body is [ReturnStmt{expr}]: groupVar.GoWait(expr) — Unit boc.
+// Otherwise: groupVar.Go(func() any { body }) — general case.
 func (g *generator) emitSpawn(s *ir.SpawnExpr) string {
-	// Scalar lazy types implement Waitable; use GoWait instead of Go+Force.
-	if s.IsScalar && len(s.Body) == 1 {
+	if len(s.Body) == 1 {
 		if rs, ok := s.Body[0].(*ir.ReturnStmt); ok && rs.Value != nil {
-			return s.GroupVar + ".GoWait(" + g.expr(rs.Value) + ")"
+			thunkExpr := g.expr(rs.Value)
+			if s.StoreVar != "" {
+				return "std.GoStore(" + s.GroupVar + ", " + thunkExpr + ", &" + s.StoreVar + ")"
+			}
+			return s.GroupVar + ".GoWait(" + thunkExpr + ")"
 		}
 	}
 

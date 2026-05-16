@@ -3,7 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Greeter interface {
-	greet() std.Unit
+	greet() *std.Thunk[std.Unit]
 }
 
 
@@ -24,10 +24,10 @@ func (self *Person) greet() std.Unit {
 	return std.Print(self.name)
 }
 
-func (self *Person) Greet() std.Unit {
-	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
+func (self *Person) Greet() *std.Thunk[std.Unit] {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return self.greet()
-	}))
+	})
 }
 
 type _greet_allBoc struct {
@@ -35,11 +35,11 @@ type _greet_allBoc struct {
 	g Greeter
 }
 
-func (self *_greet_allBoc) Call(g Greeter) std.Unit {
-	return std.LazyUnit(std.Go(func() std.Unit {
+func (self *_greet_allBoc) Call(g Greeter) *std.Thunk[std.Unit] {
+	return std.Go(func() std.Unit {
 		self.g = g
-		return self.g.Greet()
-	}))
+		return self.g.Greet().Force()
+	})
 }
 
 var Greet_all = &_greet_allBoc{
@@ -49,8 +49,8 @@ type _mainBoc struct {
 	std.Cown
 }
 
-func (self *_mainBoc) Call() std.Unit {
-	return std.LazyUnit(std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var p *Person
 		std.Schedule(&self.Cown, func() std.Unit {
@@ -60,7 +60,7 @@ func (self *_mainBoc) Call() std.Unit {
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	}))
+	})
 }
 
 var Main = &_mainBoc{}

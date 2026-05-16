@@ -3,7 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Greeter interface {
-	greet() std.Unit
+	greet() *std.Thunk[std.Unit]
 }
 
 
@@ -22,8 +22,8 @@ func (self *Person) greet() std.Unit {
 	return std.Print(self.name)
 }
 
-func (self *Person) Greet() std.Unit {
-	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
+func (self *Person) Greet() *std.Thunk[std.Unit] {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return self.greet()
-	}))
+	})
 }

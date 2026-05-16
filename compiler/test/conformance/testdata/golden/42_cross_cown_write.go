@@ -12,10 +12,10 @@ func (self *_bankBoc) deposit(amount std.Int) std.Unit {
 	return std.TheUnit
 }
 
-func (self *_bankBoc) Deposit(amount std.Int) std.Unit {
-	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
+func (self *_bankBoc) Deposit(amount std.Int) *std.Thunk[std.Unit] {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return self.deposit(amount)
-	}))
+	})
 }
 
 var Bank = &_bankBoc{
@@ -35,10 +35,10 @@ func (self *_mainBoc) call() std.Unit {
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() std.Unit {
-	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	}))
+	})
 }
 
 var Main = &_mainBoc{}
