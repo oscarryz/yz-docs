@@ -272,9 +272,9 @@ greet: { msg String
 hi: { 42 }
 ```
 
-### [Block Signatures](docs/Features/Block%20type.md)
+### [Boc Signature / Interface](docs/Features/Block%20type.md)
 
-A `#(...)` represents a block signature or a _boc type_, this is useful to use bocs in parameters, or arrays
+A `#(...)` is a **boc signature** — the type and interface of a boc. It is useful for declaring boc parameters, arrays of bocs, and structural constraints:
 ```js
 hell_world #(String) // a boc that returns a String
 ```
@@ -282,24 +282,24 @@ hell_world #(String) // a boc that returns a String
 The block body has to be assigned to use the boc:
 
 ```javascript
-// Declare signature
-greet #(message String, to_whom String, String)
+// Boc declaration: signature + body together (no = needed)
+greet #(message String, to_whom String, String) {
+  "${message}, ${to_whom}!"
+}
 
-// Assign implementation later
+// Boc expanded form: = separates signature from body; body re-declares params
+greet #(message String, to_whom String, String) = {
+  message String
+  to_whom String
+  "${message}, ${to_whom}!"
+}
+
+// Declare signature only — assign implementation later
+greet #(message String, to_whom String, String)
 greet = {
   message String
   to_whom String
-  message // just returns the variable message
-}
-
-// Type signature can omit variable names
-greet #(String, String, String) 
-greet() // Need to be assigned before used
-
-greet = {
-  a String 
-  b String
-  c String
+  message
 }
 ```
 

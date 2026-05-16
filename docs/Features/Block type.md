@@ -1,9 +1,9 @@
 #feature
-# Boc type `#()`
+# Boc Signature / Interface `#()`
 
-Every block of code `boc` has a type (or signature). Just like a number literal `1` has a type 
-`Int` or `1.0` a 
-type `Decimal` a boc literal has a boc type defined by `#(...)` where `...` represents optional variables or expression types
+The boc type is defined by its signature, and this signature is the interface for the boc.
+
+Every block of code `boc` has a type. Just like a number literal `1` has type `Int` or `1.0` has type `Decimal`, a boc literal has a boc type defined by `#(...)` where `...` represents optional variables or expression types.
 
 The variables of a boc type follow the same rules as regular variables: 
 
@@ -59,10 +59,19 @@ Example of a block that takes or has a variable `v`
 ```
 
 
-The assignment (`=`) can be omitted if the body follows immediately. in that case the body doesn't need to declare the variables and can use them directly 
+The `=` can be omitted if the body follows the signature immediately — this is the **boc declaration** form. The body can use the signature's variables directly without re-declaring them:
 
 ```js
 #(v Int) {
+  print("`v + v`")
+}
+```
+
+When `=` is kept, it is the **boc expanded form** — the body must re-declare all parameters:
+
+```js
+#(v Int) = {
+  v Int
   print("`v + v`")
 }
 ```
@@ -77,7 +86,7 @@ Type of the variable can be generic
 
 ```
 
-## Signatures serve two purposes simultaneously
+## The Signature Is the Interface
 
 A boc signature `#(...)` is intentionally dual-purpose:
 

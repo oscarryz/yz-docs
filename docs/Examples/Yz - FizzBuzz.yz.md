@@ -30,7 +30,7 @@ Idiomatic version using match:
 })
 ```
 
-Best version using a named function with BocWithSig:
+Best version using a boc declaration:
 ```js
 fizz_buzz #(i Int, String) {
     m3: i % 3 == 0

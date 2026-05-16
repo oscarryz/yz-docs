@@ -40,7 +40,7 @@ greet()                   // runs body again with current fields
 
 Fields persist after the call. `greet.name` is `"Bob"` after the second call.
 
-### BocWithSig is syntactic sugar
+### Boc declaration is syntactic sugar
 
 The expanded form of a typed boc declaration:
 
@@ -156,7 +156,7 @@ xyz → foo → bar
 
 Understanding this section is important to avoid repeating the same confusion.
 
-### The confusion: BocWithSig looked like a function
+### The confusion: boc declaration syntax looked like a function
 
 The `#(params) { body }` syntax looks like a function signature and body in most languages:
 
@@ -169,17 +169,17 @@ This looks exactly like:
 func add(a int, b int) int { return a + b }
 ```
 
-The visual similarity pulled the implementation toward treating BocWithSig as a Go function. Once that decision was made, the params (`a`, `b`) became local variables (Go function arguments) rather than fields of a struct. This is where field persistence was lost: after `add(3, 4)`, `add.a` should be `3`, but the Go function lowering makes `a` a stack-local that disappears on return.
+The visual similarity pulled the implementation toward treating boc declarations as Go functions. Once that decision was made, the params (`a`, `b`) became local variables (Go function arguments) rather than fields of a struct. This is where field persistence was lost: after `add(3, 4)`, `add.a` should be `3`, but the Go function lowering makes `a` a stack-local that disappears on return.
 
-### The confusion compounded: "stateless" was applied to BocWithSig
+### The confusion compounded: "stateless" was applied to boc declarations
 
-Once BocWithSig was being lowered to Go functions, the word "stateless" appeared in documentation and design discussions — "BocWithSig bocs have no persistent fields." But this is a description of the implementation, not the design. The design has no stateless bocs. All bocs have fields. The `#(params)` form is just a way to declare those fields upfront.
+Once boc declarations were being lowered to Go functions, the word "stateless" appeared in documentation and design discussions — "boc declarations have no persistent fields." But this is a description of the implementation, not the design. The design has no stateless bocs. All bocs have fields. The `#(params)` form is just a way to declare those fields upfront.
 
-This led to treating BocWithSig as a **different concept** with different semantics, rather than as syntactic sugar over the same concept. Design questions like "when should you use BocWithSig vs body form?" arose from this confusion — but the answer is simply: "BocWithSig is body form with declared-upfront field names."
+This led to treating boc declarations as a **different concept** with different semantics, rather than as syntactic sugar over the same concept. Design questions like "when should you use a boc declaration vs body form?" arose from this confusion — but the answer is simply: "boc declarations are body form with declared-upfront field names."
 
 ### The confusion persisted into HOF discussion
 
-When discussing higher-order bocs, "boc vs function" framing led to questions like "does `#(String, Int)` accept only functions or only bocs?" The real question is simpler: `#(String, Int)` describes the shape of a boc (takes a String field, produces an Int). Any boc with that shape satisfies it, whether declared with BocWithSig syntax or body syntax.
+When discussing higher-order bocs, "boc vs function" framing led to questions like "does `#(String, Int)` accept only functions or only bocs?" The real question is simpler: `#(String, Int)` describes the shape of a boc (takes a String field, produces an Int). Any boc with that shape satisfies it, whether written as a boc declaration or a boc literal.
 
 ### What should have been understood from the start
 
@@ -209,7 +209,7 @@ var Counter = &_counterBoc{count: std.NewInt(0)}
 
 **Gap:** Calling the boc itself — `counter()` — is not supported. Per the design, calling `counter()` runs counter's body, reinitializing its fields. Currently `Counter` is just a struct instance; there is no generated method for "run the top-level body." The `increment` and `value` variables-that-are-bocs are wired as methods, but the outer body is not.
 
-### Path 2: BocWithSig (`countdown #(n Int) { ... }`)
+### Path 2: Boc declaration (`countdown #(n Int) { ... }`)
 
 **Semantically wrong.** Generates a Go function with a local parameter:
 
@@ -223,7 +223,7 @@ This works as a computational approximation — the countdown runs correctly —
 - `countdown.n` is inaccessible after a call. Per the design it should be `3` after `countdown(3)`.
 - The boc has no struct, so no inner bocs or additional fields could be added to `countdown` later without breaking the model.
 
-This path exists because the implementation confused BocWithSig with Go functions. It is a semantic shortcut that happens to produce correct computational output for pure recursive/stateless uses, but it diverges from the design.
+This path exists because the implementation confused boc declarations with Go functions. It is a semantic shortcut that happens to produce correct computational output for pure recursive/stateless uses, but it diverges from the design.
 
 ### Path 3: Local boc inside a boc body (`f: { n Int; ... }` inside `main:`)
 
@@ -239,11 +239,11 @@ std.Go(func() std.Unit { return f(std.NewInt(3)) })  // no BocGroup, program exi
 - Recursive calls fire goroutines with no coordination
 - `f(3)` in `main:` has no `BocGroup` — the program exits immediately
 
-This path was left unimplemented because the BocWithSig shortcut (Path 2) was handling the "function-like" use case, and local body-form bocs without a use case weren't prioritized.
+This path was left unimplemented because the boc declaration shortcut (Path 2) was handling the "function-like" use case, and local body-form bocs without a use case weren't prioritized.
 
 ### Gap Summary
 
-| Aspect | File-scope body | BocWithSig | Local body |
+| Aspect | File-scope body | Boc declaration | Local body |
 |---|---|---|---|
 | Struct emitted | Yes | **No — Go func** | No — func literal |
 | Fields persist between calls | Yes | **No — stack locals** | No |
@@ -326,7 +326,7 @@ func main() {
 }
 ```
 
-For BocWithSig (`countdown #(n Int) { ... }`), the same model applies:
+For boc declarations (`countdown #(n Int) { ... }`), the same model applies:
 
 ```go
 type _countdownBoc struct {
@@ -358,7 +358,7 @@ Note: for the recursive case, the singleton model means all recursive calls shar
 ### Pass 1 — Sema: record struct shape for all boc declarations
 
 - `analyzeBocDecl` should call `analyzeStructBoc` for ALL lowercase boc bodies (not just Uppercase), producing a `StructType` with the correct fields at all nesting levels
-- `analyzeBocWithSig` should no longer be a fundamentally separate path — it resolves to the same `StructType` model, with params as fields
+- `analyzeBocWithSig` (AST node for boc declarations) should no longer be a fundamentally separate path — it resolves to the same `StructType` model, with params as fields
 - FQN registration should work the same at all depths
 
 ### Pass 2 — Lowerer: lift all boc structs to package level
@@ -374,7 +374,7 @@ Note: for the recursive case, the singleton model means all recursive calls shar
 
 - Merge `lowerTopLevel`, `lowerBocBody`, `lowerClosureBody`, `lowerBocAsStmts` into one path
 - Remove `localBocVars` tracking and `var f any` hacks
-- BocWithSig lowering becomes struct emission, not Go function emission
+- Boc declaration lowering becomes struct emission, not Go function emission
 
 **Note**: goldens 27, 34, 05 (HOF callbacks, while loop bodies) should NOT be updated until the design question about synchronous callback bocs is resolved.
 
@@ -385,7 +385,7 @@ Note: for the recursive case, the singleton model means all recursive calls shar
 - **Go local type restriction**: Go does not allow methods on locally-declared types. All boc structs must be lifted to package level. FQN-based naming avoids collisions.
 - **Uppercase outer boc + lowercase inner boc**: `Foo: { bar: { count: 0 } }` — `bar` is a per-`Foo`-instance singleton. `_foo_barBoc` must be instantiated inside `NewFoo()`, not as a package-level var. This is the main structural difference from top-level singletons.
 - **Calling the boc itself**: `counter()` vs `counter.increment()` — the generated `Call()` method runs the full body and reinitializes fields. This is correct by design but has no golden test yet. The current struct model just doesn't generate `Call()` at all.
-- **BocWithSig field persistence**: `countdown(3)` should leave `countdown.n == 3` after the call. The current Go-function lowering loses this. Test coverage for this semantic does not yet exist.
+- **Boc declaration field persistence**: `countdown(3)` should leave `countdown.n == 3` after the call. The current Go-function lowering loses this. Test coverage for this semantic does not yet exist.
 - **Actor queue / SWMR**: concurrent calls to the same singleton from different goroutines currently race on struct fields. This is a known deferred issue — struct emission can land without fixing it.
 
 ## What NOT to Change Yet
@@ -394,4 +394,4 @@ Note: for the recursive case, the singleton model means all recursive calls shar
 - **Actor queue** — separate concern; struct emission lands first
 - **HOF callback semantics** — resolve the design question before touching goldens 27/34/05
 - **FQN cross-file references to nested bocs** — defer until single-file case is solid
-- **BocWithSig field persistence tests** — add golden tests for `foo.a` access after call once struct model is in place
+- **Boc declaration field persistence tests** — add golden tests for `foo.a` access after call once struct model is in place

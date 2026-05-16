@@ -121,9 +121,9 @@ alice: Person("Alice", 30)            // positional
 alice: Person(name: "Alice", age: 30) // named
 ```
 
-## Boc signatures
+## Boc Signature / Interface
 
-When a boc has explicit input and output types, declare them with `#(params)`. This is the **shorthand form** — signature and body together:
+When a boc has explicit input and output types, declare them with `#(params)`. This is the **boc declaration** — signature and body together:
 
 ```yz
 // Takes a String, returns nothing
@@ -139,7 +139,7 @@ add #(x Int, y Int, Int) {
 result: add(3, 4)  // 7
 ```
 
-The **body-only form** separates the signature from the body with `=`. The body re-declares the parameters:
+The **boc expanded form** separates the signature from the body with `=`. The body re-declares the parameters:
 
 ```yz
 greet #(name String) = {

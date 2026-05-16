@@ -89,7 +89,7 @@ divide #(a Int, b Int, Int, Error) {
 The presence of `#(...)` in a boc declaration determines its execution model:
 
 - **Body form** `foo: { field T; ... }` — stateful actor. Fields persist between calls. Concurrent calls are serialized through the boc's actor queue. `foo.field` is accessible from outside.
-- **BocWithSig form** `foo #(param T, ...) { ... }` — stateless function. Parameters are local to each call. Concurrent calls run in parallel. `foo.param` does not exist between calls.
+- **Boc declaration form** `foo #(param T, ...) { ... }` — stateless. Parameters are local to each call. Concurrent calls run in parallel. `foo.param` does not exist between calls.
 
 This distinction also applies to boc types used as HOF parameters (see §4.3.1).
 

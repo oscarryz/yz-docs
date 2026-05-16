@@ -29,13 +29,13 @@ All foundational phases are done. Details are in git history.
 
 ### Language
 - Singleton bocs, struct bocs, main boc — all uniform (boc uniformity passes 1–4)
-- BocWithSig as methods; body-only form with named/anonymous param matching
-- Type-only BocWithSig: data params → struct; all-boc params → Go interface
+- Boc declarations as methods; boc expanded form with named/anonymous param matching
+- Type-only boc declarations: data params → struct; all-boc params → Go interface
 - Mixed type-only decl: `Name #(name String, greet #())` → struct + method wrappers
 - Variant/discriminant sum types: `Pet: { Cat(...), Dog(...) }` with per-variant constructors
 - Discriminant match: `match expr { Cat => body }` → Go switch
 - Condition match in statement position (if/else) and expression position (IIFE)
-- `while` — user-land recursion via BocWithSig; `tryLowerWhile` and `yzrt.While` removed
+- `while` — user-land recursion via boc declaration; `tryLowerWhile` and `yzrt.While` removed
 - HOF / closures as arguments: `.filter`, `.each`, `.map` on Array
 - Default values in params: `#(name String = "hello")`
 - `ShortDecl` as param: `name : "default"` — type inferred from default
@@ -49,7 +49,7 @@ All foundational phases are done. Details are in git history.
 ### Types & Generics
 - All types as `std.*` structs; literal boxing in codegen
 - Generic structs: `Box: { T; value T }` → `Box[T any]`; generic variant types: `Option: { V; Some(value V); None() }`
-- Generic type vars in BocWithSig: `identity #(value V, V)` → `func identity[V any]`
+- Generic type vars in boc declarations: `identity #(value V, V)` → `func identity[V any]`
 - Generic constraint inference: sema infers from usage; reports all violations at once
 - Go constraint generation: emits `[T interface{ Method() }]` from inferred constraints
 - Multiple type params: `#(key K, value V)` → `[K any, V any]`
@@ -60,7 +60,7 @@ All foundational phases are done. Details are in git history.
 - B.1: queue-based cown scheduler — lock-free, spawn-order guarantee
 - B.2: `ScheduleMulti` — atomic multi-cown acquisition
 - C: ownership-based field writes (SWMR); cross-cown writes via `Schedule`
-- D: struct boc instances embed `std.Cown`; fresh instance per call site for multi-cown BocWithSig
+- D: struct boc instances embed `std.Cown`; fresh instance per call site for multi-cown boc declarations
 - E.1: implicit BocGroup per scope; split-BocGroup pattern; `ScheduleAsSuccessor`
 - E.3: plain scalar types (no lazy fields); `GoStore[T]`/`GoWait`; `*Thunk[T]` internal to runtime
 
