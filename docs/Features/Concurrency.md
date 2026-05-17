@@ -223,8 +223,8 @@ ordered:
 ```js
 boring : {
     m String
-    messages : [String]()
-    next : { messages.pop() }     // acquires boring as a resource before reading
+    messages : [String]()     // `messages` acts as the synchronization resource
+    next : { messages.pop() } 
 
     i : 1
     // while's body is a boc — each iteration is a separate invocation
@@ -254,17 +254,17 @@ any explicit signalling.
 
 ```
   main                          boring
-    |                              |
-    |------ boring("sync") ------->| boring acquires the resource first
-    |                              |
-    |                              | push("sync 1")
-    | boring.next() - - - - - - -> | push("sync 2")
-    |              waiting         | time.delay(1)
-    |                              |
-    |<-------- releases resource --|
-    |  pops → print("sync 1")      |
-    |                              | push("sync 3")
-    |  boring.next() - - - - - - ->| ...
+    |                             |
+    |------ boring("sync") ------>| boring acquires the resource first
+    |                             |
+    |                             | push("sync 1")
+    | boring.next() - - - - - - ->| push("sync 2")
+    |          waiting            | time.delay(1)
+    |                             |
+    |<------ releases resource ---|
+    |    pops → print("sync 1")   |
+    |                             | push("sync 3")
+    | boring.next() - - - - - - ->| ...
 ```
 
 
