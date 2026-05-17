@@ -3,9 +3,7 @@
 
 ## Overview
 
-Yz is concurrent by default and is the only model. Every boc (block of code) invocation runs concurrently, lock free, data race free and in a deterministic way. There are no language constructs to drive concurrency like locks, threads, channels nor `async`/`await` annotations. The runtime handles
-synchronisation automatically and the compiler optimises away overhead in the common
-case.
+Yz is concurrent by default and is the only model. Every boc ([block of code](Bocs.md)) invocation runs concurrently, lock free, data race free and in a deterministic way. There are no language constructs to drive concurrency like locks, threads, channels nor `async`/`await` annotations. The runtime handles synchronization automatically and the compiler optimizes away overhead in the common case.
 
 ---
 
@@ -187,37 +185,28 @@ second.
 > **Incorrect scheduling hurts performance but never correctness.** The program is
 > always data-race free and deadlock free regardless of invocation order.
 
+### Happens-before is transitive through nested calls
 
-> TODO include the following clarification
+Ordering propagates through the resource queue. If `main` calls `foo(x)` twice, the
+second call waits for the first — and for anything the first `foo` queued on `x`:
+
+```js
+main: {
+    foo(x)   // (1)  acquires x
+    foo(x)   // (2)  queued behind (1)
+    foo(y)   // (3)  acquires y — runs in parallel with (1) and (2)
+}
 ```
-It is deterministic and the order is determined for the
-  use of the resources (cows), if main uses x twice, the happens-before takes place
 
-  main: {
-     ...
-     foo(x) // 1
-     foo(x) // 2
-     foo(y) // 3
-  }
+If `foo` itself makes inner calls on the same resource, those inner calls run before
+the second `foo(x)` in `main` gets its turn:
 
-  2 runs after 1, because they both use x
-  3 runs in parallel
-
-  If foo itself does something similar
-
-
-  foo : {
-     x Bar // x it the parameter
-
-     bar(x)  // same Bar
-     bar(Bar()) // different bar
-  }
-
-  Then foo releases the cown `x`, bar will acquire it first because it happens-before the second `foo` call in main, wins it, uses
-  it, and releases it. foo regains it again if it needs it (in this sample it doesn't) and then completes, all while bar(Fo()) is
-  running in parallel because the new Bar() was uncontested
-
-  When the 1st foo returns the second acquires it
+```js
+foo : {
+    x Bar
+    bar(x)       // (1)a — same resource, queued inside foo (1)
+    bar(Bar())   // (1)b — fresh Bar() instance, uncontested, runs in parallel
+}
 ```
 
 
@@ -235,27 +224,48 @@ ordered:
 boring : {
     m String
     messages : [String]()
-    next : { messages.pop() }
-    i : 1
+    next : { messages.pop() }     // acquires boring as a resource before reading
 
-    while({ true }, {
-        messages.push("`m` `i`")
-        i = i + 1
-        time.delay(1)
-    })
+    i : 1
+    // while's body is a boc — each iteration is a separate invocation
+    while({ true }, {              // ─┐ holding resource for this iteration 
+        messages.push("${m} ${i}") //  │ 
+        i = i + 1                  //  │ next() is queued, waiting...
+        time.delay(1)              //  │
+    })                             // ─┘ resource released → next() runs → boring re-acquires
 }
 
 main : {
-    boring("sync")
+    boring("sync")             // spawns boring — boring gets the resource first
     5.times().do({
-        print(boring.next())
+        print(boring.next())   // waits for boring to release, then pops
     })
 }
 ```
 
-The ordering guarantee ensures `boring` writes at least once before `main` reads —
-`boring` is spawned first. After that, `boring` can race ahead freely. Since it writes
-to an array rather than a single value, no messages are lost.
+`boring` is spawned before any `boring.next()` call, so it is first in the resource
+queue and writes at least once before `main` can read. After that the two run
+concurrently — since messages accumulate in an array, no write is lost even if boring
+laps the consumer.
+
+Yz's `while`'s body is a boc — each iteration is a separate invocation,
+naturally releasing the resource between turns and letting `next()` interleave without
+any explicit signalling.
+
+```
+  main                          boring
+    |                              |
+    |------ boring("sync") ------->| boring acquires the resource first
+    |                              |
+    |                              | push("sync 1")
+    | boring.next() - - - - - - -> | push("sync 2")
+    |              waiting         | time.delay(1)
+    |                              |
+    |<-------- releases resource --|
+    |  pops → print("sync 1")      |
+    |                              | push("sync 3")
+    |  boring.next() - - - - - - ->| ...
+```
 
 
 ---

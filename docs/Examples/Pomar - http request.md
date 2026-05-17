@@ -2,35 +2,36 @@
 
 https://twitter.com/pomarlang/status/1763877680280187098/photo/1
 
-TBD: enums, asymetric structural typing?
-```js
-http_status: {
-	Ok: {
-	}
-	ClientError: {
-		error_msg String
-	}
-}
-HttpResult: {
-	ok Option(Ok)
-	error Option(ClientError)
-}
-make_http_request: {
-	http_status.ClientError("Invalid request")
-}
-match_with_iflets: {
-	response: make_http_request()
-	match {
-		response == http_status.Ok         => println('Ok')
-	}, {
-		response == http_status.ClientError => println(response.error_msg)
-	}
+Using [Type variants](Type%20variants.md) + [Conditional Bocs](Conditional%20Bocs.md)
 
-	result: HttpResult(make_http_request())
-	match {
-		result.status == http_status.Ok          => println('Ok')
-	}, {
-		result.status == http_status.ClientError => println(response.error_msg)
-	}
+```js
+HttStatus: {
+    Ok(),
+    ClientError(error_message String)    
+}
+
+HttpResult : { 
+    status HttpStatus
+}
+make_http_request #(HttpStatus) {
+    HttpStatus.ClientError("Invalid Request")
+}
+
+match_with_iflets: {
+    // With function call 
+    response : make_http_request()
+    match response {
+        Ok => print("Ok")
+    }, {
+        ClientError => print(response.error_message)
+    }
+    
+    // With field access
+    result : HttpResult(make_http_request())
+    match result.status {
+        Ok => print("Ok")
+    }, {
+        ClientError => print(response.error_message)
+    }
 }
 ```
