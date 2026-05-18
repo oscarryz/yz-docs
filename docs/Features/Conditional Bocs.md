@@ -65,14 +65,15 @@ factorial #(n Int, Int) {
 If more than one branch should execute, use `continue` to fall through to the next branch:
 
 ```yz
-n Int
-match {
-    n % 3 == 0 => print("Fizz")
-    continue
-}, {
-    n % 5 == 0 => print("Buzz")
-}, {
-    print("`n`")
+fizzbuzz #(n Int) {
+    match {
+        n % 3 == 0 => print("Fizz")
+        continue
+    }, {
+        n % 5 == 0 => print("Buzz")
+    }, {
+        print("${n}")
+    }
 }
 ```
 
@@ -81,20 +82,20 @@ match {
 When `match` is given a subject, each branch can pattern-match on a type variant constructor:
 
 ```yz
-x Option(String)   // could be Some or None
+describe #(x Option(String)) {
+    // Execute statements based on variant
+    match x {
+        Some => print("The value is ${x.value}")
+    }, {
+        None => print("There was no value")
+    }
 
-// Execute statements based on variant
-match x {
-    Some => print("The value is `x.value`")
-}, {
-    None => print("There was no value")
-}
-
-// Return a value based on variant
-value: match x {
-    Some => x.value
-}, {
-    "No value"
+    // Return a value based on variant
+    value: match x {
+        Some => x.value
+    }, {
+        "No value"
+    }
 }
 ```
 

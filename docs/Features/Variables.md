@@ -45,6 +45,39 @@ greet #(msg String, to_whom String, String) {
 
 Labeled entries are input fields; the trailing unlabeled `String` is the output.
 
+## Definite Assignment
+
+A typed declaration with no default is **uninitialized**. The compiler requires it to be assigned on all control-flow paths before it is read:
+
+```yz
+result Int          // uninitialized
+result = compute()  // assigned
+print(result)       // OK — assigned before read
+```
+
+Reading an uninitialized variable is a compile error:
+
+```yz
+x Int
+print(x)   // compile error: x used before assignment
+```
+
+This also applies across conditional branches — if any path skips the assignment, the read is an error:
+
+```yz
+value Int
+flag ? { value = 1 }, { }  // one branch doesn't assign value
+print(value)               // compile error: value may be uninitialized
+```
+
+The fix is either to assign on every path, or give the variable a default:
+
+```yz
+value: 0   // default — always initialized
+flag ? { value = 1 }, { }
+print(value)  // OK
+```
+
 ## Variables as parameters
 
 Inside a boc, a typed declaration with no default value is a **required parameter** — it must be provided when the boc is invoked:

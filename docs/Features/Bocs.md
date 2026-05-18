@@ -217,7 +217,32 @@ n("yz")          // error: last_name not provided
 n("yz", "lang")  // ok
 ```
 
-A variable with a default value becomes an optional parameter — more on this in [Default values](Default%20values.md).
+A variable with a default value becomes an optional parameter.
+
+### Declare and assign within a body
+
+A variable can be declared uninitialized and assigned later within the same scope. The compiler verifies it is assigned on all control-flow paths before it is read:
+
+```yz
+classify: {
+    n Int
+    label String          // uninitialized
+    (n > 0) ? {
+        label = "positive"
+    }, {
+        label = "non-positive"
+    }
+    label                 // OK — assigned on both paths
+}
+```
+
+### When to use `Option(T)` vs a default
+
+- Use **`Option(T)`** when absence is a meaningful state — the value may legitimately never exist (e.g., `last_login Option(Date)`).
+- Use a **default value** (`field String = ""`) when the field has a clear zero or fallback.
+- Use **definite assignment** (declare then assign before use) when the value is always set within the scope before it is needed.
+
+Wrapping every field in `Option` to work around initialization is an anti-pattern.
 
 ## Closures
 
