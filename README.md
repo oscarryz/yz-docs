@@ -14,7 +14,7 @@ print("${factorial(5)}")  // prints 120
 ```
 
 ## Philosophy
-The initial goal for the language was to explore how much can be expressed without using keywords (which has to be admitted is silly goal on its own), so far the language has only 4 keywords and a handful of reserved symbols, see [Keyword Constraint](docs/Features/Keyword%20Constraint.md)
+The initial goal for the language was to explore how much can be expressed without using keywords (which has to be admitted is silly goal on its own), so far the language has only 4 keywords and a handful of reserved symbols, (see [Keyword Constraint](docs/Features/Keyword%20Constraint.md) for more details).
 
 Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, [concurrent execution](#async-by-default) are all blocks. 
 
