@@ -101,7 +101,7 @@ Inside a `Compile` implementation's `run` method, the parent boc's infostring is
 ```
 GraphQL : {
     Schema : #(schema String)
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         // self.infostring is Boc
         // self.infostring.graphql is typed as Schema = #(schema String)
         schema_url = self.infostring.graphql.schema   // String — validated
@@ -111,7 +111,7 @@ GraphQL : {
 
 JSON : {
     Schema : #(field_name String, ignore Bool)
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         config      = self.infostring.json    // typed as Schema
         should_skip = config.ignore           // Bool
         ...
@@ -149,7 +149,7 @@ A `Compile` implementation reads field infostrings via `self.fields[n].infostrin
 ```
 JSON : {
     Schema : #(field_name String, ignore Bool)
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         self.fields.forEach({ f Boc
             config = f.infostring.json         // typed as Schema
             config.ignore ? { /* skip this field */ }

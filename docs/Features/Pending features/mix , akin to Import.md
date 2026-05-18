@@ -98,7 +98,7 @@ Max: {
       b Int
       ? : { a > b ? { a }, { b } }
 }
- max #(Int,Int,Int) = {
+ max #(a Int, b Int, Int) = {
     a Int
     b Int
     Max(a, b).?() // creates a new object and returns 

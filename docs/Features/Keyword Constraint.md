@@ -137,7 +137,7 @@ bocs in Yz:
 | ------------------------ | ---------------------------------------------------------- |
 | `if` / `else`            | `if_true_if_false` method on `Bool`                        |
 | `while` loop             | Recursive boc with `Bool` condition                        |
-| Operators `+`, `>`, etc. | Methods on boc — `Int` has `+ #(Int, Int)`                 |
+| Operators `+`, `>`, etc. | Methods on boc — `Int` has `+ #(other Int, Int)`                 |
 | New user-defined types   | Uppercase-starting boc                                     |
 | Generics                 | Single uppercase identifier — `T`, `U`, `V`                |
 | Imports                  | FQN reference or local alias — `net : some.util.place.net` |

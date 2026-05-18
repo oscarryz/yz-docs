@@ -24,11 +24,11 @@ See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20-%20T
 ```
 Compile : {
     Schema #()
-    run    #(Boc, Boc)   // receives the parent boc, returns a boc to merge
+    run    #(parent Boc, Boc)   // parent = input boc; output = boc to merge
 }
 ```
 
-`Schema` is an associated type — each implementation fixes it to the concrete shape it expects from the infostring. `run` receives the parent boc and returns a boc whose slots are merged into it.
+`Schema` is an associated type — each implementation fixes it to the concrete shape it expects from the infostring. `run` receives the parent boc (`parent`) and returns a boc whose slots are merged into it.
 
 The `name` that maps an implementation to its infostring variable lives in the implementation's own infostring, not in the interface. When `name` is absent the compiler derives it from `Schema`: if `Schema` has exactly one field, that field's name is used. If `Schema` has multiple fields, `name` is required — a compile error if missing.
 
@@ -83,7 +83,7 @@ Movies : {
 ```
 GraphQL : {
     Schema : #(schema String)        // associated type — declares expected shape
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         // self.infostring is Boc
         // self.infostring.graphql is typed as Schema = #(schema String)
         schema_url = self.infostring.graphql.schema   // String — validated
@@ -93,7 +93,7 @@ GraphQL : {
 
 JSON : {
     Schema : #(field_name String, ignore Bool)
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         self.fields.forEach({ f Boc
             config      = f.infostring.json            // typed as Schema
             field_name  = config.field_name            // String
@@ -123,7 +123,7 @@ A complete `Compile` implementation declares its `Schema`, optionally its `name`
 // name derived from Schema's single field — "documentation"
 Doc : {
     Schema : #(documentation String)
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         text = self.infostring.documentation   // String
         // generate documentation-related slots
     }
@@ -137,7 +137,7 @@ Server : {
         protocol String
         timeout  Int
     )
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         config   = self.infostring.server
         port     = config.port       // Int
         protocol = config.protocol   // String
@@ -171,7 +171,7 @@ A `Compile` boc has access to the full language. The same facilities available a
 ```
 GraphQL : {
     Schema : #(schema String)
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         schema_url = self.infostring.graphql.schema
 
         // fetch a remote schema at compile time
@@ -238,7 +238,7 @@ By strong convention, `Compile` implementations declare the constraints they req
 Derive : {
     Schema     #(serialize #(String))
     S          #(serialize #(String))
-    run #(Boc, Boc) = { ... }
+    run #(parent Boc, Boc) = { ... }
 }
 
 // Via a named interface if one exists
@@ -248,7 +248,7 @@ Debuggable   : #(toString  #(String))
 Derive : {
     Schema : #(serialize #(String))
     S      #(Serializable, Debuggable, metricsId #(String))
-    run #(Boc, Boc) = { ... }
+    run #(parent Boc, Boc) = { ... }
 }
 ```
 
@@ -335,7 +335,7 @@ Generated code is fully analysed — its types are inferred, its constraints pro
 
 `Compile` implementations are full Yz programs that execute during compilation. The compiler needs them as callable native code before it can compile the rest of the source. This is handled by a two-phase build.
 
-**Phase 1 — Bootstrap:** The compiler scans source for bocs satisfying the `Compile` interface (identified by `Schema #()` and `run #(Boc, Boc)`). It compiles only those bocs to native executables ahead of everything else. The standard library and previously compiled packages are available at this phase.
+**Phase 1 — Bootstrap:** The compiler scans source for bocs satisfying the `Compile` interface (identified by `Schema #()` and `run #(parent Boc, Boc)`). It compiles only those bocs to native executables ahead of everything else. The standard library and previously compiled packages are available at this phase.
 
 **Phase 2 — Main compilation:** The compiler processes the full source normally. When inference encounters a `compile_time` infostring variable, it calls the pre-compiled executables via subprocess in array order — passing the current partially-inferred `Boc` as serialised data, receiving the generated `Boc` back, merging it into the AST, and resuming inference.
 
@@ -387,7 +387,7 @@ A violation is a compile error. The error message names the full cycle.
 Derive : {
     Schema : #(serialize #(String))
     S      #(serialize #(String))
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         // implementation
     }
 }

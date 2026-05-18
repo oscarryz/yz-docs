@@ -195,7 +195,7 @@ Signatures can be declared in a parent file, with implementations in child files
 
 ```javascript
 // util/math.yz
-sqrt #(Int, Int)          // Signature: util.math.sqrt
+sqrt #(x Int, Int)          // Signature: util.math.sqrt
 
 // util/math/sqrt.yz
 sqrt: { x Int, Int
@@ -327,7 +327,7 @@ main: {
 
 ```javascript
 // util/math.yz
-sqrt #(Int, Int)      // Signature only
+sqrt #(x Int, Int)      // Signature only
 
 // util/math/sqrt.yz
 sqrt: { x Int, Int    // Full implementation

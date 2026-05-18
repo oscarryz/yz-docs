@@ -118,7 +118,7 @@ as a magic `self` — through the `Boc` type it is simply the named argument pas
 
 ```yz
 Compile : {
-    run #(Boc, Boc)  // receives parent as Boc instance, returns Boc to merge
+    run #(parent Boc, Boc)  // parent = input boc; output = boc to merge
 }
 ```
 
@@ -127,8 +127,8 @@ regular `Boc` slots:
 
 ```yz
 Serialize : {
-    run #(Boc, Boc) = {
-        parent = compiler.read(self)
+    run #(parent Boc, Boc) = {
+        parent = compiler.read(parent)
 
         generated_fields = parent.fields.map({ f Boc
             "{f.name}: {f.source().serialize()}"
@@ -162,7 +162,7 @@ mix : {
 
 Embed : {
     targets [#()]
-    run #(Boc, Boc) = {
+    run #(parent Boc, Boc) = {
         merged = targets.map({ t #()
             compiler.read(t)
         }).reduce({ acc Boc  b Boc
