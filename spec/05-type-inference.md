@@ -154,7 +154,7 @@ max: {
     a T
     b T
     (a > b) ? { a }, { b }
-    // a > b → a.>(b) → T must have method > #(T, Bool)
+    // a > b → a.>(b) → T must have method > #(other T, Bool)
 }
 
 max(3, 7)              // OK: Int has >

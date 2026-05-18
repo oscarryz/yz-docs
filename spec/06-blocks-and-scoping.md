@@ -38,7 +38,7 @@ There are three distinct boc forms with different execution semantics:
 |---|---|---|
 | `Foo: { field T; ... }` | Uppercase, body | Type — each call creates a new independent instance |
 | `foo: { field T; ... }` | Lowercase, body | Singleton actor — shared state, calls serialize |
-| `foo #(param T, ...) { ... }` | Any case, with `#(...)` | Stateless function — each call is an independent goroutine, calls parallel |
+| `foo #(param T, ...) { ... }` | Any case, with `#(...)` | Boc declaration — singleton with explicit interface; fields persist between calls |
 
 ```yz
 Person: { name String; age Int }
@@ -178,7 +178,7 @@ Bocs are first-class values. They can be:
 
 ```yz
 apply: {
-    f #(Int, Int)
+    f #(n Int, Int)
     x Int
     f(x)
 }
