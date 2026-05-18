@@ -3,7 +3,7 @@
 
 ## Overview
 
-Yz is concurrent by default and is the only model. Every boc ([block of code](Bocs.md)) invocation runs concurrently, lock free, data race free and in a deterministic way. There are no language constructs to drive concurrency like locks, threads, channels nor `async`/`await` annotations. The runtime handles synchronization automatically and the compiler optimizes away overhead in the common case.
+Yz is concurrent by default and is the only model. Every block of code ([boc](Bocs.md)) invocation runs concurrently, lock free, data race free and in a deterministic way. There are no language constructs to drive concurrency like locks, threads, channels nor `async`/`await` annotations. The runtime handles synchronization automatically and the compiler optimizes away overhead in the common case.
 
 ---
 
@@ -11,14 +11,14 @@ Yz is concurrent by default and is the only model. Every boc ([block of code](Bo
 
 ### Concurrent Resources
 
-Every value in Yz — whether a simple integer, a boc, or a complex object — is
+Every value in Yz — whether a simple integer, or a complex object — is
 implicitly a protected concurrent resource. A resource is either **available** or
 **acquired**. Only one running boc can acquire a resource at a time. When a resource is acquired,
 all other bocs that need it wait in a queue.
 
 
 
-### Every Invocation Is Concurent
+### Every Invocation Is Concurrent
 
 When you invoke a boc, you are scheduling an asynchronous unit of work that will run
 when it has acquired all the resources it needs. Crucially, **all required resources are
@@ -85,7 +85,7 @@ exists but is empty, so acquisition is a single atomic operation with no waiting
 
 ## Return Values
 
-Return values in Yz are **transparently lazy**. When you invoke a boc, it gets scheduled to run as soon as its resources are acquired and a placeholder is returned to the caller. The placeholder
+When you invoke a boc, it gets scheduled to run as soon as its resources are acquired and a placeholder is returned to the caller. The placeholder
 resolves — and the caller synchronizes — only when the value is actually used, typically in a I/O boundry. 
 
 ```js
@@ -95,8 +95,7 @@ print(u)                     // synchronizes here until load completes
 ```
 
 The type of `u` is always the declared return type — `User` in this case, not a
-`Future[User]` or any wrapper type. The placeholder is an internal runtime concept,
-not something the developer works with directly:
+ wrapper type like `Future[User]` or `Promise[User]`. 
 
 ```js
 load #(id String, User)   // returns User — always
@@ -163,10 +162,10 @@ main : {
 The ordering guarantee is determined by **invocation order and value overlap**. The
 programmer controls parallelism by controlling when invocations are spawned.
 
-Consider four philosophers each needing two forks:
+Consider [four dining philosophers](https://en.wikipedia.org/wiki/Dining_philosophers_problem) each needing two forks:
 
 ```js
-// Sequential — each invocation shares a fork with the next, forced into a chain
+// Sequential — each invocation shares a fork `f1..f4` with the next, forced into a chain
 eat(f1, f2)
 eat(f2, f3)   // waits for first  (shares f2)
 eat(f3, f4)   // waits for second (shares f3)
