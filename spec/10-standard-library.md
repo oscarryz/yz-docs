@@ -122,11 +122,11 @@ empty: [String]()        // Empty [String]
 | `length` | `#(Int)` | Number of elements |
 | `at` | `#(index Int, T)` | Element at index |
 | `<<` | `#(item T)` | Append element |
-| `each` | `#(f #(T))` | Iterate over elements |
-| `each_with_index` | `#(f #(T, Int))` | Iterate with index |
-| `map` | `#(f #(T, U), [U])` | Transform elements |
-| `filter` | `#(pred #(T, Bool), [T])` | Filter elements |
-| `reduce` | `#(init U, f #(U, T, U), U)` | Fold/reduce |
+| `each` | `#(f #(item T))` | Iterate over elements |
+| `each_with_index` | `#(f #(item T, idx Int))` | Iterate with index |
+| `map` | `#(f #(item T, U), [U])` | Transform elements |
+| `filter` | `#(pred #(item T, Bool), [T])` | Filter elements |
+| `reduce` | `#(init U, f #(acc U, item T, U), U)` | Fold/reduce |
 | `contains` | `#(item T, Bool)` | Contains element (uses `==`) |
 | `first` | `#(Option(T))` | First element |
 | `last` | `#(Option(T))` | Last element |
@@ -154,7 +154,7 @@ empty: [String:Int]()              // Empty
 | `remove` | `#(key K, Option(V))` | Remove and return |
 | `keys` | `#([K])` | All keys |
 | `values` | `#([V])` | All values |
-| `each` | `#(f #(K, V))` | Iterate over entries |
+| `each` | `#(f #(key K, val V))` | Iterate over entries |
 | `length` | `#(Int)` | Number of entries |
 | `==` | `#(other [K:V], Bool)` | Key-value equality |
 
@@ -166,7 +166,7 @@ Created by `Int.to()`. Represents a half-open interval `[start, end)`.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `each` | `#(f #(Int))` | Iterate over range |
+| `each` | `#(f #(i Int))` | Iterate over range |
 | `contains` | `#(n Int, Bool)` | Check membership |
 | `to_array` | `#([Int])` | Convert to array |
 
