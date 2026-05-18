@@ -13,6 +13,9 @@ factorial: { n Int
 print("${factorial(5)}")  // prints 120
 ```
 
+## Philosophy
+The initial goal for the language was to explore how much can be expressed without using keywords (which has to be admitted is silly goal on its own), so far the language has only 4 keywords and a handful of reserved symbols, see [Keyword Constraint](docs/Features/Keyword%20Constraint.md)
+
 Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, [concurrent execution](#async-by-default) are all blocks. 
 
 A block is a series of expressions between `{` and `}`, and the same block can act as data, be executed, or both:
@@ -211,7 +214,7 @@ process_data: {
 
 ### Exclusive Access 
 
-Every value in Yz is a protected concurrent resource — a **cown** (concurrent owner). Only one running boc can hold a cown at a time; all others queue behind it. Cowns are acquired atomically: a boc that needs multiple resources gets all of them at once or waits until it can.
+Every value in Yz is a protected concurrent resource. Only one running boc can hold a resource at a time; all others queue behind it. Resources are acquired atomically: a boc that needs multiple resources gets all of them at once or waits until it can.
 
 ```javascript
 Account: {

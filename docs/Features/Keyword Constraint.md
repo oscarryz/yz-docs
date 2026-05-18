@@ -1,6 +1,6 @@
 #feature
 
-# Yz Language Primitives
+# Yz Keyword Constraint
 
 ## The Design Invariant
 
@@ -34,7 +34,7 @@ requires the compiler to narrow the type of the subject inside each branch (flow
 The boolean form of `match` comes close to being expressible as a boc — a list of
 conditional bocs evaluated in order. The variant form is what requires the keyword.
 
-```yz
+```js
 // boolean form — evaluates conditions in order
 grade : match {
     score >= 90 => "A"
@@ -128,110 +128,22 @@ match {
 
 ---
 
-## Compiler Seam
-
-### `compiler.read(b)` and `compiler.insert(b)`
-
-**What it does:** `compiler.read` returns the `Boc` instance the compiler created for a
-boc definition. `compiler.insert` splices a `Boc` into the current compilation context.
-Both are available only inside `Compile` typed slots.
-
-**Why it cannot be a regular boc:** The compiler builds structural descriptions of bocs
-as it parses and infers them. Making that information available as a value requires a
-controlled seam between the language and the compilation phase. `compiler` is that seam
-— explicit, localized, and available only where compile-time execution is opted into via
-the `Compile` type.
-
-Everything inside a `Compile` slot is regular Yz. `compiler` is the only thing that is
-not.
-
-See also: [Structural Reflection](./yz-structural-reflection.md) ·
-[Compile-Time Bocs](./yz-compile-time-bocs.md)
-
----
-
-## Meta-Type
-
-### `Boc`
-
-**What it does:** Represents the structural description of any boc — its name,
-fields, methods, type parameters, infostrings, and literal source — as a regular Yz
-value. The compiler creates a `Boc` instance for every boc definition automatically.
-
-**Why it cannot be a regular boc:** Every other boc is defined by the developer. `Boc`
-instances are created by the compiler from source code. The compiler must populate them
-— the developer cannot. This is the minimum meta-level concept required for structural
-reflection, compile-time code generation, and constraint inference to work.
-
-`Boc` is not a meta-type in the sense of living outside the type system. It is a regular
-boc with a known structure. Its instances behave like any other value — they can be
-passed, iterated, serialized, and sent across a wire. The only special thing about `Boc`
-is who creates its instances.
-
-```yz
-Boc : {
-    name         String
-    instantiable Bool
-    fields       [Boc]
-    methods      [Boc]
-    type_params  [Boc]
-    infostrings  [String]
-    source       #()
-}
-```
-
-See also: [Structural Reflection](./yz-structural-reflection.md)
-
----
-
-## Naming Convention
-
-### Single Uppercase Letter — Type Parameter
-
-**What it does:** A single uppercase letter identifier (`T`, `U`, `V`, etc.) in a boc
-body declares a type parameter — a placeholder `Boc` that is filled with a concrete type
-at instantiation time.
-
-**Why it is a compiler primitive:** The compiler uses this rule to identify type
-parameters and create placeholder `Boc` instances for them. It is not merely a
-convention — a multi-letter identifier in the same position is a syntax error, not a
-type parameter.
-
-```yz
-Box : { T }    // T is a type parameter — placeholder Boc, valid
-Box : { Tom }  // syntax error — Tom is not a type parameter
-```
-
-This convention fits within the existing identifier system without ambiguity:
-
-| Shape | Meaning |
-|---|---|
-| `lowercase` | singleton |
-| `Uppercase` multi-letter | instantiable boc |
-| Single uppercase letter `T` | type parameter |
-
-See also:  [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md)
-
-
----
-
 ## Everything Else Is A boc
 
 The following features that are primitives or keywords in other languages are regular
 bocs in Yz:
 
-| Feature | How Yz expresses it |
-|---|---|
-| `if` / `else` | `if_true_if_false` method on `Bool` |
-| `while` loop | Recursive boc with `Bool` condition |
-| Operators `+`, `>`, etc. | Methods on boc — `Int` has `+ #(Int, Int)` |
-| Imports | `mix` — composition via `Compile` and `Boc` |
-| Generics constraints | Inferred from usage — no declaration needed |
-| Annotations / macros | `Compile` typed slot — a boc like any other |
-| Serialization / codegen | Library `Compile` implementations |
-| Dependency management | `project` boc with a `Compile` slot |
-| Reflection / introspection | `Boc` instances via `compiler.read()` |
-| Associated types | Type slots — a `Boc` placeholder inside a boc |
+| Feature                  | How Yz expresses it                                        |
+| ------------------------ | ---------------------------------------------------------- |
+| `if` / `else`            | `if_true_if_false` method on `Bool`                        |
+| `while` loop             | Recursive boc with `Bool` condition                        |
+| Operators `+`, `>`, etc. | Methods on boc — `Int` has `+ #(Int, Int)`                 |
+| New user-defined types   | Uppercase-starting boc                                     |
+| Generics                 | Single uppercase identifier — `T`, `U`, `V`                |
+| Imports                  | FQN reference or local alias — `net : some.util.place.net` |
+| Annotations / macros     | Info strings — bocs themselves                             |
+| Dependency management    | Info strings                                               |
+| Associated types         | A type-of-type boc                                         |
 
 ---
 
