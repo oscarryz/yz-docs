@@ -205,7 +205,7 @@ greet #(name String, String) {
 ### Implicit Return Type
 
 When no explicit return type is given:
-- If the last expression returns `Unit` → the boc returns `Unit`
+- If the last expression returns nothing (Unit internally) → the boc returns nothing
 - If assigned to a variable → the boc returns its **instance** (for field access)
 - If not assigned → the boc's logic executes (side effects)
 

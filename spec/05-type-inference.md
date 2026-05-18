@@ -69,16 +69,16 @@ swap: {
 // swap : #(a String, b String, String, String)
 ```
 
-### Unit Return
+### No Return (Unit internally)
 
-If the last expression produces `Unit`, or if there are no expressions (only declarations/statements), the return type is `Unit`:
+If the last expression produces no meaningful value, or if there are no expressions (only declarations/statements), the boc returns nothing. Internally this is represented as `Unit`, but it does not surface to users.
 
 ```yz
 log: {
     message String
-    print(message)    // print returns Unit
+    print(message)    // print returns nothing
 }
-// log : #(message String)  — implicit Unit return
+// log : #(message String)  — returns nothing
 ```
 
 ## 5.4 Generic Type Inference

@@ -54,7 +54,7 @@ hi("Alice")                // Independent goroutine — parallel-safe
 hi("Bob")                  // Another independent goroutine
 ```
 
-The key distinction: **body-form bocs** (with or without uppercase) are actors whose fields persist. **Boc declaration form** bocs (with `#(...)`) are stateless — parameters are local to each call, no persistent state, `hi.name` does not exist. See §4.3 for how this affects type compatibility when bocs are passed as arguments.
+All boc forms share the same model: fields persist between calls. A boc declaration `hi #(name String) { ... }` has `name` as a persistent field — `hi.name` is accessible after calling `hi("Alice")`, just as it would be in a body-form boc. See §4.3 for how labeled vs unlabeled params in boc interfaces affect type compatibility when bocs are passed as arguments.
 
 ### 3. Completion
 

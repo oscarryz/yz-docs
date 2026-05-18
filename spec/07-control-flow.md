@@ -82,7 +82,7 @@ grade: match {
 - Conditions are tested top-to-bottom
 - The first `true` condition's boc is executed
 - A boc without `=>` is the **default** (always matches)
-- If no branch matches and there's no default, the result is `Unit`
+- If no branch matches and there's no default, the result is nothing (Unit internally)
 
 ### Variant Match
 
@@ -101,7 +101,7 @@ match result {
 - Each branch names a variant constructor
 - The **runtime discriminant tag** (see §4.5) determines which branch executes
 - Inside a matched branch, the variant's fields are accessible on the subject
-- If no branch matches, the result is `Unit`
+- If no branch matches, the result is nothing (Unit internally)
 
 ### Match with `continue`
 

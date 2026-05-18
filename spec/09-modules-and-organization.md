@@ -120,37 +120,37 @@ Json: { ... }
 
 ## 9.6 Access Control
 
-### Explicit Signature = Public Interface
+### Explicit Interface = Public Interface
 
-A boc with an explicit `#(...)` signature exposes only the parameters listed in the signature:
+A boc declaration with an explicit `#(...)` interface exposes only the fields listed in it:
 
 ```yz
-Counter: {
-    count: 0                        // Internal
-    increment #() {                 // Public
+Counter #(increment #(), get #(Int)) {
+    count: 0                        // internal — not in interface
+    increment #() {
         count = count + 1
     }
-    get #(Int) {                    // Public, returns Int
+    get #(Int) {
         count
     }
 }
 
 c: Counter()
-c.increment()    // OK — public
-c.get()          // OK — public
-c.count          // ERROR — not in any public signature
+c.increment()    // OK — in interface
+c.get()          // OK — in interface
+c.count          // ERROR — not in interface
 ```
 
-### No Signature = Everything Public
+### No Interface = Everything Public
 
-When no explicit signature is given, a synthetic signature is created that includes all internal variables:
+A short boc declaration infers its interface from the body — all declared variables become public:
 
 ```yz
 Point: {
     x Int
     y Int
 }
-// Synthetic: #(x Int, y Int)  — both fields are public
+// inferred: #(x Int, y Int) — both fields are public
 
 p: Point(1, 2)
 p.x              // OK — public

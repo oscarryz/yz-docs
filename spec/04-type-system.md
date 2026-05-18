@@ -20,7 +20,7 @@ Every value in Yz has a type. Types are either:
 | `Decimal` | Decimal floating-point | `3.14`, `0.5` |
 | `String` | UTF-8 text | `"hello"`, `'world'` |
 | `Bool` | Boolean | `true`, `false` |
-| `Unit` | No meaningful value (like `void`) | (implicit) |
+| `Unit` | No meaningful value (like `void`) — **internal term; user-facing code says "returns nothing"** | (implicit) |
 
 ### Methods on Built-In Types
 
@@ -84,39 +84,39 @@ divide #(a Int, b Int, Int, Error) {
 }
 ```
 
-### Stateful vs. Stateless Bocs
+### All Bocs Have Persistent Fields
 
-The presence of `#(...)` in a boc declaration determines its execution model:
+All boc forms share the same model: fields persist between calls and are accessible from outside.
 
-- **Body form** `foo: { field T; ... }` — stateful actor. Fields persist between calls. Concurrent calls are serialized through the boc's actor queue. `foo.field` is accessible from outside.
-- **Boc declaration form** `foo #(param T, ...) { ... }` — stateless. Parameters are local to each call. Concurrent calls run in parallel. `foo.param` does not exist between calls.
+- **Short boc declaration** `foo: { field T; ... }` — fields persist. `foo.field` is accessible from outside.
+- **Boc declaration** `foo #(param T, ...) { ... }` — syntactic sugar for the same model. `foo.param` persists between calls and is accessible from outside.
 
-This distinction also applies to boc types used as HOF parameters (see §4.3.1).
+### 4.3.1 Named vs. Unlabeled Params in Boc Types
 
-### 4.3.1 Named vs. Anonymous Params in Boc Types
-
-When a boc type is used as a parameter type, the named/anonymous distinction declares what the callee will do with it:
+When a boc interface is used as a parameter type, the labeled/unlabeled distinction declares what the callee will do with the passed boc:
 
 | Signature type | What callee expects | Who satisfies it |
 |---|---|---|
-| `#(String, Int)` | Only callability — `func("x")` | Both stateful and stateless bocs |
-| `#(name String, Int)` | Field access + callability — `person.name` | Only stateful bocs |
+| `#(String, Int)` | Reads two return values (String, Int) | Any boc whose last two expressions are String and Int |
+| `#(name String, Int)` | Field access by name — `person.name` — and reads Int return | Any boc with a field named `name` of type String that returns Int |
 
 ```yz
-// Anonymous: only calls func — stateless or stateful both work
-map #(func #(String, Int)) { ... }
-map(#(item String, Int) { item.length() })   // stateless ✓
-map({ item String; item.length() })          // stateful ✓
-
-// Named: accesses person.name — must be stateful
-greet #(person #(name String, Int)) {
-    println(person.name)   // requires persistent field
+// Callee reads two return values — any boc whose last two expressions are String, Int qualifies
+describe #(source #(String, Int)) {
+    label, count = source()
+    print("${label}: ${count}")
 }
-greet({ name: "Alice"; name.length() })      // stateful ✓
-greet(#(name String, Int) { name.length() }) // stateless — ERROR: no .name field
+describe({ "items"; 42 })                    // ✓ — returns String and Int
+
+// Callee accesses person.name — boc must have a field named name
+greet #(person #(name String, Int)) {
+    println(person.name)   // requires field named name
+}
+greet({ name: "Alice"; name.length() })      // ✓ — boc literal with name field, returns Int
+greet(#(name String, Int) { name.length() }) // ✓ — boc declaration with name field, returns Int
 ```
 
-A stateful boc satisfies both forms (wider capability). A stateless boc satisfies only the anonymous form.
+A boc satisfies `#(name String, Int)` if it has a field named `name` of type String and returns Int. Both boc literals and boc declarations can satisfy it.
 
 ### Synthetic Signature
 
@@ -132,14 +132,14 @@ person: {
 // Everything is public
 ```
 
-### Unit Type
+### Unit Type (internal)
 
-A boc that doesn't return a meaningful value has return type `Unit`:
+`Unit` is the compiler's internal representation for "returns nothing". It does not appear in user-facing code or error messages — bocs that produce no output are described as "returns nothing".
 
 ```yz
 say_hi #(name String) {
     print("Hi, ${name}!")
-    // Returns Unit implicitly
+    // returns nothing (Unit internally)
 }
 ```
 

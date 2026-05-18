@@ -7,7 +7,7 @@ This chapter defines the built-in types, their methods, and core functions provi
 
 The standard library provides:
 
-1. **Built-in types** — `Int`, `Decimal`, `String`, `Bool`, `Unit`
+1. **Built-in types** — `Int`, `Decimal`, `String`, `Bool`, `Unit` (internal)
 2. **Collection types** — `Array` (`[T]`), `Dictionary` (`[K:V]`)
 3. **Common variant types** — `Option(T)`, `Result(T, E)`
 4. **Core functions** — `print`, `while`, `info`
@@ -98,9 +98,9 @@ Boolean type. `true` and `false` are standard library constants, not keywords.
 | `!=` | `#(other Bool, Bool)` | Inequality |
 | `to_string` | `#(String)` | `"true"` or `"false"` |
 
-## 10.6 Unit
+## 10.6 Unit (internal)
 
-The `Unit` type represents the absence of a meaningful value. Bocs that perform side effects without returning a value have return type `Unit`.
+`Unit` is the compiler's internal type for "returns nothing". It does not appear in user-facing code, signatures, or error messages. Bocs that produce no output are described as "returns nothing" in diagnostics and documentation.
 
 `Unit` has no methods.
 
@@ -265,7 +265,7 @@ Retrieves the info string metadata attached to any element (see §1.14).
 |----------|-------------|
 | `io.read_line()` | Read line from stdin |
 | `io.read_file(path String)` | Read file contents → `Result(String, Error)` |
-| `io.write_file(path String, content String)` | Write file → `Result(Unit, Error)` |
+| `io.write_file(path String, content String)` | Write file → `Result(Int, Error)` |
 
 ### `math`
 
