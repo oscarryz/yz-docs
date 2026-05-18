@@ -55,8 +55,8 @@ age Int
 ```
 
 - Creates a new variable `age` of type `Int`
-- The variable is **uninitialized** — it must be assigned before use, or passed as an argument during invocation
-- Uninitialized typed declarations serve as **parameters** when the boc is invoked
+- The variable is **uninitialized** — it must be assigned on all control-flow paths before it is read
+- Uninitialized typed declarations serve as **required parameters** when the boc is invoked
 
 ### Typed Declaration with Initialization
 
@@ -75,6 +75,33 @@ Inside a boc, variables serve dual roles:
 |--------------------|--------------------------|
 | No (`age Int`) | **Required parameter** — must be provided |
 | Yes (`age: 30`) | **Optional parameter / field** — uses default if not provided |
+
+### Definite Assignment
+
+The compiler enforces that every uninitialized typed declaration is assigned before first use (definite assignment analysis):
+
+```yz
+Bar: { f String }
+
+// compile error — f is not provided and not assigned before use
+b : Bar()
+print(b.f)
+
+// OK — f is provided at construction
+b : Bar("hello")
+print(b.f)
+
+// OK — f is assigned on all paths before use
+bar: {
+    b Bar
+    b.f = "hello"
+    print(b.f)
+}
+```
+
+Crossing a boc boundary requires a fully initialized value at the call site. A `Bar` can only be passed to another boc if all its required fields have been provided or assigned.
+
+**`Option(T)` is not a substitute.** Use `Option(T)` only when absence is a meaningful semantic state (e.g., `last_login Option(Date)`). Use a default value (`f String = ""`) when a sensible zero exists. Definite assignment handles the "fill in later within a scope" case without either.
 
 ## 3.3 Assignment Semantics
 

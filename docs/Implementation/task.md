@@ -91,6 +91,8 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 ### Language Features
 
+- [ ] **[YZC-0034] Definite assignment analysis** — `name Type` (uninitialized typed declaration) must be assigned before first use; `Bar()` with unassigned required fields is a compile error unless all paths assign before read; crossing a boc boundary requires fully initialized values at the call site. Sema pass: build per-scope control-flow graph; track assigned set; report "field f used before initialization" on unassigned reads. Spec: §3.2. Depends on: YZC-0033.
+
 - [ ] **[YZC-0009] Range iteration** — `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver
 - [ ] **[YZC-0010] HOF iteration + cown happens-before** — design question: does `Range.do()` force each closure thunk before the next iteration (sequential) or fire-and-forget into a BocGroup (concurrent)? See `docs/Questions/HOF iteration and cown happens-before.md`; must be resolved before implementing YZC-0009
 - [ ] **[YZC-0011] Named arguments in constructor calls** — `Person(name: "Alice", age: 30)`
@@ -107,6 +109,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 ### Infrastructure
 
 - [ ] **[YZC-0033] Compiler deep review against settled spec** — the compiler was generated using the old spec which had stateless/stateful boc distinction, `Unit` as user-facing type, and boc declarations treated as Go functions (no cown, no persistent fields). Review and align: (1) boc declarations should lower to singleton structs with cowns, not plain Go functions; (2) `foo.param` should be accessible after call; (3) sema errors should say "returns nothing" not mention Unit; (4) all bocs serialized through cown — no "fully parallel" fast path for boc declarations. Depends on: YZC-0004, YZC-0006.
+  - [x] spec/02 grammar updated: labeled=input/unlabeled=output rule, BocDecl three forms, MixStmt removed
 - [ ] **[YZC-0021] Directory and file bocs** — defer until in-file nesting works; extend FQN tree to directories and files as bocs
 - [x] **[YZC-0032] Rename `BocWithSig` in compiler code** — AST node `BocWithSig`, sema path `analyzeBocWithSig`, lowerer path `lowerBocWithSig`, and all related identifiers should be renamed to `BocDecl` / `analyzeBocDecl` / `lowerBocDecl` to match the settled terminology; also rename the `BocWithSig` → `BocDecl` grammar production in spec/02
 - [ ] **[YZC-0022] Multiple source roots** — `src/` + `lib/` as independent FQN mount points; compiler accepts list of source roots; builds one FQN forest per root
@@ -205,7 +208,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0034**
+- Numbers are assigned in creation order; next available: **YZC-0035**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
