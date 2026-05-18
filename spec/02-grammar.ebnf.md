@@ -35,15 +35,15 @@ Declaration    = ShortDecl
 
 ShortDecl      = IdentifierList ":" ExpressionList .
 
-TypedDecl      = Identifier TypeExpr [ "=" Expression ] .
+TypedDecl      = Identifier TypeExpr [ "=" Expression ]
+               | Identifier BocType BocLiteral .   (* boc declaration: name #(..) { } *)
 
 Assignment     = AccessExpr "=" Expression
                | IdentifierList "=" ExpressionList .
 
 KeywordStmt    = ReturnStmt
                | BreakStmt
-               | ContinueStmt
-               | MixStmt .
+               | ContinueStmt .
 
 ReturnStmt     = "return" [ Expression ] .
 BreakStmt      = "break" .
@@ -151,13 +151,17 @@ BocElement     = Declaration
 VariantDef     = type_identifier "(" [ BocParamList ] ")" .
 ```
 
-### Boc Declaration (Signature + Body)
+### Boc Declaration, Expanded Form, and Signature-Only
+
+Three surface forms share the same `BocDecl` production:
 
 ```ebnf
-BocDecl        = BocType [ BocLiteral ] .
+BocDecl        = BocType BocLiteral          (* boc declaration *)
+               | BocType "=" BocLiteral      (* boc expanded form *)
+               | BocType .                   (* boc signature only — no body *)
 ```
 
-When a boc type signature is immediately followed by a boc literal (no `=`), the parameters declared in the signature are available inside the body without redeclaration:
+**Boc declaration** (`name #(params) { body }`) — signature params are available in the body without redeclaration:
 
 ```yz
 greet #(name String, String) {
@@ -165,9 +169,40 @@ greet #(name String, String) {
 }
 ```
 
+**Boc expanded form** (`name #(params) = { body }`) — all params are inputs; the body begins with typed declarations that match the signature:
+
+```yz
+greet #(name String, String) = {
+    name String
+    "Hello, ${name}!"
+}
+```
+
+**Boc signature only** (`name #(params)`) — declares the interface with no body; the body is assigned separately:
+
+```yz
+greet #(name String, String)
+greet = { "Hello, ${name}!" }
+```
+
+#### Labeled vs. unlabeled params (semantic rule)
+
+Within `BocParamList`:
+
+- **Labeled entry** (`Identifier TypeExpr`) — an **input field**: the caller provides a value; the value persists between calls.
+- **Unlabeled entry** (`TypeExpr` only) — an **output type**: matches the last N expressions in the body; not a field.
+
+```yz
+sum #(a Int, b Int, Int)  // a, b = inputs;  Int = output type
+id  #(Int)                // no inputs;  Int = output type
+run #(a Int, b Int)       // a, b = inputs;  returns nothing (no unlabeled entry)
+```
+
 ## 2.9 Type Declarations
 
-A type declaration is a statement where the identifier starts with an uppercase letter:
+A type declaration is a statement where the identifier starts with an uppercase letter.
+
+The first alternative is the **short boc declaration** form (interface inferred from body); the second uses an explicit boc signature:
 
 ```ebnf
 TypeDecl       = type_identifier ":" BocLiteral
