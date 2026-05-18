@@ -1,3 +1,8 @@
+#solved `Point()`
+
+
+<hr>
+
 
 This whole document was created using the `::` notion which was later rejected, it help to inform though how instances will be created. See `Re-Summary` at the bottom and feel free to ignore the whole doc.
 

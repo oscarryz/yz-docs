@@ -1,3 +1,7 @@
+#solved Yes, expression only bocs 
+
+<hr>
+
 When a block has no variables but has values, is that a tuple?
 
 ```javascript

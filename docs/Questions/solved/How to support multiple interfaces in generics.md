@@ -1,3 +1,7 @@
+#solved with constraints see [Generics - Type Parameters](docs/Features/Generics%20-%20Type%20Parameters.md)
+
+<hr>
+
 Currently generics are good for single value that don't require calling methods
 
 

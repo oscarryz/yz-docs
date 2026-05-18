@@ -1,3 +1,7 @@
+#solved Use them, they are optional
+
+<hr>
+
 We could ommit semicolons but code starts getting messy. 
 
 Analyze and determine if they can be avoided. 

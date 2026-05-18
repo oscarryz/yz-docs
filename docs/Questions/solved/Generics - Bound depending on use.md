@@ -1,3 +1,6 @@
+#solved in [Generics - Type Parameters](docs/Features/Generics%20-%20Type%20Parameters.md)
+
+
 In [Inko - Generic Data types](Inko%20-%20Generic%20Data%20types.md) the bound is determined by the use of the variable
 
 

@@ -1,6 +1,9 @@
+#solved  in  [Conditional Bocs](../../Features/Conditional%20Bocs.md)
 #pattern-matching 
-#answered in  [Conditional Bocs](../../Features/Conditional%20Bocs.md)
-Revision of: [Pattern matching 1](Pattern%20matching%201.md)
+
+<hr>
+
+Revision of: [Pattern matching - More dicussion](docs/Questions/solved/Pattern%20matching%20-%20More%20dicussion.md)
 
 ```js
 status : {

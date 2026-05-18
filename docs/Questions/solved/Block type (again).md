@@ -1,3 +1,7 @@
+#solved in [Boc Interface](docs/Features/Boc%20Interface.md)
+
+<hr>
+
 Now that [Instances (again)](solved/Instances%20(again).md)  specifies how to create instances and define types, the type won't necessarily have an extra type but it would structurally match to any other block wit the same types.
 
 

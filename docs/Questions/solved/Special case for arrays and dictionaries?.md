@@ -1,3 +1,8 @@
+#solved Yes, see [Array](docs/Features/Array.md) [Associative arrays](docs/Features/Associative%20arrays.md) 
+
+<hr>
+
+
 Should we make an special case for arrays and dictionaries for declaration and initialization? 
 
 Usually the decl + init is like the following: 

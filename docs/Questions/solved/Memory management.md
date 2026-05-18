@@ -1,3 +1,8 @@
+#solved Use Go's GC, keep programs short lived, Yz is not intended to be a heavy use language
+
+
+<hr>
+
 How is memory GC'ed?
 How to avoid out of memory?
 Can it be collected per "actor"

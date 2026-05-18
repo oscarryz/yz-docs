@@ -1,4 +1,9 @@
-#answered  if needed, add a `self` variable
+#open-question We need it, but need to establish the proper rules
+
+
+<hr>
+
+ if needed, add a `self` variable
 
 eg in [[Arturo  - Examples]]  the int `2` is used: 
 

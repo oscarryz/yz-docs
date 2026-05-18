@@ -1,4 +1,3 @@
-#answered 
 #rejected  Keep the current way `Name: {}` and `Name #(){}`
 
 ## Currently

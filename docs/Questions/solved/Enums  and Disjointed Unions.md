@@ -1,6 +1,4 @@
-
-
-#answered  [Type variants](../../Features/Type%20variants.md)
+#solved  [Type variants](../../Features/Type%20variants.md)
 
 
 

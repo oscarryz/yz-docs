@@ -1,3 +1,7 @@
+#solved See [return, break, continue](docs/Features/return,%20break,%20continue.md)
+
+<hr>
+
 
 #answered  Will be very similar to Smalltalk
 #accepted 

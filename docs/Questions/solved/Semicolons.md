@@ -1,3 +1,5 @@
+#solved 
+
 We don't use commas nor semicolons but sometimes it seems to be a good idea to have a way to say: "this ends here". 
 
 ```js

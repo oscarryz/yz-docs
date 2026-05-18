@@ -1,9 +1,8 @@
+#solved Yes, just use `:` see [Type Alias](Features/Type%20Alias.md)
 
-#answered Yes, just use `:` see [Type Alias](Features/Type%20Alias.md)
+<hr>
 
-
-
-#rejected `::` will be used to declare the block type e.g. `a :: {}`  `a` is a variable of type `block` (empty block), so no type alias
+ `::` will be used to declare the block type e.g. `a :: {}`  `a` is a variable of type `block` (empty block), so no type alias
 
 The `::` operators is used to create an alias to a type and optionally add new behavior. 
 

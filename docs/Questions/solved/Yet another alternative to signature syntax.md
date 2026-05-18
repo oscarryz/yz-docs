@@ -1,3 +1,7 @@
+#solved This was the wining design! Yey, now lives in [Boc Interface](docs/Features/Boc%20Interface.md)
+
+<hr>
+
 Instead of plain `()` we could use `#()` which makes it easier to differentiate with function calls. 
 
 Consider: 

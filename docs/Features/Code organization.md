@@ -272,3 +272,5 @@ Front {
 ```
 In this case, when a block is defined in different files or different source directories, they'll be merged in a single object.
 In case of repeating attributes, a compilation error will be shown (_it might be changed with a compilation variable where the first found in will take precedence_)
+
+Note, this feature might be fully implemented by [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md)

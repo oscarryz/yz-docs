@@ -1,3 +1,4 @@
+#rejected 
 #dropped  All things will be mutable; with [Concurrency](../../Features/Concurrency.md)  each variable would have a single writer, thus, this is not strictly speaking needed
 ....
 

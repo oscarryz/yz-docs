@@ -1,3 +1,5 @@
+#solved in [Generics - Type Parameters](docs/Features/Generics%20-%20Type%20Parameters.md)
+
 #answered 
 
 There are a lot of good questions here: 

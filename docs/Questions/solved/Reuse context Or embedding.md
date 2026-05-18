@@ -1,3 +1,9 @@
+#solved See [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md)
+
+
+<hr>
+
+	
 There's not inheritance (because blocks are not classes)  nor embedding, instead to reuse you "just" plug the functionality you want in the new block. 
 e.g. 
 

@@ -1,3 +1,8 @@
+#solved  Add a value to the variable
+
+<hr>
+
+
 How to handle default args? 
 
 ```javascript

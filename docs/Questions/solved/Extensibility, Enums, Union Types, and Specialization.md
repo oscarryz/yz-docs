@@ -1,5 +1,12 @@
 
-#answered  No need for macros nor pattern matching atm, see [Type variants](../../Features/Type%20variants.md) and [Type Alias](Features/Type%20Alias.md)
+#solved  There will be macros [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md), and [Type variants](docs/Features/Type%20variants.md), and [Type Alias](docs/Features/Type%20Alias.md)
+
+
+
+<hr>
+
+
+No need for macros nor pattern matching atm, see [Type variants](../../Features/Type%20variants.md) and [Type Alias](Features/Type%20Alias.md)
 
 
 

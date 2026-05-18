@@ -1,3 +1,7 @@
+#rejected See [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md)
+
+<hr>
+
 Embedding instantiable blocks causes the enclosing obj to have the values as if they were declared previously.
 They can be re-assigned, but no re-declared
 

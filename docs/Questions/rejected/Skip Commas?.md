@@ -1,3 +1,7 @@
+#rejected Commas are very useful 
+
+<hr>
+
 How feasible would it be to skip commas? 
 ```javascript
 foo: {

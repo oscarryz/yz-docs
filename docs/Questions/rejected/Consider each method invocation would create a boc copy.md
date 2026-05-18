@@ -1,4 +1,7 @@
 
+#rejected 
+
+
 Currently every time a block is executed, the state is kept between calls: 
 
 ```js
@@ -30,4 +33,4 @@ We need to find a way to reset the execution but preserving the fact that blocks
 
 _The example above is wrong, but the question remains..._
 
-#answered No need to create a copy because bocs execute their inner bocs sequentially, there is no override. In the invocation `a(1)` followed by `a(2)` the second only start once the first has completed
+#rejected No need to create a copy because bocs execute their inner bocs sequentially, there is no override. In the invocation `a(1)` followed by `a(2)` the second only start once the first has completed

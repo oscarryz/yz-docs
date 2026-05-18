@@ -1,6 +1,7 @@
-#solved
 
-See [mix](mix.md)
+#rejected see [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md)
+
+<hr>
 
 
 The `import` keyword would import in the current scope the variables in the scope imported. 

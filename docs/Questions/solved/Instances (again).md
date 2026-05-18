@@ -1,3 +1,6 @@
+#solved Yes, use Point(), that's the only way (or use a boc literal)
+
+
 It seems using `{}` for object literal would be overloading the `{}` too much.
 
 Alternative is to use `()`  for instantiation

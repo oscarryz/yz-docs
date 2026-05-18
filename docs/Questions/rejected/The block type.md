@@ -1,4 +1,6 @@
-In the [Block type](../../Features/Block%20type.md)  we discuss how the block type can be defined, but later there was a problem with the instantiation because declaring a variable of type block `a {}` looks exactly the same as instantiating a block named `a{}`  (using the space or the uppercase would be too error prone). ~~As alternative we can use `::`  for types and plain `{}` for instantiation~~. This also frees up the `{}` to instantiate any block. 
+#rejected we don't instantiate with Point { } but Point() 
+
+In the  [Boc Interface](docs/Features/Boc%20Interface.md)  we discuss how the block type can be defined, but later there was a problem with the instantiation because declaring a variable of type block `a {}` looks exactly the same as instantiating a block named `a{}`  (using the space or the uppercase would be too error prone). ~~As alternative we can use `::`  for types and plain `{}` for instantiation~~. This also frees up the `{}` to instantiate any block. 
 
 Example, creating an instance of an existing block with `{}`
 

@@ -1,4 +1,4 @@
-
+#rejected 
 *answer*: No casting. need to create a new value with a constructor / factory method.
 
 ```javascript
@@ -15,4 +15,4 @@
    }
 ```   
 
- #answered
+ 

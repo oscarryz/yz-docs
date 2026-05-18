@@ -1,6 +1,6 @@
+#solved in  [Conditional Bocs](../../Features/Conditional%20Bocs.md)
 #pattern-matching 
 #flow-typing
-#answered in  [Conditional Bocs](../../Features/Conditional%20Bocs.md)
 
 In the last example of  [SumTypes/Example](../../Examples/Yz%20-%20SumTypes.md) we use `>_` to match with one of the types. 
 

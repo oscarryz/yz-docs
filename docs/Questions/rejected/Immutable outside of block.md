@@ -1,3 +1,5 @@
+#rejected See [Concurrency](docs/Features/Concurrency.md)
+
 #idea 
 
 Make local variables mutable but outside the block/object they are immutable, they can only be modified through "messages"

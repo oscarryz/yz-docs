@@ -1,4 +1,8 @@
-#answered Yes, it looks a bit redundant, but has its spot. 
+#solved Yes, it looks a bit redundant, but has its spot. 
+Also we now have "boc declarations"
+
+<hr>
+
 
 Answer in : [[Signatures + Literals duplication]]
 

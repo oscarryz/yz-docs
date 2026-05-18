@@ -1,4 +1,4 @@
-#open-question 
+#rejected 
 
     a: 1
     a // 1

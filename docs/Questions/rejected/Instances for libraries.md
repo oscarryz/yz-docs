@@ -1,3 +1,5 @@
+#rejected Do use thin dispatchers if needed, BOC should handle the rest. 
+
 In the current proposal most of the control structures are in the standard library, e.g. `if`, `when`, `while`, `some`, `none` etc. 
 
 Using a block is an object and a function makes it almost impossible to do multithread because every concurrent invocation might trip into someone else's code. 

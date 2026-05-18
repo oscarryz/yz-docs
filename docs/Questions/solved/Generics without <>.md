@@ -1,3 +1,5 @@
+#solved in [Generics - Type Parameters](docs/Features/Generics%20-%20Type%20Parameters.md)
+
 
 This was #answered 
 Update: 03/12/2024: No, there's no easy way to [How to enforce data types in generics](How%20to%20enforce%20data%20types%20in%20generics.md)  so a type will be used. Single upper case letter, no <> and will use () for instantiation. 

@@ -1,3 +1,8 @@
+#rejected Solved by [Concurrency](docs/Features/Concurrency.md)
+
+<hr>
+
+
 [Wait for a value to be set](solved/Wait%20for%20a%20value%20to%20be%20set.md)
 
 We have two blocks, one produces a value, the other consumes it. How to make this async while keeping the structured concurrency nature? (see [Concurrency](../../Features/Concurrency.md) )

@@ -1,5 +1,5 @@
 
-#answered  See [Type variants](../../Features/Type%20variants.md)
+#solved  See [Type variants](../../Features/Type%20variants.md)
 
 Original discussion below 
 

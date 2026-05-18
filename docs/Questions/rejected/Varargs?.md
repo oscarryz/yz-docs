@@ -1,4 +1,6 @@
-#open-question  How to handle varargs? 
+#rejected 
+
+  How to handle varargs? 
 
 ```javascript
 

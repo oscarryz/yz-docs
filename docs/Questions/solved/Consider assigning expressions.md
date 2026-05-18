@@ -1,3 +1,6 @@
+#solved Yes, this is the tuple like feature
+
+
 We treat the last variables declared as return values
 
 ```javascript

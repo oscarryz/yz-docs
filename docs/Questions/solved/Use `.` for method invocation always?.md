@@ -1,3 +1,8 @@
+#solved Yes, except for [Non-Word invocation](docs/Features/Non-Word%20invocation.md)
+
+<hr>
+
+
 # Use space for non words method only? 
 
 

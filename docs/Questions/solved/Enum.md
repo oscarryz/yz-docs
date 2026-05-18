@@ -1,3 +1,7 @@
+#solved [Type variants](docs/Features/Type%20variants.md)
+
+<hr>
+
 Kind of want to do enums but they would have to:
 - Have structural typing too
 - Have different methods

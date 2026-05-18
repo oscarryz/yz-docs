@@ -1,3 +1,6 @@
+#solved Yes
+
+
 Should structural typing match include variable name or only types are needed. 
 
 

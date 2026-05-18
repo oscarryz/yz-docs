@@ -1,4 +1,4 @@
-#answered Use them all. Each one preferred for a different use
+#solved Use them all. Each one preferred for a different use
 
 `#(){}` For variable declaration
 `{}` For lambdas

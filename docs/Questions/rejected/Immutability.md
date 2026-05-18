@@ -1,3 +1,6 @@
+#rejected Everything is mutable 
+
+<hr>
 
 Blocks don't change after they have been created, but you can still re-assing values to them updating that reference. 
 

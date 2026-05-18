@@ -1,3 +1,5 @@
+#solved See [Error handling](docs/Features/Error%20handling.md)
+
 [Error handling](../../Features/Error%20handling.md) provides some options to handle errors, most promising is `Optional` with `some` and `none`  instances, similar to `Boolean` with `true` and `false` but still needs some work. 
 
 The simplest thing and original idea is to define specific errors for a type and then compare against that: 

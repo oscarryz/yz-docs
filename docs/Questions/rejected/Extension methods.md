@@ -1,3 +1,6 @@
+#rejected 
+
+
 #idea 
 
 Allow extension methods where a method can be defined for an existing type

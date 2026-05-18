@@ -1,3 +1,23 @@
+#solved 
+Yes, use infostrings for that 
+
+```js
+`cue:!~ "^$"` // or validation
+non_empty String 
+```
+
+Granted the compile-time is added 
+
+```js
+`compile-time: [Cue]`
+thing : {    
+   `validation: !~"^$"`
+   title String
+}
+```
+
+<hr>
+
 #answered  Keep the constraints with sumtypes or doc strings
 
 Idea for another version perhaps. 

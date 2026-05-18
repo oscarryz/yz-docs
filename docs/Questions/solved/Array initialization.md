@@ -1,4 +1,5 @@
-#answered in [Array](../../Features/Array.md)
+
+#solved in [Array](../../Features/Array.md)
 
 ```javascript
 a []Int // array of ints

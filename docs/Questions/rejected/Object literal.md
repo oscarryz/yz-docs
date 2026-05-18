@@ -1,7 +1,4 @@
-
-
-#answered  Yz will use `()` notation to create instance e.g. `Person()`
-#rejected
+#rejected Yz will use `()` notation to create instance e.g. `Person()`
 
 We could have a notation for object literal such that the Boc defined with
 ```js

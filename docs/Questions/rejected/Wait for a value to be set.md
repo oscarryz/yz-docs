@@ -1,3 +1,8 @@
+#rejected (ish) see [Concurrency](docs/Features/Concurrency.md)
+
+<hr>
+
+
 We usually have this way to wait until a block execution finishes: 
 
 ```js

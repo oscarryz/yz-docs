@@ -1,5 +1,8 @@
 
-#answered  in [Type variants](../../Features/Type%20variants.md)
+#solved in [Type variants](../../Features/Type%20variants.md)
+
+<hr>
+
 #accepted
 
 The example above would be
@@ -85,7 +88,7 @@ two: one.plus(one)
 
 Which might be enough(ish)
 
-Creating a variant using  [Pattern matching 1](Pattern%20matching%201.md)
+Creating a variant using  [Pattern matching - More dicussion](docs/Questions/solved/Pattern%20matching%20-%20More%20dicussion.md)
 and something like a hamcrest api would be 
 
 ```js 

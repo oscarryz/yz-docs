@@ -1,3 +1,8 @@
+#solved  Use thin dispatcher 
+
+<hr>
+
+
 Because functions are singletons, we can really have a library without each caller overriding each other
 
 ```javascript

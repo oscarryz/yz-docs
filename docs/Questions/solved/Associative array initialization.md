@@ -1,4 +1,5 @@
-#answered in [Associative arrays](../../Features/Associative%20arrays.md) array (aka Dictionary, aka Map)
+
+#solved in [Associative arrays](../../Features/Associative%20arrays.md) array (aka Dictionary, aka Map)
 
 ```javascript
 dict [String] Int // declaration
