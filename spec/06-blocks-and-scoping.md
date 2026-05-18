@@ -107,7 +107,9 @@ print("${x}")        // Prints 10
 
 ## 6.4 Variable Capture (Closures)
 
-Bocs capture variables from enclosing scopes by **reference** — modifications to captured variables are visible in the original scope:
+Bocs capture variables from enclosing scopes by **reference** — modifications to captured variables are visible in the original scope.
+
+A closure may capture an uninitialized variable, but definite assignment still applies: the variable must be assigned on all paths before the closure is **called**, not before it is defined. The compiler verifies this at the call site.
 
 ```yz
 count: 0

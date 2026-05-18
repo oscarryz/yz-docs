@@ -91,6 +91,8 @@ All boc forms share the same model: fields persist between calls and are accessi
 - **Short boc declaration** `foo: { field T; ... }` — fields persist. `foo.field` is accessible from outside.
 - **Boc declaration** `foo #(param T, ...) { ... }` — syntactic sugar for the same model. `foo.param` persists between calls and is accessible from outside.
 
+A field declared without a default (`field T`) is a **required field**. It must be assigned on all control-flow paths before it is read, and must be provided by the caller before the boc value is passed across a boc boundary. See §3.2 (Definite Assignment).
+
 ### 4.3.1 Named vs. Unlabeled Params in Boc Types
 
 When a boc interface is used as a parameter type, the labeled/unlabeled distinction declares what the callee will do with the passed boc:

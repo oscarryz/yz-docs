@@ -136,6 +136,20 @@ description: match response {
 }
 ```
 
+### Definite Assignment Across Branches
+
+If a variable is assigned inside a match and read afterward, it must be assigned in **every** branch — including any default branch. If a path exists where it is not assigned, reading it after the match is a compile error (§3.2).
+
+```yz
+result String
+match {
+    x > 0 => result = "positive"
+}, {
+    result = "non-positive"   // default — required for result to be definite after match
+}
+print(result)   // OK — all paths assign result
+```
+
 ## 7.4 Iteration
 
 Yz has no loop syntax. Iteration is achieved through methods on ranges and collections.

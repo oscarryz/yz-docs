@@ -11,6 +11,15 @@ Explicit type annotations are always optional but allowed for documentation or d
 
 ## 5.2 Variable Type Inference
 
+### Typed Declaration (no initializer)
+
+When a variable is declared with an explicit type and no value, no type inference occurs — the type is given directly. The variable is **uninitialized** and subject to definite assignment (§3.2): it must be assigned on all control-flow paths before it is read.
+
+```yz
+age Int          // type is Int; uninitialized — must be assigned before use
+age = 30         // now initialized
+```
+
 ### Short Declaration
 
 When a variable is declared with `:`, its type is inferred from the initializing expression:
