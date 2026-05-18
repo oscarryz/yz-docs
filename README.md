@@ -279,7 +279,7 @@ hi: { 42 }
 
 A `#(...)` is a **boc signature** — the type and interface of a boc. It is useful for declaring boc parameters, arrays of bocs, and structural constraints:
 ```js
-hell_world #(String) // a boc that returns a String
+hello_world #(String) // a boc that returns a String
 ```
 
 The block body has to be assigned to use the boc:
@@ -552,7 +552,7 @@ divide: {
   b Int
   b == 0 ? {
     Result.Err("Division by zero")
-  } {
+  }, {
     Result.Ok(a / b)
   }
 }
