@@ -1,4 +1,4 @@
-#open-question 
+#rejected No for now. Doesn't add much
 
 # Yz Language Design: Types as First-Class Values
 
