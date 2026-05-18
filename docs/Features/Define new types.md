@@ -30,5 +30,5 @@ Person #(name String, to_str #(String))
 
 ### Related:
 [Bocs](Bocs.md)
-[Block type](../Features/Block%20type.md)
+[Block type](../Features/Boc%20Interface.md)
 

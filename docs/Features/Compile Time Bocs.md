@@ -32,7 +32,7 @@ Compile : {
 
 The `name` that maps an implementation to its infostring variable lives in the implementation's own infostring, not in the interface. When `name` is absent the compiler derives it from `Schema`: if `Schema` has exactly one field, that field's name is used. If `Schema` has multiple fields, `name` is required — a compile error if missing.
 
-See also: [Structural Typing](Structural%20typing.md) · [Boc Type](Block%20type.md)
+See also: [Structural Typing](Structural%20typing.md) · [Boc Type](Boc%20Interface.md)
 
 ---
 
@@ -432,7 +432,7 @@ The key distinction from Haskell's `deriving` and Rust's `derive` is openness. B
 - [Structural Reflection](Structural%20Reflection.md) — the full `Boc` API available inside `run`
 - [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) — constraint inference and propagation
 - [Structural Typing](Structural%20typing.md) — how `#(...)` signatures work
-- [Boc Type](Block%20type.md) — boc type syntax including `#(...)`
+- [Boc Type](Boc%20Interface.md) — boc type syntax including `#(...)`
 - [Info strings](Info%20strings.md) — infostring syntax and conventions
 - [Conditional Bocs](Conditional%20Bocs.md) — used in generated control flow
 - [Type Variants](Type%20variants.md) — used in generated variant dispatch

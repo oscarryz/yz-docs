@@ -33,9 +33,9 @@ salute: {
 }
 ```
 
-## Boc signature shorthand
+## Boc Declaration
 
-A boc variable can declare its type signature and body together in one statement:
+A boc variable can declare its signature and body together — this is the **boc declaration** form:
 
 ```yz
 greet #(msg String, to_whom String, String) {
@@ -43,7 +43,7 @@ greet #(msg String, to_whom String, String) {
 }
 ```
 
-Here the trailing `String` (unlabeled) is the return type; the labeled entries are inputs.
+Labeled entries are input fields; the trailing unlabeled `String` is the output.
 
 ## Variables as parameters
 

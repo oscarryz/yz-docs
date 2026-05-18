@@ -80,7 +80,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 ### Bugs
 
-- [ ] **[YZC-0001] Variants broken** — variants were not updated for the BOC model; see `examples/variants`
+- [x] **[YZC-0001] Variants broken** — variants were not updated for the BOC model; see `examples/variants`
 - [ ] **[YZC-0002] Cross-package broken** — broke during BOC migration
 - [ ] **[YZC-0003] Assigning Unit-returning boc to variable** — `a : foo()` where `foo` returns Unit should be a sema error (analogue to Go's `x := f()` where `f` returns nothing); detect in sema; add error golden test
 - [ ] **[YZC-0004] Top-level boc callable as function** — `foo: { time.sleep(1); "done" }` lowers as singleton struct, not callable as `foo()`; needs sema + lowerer fix

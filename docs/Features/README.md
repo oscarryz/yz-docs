@@ -6,7 +6,7 @@
 
 - [Bocs.md](Bocs.md) — The core abstraction: blocks of code that hold state and behavior
 - [Variables.md](Variables.md) — Variable declaration, initialization, and their role as parameters
-- [Block type.md](Block%20type.md) — The `#(...)` type syntax for describing boc signatures
+- [Boc Interface.md](Boc%20Interface.md) — The `#(...)` notation — boc interface, inputs/outputs, encapsulation
 - [Define new types.md](Define%20new%20types.md) — Uppercase bocs as named types (structs)
 - [Create instances.md](Create%20instances.md) — Constructing instances of types
 - [Structural typing.md](Structural%20typing.md) — Structural (duck-typing) compatibility between bocs

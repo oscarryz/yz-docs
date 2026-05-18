@@ -275,7 +275,7 @@ greet: { msg String
 hi: { 42 }
 ```
 
-### [Boc Signature / Interface](docs/Features/Block%20type.md)
+### [Boc Signature / Interface](docs/Features/Boc%20Interface.md)
 
 A `#(...)` is a **boc signature** — the type and interface of a boc. It is useful for declaring boc parameters, arrays of bocs, and structural constraints:
 ```js

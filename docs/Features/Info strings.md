@@ -20,7 +20,7 @@ Movies : {
 
 The backtick delimiters take the place of `{` and `}`. Everything inside is valid Yz — field declarations, nested bocs, scalar values — subject to the restrictions described below.
 
-See also: [Compile-Time Bocs](Compile%20Time%20Bocs.md) · [Structural Reflection](Structural%20Reflection.md) · [Boc Type](Block%20type.md)
+See also: [Compile-Time Bocs](Compile%20Time%20Bocs.md) · [Structural Reflection](Structural%20Reflection.md) · [Boc Type](Boc%20Interface.md)
 
 ---
 

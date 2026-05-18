@@ -5,7 +5,7 @@ In Yz, everything is a **block of code** (boc). A boc plays the role that packag
 
 ## The basics
 
-A block is a sequence of expressions between `{` and `}`. Assign it to a variable with `:` and call it with `()`:
+A **boc literal** is a sequence of expressions between `{` and `}`. Assign it to a variable with `:` — a **short boc declaration** — and call it with `()`:
 
 ```yz
 hello: {
@@ -121,25 +121,24 @@ alice: Person("Alice", 30)            // positional
 alice: Person(name: "Alice", age: 30) // named
 ```
 
-## Boc Signature / Interface
+## Boc Interface `#()`
 
-When a boc has explicit input and output types, declare them with `#(params)`. This is the **boc declaration** — signature and body together:
+A `#(params)` declares the boc's inputs and outputs explicitly. Labeled params are input fields; unlabeled types at the end are outputs. This is the **boc declaration** form:
 
 ```yz
-// Takes a String, returns nothing
+// named input, no output
 greet #(name String) {
   print(name)
 }
-greet("Alice")
 
-// Takes two Ints, returns an Int (last unnamed type = return type)
+// two named inputs, one unlabeled output
 add #(x Int, y Int, Int) {
   x + y
 }
 result: add(3, 4)  // 7
 ```
 
-The **boc expanded form** separates the signature from the body with `=`. The body re-declares the parameters:
+The **boc expanded form** uses `=` to separate interface from body:
 
 ```yz
 greet #(name String) = {
@@ -148,7 +147,7 @@ greet #(name String) = {
 }
 ```
 
-See [Block type](Block%20type.md) for the full boc type syntax.
+See [Boc Interface](Boc%20Interface.md) for the full syntax, all entry forms, and encapsulation.
 
 ## Default parameters
 
@@ -183,17 +182,57 @@ greet("Alice")
 greet("Bob")
 ```
 
-## Type-only declarations
+## Boc signatures
 
-A signature without a body defines a **type** — struct or interface depending on contents:
+A boc interface without a body defines a structural type — a struct if it has only data fields, an interface if it has only boc fields:
 
 ```yz
-// Struct: data fields only
-Point #(x Int, y Int)
-
-// Interface: method signatures only
-Greeter #(greet #())
-
-// Mixed: data + methods
-Named #(name String, greet #())
+Point #(x Int, y Int)            // struct: two Int fields
+Greeter #(greet #())             // interface: any boc with greet qualifies
+Named #(name String, greet #())  // mixed: data + method
 ```
+
+## Initialization
+
+Calling a boc with uninitialized variables is a compile error. What counts as "uninitialized" depends on the form.
+
+In a **boc declaration** (`name #(params) { body }`): the interface is the complete contract. A variable in the body that is not in the interface and has no default has no way to receive a value — compile error:
+
+```yz
+n #(name String) {
+    last_name String   // error: not in interface, no default
+}
+```
+
+In a **short boc declaration** (`name : { ... }`): all uninitialized variables become required parameters in the inferred interface. Calling without providing them is a compile error:
+
+```yz
+n : {
+    name String
+    last_name String
+}
+// inferred: #(name String, last_name String)
+
+n("yz")          // error: last_name not provided
+n("yz", "lang")  // ok
+```
+
+A variable with a default value becomes an optional parameter — more on this in [Default values](Default%20values.md).
+
+## Closures
+
+Nested bocs capture variables from their enclosing scope:
+
+```yz
+Person: {
+  name String
+  greet: {
+    print("I'm `name`")  // captures name from Person
+  }
+}
+
+p: Person("Alice")
+p.greet()  // I'm Alice
+```
+
+The compiler tracks captured variables and ensures they remain accessible.
