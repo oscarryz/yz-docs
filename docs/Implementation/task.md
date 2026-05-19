@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **52 golden + 2 error conformance tests passing** — `go test -race ./...` passes
+- **53 golden + 2 error conformance tests passing** — `go test -race ./...` passes
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -101,11 +101,11 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0013] Array append via `<<`** — `a << item` → `a.Append(item)`; `Array.Append` exists in yzrt
 - [ ] **[YZC-0014] Option/Result method chaining** — `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })`
 - [ ] **[YZC-0015] Non-word boc names** — `balance+= #(amount Int) { ... }` — parser only allows word identifiers in boc declarations; fix: accept `NON_WORD` token; map to Go-safe name via symbol table; add golden test
-- [ ] **[YZC-0016] String concatenation with `++`** — `String.PlusPlus` exists in yzrt; need golden test to confirm end-to-end
+- [ ] **[YZC-0016] String concatenation with `++`** — lowerer emits `Plusplus` but runtime `String` has no such method; fix: add `Plusplus` to `String` in yzrt
 - [ ] **[YZC-0017] Dict optional access** — `d[key]` should return `Option(V)`; currently panics on missing key via `At()`
-- [ ] **[YZC-0018] Bool methods `&&` / `||`** — `Bool.Ampamp` / `Bool.Pipepipe` exist in yzrt; need golden test confirming operator lowering path
+- [x] **[YZC-0018] Bool methods `&&` / `||`** — `Bool.Ampamp` / `Bool.Pipepipe` exist in yzrt; golden test 53 confirms end-to-end. *Note: current operators are eager and special-cased on the built-in Bool; when Bool moves to Yz source (YZC-0031), `&&`/`||` become closure-taking methods for lazy evaluation: `true && { 1 == 2 }` — the second operand is a `#(Bool)` closure, not eagerly evaluated. Compiler must stop special-casing and lower `&&`/`||` as boc calls at that point.*
 - [ ] **[YZC-0019] `break` / `continue` / `return` in loops** — blocked on concurrency model settling; lowerer should emit compile error when encountered rather than silently dropping
-- [ ] **[YZC-0020] `to_str()` mapping on user types** — confirm `to_str()` → `ToStr()` works on user-defined types; update examples
+- [ ] **[YZC-0020] `to_str()` mapping on user types** — sema rejects `p.to_str()` on user structs ("no field to_str"); needs sema to expose `to_str` on all struct types and lowerer to emit `ToStr()` or a default Go `String()` fallback
 
 ### Infrastructure
 
@@ -204,6 +204,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 - [ ] Annotate native ops per method
 - [ ] Implement higher-level methods in Yz
 - [ ] Remove all primitive-type special-casing from the compiler
+- [ ] `Bool.&&` / `Bool.||` — rewrite as lazy closure methods `#(other #(Bool), Bool)`; update lowerer to emit boc calls instead of eager `Ampamp`/`Pipepipe`; `true && { 1 == 2 }` must not evaluate the right-hand side unless the left is true
 
 ---
 
