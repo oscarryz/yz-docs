@@ -84,10 +84,11 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0002] Cross-package broken** — broke during BOC migration
 - [x] **[YZC-0003] Assigning Unit-returning boc to variable** — `a : foo()` where `foo` returns Unit should be a sema error (analogue to Go's `x := f()` where `f` returns nothing); detect in sema; add error golden test
 - [ ] **[YZC-0004] Top-level boc callable as function** — `foo: { time.sleep(1); "done" }` lowers as singleton struct, not callable as `foo()`; needs sema + lowerer fix
-- [ ] **[YZC-0005] Double return with sleep** — `foo: { time.sleep(1); 1 }` emits two return statements in generated Go
+- [~] **[YZC-0005] Double return with sleep** — `foo: { time.sleep(1); 1 }` emits two return statements in generated Go — *not reproducible as of BOC work; superseded by YZC-0035*
 - [ ] **[YZC-0006] Standalone boc invocation** — `p : { print("hello") }; p()` requires `p.call()` workaround; blocked on YZC-0004
 - [ ] **[YZC-0007] Unused variables in generated Go** — Yz allows unused vars; Go rejects them; fix: after lowering a scope, append `_ = varName` for any declared name never referenced in subsequent IR nodes
 - [ ] **[YZC-0008] Reentrant inline calls unsafe in HOF closures** — closure emitted inside a `ScheduleMulti` body and passed as argument to another boc contains sync-body calls that bypass cown acquisition; fix: sub-generator with `heldCowns = nil` when emitting closure args; dormant until HOF closures operate on cown-bearing types
+- [ ] **[YZC-0035] Sema does not check boc body return type against declared output** — when a boc declares a non-Unit output type (e.g. `foo #(Int)`) but the body's last expression returns Unit (e.g. only `time.sleep` or `print` calls), sema accepts it silently; the lowerer then emits `return std.TheUnit` which fails at `go build` with a type error; affects any void-returning call in that position, not just sleep; fix: after inferring the body's return type, verify it matches the declared output type and report a sema error
 
 ### Language Features
 
@@ -209,7 +210,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0035**
+- Numbers are assigned in creation order; next available: **YZC-0036**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket

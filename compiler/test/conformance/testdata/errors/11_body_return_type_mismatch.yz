@@ -1,0 +1,4 @@
+bad #(Int) {
+    print("oops")
+}
+main: { bad() }

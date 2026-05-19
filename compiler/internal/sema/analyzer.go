@@ -632,7 +632,19 @@ func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 	}
 
 	// Explicit return types in the signature override inferred returns.
-	if len(explicitReturns) > 0 {
+	// Check that the body's inferred return type is compatible with the declaration.
+	if len(explicitReturns) > 0 && bd.Body != nil {
+		var bodyReturn Type = TypUnit
+		if len(returns) > 0 {
+			bodyReturn = returns[0]
+		}
+		declared := explicitReturns[0]
+		_, bodyIsUnknown := bodyReturn.(*UnknownType)
+		_, declIsUnknown := declared.(*UnknownType)
+		if !bodyIsUnknown && !declIsUnknown && !bodyReturn.IsCompatibleWith(declared) {
+			a.errorf(bd.Name.Pos, "YZC-0035: boc body returns %s but declared output is %s",
+				displayType(bodyReturn), displayType(declared))
+		}
 		returns = explicitReturns
 	}
 	if len(returns) == 0 {
