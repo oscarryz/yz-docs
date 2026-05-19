@@ -157,10 +157,10 @@ main : {
 
 ---
 
-## Scheduling And Parallelism
+## Scheduling And Concurrency
 
 The ordering guarantee is determined by **invocation order and value overlap**. The
-programmer controls parallelism by controlling when invocations are spawned.
+programmer controls concurrency by controlling when invocations are spawned.
 
 Consider [four dining philosophers](https://en.wikipedia.org/wiki/Dining_philosophers_problem) each needing two forks:
 
@@ -247,9 +247,9 @@ queue and writes at least once before `main` can read. After that the two run
 concurrently — since messages accumulate in an array, no write is lost even if boring
 laps the consumer.
 
-Yz's `while`'s body is a boc — each iteration is a separate invocation,
-naturally releasing the resource between turns and letting `next()` interleave without
-any explicit signalling.
+`while` is implemented as a recursive boc — each iteration is a separate invocation
+that schedules the next one at the tail of the queue, naturally releasing the resource
+between turns and letting `next()` interleave without any explicit signalling.
 
 ```
   main                          boring
@@ -271,18 +271,18 @@ any explicit signalling.
 
 ## Summary
 
-| Property | How Yz achieves it |
-|---|---|
-| Shared state safety | Every value is protected — exclusive access guaranteed |
-| Parallelism | Invocations with non-overlapping values run in parallel automatically |
-| Ordering | Invocations sharing a value run in spawn order |
-| Deadlock | Impossible — all values acquired atomically |
-| Data races | Impossible — exclusive access by construction |
-| Async | Every invocation is async — suspension transparent at value use |
-| Structured lifetimes | A boc waits for all descendant invocations before completing |
-| Return value escaping | Impossible — return values are bounded by their scope |
-| Cancellation | Via `cancel()` method on invocation handle |
-| Performance | Uncontended values are inlined/elided by the compiler |
+| Property              | How Yz achieves it                                                    |
+| --------------------- | --------------------------------------------------------------------- |
+| Shared state safety   | Every value is protected — exclusive access guaranteed                |
+| Concurrency           | Invocations with non-overlapping values run in parallel automatically |
+| Ordering              | Invocations sharing a value run in spawn order                        |
+| Deadlock              | Impossible — all values acquired atomically                           |
+| Data races            | Impossible — exclusive access by construction                         |
+| Async                 | Every invocation is async — suspension transparent at value use       |
+| Structured lifetimes  | A boc waits for all descendant invocations before completing          |
+| Return value escaping | Impossible — return values are bounded by their scope                 |
+| Cancellation          | Via `cancel()` method on invocation handle                            |
+| Performance           | Uncontended values are inlined/elided by the compiler                 |
 
 ---
 
@@ -291,10 +291,43 @@ any explicit signalling.
 The concurrency model in Yz is a variation of the Behaviour Oriented Concurrency model developed at Imperial College London and Microsoft Research. In that model, protected
 resources are called **cowns** (concurrent owners) and asynchronous units of work are
 called **behaviours**. In Yz, a cown is any value and a behaviour is any boc
-invocation — the concepts map directly onto the language's  constructs rather and do not require separate primitives.
+invocation — the concepts map directly onto the language's constructs and do not require separate primitives.
 
 The formal model, semantics, and implementation details are described in:
 
 > Cheeseman et al. (2023). *When Concurrency Matters: Behaviour-Oriented Concurrency*.
 > Proc. ACM Program. Lang. 7, OOPSLA2, Article 276.
 > <https://marioskogias.github.io/docs/boc.pdf>
+
+### Divergence from the Original BOC Model
+
+The original BOC model is designed for languages with a **synchronous underlying
+runtime**. A running behaviour acquires its cowns and then operates on them directly —
+`account.balance -= amount` is a plain field write. Because inner operations are
+synchronous, newly spawned behaviours can safely be appended to the **tail** of the
+pending queue without breaking ordering guarantees.
+
+Yz is different: **every invocation is async**. There is no synchronous field mutation
+— `account.balance-=(amount)` is itself a boc invocation that must be scheduled. If
+newly spawned invocations went to the tail of the queue, an unrelated external caller
+could jump ahead of them, breaking the atomicity that the original model achieves for
+free.
+
+To preserve atomicity, Yz schedules non-recursive inner calls **next in line**: a newly
+spawned invocation is inserted right after the currently running one, before any
+externally-queued callers. This gives Yz the same atomicity guarantees as the
+synchronous BOC model.
+
+The consequence is that **recursive calls** — such as `while` (whose body is implemented
+as a recursive boc call) scheduling its next iteration — would also be placed next in
+line, preventing any external caller from ever interleaving between iterations. Yz
+resolves this with a different rule for recursion:
+
+- **Non-recursive inner call** (calling a different boc) → scheduled next in line — atomicity preserved
+- **Recursive inner call** (calling itself) → scheduled at the tail — external callers can interleave
+
+This gives rise to a useful design principle: use `while` when you want to produce
+values that external callers consume between iterations; use HOF methods like `each`
+and `map` when you want sequential processing with no external interleaving.
+
+See [While loop yield and external caller interleaving](docs/Questions/solved/While%20loop%20yield%20and%20external%20caller%20interleaving.md) for the full analysis.
