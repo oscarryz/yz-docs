@@ -8,17 +8,15 @@ type _mainBoc struct {
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
+		_bg0 := &std.BocGroup{}
 		var a std.String
-		_bgs_a := &std.BocGroup{}
+		var b std.String
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bgs_a, std.Http.Get(std.NewString("https://httpbin.org/get")), &a)
+			std.GoStore(_bg0, std.Http.Get(std.NewString("https://httpbin.org/get")), &a)
+			std.GoStore(_bg0, std.Http.Get(std.NewString("https://httpbin.org/uuid")), &b)
 			return std.TheUnit
 		}).Force()
-		_bgs_a.Wait()
-		var b std.String
-		_bgs_b := &std.BocGroup{}
-		std.GoStore(_bgs_b, std.Http.Get(std.NewString("https://httpbin.org/uuid")), &b)
-		_bgs_b.Wait()
+		_bg0.Wait()
 		std.Print(a)
 		std.Print(b)
 		return std.TheUnit

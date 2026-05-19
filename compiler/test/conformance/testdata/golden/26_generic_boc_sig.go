@@ -14,13 +14,13 @@ type _mainBoc struct {
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
+		_bg0 := &std.BocGroup{}
 		var x V
-		_bgs_x := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bgs_x, identity(std.NewString("hello")), &x)
+			std.GoStore(_bg0, identity(std.NewString("hello")), &x)
 			return std.TheUnit
 		}).Force()
-		_bgs_x.Wait()
+		_bg0.Wait()
 		std.Print(x)
 		return std.TheUnit
 	})

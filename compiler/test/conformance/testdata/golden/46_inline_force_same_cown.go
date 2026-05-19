@@ -35,16 +35,16 @@ type _userBoc struct {
 
 func (self *_userBoc) Call(acc *Account) *std.Thunk[std.Unit] {
 	return func() *std.Thunk[std.Unit] {
-		_bgs_loaded := &std.BocGroup{}
+		_bg0 := &std.BocGroup{}
 		var loaded *Account
 		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &acc.Cown}, func() std.Unit {
 			self.acc = acc
-			std.GoStore(_bgs_loaded, (&_loaderBoc{}).Call(self.acc), &loaded)
+			std.GoStore(_bg0, (&_loaderBoc{}).Call(self.acc), &loaded)
 			return std.TheUnit
 		})
 		return std.NewThunk(func() std.Unit {
 			_sched.Force()
-			_bgs_loaded.Wait()
+			_bg0.Wait()
 			return std.Print(loaded.balance)
 		})
 	}()

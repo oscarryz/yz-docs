@@ -29,15 +29,15 @@ type _mainBoc struct {
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
+		_bg0 := &std.BocGroup{}
 		var c any
-		_bgs_c := &std.BocGroup{}
 		var a *Greeter
 		std.Schedule(&self.Cown, func() std.Unit {
 			a = NewGreeter(std.NewString("Ann"))
-			std.GoStore(_bgs_c, a.Plusplus(std.NewString("Taylor")), &c)
+			std.GoStore(_bg0, a.Plusplus(std.NewString("Taylor")), &c)
 			return std.TheUnit
 		}).Force()
-		_bgs_c.Wait()
+		_bg0.Wait()
 		std.Print(c)
 		return std.TheUnit
 	})

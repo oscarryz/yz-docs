@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **51 golden conformance tests passing** — `go test -race ./...` passes
+- **52 golden + 1 error conformance tests passing** — `go test -race ./...` passes
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -82,7 +82,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 - [x] **[YZC-0001] Variants broken** — variants were not updated for the BOC model; see `examples/variants`
 - [ ] **[YZC-0002] Cross-package broken** — broke during BOC migration
-- [ ] **[YZC-0003] Assigning Unit-returning boc to variable** — `a : foo()` where `foo` returns Unit should be a sema error (analogue to Go's `x := f()` where `f` returns nothing); detect in sema; add error golden test
+- [x] **[YZC-0003] Assigning Unit-returning boc to variable** — `a : foo()` where `foo` returns Unit should be a sema error (analogue to Go's `x := f()` where `f` returns nothing); detect in sema; add error golden test
 - [ ] **[YZC-0004] Top-level boc callable as function** — `foo: { time.sleep(1); "done" }` lowers as singleton struct, not callable as `foo()`; needs sema + lowerer fix
 - [ ] **[YZC-0005] Double return with sleep** — `foo: { time.sleep(1); 1 }` emits two return statements in generated Go
 - [ ] **[YZC-0006] Standalone boc invocation** — `p : { print("hello") }; p()` requires `p.call()` workaround; blocked on YZC-0004
@@ -110,6 +110,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 - [ ] **[YZC-0033] Compiler deep review against settled spec** — the compiler was generated using the old spec which had stateless/stateful boc distinction, `Unit` as user-facing type, and boc declarations treated as Go functions (no cown, no persistent fields). Review and align: (1) boc declarations should lower to singleton structs with cowns, not plain Go functions; (2) `foo.param` should be accessible after call; (3) sema errors should say "returns nothing" not mention Unit; (4) all bocs serialized through cown — no "fully parallel" fast path for boc declarations. Depends on: YZC-0004, YZC-0006.
   - [x] spec/02 grammar updated: labeled=input/unlabeled=output rule, BocDecl three forms, MixStmt removed
+  - [x] sema errors say "returns nothing" instead of "Unit" (`displayType` helper, YZC-0003 check)
 - [ ] **[YZC-0021] Directory and file bocs** — defer until in-file nesting works; extend FQN tree to directories and files as bocs
 - [x] **[YZC-0032] Rename `BocWithSig` in compiler code** — AST node `BocWithSig`, sema path `analyzeBocWithSig`, lowerer path `lowerBocWithSig`, and all related identifiers should be renamed to `BocDecl` / `analyzeBocDecl` / `lowerBocDecl` to match the settled terminology; also rename the `BocWithSig` → `BocDecl` grammar production in spec/02
 - [ ] **[YZC-0022] Multiple source roots** — `src/` + `lib/` as independent FQN mount points; compiler accepts list of source roots; builds one FQN forest per root

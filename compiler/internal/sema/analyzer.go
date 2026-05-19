@@ -285,6 +285,11 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 	for _, v := range d.Values {
 		valTypes = append(valTypes, a.analyzeExpr(v))
 	}
+	for i, valTyp := range valTypes {
+		if valTyp == TypUnit && i < len(d.Names) {
+			a.errorf(d.Names[i].Pos, "YZC-0003: expression returns nothing, cannot assign to %s", d.Names[i].Name)
+		}
+	}
 	for i, name := range d.Names {
 		var typ Type = Unknown
 		if i < len(valTypes) {
@@ -429,7 +434,7 @@ func (a *Analyzer) analyzeTypedDecl(d *ast.TypedDecl) Type {
 	if d.Value != nil {
 		valTyp := a.analyzeExpr(d.Value)
 		if valTyp != Unknown && !valTyp.IsCompatibleWith(typ) {
-			a.errorf(d.Pos, "type mismatch: %v is not compatible with %v", valTyp, typ)
+			a.errorf(d.Pos, "type mismatch: %s is not compatible with %s", displayType(valTyp), displayType(typ))
 		}
 	}
 	fqn := a.currentFQN(d.Name.Name)
@@ -451,7 +456,7 @@ func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
 		targetType := a.resolveTargetType(asgn.Target)
 		if len(valTypes) > 0 && targetType != Unknown {
 			if !valTypes[0].IsCompatibleWith(targetType) {
-				a.errorf(asgn.Pos, "assignment: %v is not compatible with %v", valTypes[0], targetType)
+				a.errorf(asgn.Pos, "assignment: %s is not compatible with %s", displayType(valTypes[0]), displayType(targetType))
 			}
 		}
 	} else {
@@ -463,8 +468,8 @@ func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
 			}
 			if i < len(valTypes) && sym.Type != Unknown {
 				if !valTypes[i].IsCompatibleWith(sym.Type) {
-					a.errorf(name.Pos, "assignment to %s: %v not compatible with %v",
-						name.Name, valTypes[i], sym.Type)
+					a.errorf(name.Pos, "assignment to %s: %s not compatible with %s",
+						name.Name, displayType(valTypes[i]), displayType(sym.Type))
 				}
 			}
 		}
@@ -980,7 +985,7 @@ func (a *Analyzer) analyzeUnary(u *ast.UnaryExpr) Type {
 	case Unknown:
 		return Unknown
 	default:
-		a.errorf(u.Pos, "unary '-' not defined for type %v", operandType)
+		a.errorf(u.Pos, "unary '-' not defined for type %s", displayType(operandType))
 		return Unknown
 	}
 }
@@ -1076,7 +1081,7 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 				return f.Type
 			}
 		}
-		a.errorf(pos, "type %v has no field %q", objType, fieldName)
+		a.errorf(pos, "type %s has no field %q", displayType(objType), fieldName)
 		return Unknown
 	case *BuiltinType:
 		if methods, ok := builtinMethods[ot.name]; ok {
@@ -1084,7 +1089,7 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 				return ret
 			}
 		}
-		a.errorf(pos, "type %v has no method %q", objType, fieldName)
+		a.errorf(pos, "type %s has no method %q", displayType(objType), fieldName)
 		return Unknown
 	case *BocType:
 		// Accessing a method defined inside a boc — look up in scope.

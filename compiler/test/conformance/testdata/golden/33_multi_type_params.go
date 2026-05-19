@@ -27,13 +27,13 @@ type _mainBoc struct {
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
+		_bg0 := &std.BocGroup{}
 		var p *Pair[K, V]
-		_bgs_p := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bgs_p, makePair(std.NewInt(42), std.NewString("hello")), &p)
+			std.GoStore(_bg0, makePair(std.NewInt(42), std.NewString("hello")), &p)
 			return std.TheUnit
 		}).Force()
-		_bgs_p.Wait()
+		_bg0.Wait()
 		std.Print(p.first)
 		std.Print(p.second)
 		return std.TheUnit

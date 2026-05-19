@@ -457,36 +457,99 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 // singleton's Call() method body.  Consecutive boc method calls are batched
 // into BocGroups so they run concurrently and are joined before the next
 // statement (same semantics as the old lowerMainBoc).
+// pendingBocDecl holds one entry in a concurrent-dispatch batch.
+// name and typ are non-empty for named declarations (ShortDecl/TypedDecl result);
+// empty for void boc calls (statement-position expressions).
+type pendingBocDecl struct {
+	name string
+	typ  string
+	expr ast.Expr
+}
+
 func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 	var stmts []Stmt
-	var pendingBocCalls []ast.Expr
+	var pending []pendingBocDecl
 	bgIdx := 0
 
 	flushGroup := func() {
-		if len(pendingBocCalls) == 0 {
+		if len(pending) == 0 {
 			return
 		}
 		bgVar := fmt.Sprintf("_bg%d", bgIdx)
 		bgIdx++
 		stmts = append(stmts, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
-		for _, call := range pendingBocCalls {
-			callExpr := l.lowerExpr(call)
-			stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{
-				GroupVar: bgVar,
-				Body:     []Stmt{&ReturnStmt{Value: callExpr}},
-			}})
+		for _, pc := range pending {
+			callExpr := l.lowerExpr(pc.expr)
+			if pc.name != "" {
+				stmts = append(stmts,
+					&DeclStmt{Name: pc.name, Type: pc.typ},
+					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: pc.name, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
+				)
+			} else {
+				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, Body: []Stmt{&ReturnStmt{Value: callExpr}}}})
+			}
 		}
 		stmts = append(stmts, &WaitStmt{GroupVar: bgVar})
-		pendingBocCalls = nil
+		pending = nil
+	}
+
+	// pendingNames tracks names declared by pending boc calls for dependency detection.
+	pendingNames := map[string]bool{}
+
+	addPending := func(pc pendingBocDecl) {
+		pending = append(pending, pc)
+		if pc.name != "" {
+			pendingNames[pc.name] = true
+		}
+	}
+
+	origFlush := flushGroup
+	flushGroup = func() {
+		origFlush()
+		pendingNames = map[string]bool{}
 	}
 
 	for _, elem := range elems {
+		// Void boc call at statement position.
 		if expr, ok := elem.(ast.Expr); ok && l.isBocMethodCall(expr) {
-			pendingBocCalls = append(pendingBocCalls, expr)
-		} else {
-			flushGroup()
-			stmts = append(stmts, l.lowerMainStmt(elem)...)
+			if exprRefsAny(expr, pendingNames) {
+				flushGroup()
+			}
+			addPending(pendingBocDecl{expr: expr})
+			continue
 		}
+		// Named boc call: short declaration or typed declaration.
+		if sd, ok := elem.(*ast.ShortDecl); ok && len(sd.Names) == 1 && len(sd.Values) == 1 {
+			if _, isBocLit := sd.Values[0].(*ast.BocLiteral); !isBocLit && l.isBocMethodCall(sd.Values[0]) {
+				if synced := l.trySyncExpr(sd.Values[0]); synced != nil {
+					flushGroup()
+					stmts = append(stmts, &DeclStmt{Name: sd.Names[0].Name, Init: synced})
+					continue
+				}
+				if exprRefsAny(sd.Values[0], pendingNames) {
+					flushGroup()
+				}
+				goType := l.goType(l.analyzer.ExprType(sd.Values[0]))
+				addPending(pendingBocDecl{name: sd.Names[0].Name, typ: goType, expr: sd.Values[0]})
+				continue
+			}
+		}
+		if td, ok := elem.(*ast.TypedDecl); ok && td.Value != nil && l.isBocMethodCall(td.Value) {
+			if synced := l.trySyncExpr(td.Value); synced != nil {
+				flushGroup()
+				stmts = append(stmts, &DeclStmt{Name: td.Name.Name, Init: synced})
+				continue
+			}
+			if exprRefsAny(td.Value, pendingNames) {
+				flushGroup()
+			}
+			goType := l.goType(l.analyzer.ExprType(td.Value))
+			addPending(pendingBocDecl{name: td.Name.Name, typ: goType, expr: td.Value})
+			continue
+		}
+		// Non-boc statement: flush pending group, then emit normally.
+		flushGroup()
+		stmts = append(stmts, l.lowerMainStmt(elem)...)
 	}
 	flushGroup()
 
@@ -767,6 +830,20 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 	l.bocGroupCtx = bgVar
 	defer func() { l.bocGroupCtx = prevBocGroupCtx }()
 
+	// hasPendingSpawns tracks whether SpawnExprs have been registered on bgVar but
+	// not yet waited on. emitPendingWait flushes a WaitStmt before any statement
+	// that may consume the spawned values, so the Wait lands in the right position
+	// for the split-BocGroup pattern (postWait, after Schedule.Force()).
+	hasPendingSpawns := false
+	didEmitWait := false
+	emitPendingWait := func() {
+		if hasPendingSpawns {
+			inner = append(inner, &WaitStmt{GroupVar: bgVar})
+			hasPendingSpawns = false
+			didEmitWait = true
+		}
+	}
+
 	for i, elem := range elems {
 		isLast := i == len(elems)-1
 		switch e := elem.(type) {
@@ -779,21 +856,31 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			expr := l.lowerExpr(e.Value)
 			if synced := l.trySyncExpr(e.Value); synced != nil {
 				// Held-cown reentrant call: emit directly, no goroutine.
+				emitPendingWait()
 				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: synced})
 			} else if l.isBocMethodCall(e.Value) {
 				goType := l.goType(l.analyzer.ExprType(e.Value))
-				// Use a per-variable BocGroup and insert WaitStmt immediately
-				// after GoStore so that subsequent statements referencing this
-				// variable land in postWait (after cown release) rather than
-				// inside the ScheduleMulti closure where the value is still nil.
-				perBg := "_bgs_" + e.Name.Name
-				inner = append(inner,
-					&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
-					&DeclStmt{Name: e.Name.Name, Type: goType},
-					&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
-					&WaitStmt{GroupVar: perBg},
-				)
+				if bgVar != "" {
+					// Shared BocGroup: register and let emitPendingWait insert the Wait
+					// before the first dependent statement.
+					inner = append(inner,
+						&DeclStmt{Name: e.Name.Name, Type: goType},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
+					)
+					hasPendingSpawns = true
+				} else {
+					// No shared BocGroup: per-variable group with immediate Wait so
+					// the value is ready before any subsequent statement references it.
+					perBg := "_bgs_" + e.Name.Name
+					inner = append(inner,
+						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
+						&DeclStmt{Name: e.Name.Name, Type: goType},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
+						&WaitStmt{GroupVar: perBg},
+					)
+				}
 			} else {
+				emitPendingWait()
 				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: expr})
 			}
 		case *ast.ShortDecl:
@@ -801,6 +888,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 				callExpr := l.lowerExpr(e.Values[0])
 				goType := l.goType(l.analyzer.ExprType(e.Values[0]))
 				if synced := l.trySyncExpr(e.Values[0]); synced != nil {
+					emitPendingWait()
 					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Init: synced})
 				} else if bgVar != "" {
 					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Type: goType})
@@ -809,6 +897,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 						StoreVar: e.Names[0].Name,
 						Body:     []Stmt{&ReturnStmt{Value: callExpr}},
 					}})
+					hasPendingSpawns = true
 				} else {
 					// No shared BocGroup: per-variable group with immediate Wait so
 					// dependent statements land in postWait (after cown release).
@@ -822,13 +911,17 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 				}
 			} else if isLast && len(e.Names) == 1 && len(e.Values) == 1 {
 				// Last short decl in body — could be an expression-result.
+				emitPendingWait()
 				inner = append(inner, l.lowerBodyShortDecl(e, true, resultType)...)
 			} else {
+				emitPendingWait()
 				inner = append(inner, l.lowerBodyShortDecl(e, false, resultType)...)
 			}
 		case *ast.Assignment:
+			emitPendingWait()
 			inner = append(inner, l.lowerAssignment(e))
 		case *ast.ReturnStmt:
+			emitPendingWait()
 			var val Expr
 			if e.Value != nil {
 				val = l.lowerExpr(e.Value)
@@ -836,11 +929,14 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			inner = append(inner, &ReturnStmt{Value: val})
 		case ast.Expr:
 			if is, ok := l.tryLowerConditional(e); ok {
+				emitPendingWait()
 				inner = append(inner, is)
 			} else if !isLast {
 				if ms, ok := l.tryLowerMatch(e); ok {
+					emitPendingWait()
 					inner = append(inner, ms)
 				} else if synced := l.trySyncExpr(e); synced != nil {
+					emitPendingWait()
 					inner = append(inner, &ExprStmt{Expr: synced})
 				} else if l.isBocMethodCall(e) && bgVar != "" {
 					callExpr := l.lowerExpr(e)
@@ -848,7 +944,9 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 						GroupVar: bgVar,
 						Body:     []Stmt{&ReturnStmt{Value: callExpr}},
 					}})
+					hasPendingSpawns = true
 				} else {
+					emitPendingWait()
 					inner = append(inner, &ExprStmt{Expr: l.lowerExprForced(e)})
 				}
 			} else {
@@ -861,7 +959,9 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 						GroupVar: bgVar,
 						Body:     []Stmt{&ReturnStmt{Value: callExpr}},
 					}})
+					hasPendingSpawns = true
 				} else {
+					emitPendingWait()
 					inner = append(inner, &ReturnStmt{Value: l.lowerExprForced(e)})
 				}
 			}
@@ -870,7 +970,12 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 		}
 	}
 
-	if bgVar != "" {
+	emitPendingWait() // flush remaining pending spawns (body ends with boc calls)
+
+	// Append end-of-loop Wait for branch spawns (inside conditionals/matches).
+	// Skip when emitPendingWait already fired: direct spawns were already flushed
+	// at the right position and an extra Wait here would produce dead code.
+	if bgVar != "" && !didEmitWait {
 		inner = append(inner, &WaitStmt{GroupVar: bgVar})
 	}
 
@@ -2106,6 +2211,42 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	return false
 }
 
+// exprRefsAny reports whether expr (recursively) references any identifier in names.
+// Used to detect data dependencies between pending concurrent boc calls.
+func exprRefsAny(expr ast.Expr, names map[string]bool) bool {
+	if len(names) == 0 {
+		return false
+	}
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return names[e.Name]
+	case *ast.CallExpr:
+		if exprRefsAny(e.Callee, names) {
+			return true
+		}
+		for _, arg := range e.Args {
+			if exprRefsAny(arg.Value, names) {
+				return true
+			}
+		}
+	case *ast.MemberExpr:
+		return exprRefsAny(e.Object, names)
+	case *ast.BinaryExpr:
+		return exprRefsAny(e.Left, names) || exprRefsAny(e.Right, names)
+	case *ast.UnaryExpr:
+		return exprRefsAny(e.Operand, names)
+	case *ast.IndexExpr:
+		return exprRefsAny(e.Object, names) || exprRefsAny(e.Index, names)
+	case *ast.InterpolatedStringExpr:
+		for _, part := range e.Parts {
+			if part.IsExpr && exprRefsAny(part.Expr, names) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // isStructInstanceMethodCall reports whether e is a method call on a
 // non-singleton struct instance — a cown-per-instance type whose cown will be
 // acquired by ScheduleMulti, making the call a candidate for ScheduleAsSuccessor.
@@ -2244,6 +2385,19 @@ func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 // is a method call on a cown-bearing struct instance (requires ScheduleAsSuccessor).
 func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
 	for i, elem := range elems {
+		// ShortDecl and TypedDecl are statement nodes, not expressions; check them directly.
+		if sd, ok := elem.(*ast.ShortDecl); ok {
+			if len(sd.Names) == 1 && len(sd.Values) == 1 && l.isBocMethodCall(sd.Values[0]) {
+				return true
+			}
+			continue
+		}
+		if td, ok := elem.(*ast.TypedDecl); ok {
+			if td.Value != nil && l.isBocMethodCall(td.Value) {
+				return true
+			}
+			continue
+		}
 		e, ok := elem.(ast.Expr)
 		if !ok {
 			continue

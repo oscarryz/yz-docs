@@ -56,25 +56,19 @@ type _mainBoc struct {
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
+		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
 			_bg0.GoWait(Counter.Increment(std.NewInt(1)))
+			std.GoStore(_bg0, Counter.Value(), &n)
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		var n std.Int
-		_bgs_n := &std.BocGroup{}
-		std.GoStore(_bgs_n, Counter.Value(), &n)
-		_bgs_n.Wait()
 		_bg1 := &std.BocGroup{}
 		_bg1.GoWait(Counter.Increment(n))
-		_bg1.Wait()
 		var m std.Int
-		_bgs_m := &std.BocGroup{}
-		std.GoStore(_bgs_m, Counter.Value(), &m)
-		_bgs_m.Wait()
-		_bg2 := &std.BocGroup{}
-		_bg2.GoWait(P.Call())
-		_bg2.Wait()
+		std.GoStore(_bg1, Counter.Value(), &m)
+		_bg1.GoWait(P.Call())
+		_bg1.Wait()
 		std.Print(std.NewString(std.Stringify(m)))
 		return std.TheUnit
 	})

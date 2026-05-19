@@ -56,6 +56,15 @@ var (
 	TypUnit    = &BuiltinType{name: "Unit"}
 )
 
+// displayType returns a user-facing name for t.
+// Unit is internal; the user-visible term is "nothing".
+func displayType(t Type) string {
+	if t == TypUnit {
+		return "nothing"
+	}
+	return t.typeName()
+}
+
 // ---------------------------------------------------------------------------
 // Boc type
 // ---------------------------------------------------------------------------
