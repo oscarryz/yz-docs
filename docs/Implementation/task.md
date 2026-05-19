@@ -107,6 +107,11 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [x] **[YZC-0018] Bool methods `&&` / `||`** — `Bool.Ampamp` / `Bool.Pipepipe` exist in yzrt; golden test 53 confirms end-to-end. *Note: current operators are eager sync calls, special-cased on built-in Bool; when Bool moves to Yz source (YZC-0031), `&&`/`||` become lazy closure-taking boc methods that go through the normal BOC cycle — see YZC-0031 sub-item.*
 - [ ] **[YZC-0019] `break` / `continue` / `return` in loops** — blocked on concurrency model settling; lowerer should emit compile error when encountered rather than silently dropping
 - [ ] **[YZC-0020] `to_str()` mapping on user types** — sema rejects `p.to_str()` on user structs ("no field to_str"); needs sema to expose `to_str` on all struct types and lowerer to emit `ToStr()` or a default Go `String()` fallback
+- [ ] **[YZC-0037] Decimal type end-to-end** — `std.Decimal` exists in yzrt but literals, arithmetic, comparison, and methods (`abs`, `pow`, `to_str`) are not wired up in sema/lowerer; add golden test covering all spec'd operations. Spec: `docs/Features/Decimal.md`.
+- [ ] **[YZC-0038] `Result(T,E)` type** — error handling doc specifies `Result(T,E)` alongside `Option(T)` but `Result` is not implemented in yzrt; implement as a variant type, wire up sema/lowerer recognition; `and_then`/`or_else` method chaining follows from YZC-0014. Spec: `docs/Features/Error handling.md`.
+- [ ] **[YZC-0039] Operators audit** — systematic comparison of operators documented in spec vs. implemented in yzrt and recognised by the lowerer; covers `%`, bitwise ops, string operators, and any gaps; add golden tests for each gap found. See `docs/Questions/Operators.md`.
+- [ ] **[YZC-0040] Smart Nesting / Namespace Flattening** — when a directory name matches the boc file inside it (e.g. `house/house.yz`), the namespace is flattened so callers use `house.method` not `house.house.method`; implement in FQN resolution. Spec: `docs/Features/Smart Nesting and Namespace Flattening.md`. Depends on: YZC-0021.
+- [ ] **[YZC-0043] Captured variable reference semantics** — design question: when a boc literal captures an outer variable, does it capture by value or by reference? Mutable captured state (e.g. a counter updated across iterations) needs a clear semantic and a runtime strategy. See `docs/Questions/Memory Management.md` and `docs/Questions/Variables lifetime.md`.
 
 ### Infrastructure
 
@@ -117,6 +122,11 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [x] **[YZC-0032] Rename `BocWithSig` in compiler code** — AST node `BocWithSig`, sema path `analyzeBocWithSig`, lowerer path `lowerBocWithSig`, and all related identifiers should be renamed to `BocDecl` / `analyzeBocDecl` / `lowerBocDecl` to match the settled terminology; also rename the `BocWithSig` → `BocDecl` grammar production in spec/02
 - [ ] **[YZC-0022] Multiple source roots** — `src/` + `lib/` as independent FQN mount points; compiler accepts list of source roots; builds one FQN forest per root
 - [ ] **[YZC-0023] Cancellation / non-local return** — non-local `return` across goroutine boundaries conflicts with structured concurrency; see `docs/Questions/How to cancel a running block.md`
+
+### Tooling
+
+- [ ] **[YZC-0041] Dependency management** — design + implement HTTPS-based import resolution; a source file declares a dependency by URL; the compiler fetches and caches the source; safety, version locking, and checksum verification TBD. See `docs/Questions/Dependency Management.md`.
+- [ ] **[YZC-0042] Package management (`yz` tool)** — `yz init`, `yz add <url>`, `yz remove`, lock file, local cache; depends on YZC-0041. See `docs/Questions/Package management.md`.
 
 ---
 
@@ -212,7 +222,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0037**
+- Numbers are assigned in creation order; next available: **YZC-0044**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
