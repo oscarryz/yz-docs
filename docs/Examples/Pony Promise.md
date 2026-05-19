@@ -17,7 +17,7 @@ Issue: {
 }
 
 main: {
-	repo: Promise(Repository) = Github("my token").get_repo("ponylang/ponyc")
+	repo Promise(Repository) = Github("my token").get_repo("ponylang/ponyc")
 	//
 	// Do something with the repo once the promise is fulfulled
 	// in our case, get the issue
@@ -31,7 +31,7 @@ main: {
 fetch_issue #(number Int, repo Repository, Promise(Issue)) {
 	repo.get_issue(number)
 }
-print_issue_title #(issue Promise(Issue), Unit) {
+print_issue_title #(issue Promise(Issue)) {
 	issue.then({ i Issue
 		print("Issue: ${i.title()}")
 	})
@@ -42,6 +42,5 @@ Promise: {
   next
   flatten_next
   add
-
 }
 ```

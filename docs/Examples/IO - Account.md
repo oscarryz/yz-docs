@@ -4,7 +4,7 @@ https://iolanguage.org/samples/index.html
 
 
 ```js
-account: { 
+Account: { 
     balance: 0.0
     deposit : { 
         v Decimal
@@ -14,6 +14,7 @@ account: {
         println('Account balance ${balance}')
     }
 }
+account : Account()
 print( "initial: " )
 account.show()
 println("Depositiong $10\n")

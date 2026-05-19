@@ -22,9 +22,9 @@ Using annotations?
 test: std.test
 assert: std.test.assert
 
-'[test: "Main suilte"]'
+`!:[Test]`
 main_test: {
-	'[test: "Should work"]'
+	`test-name: "Should work"`
 	exploration: {
 		result: 2 + 2
 		assert.equal(result, 4)
@@ -40,9 +40,9 @@ Using annotations?
 test: std.test
 assert: std.test.assert
 
-'test: "Main suilte"'
+`!:[Test]`
 main_test: {
-	'test: "Should work"'
+	`test-name: "Should work"`
 	exploration: {
 		result: 2 + 2
 		assert.equal(result, 4)
@@ -56,10 +56,11 @@ Using test docs
 
 ```js
 `
-Some descripton
+!:[Test]
+test-desc: "Some descripton"
 test: {
 	result: sum(2, 2)
-     test.assert.equal(result, 4)
+    assert: result == 4
 }
 `
 sum: { a Int; b Int; a + b }

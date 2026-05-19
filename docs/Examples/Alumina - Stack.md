@@ -5,17 +5,20 @@ https://github.com/tibordp/alumina
 ```js
 stack: {
     new: {
-        with_capacity(0)
+	    T
+        with_capacity(T, 0)
     }
     with_capacity: {
+	    T
         capacity Int
         // capacity is not used but in the
         // oriinal example it was used to
         // create an array of size capacity
-        Stack(data: [T](), len: 0)
+        Stack(data=[T](), len: 0)
     }
     Stack: {
-        data [T]()
+        T
+        data [T]
         len Int
         reserve: {
             additional Int
@@ -26,14 +29,16 @@ stack: {
             }
         }
         push: {
-	    value T
+	        value T
             reserve(1)
             data[len] = value
             len = len + 1
         }
-        <<: push
-        pop: {
+        << : push
+        pop #(T) {
             len = len - 1
+            // should remove from underlaying
+            // data 
             data[len]
         }
 
@@ -46,7 +51,7 @@ stack: {
     }
 }
 main: {
-    v: stack.new()
+    v Stack(String) =  stack.new(String)
     v << 'Stack\n'
     v << 'a '
     v << 'am '

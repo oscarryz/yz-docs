@@ -27,8 +27,7 @@ main: {
 	print(get_first_non_empty([[1, 2], [3, 4, 5], []]))
 	print(get_first_non_empty([[Int](), [Int](), [Int]()]))
 }
-get_first_non_empty: {
-	lists [[T]]
+get_first_non_empty #(lists [[T]], [T])
 
 	match {
       list[0].length() == 0 => list[0]

@@ -5,10 +5,12 @@
 
 ```js
 Stack: {
-
-  data: { None() }
+  T
+  // this doesn't work because of the Self data 
+  // type which doesn't exists
+  data #(Some(#(val T, next Self)){ None() }
   push: {
-    element
+    element T
     curr_data: data()
     Stack(
         data: {
@@ -26,5 +28,5 @@ Stack: {
 
 }
 
-Stack().push(3).push(2).peek().print()
+Stack(Int).push(3).push(2).peek().print()
 ```

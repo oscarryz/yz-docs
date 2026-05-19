@@ -15,9 +15,10 @@ The producer knows when to stop
 // WORKS
 // To make it work as close as possible, the squarer needs to invoke the counter // until it closes. The counter needs to know when to stop
 `
-Creates a block that returns an Int and a Bool every times it is invoked.
+!:[Doc]
+doc: 'Creates a block that returns an Int and a Bool every times it is invoked.
 It will continue to be invoked while n < 100
-This counter is the "producer"
+This counter is the "producer"'
 `
 counter: {
 	n: -1
@@ -76,7 +77,7 @@ squarer: {
 	}
 }
 // The printer is a block that takes an Int and prints it
-printer #(n Int, Unit) {
+printer #(n Int) {
     print(n)
 }
 main: {

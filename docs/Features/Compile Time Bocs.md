@@ -8,7 +8,8 @@ Yz provides a compile-time execution system built from regular Yz code. Compile-
 
 The system is built on one rule:
 
-> **A `compile_time: [...]` variable inside a boc's infostring triggers `Compile` implementations during type inference. Their return values are merged into the parent boc.**
+> **A `compile_time: [...]` variable inside a boc's infostring triggers `Compile` implementations during type inference. Their return values are merged into the parent boc.
+> The variable name `!` can also be used**
 
 Everything else follows from existing Yz concepts.
 

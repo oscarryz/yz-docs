@@ -10,14 +10,17 @@ BinTree: {
 }
 leaf = BinTree()
 
-`'
-Calculate the sum of node values
-Examples:
-  >> tree_sum(leaf)
-  0
-  >> node4: BinTree(4)
-  >> tree_sum(BinTree(5, node4))
-  9
+`
+!:[Example]
+example: {
+  desc: "Calculate the sum of node values"
+  tree_sum(leaf)
+  node4: BinTree(4)
+  tree_sum(BinTree(5, node4))
+  output: [
+	  "0",
+	  "9"
+  ]
 '`
 tree_sum: { t BinTree
   match {

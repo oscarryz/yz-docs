@@ -1,12 +1,19 @@
 #example
 
-https://arturo-lang.io/playground/?example=first-class%20functions
+https://arturo-lang.io/playground?example=First-class%20functions
 
  ```js
-`yz> fcf()
-sin/asin => 0.5
-cos/acos => 0.4999999999999999
-cube/croot => 0.5
+
+`
+!:[Example]
+example: {
+  fcf()
+  output: [
+  "sin/asin => 0.5"
+  "cos/acos => 0.4999999999999999"
+  "cube/croot => 0.5"
+  ]
+}  
 `
 fcf: {
     cube:  { x Int; x ^ 3 }
@@ -19,7 +26,7 @@ fcf: {
 
     num: 0.5
 
-    0.to(2).each({
+    0.to(func_list.len()).each({
         i Int
         result: func_list[i](num)
         print('${names[i]} => ${inv_list[i](result)}')

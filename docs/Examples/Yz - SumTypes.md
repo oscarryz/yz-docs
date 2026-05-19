@@ -47,7 +47,7 @@ Status: {
     Pending(),
   }
 
-classify_status #(status Status, Unit) {
+classify_status #(status Status) {
   match status
     { Success => print("Successful response (2xx): ${status.code}") },
     { Warning => print("Redirection (3xx): ${status.code}") },

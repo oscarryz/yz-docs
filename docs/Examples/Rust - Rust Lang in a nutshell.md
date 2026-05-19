@@ -6,19 +6,20 @@ https://www.softax.pl/blog/rust-lang-in-a-nutshell-1-introduction/
 
 ```js
     x: 3
-    y: 9.0
+    y Decimal = 9.0
 
+	a,b = {"foo", "bar"}()
     s1: 'Hello world'
     s2: s1
 
     // Functions
-    test: { x Int }
-    add: { x Decimal; y Decimal; r Decimal }
+    test #( x Int ) {}
+    add  #( x Decimal, y Decimal,  Decimal ){}
 
-    own_and_forget: { v List(String) }
-    print: { v List(String) }
-    change: { v List(String) }
-    main: { result Result(Unit, std.io.Error) }
+    own_and_forget #( v List(String) ){}
+    print #( v List(String) ){}
+    change #(v List(String) ){}ß
+    main: { result Result("", std.io.Error) }
 
     foo: { x Int
         x > 0 ? { x }, { x + 1 }

@@ -1,6 +1,8 @@
+#example 
+
 https://odin-lang.org/
 
-```yz
+```js
 main: { 
 	program : "+ + * 😃 - /"
 	accumulator: 0

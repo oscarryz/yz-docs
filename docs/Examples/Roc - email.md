@@ -61,7 +61,7 @@ handle_error: {
 Example using the `>>=` function
 
 ```js
-store_email #(Path, Result(Unit,String)) {
+store_email #(Path, Result(String,String)) {
   path Path
   fs.read(path) >>= { url String
     http.get(url, json.UTF8)

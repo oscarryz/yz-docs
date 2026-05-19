@@ -2,14 +2,15 @@
 https://github.com/jinyus/related_post_gen/blob/main/v/related.v
 
 ```js
+`!:[Json]`
 Post: {
-  "json: '_id'"
+  `json: "_id"`
    id String
 
-  "json: 'title'"
+  `json: "title"`
    title String
 
-  "json: 'tags'"
+  `json: "tags"`
    tags [String]()
 }
 
@@ -18,8 +19,9 @@ PostWithSharedTags: {
    shared_tags Int
 }
 
+`!:[Json]`
 RelatedPost: {
-    'json: "_id"'
+    `json: "_id"`
     id String
     tags [String]()
     related [Post]()

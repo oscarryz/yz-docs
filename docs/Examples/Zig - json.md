@@ -31,24 +31,25 @@ pub fn main() !void {
 ```
 
 ```js
-payload: `
+payload: "
         "vals": {
             "testing": 1,
             "production": 42
         },
         "uptime": 9999
-  `
+  "
+`!:[JSON]`
 Configuration: {
-   'json:vals'
+   `json:vals`
    values: {
-       'json:testing'
+       `json:testing`
        tests Int
 
-       'json:production'
+       `json:production`
        prod Int
    }
 
-   'json:uptime'
+   `json:uptime`
    ut Int
 }
 config: {

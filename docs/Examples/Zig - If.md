@@ -57,15 +57,15 @@ say_hello_ignore_error: {
 dude_is_edish_or_error #(name String, Result(String)) = {
     name String
     match {
-        name == 'Ed' => {
+        name == 'Ed' => 
             print('Hello ${name}')
             Result.Ok(true)
-        }
+        
     }, {
-        name == 'Edward' => {
+        name == 'Edward' => 
             println('Hello again ${name}')
             Result.Ok(false)
-        }
+        
     }, {
         Result.Err('Wrong person')
     }
@@ -88,15 +88,15 @@ say_hello_edish: {
 dude_is_maybe_ed: {
     name String
     match {
-        name == 'Ed' => {
+        name == 'Ed' => 
             print('Hello ${name}')
             Option.Some(true)
         }
     }, {
-        name == 'Edward' => {
+        name == 'Edward' => 
             println('Hello again ${name}')
             Option.Some(false)
-        }
+        
     }, {
         println('Hello world')
         Option.None()

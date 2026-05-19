@@ -2,7 +2,7 @@
 
 Fat - http-server
 
-https://gitlab.com/fatscript/fry/-/blob/main/sample/http-server.fat?ref_type=heads
+https://gitlab.com/fatscript/fry/-/blob/main/sample/http_server.fat
 
 ```js
 Chunk: fat.type.Chunk
@@ -16,8 +16,7 @@ routes: [
   ),
   Route(
     '/json',
-    post: #(HttpRequest, HttpResponse) = {
-        _ HttpRequest
+    post #(HttpRequest, HttpResponse) {
         HttpResponse(
           body: { "message": "hello" }
         )

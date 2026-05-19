@@ -6,7 +6,9 @@ https://www.anardil.net/2018/binary-tree-in-haskell.html
 
 binary_tree: {
 
-  "deriving:['Read', 'Equal']"
+  
+  `!:[Derive]
+  deriving:['Read', 'Equal']`
   Tree: {
     T
     Empty(),
@@ -33,7 +35,7 @@ binary_tree: {
     //   < #(T, Bool),
     //   > #(T,Bool)
     // )
-    // insert #(a Ord)
+    // insert #(a T Ord)
    insert #(a T) = {
       a T
       self.Empty ? {
@@ -55,7 +57,7 @@ binary_tree: {
       }
     }
   }
-  "Helper function"
+  // Helper function
   show #(t Tree(T), depth Int, width Int, String) {
     t.Empty ? { " " }, {
       leftside: show(t.left, depth + width, width)
@@ -94,7 +96,7 @@ WhildMushroom: {
   name String
   is_edible Bool
 }
-"derive:['Debug']"
+`derive:["Debug"]`
 InedibleError: {}
 
 mushrooms: [
@@ -112,13 +114,13 @@ mushrooms: [
   ),
 ]
 
-total_price [Result]()(String, InedibleError) =
+total_price [Result(String, InedibleError)]() =
   mushooms.map({
     m Mushroom,
     m.is_edible ? {
-      Ok(m.name)
+      Option.Ok(m.name)
     }, {
-      Err(InedibleError)
+      Option.Err(InedibleError)
     }
   })
 ```

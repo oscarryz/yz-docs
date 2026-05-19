@@ -61,7 +61,7 @@ get_all_tasks #(Result([Task], Error)) {
 /*
 Adds a new task object to the JSON file.
 */
-add_task #(task_description String, Unit) {
+add_task #(task_description String) {
 
     // 1. Define and initialize the new Task object using the new syntax
     new_task: Task(
@@ -111,7 +111,7 @@ add_task #(task_description String, Unit) {
 /*
 Reads all task objects and prints them.
 */
-view_tasks #(Unit) {
+view_tasks #() {
     tasks_result: get_all_tasks()
 
     tasks_result.and_then({

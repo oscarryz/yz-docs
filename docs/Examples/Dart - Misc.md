@@ -59,9 +59,9 @@ result: fibonacci(20)
 /*
     Multiline
 */
-'Value of n is: ${n}'
+// Value of n is: ${n}
 n: 0
-info(n)  // Value of n is: 0
+// no longer info(n)  // Value of n is: 0
 ```
 
 ```js
@@ -82,15 +82,15 @@ foo: lib2.lib2.foo
 
 ```js
 
+`!:[Example, Deprecate]`
 Television: {
     // Use [turn_on] to turn the power on instead
-    `Example:
-     yz> tv: Television()
-     ... tv.activate()
-
-
-    @Deprecated('Use turn_on instead')
-    Something else {something_else()}
+	`
+	example: {
+		tv: Television()
+		tv.activate()
+	}
+	deprecate: "Use turn_on instead"
     `
     activate: { turn_on() }
 
@@ -101,21 +101,43 @@ Television: {
 }
 
 // Use the element's info
-tv: Television()
-info(tv.activate) // @Deprecated('Use turn_on instead')
-process_annotations(info(tv.activate)) // Reads the `@` elements
-process_doc(info(tv.activate)) // Read the `Examples:` section etc.
-process_xyz(info(tv.activate)) // might read something else...
+tv: Television() // deprecate notice on build time
+// generates Example docs
 ```
 
 ```js
+// The example below is broken beyond repair, is kept for historical purposes
 // Write can have an I/O error usually retuns the number of bytes written
-write: { data [Int](); r Int; eh: {Int}
+write:  data [Int](); r Int; eh: {Int}
  ...
 }
 n: write([1, 2, 3], eh: { e Int
      match { e == write.ERROR => { print('Error: ${info(e)}') } }
  })
 n: write([4, 5, 6])
+
+// What was intended was this: 
+// A write boc that takes an array of ints
+// and returns a result with int as the number of writtent bytes if Ok
+// and a strcuture with `written` and `message` if there is n error
+write #(data [Int], Result(Int,#(written Int, message String))) {
+     ... 
+}
+// write it
+res: write([1,2,3])
+match res {
+	Ok => /* do nothing */
+}, {
+	Err => print("Error message: ${res.message}, bytes written ${res.written}") 
+}
+// also 
+
+written : write([1,2,3]).or({
+	e Result.Err(#(written Int, message String))
+	print("Error message: ${e.message}, bytes written ${e.written}")
+	e.written
+})
+// written has either way the number of bytes written
+
 
 ```

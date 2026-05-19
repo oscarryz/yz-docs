@@ -5,8 +5,13 @@ https://inko-lang.org/
 
 ```js
 
-
-
+div #(left Int, right Int, Result(Int,String)) {
+	match {
+		right == 0 => Result.Err("division by zero")
+	}, {
+		Result.Ok( left / right)
+	}
+}
 // Explicit syntax
 div1: {
 	left Int
@@ -48,7 +53,7 @@ main: {
     // we can also just "unwrap" the Ok value
     div(10, 2).get() // will exit if error
 }
-// result library
+// result library (obsolete, use type variant instead)
 result: {
 	Result: {
 		is_ok #(Bool)

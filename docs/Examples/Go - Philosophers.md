@@ -3,7 +3,7 @@
 
 https://web.archive.org/web/20230329041616/https://www.golangprograms.com/go-language/concurrency.html
 
-```yz
+```js
 Philosopher : {
   name String
   left Fork

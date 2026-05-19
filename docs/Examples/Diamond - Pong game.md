@@ -100,14 +100,11 @@ reset: {
     ball.dy = math.random() * 10 - 5
 }
 
-intersects #(ball Ball, paddle Paddle, Bool) = {
-      ball Ball
-      paddle Paddle
-
+intersects #(ball Ball, paddle Paddle, Bool) {
       ball.x + ball.size < paddle.x
-  ||  ball.x > paddle.x + paddle.width
-  ||  ball.y + ball.size < paddle.y
-  ||  ball.y > paddle.y + paddle.height
+  ||  {ball.x > paddle.x + paddle.width}
+  ||  {ball.y + ball.size < paddle.y}
+  ||  {ball.y > paddle.y + paddle.height}
   == false
 }
 

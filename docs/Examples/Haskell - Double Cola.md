@@ -9,7 +9,8 @@ Video
 ```js
 map: std.collections.map
 
-'derive: [Show]'
+`!:[Derive]
+derive: [Show]`
 Group: {
   group_size Int
   group_name String

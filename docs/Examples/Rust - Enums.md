@@ -14,7 +14,7 @@ WebEvent: {
 
 }
 
-inspect #(event WebEvent, Unit) {
+inspect #(event WebEvent) {
    match event {
 	   WebEvent.PageLoad => println("page loaded")
    }, {
