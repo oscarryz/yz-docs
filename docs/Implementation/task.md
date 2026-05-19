@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **52 golden + 1 error conformance tests passing** — `go test -race ./...` passes
+- **52 golden + 2 error conformance tests passing** — `go test -race ./...` passes
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -88,7 +88,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0006] Standalone boc invocation** — `p : { print("hello") }; p()` requires `p.call()` workaround; blocked on YZC-0004
 - [ ] **[YZC-0007] Unused variables in generated Go** — Yz allows unused vars; Go rejects them; fix: after lowering a scope, append `_ = varName` for any declared name never referenced in subsequent IR nodes
 - [ ] **[YZC-0008] Reentrant inline calls unsafe in HOF closures** — closure emitted inside a `ScheduleMulti` body and passed as argument to another boc contains sync-body calls that bypass cown acquisition; fix: sub-generator with `heldCowns = nil` when emitting closure args; dormant until HOF closures operate on cown-bearing types
-- [ ] **[YZC-0035] Sema does not check boc body return type against declared output** — when a boc declares a non-Unit output type (e.g. `foo #(Int)`) but the body's last expression returns Unit (e.g. only `time.sleep` or `print` calls), sema accepts it silently; the lowerer then emits `return std.TheUnit` which fails at `go build` with a type error; affects any void-returning call in that position, not just sleep; fix: after inferring the body's return type, verify it matches the declared output type and report a sema error
+- [x] **[YZC-0035] Sema does not check boc body return type against declared output** — when a boc declares a non-Unit output type (e.g. `foo #(Int)`) but the body's last expression returns Unit (e.g. only `time.sleep` or `print` calls), sema accepts it silently; the lowerer then emits `return std.TheUnit` which fails at `go build` with a type error; affects any void-returning call in that position, not just sleep; fix: after inferring the body's return type, verify it matches the declared output type and report a sema error
 
 ### Language Features
 
