@@ -95,7 +95,8 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0034] Definite assignment analysis** — `name Type` (uninitialized typed declaration) must be assigned before first use; `Bar()` with unassigned required fields is a compile error unless all paths assign before read; crossing a boc boundary requires fully initialized values at the call site. Sema pass: build per-scope control-flow graph; track assigned set; report "field f used before initialization" on unassigned reads. Spec: §3.2. Depends on: YZC-0033.
 
 - [ ] **[YZC-0009] Range iteration** — `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver
-- [ ] **[YZC-0010] HOF iteration + cown happens-before** — design question: does `Range.do()` force each closure thunk before the next iteration (sequential) or fire-and-forget into a BocGroup (concurrent)? See `docs/Questions/HOF iteration and cown happens-before.md`; must be resolved before implementing YZC-0009
+- [ ] **[YZC-0010] HOF iteration + cown happens-before** — design question: does `Range.do()` force each closure thunk before the next iteration (sequential) or fire-and-forget into a BocGroup (concurrent)? See `docs/Questions/HOF iteration and cown happens-before.md`; must be resolved before implementing YZC-0009; may depend on YZC-0036
+- [ ] **[YZC-0036] While loop yield and external caller interleaving** — `while` is implemented as boc recursion; each iteration is a successor of the previous, so external callers on the same cown can never interleave — the infinite loop in the `Concurrency.md` producer-consumer example can never yield to `boring.next()`. Design question: tail scheduling vs explicit yield vs channel primitive vs two-phase while. See `docs/Questions/While loop yield and external caller interleaving.md`. Depends on: BOC scheduling model. Blocks: correct producer-consumer example in docs.
 - [ ] **[YZC-0011] Named arguments in constructor calls** — `Person(name: "Alice", age: 30)`
 - [ ] **[YZC-0012] Multiple return values** — `x, y = swap(x, y)` — multi-assign LHS not in any golden test
 - [ ] **[YZC-0013] Array append via `<<`** — `a << item` → `a.Append(item)`; `Array.Append` exists in yzrt
@@ -103,7 +104,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0015] Non-word boc names** — `balance+= #(amount Int) { ... }` — parser only allows word identifiers in boc declarations; fix: accept `NON_WORD` token; map to Go-safe name via symbol table; add golden test
 - [ ] **[YZC-0016] String concatenation with `++`** — lowerer emits `Plusplus` but runtime `String` has no such method; fix: add `Plusplus` to `String` in yzrt
 - [ ] **[YZC-0017] Dict optional access** — `d[key]` should return `Option(V)`; currently panics on missing key via `At()`
-- [x] **[YZC-0018] Bool methods `&&` / `||`** — `Bool.Ampamp` / `Bool.Pipepipe` exist in yzrt; golden test 53 confirms end-to-end. *Note: current operators are eager and special-cased on the built-in Bool; when Bool moves to Yz source (YZC-0031), `&&`/`||` become closure-taking methods for lazy evaluation: `true && { 1 == 2 }` — the second operand is a `#(Bool)` closure, not eagerly evaluated. Compiler must stop special-casing and lower `&&`/`||` as boc calls at that point.*
+- [x] **[YZC-0018] Bool methods `&&` / `||`** — `Bool.Ampamp` / `Bool.Pipepipe` exist in yzrt; golden test 53 confirms end-to-end. *Note: current operators are eager sync calls, special-cased on built-in Bool; when Bool moves to Yz source (YZC-0031), `&&`/`||` become lazy closure-taking boc methods that go through the normal BOC cycle — see YZC-0031 sub-item.*
 - [ ] **[YZC-0019] `break` / `continue` / `return` in loops** — blocked on concurrency model settling; lowerer should emit compile error when encountered rather than silently dropping
 - [ ] **[YZC-0020] `to_str()` mapping on user types** — sema rejects `p.to_str()` on user structs ("no field to_str"); needs sema to expose `to_str` on all struct types and lowerer to emit `ToStr()` or a default Go `String()` fallback
 
@@ -204,14 +205,14 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 - [ ] Annotate native ops per method
 - [ ] Implement higher-level methods in Yz
 - [ ] Remove all primitive-type special-casing from the compiler
-- [ ] `Bool.&&` / `Bool.||` — rewrite as lazy closure methods `#(other #(Bool), Bool)`; update lowerer to emit boc calls instead of eager `Ampamp`/`Pipepipe`; `true && { 1 == 2 }` must not evaluate the right-hand side unless the left is true
+- [ ] `Bool.&&` / `Bool.||` — rewrite as lazy closure methods `#(other #(Bool), Bool)`; calls go through the normal BOC cycle (return `*Thunk[Bool]`, participate in BocGroup/GoWait) instead of the current eager sync `Ampamp`/`Pipepipe`; lowerer wraps bare expression operands in a closure: `a && b` → `a.Ampamp({ b })`
 
 ---
 
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0036**
+- Numbers are assigned in creation order; next available: **YZC-0037**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
