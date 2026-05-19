@@ -108,3 +108,7 @@ alice.password  // not accessible
 ```
 
 This is Yz's encapsulation model: the form you choose determines visibility. Short boc declaration = everything public. Boc declaration = explicitly controlled interface.
+
+## Example
+
+[Stack (interface-first pattern)](../Examples/1ML%20-%20Stack.md) — a boc interface declared separately from its implementation, showing structural conformance and the assign-later pattern.
