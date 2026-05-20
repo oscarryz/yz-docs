@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **57 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **58 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -107,7 +107,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [x] **[YZC-0018] Bool methods `&&` / `||`** — `Bool.Ampamp` / `Bool.Pipepipe` exist in yzrt; golden test 53 confirms end-to-end. *Note: current operators are eager sync calls, special-cased on built-in Bool; when Bool moves to Yz source (YZC-0031), `&&`/`||` become lazy closure-taking boc methods that go through the normal BOC cycle — see YZC-0031 sub-item.*
 - [ ] **[YZC-0019] `break` / `continue` / `return` in loops** — blocked on concurrency model settling; lowerer should emit compile error when encountered rather than silently dropping
 - [ ] **[YZC-0020] `to_str()` mapping on user types** — sema rejects `p.to_str()` on user structs ("no field to_str"); needs sema to expose `to_str` on all struct types and lowerer to emit `ToStr()` or a default Go `String()` fallback
-- [ ] **[YZC-0037] Decimal type end-to-end** — `std.Decimal` exists in yzrt but literals, arithmetic, comparison, and methods (`abs`, `pow`, `to_str`) are not wired up in sema/lowerer; add golden test covering all spec'd operations. Spec: `docs/Features/Decimal.md`.
+- [x] **[YZC-0037] Decimal type end-to-end** — `std.Decimal` wired end-to-end: literals (`3.14`), arithmetic (`+`,`-`,`*`,`/`), comparisons, unary minus, `abs()`, `pow()`, `to_str()` all compile and generate correct Go; `to_str` added as alias for `to_string` in builtinMethods and yzMethodToGoName; fixed misleading "Integer division result" section in docs/Features/Decimal.md. Golden test 58.
 - [ ] **[YZC-0038] `Result(T,E)` type** — error handling doc specifies `Result(T,E)` alongside `Option(T)` but `Result` is not implemented in yzrt; implement as a variant type, wire up sema/lowerer recognition; `and_then`/`or_else` method chaining follows from YZC-0014. Spec: `docs/Features/Error handling.md`.
 - [ ] **[YZC-0039] Operators audit** — systematic comparison of operators documented in spec vs. implemented in yzrt and recognised by the lowerer; covers `%`, bitwise ops, string operators, and any gaps; add golden tests for each gap found. See `docs/Questions/Operators.md`.
 - [ ] **[YZC-0040] Smart Nesting / Namespace Flattening** — when a directory name matches the boc file inside it (e.g. `house/house.yz`), the namespace is flattened so callers use `house.method` not `house.house.method`; implement in FQN resolution. Spec: `docs/Features/Smart Nesting and Namespace Flattening.md`. Depends on: YZC-0021.

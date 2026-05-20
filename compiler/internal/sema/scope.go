@@ -80,6 +80,7 @@ var builtinMethods = map[string]map[string]Type{
 		"neq":       TypBool,  // !=
 		"abs":       TypInt,
 		"to":        &StructType{Name: "Range"}, // 1.to(10) → Range
+		"to_str":    TypString,
 		"to_string": TypString,
 	},
 	"Decimal": {
@@ -95,6 +96,7 @@ var builtinMethods = map[string]map[string]Type{
 		"neq":       TypBool,
 		"abs":       TypDecimal,
 		"pow":       TypDecimal,
+		"to_str":    TypString,
 		"to_string": TypString,
 	},
 	"String": {
@@ -112,6 +114,7 @@ var builtinMethods = map[string]map[string]Type{
 		"to_upper":   TypString,
 		"to_lower":   TypString,
 		"trim":       TypString,
+		"to_str":     TypString,
 		"to_string":  TypString,
 	},
 	"Bool": {
@@ -120,6 +123,7 @@ var builtinMethods = map[string]map[string]Type{
 		"qm":        Unknown,  // ? — return type depends on boc args; resolved later
 		"eqeq":      TypBool,
 		"neq":       TypBool,
+		"to_str":    TypString,
 		"to_string": TypString,
 	},
 }

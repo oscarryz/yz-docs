@@ -35,12 +35,16 @@ x.pow(2.0)        // x squared
 x.to_str()        // "3.14" — convert to String
 ```
 
-## Integer division result
+## Division is never truncated
 
-Unlike many languages, division of two `Decimal` values always produces a `Decimal`:
+`/` on `Decimal` values always returns the full result:
 
 ```yz
 5.0 / 2.0   // 2.5
 ```
 
-For integer division, use `Int`.
+For truncated (integer) division, use `Int` values instead:
+
+```yz
+5 / 2   // 2
+```

@@ -1849,6 +1849,7 @@ var builtinGoName = map[string]string{
 // capitalize(yzName) need an entry here.
 var yzMethodToGoName = map[string]string{
 	"to_string": "ToStr",
+	"to_str":    "ToStr",
 }
 
 // lowerMethodName converts a Yz method name to the exported Go method name that
@@ -1867,6 +1868,7 @@ func lowerMethodName(yzName string) string {
 // *Thunk wrappers, since Thunk wrapping is added by the lowerer at call sites).
 var builtinConstraintSig = map[string]string{
 	"to_string": "ToStr() std.String",
+	"to_str":    "ToStr() std.String",
 	"length":    "Length() std.Int",
 	"plus":      "Plus($T) $T",
 	"minus":     "Minus($T) $T",
