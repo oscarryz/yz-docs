@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **54 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **55 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -83,7 +83,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [x] **[YZC-0001] Variants broken** — variants were not updated for the BOC model; see `examples/variants`
 - [ ] **[YZC-0002] Cross-package broken** — broke during BOC migration
 - [x] **[YZC-0003] Assigning Unit-returning boc to variable** — `a : foo()` where `foo` returns Unit should be a sema error (analogue to Go's `x := f()` where `f` returns nothing); detect in sema; add error golden test
-- [ ] **[YZC-0004] Top-level boc callable as function** — `foo: { time.sleep(1); "done" }` lowers as singleton struct, not callable as `foo()`; needs sema + lowerer fix
+- [x] **[YZC-0004] Top-level boc callable as function** — implemented: `lowerCall` and `isBocMethodCall` extended for plain body singletons (BocType, Node != nil, ParentTypeName == "") → `Foo.Call(args)`, and structured singletons (StructType{IsSingleton:true}) → `Foo.Call(args)`; `lowerBodyOnlySingleton` now reads return type from sema and converts last ExprStmt to ReturnStmt for non-Unit returns. Golden test 55.
 - [~] **[YZC-0005] Double return with sleep** — `foo: { time.sleep(1); 1 }` emits two return statements in generated Go — *not reproducible as of BOC work; superseded by YZC-0035*
 - [ ] **[YZC-0006] Standalone boc invocation** — `p : { print("hello") }; p()` requires `p.call()` workaround; blocked on YZC-0004
 - [x] **[YZC-0007] Unused variables in generated Go** — implemented: `emitBodyStmts` pre-scans the full statement list via `usedNames`/`collectUsedStmt`/`collectUsedExpr`; emits `_ = varName` immediately after any `DeclStmt` whose name is never read (plain-Ident assignment targets excluded); `SpawnExpr.GroupVar`, `SpawnExpr.StoreVar`, `WaitStmt.GroupVar` counted as reads. Golden test 54.
@@ -94,12 +94,12 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 - [ ] **[YZC-0034] Definite assignment analysis** — `name Type` (uninitialized typed declaration) must be assigned before first use; `Bar()` with unassigned required fields is a compile error unless all paths assign before read; crossing a boc boundary requires fully initialized values at the call site. Sema pass: build per-scope control-flow graph; track assigned set; report "field f used before initialization" on unassigned reads. Spec: §3.2. Depends on: YZC-0033.
 
-- [ ] **[YZC-0009] Range iteration** — `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver
+- [ ] **[YZC-0009] Range iteration** — `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver. Depends on: YZC-0031.
 - [ ] **[YZC-0010] HOF iteration + cown happens-before** — resolved by YZC-0036: HOF methods use `a→b→a` indirect recursion → ScheduleAsSuccessor at each step → sequential processing behaviour. No further design needed; implement as sequential closure calls.
 - [x] **[YZC-0036] While loop yield and external caller interleaving** — implemented: BocDecl singletons now use `std.Schedule(&self.Cown, ...)` instead of `std.Go`; recursive self-calls emit `self.Call(args)` with `IsRecursive=true` so codegen bypasses `ScheduleAsSuccessor` and uses the regular goroutine path (tail-queue semantics). Non-recursive inner calls retain `ScheduleAsSuccessor`. See `docs/Questions/solved/While loop yield and external caller interleaving.md`.
 - [ ] **[YZC-0011] Named arguments in constructor calls** — `Person(name: "Alice", age: 30)`
 - [ ] **[YZC-0012] Multiple return values** — `x, y = swap(x, y)` — multi-assign LHS not in any golden test
-- [ ] **[YZC-0013] Array append via `<<`** — `a << item` → `a.Append(item)`; `Array.Append` exists in yzrt
+- [ ] **[YZC-0013] Array append via `<<`** — `a << item` → `a.Append(item)`; `Array.Append` exists in yzrt. Depends on: YZC-0031.
 - [ ] **[YZC-0014] Option/Result method chaining** — `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })`
 - [x] **[YZC-0015] Non-word boc names** — `balance+= #(amount Int) { ... }` — parser only allows word identifiers in boc declarations; fix: accept `NON_WORD` token; map to Go-safe name via symbol table; add golden test
 - [ ] **[YZC-0016] String concatenation with `++`** — lowerer emits `Plusplus` but runtime `String` has no such method; implement `++` in Yz source when String moves to stdlib. Depends on: YZC-0031.

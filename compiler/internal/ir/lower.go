@@ -441,18 +441,45 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 	typeName := "_" + name + "Boc"
 	sd := &SingletonDecl{TypeName: typeName, VarName: capitalize(name)}
 
+	// Determine the actual return type from sema (YZC-0004).
+	resultType := "std.Unit"
+	if sym := l.analyzer.LookupInFile(name); sym != nil {
+		if bt, ok := sym.Type.(*sema.BocType); ok && len(bt.Returns) > 0 {
+			if rt := l.goType(bt.Returns[0]); rt != "std.Unit" {
+				resultType = rt
+			}
+		}
+	}
+
 	prevCtx := l.contextName
 	l.contextName = name
 	defer func() { l.contextName = prevCtx }()
 
 	innerStmts := l.lowerSingletonBodyStmts(b.Elements)
-	thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown"}
+
+	// For non-Unit returns: lowerSingletonBodyStmts appends ReturnStmt(unit) after
+	// the last value expression. Convert [..., ExprStmt(val), ReturnStmt(unit)]
+	// to [..., ReturnStmt(val)] so the value is actually returned.
+	if resultType != "std.Unit" {
+		n := len(innerStmts)
+		if n >= 2 {
+			if ru, ok := innerStmts[n-1].(*ReturnStmt); ok {
+				if _, isUnit := ru.Value.(*UnitLit); isUnit {
+					if es, ok := innerStmts[n-2].(*ExprStmt); ok {
+						innerStmts = append(innerStmts[:n-2], &ReturnStmt{Value: es.Expr})
+					}
+				}
+			}
+		}
+	}
+
+	thunk := &ThunkExpr{ResultType: resultType, Body: innerStmts, Spawn: true, RecvCown: "&self.Cown"}
 	callMethod := &MethodDecl{
 		RecvType: "*" + typeName,
 		RecvName: "self",
 		Name:     "Call",
 		Params:   nil,
-		Results:  []string{"*std.Thunk[std.Unit]"},
+		Results:  []string{"*std.Thunk[" + resultType + "]"},
 		Body:     []Stmt{&ExprStmt{Expr: thunk}},
 	}
 	sd.Methods = append(sd.Methods, callMethod)
@@ -2093,8 +2120,13 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			if sym.ParentTypeName != "" {
 				return &FuncCall{Func: &Ident{Name: "New" + sym.ParentTypeName + id.Name}, Args: args}
 			}
-			// Struct type constructor call: Named("Alice") → NewNamed(args)
-			if _, isStruct := sym.Type.(*sema.StructType); isStruct {
+			// Struct type constructor call: Named("Alice") → NewNamed(args).
+			// Lowercase singletons with inner structure (IsSingleton) are called
+			// via their package-level singleton var's Call() method (YZC-0004).
+			if st, isStruct := sym.Type.(*sema.StructType); isStruct {
+				if st.IsSingleton {
+					return &MethodCall{Recv: &Ident{Name: capitalize(id.Name)}, Method: "Call", Args: args}
+				}
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
 			// BocDecl singletons: each external call creates a fresh instance so
@@ -2123,6 +2155,12 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 					Method: "Call",
 					Args:   args,
 				}
+			}
+			// Plain body singleton (BocType, file-level, not a BocDecl):
+			// foo() → Foo.Call(args). Node != nil excludes builtins;
+			// ParentTypeName == "" excludes variant constructors. (YZC-0004)
+			if _, isBoc := sym.Type.(*sema.BocType); isBoc && sym.Node != nil && sym.ParentTypeName == "" {
+				return &MethodCall{Recv: &Ident{Name: capitalize(id.Name)}, Method: "Call", Args: args}
 			}
 		}
 	}
@@ -2224,6 +2262,15 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		sym := l.analyzer.LookupInFile(id.Name)
 		if sym != nil {
 			if _, isBD := sym.Node.(*ast.BocDecl); isBD {
+				return true
+			}
+			// Plain body singleton (YZC-0004): sym.Node != nil excludes builtins;
+			// sym.ParentTypeName == "" excludes variant constructors.
+			if _, isBoc := sym.Type.(*sema.BocType); isBoc && sym.Node != nil && sym.ParentTypeName == "" {
+				return true
+			}
+			// Structured singleton (YZC-0004)
+			if st, isStruct := sym.Type.(*sema.StructType); isStruct && st.IsSingleton {
 				return true
 			}
 		}
