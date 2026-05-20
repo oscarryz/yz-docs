@@ -226,9 +226,10 @@ type Ident struct{ Name string }
 // MethodCall is recv.Method(args...).
 // Method is already the Go name (e.g. "Plus" for the Yz operator "+").
 type MethodCall struct {
-	Recv   Expr
-	Method string
-	Args   []Expr
+	Recv        Expr
+	Method      string
+	Args        []Expr
+	IsRecursive bool // true when callee FQN == enclosing BocDecl FQN (YZC-0036)
 }
 
 // FuncCall is func(args...) — for free functions and package-level calls.

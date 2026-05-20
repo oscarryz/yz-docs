@@ -8,7 +8,7 @@ type _greetBoc struct {
 }
 
 func (self *_greetBoc) Call(name std.String) *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		self.name = name
 		return std.Print(self.name)
 	})

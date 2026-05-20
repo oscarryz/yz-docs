@@ -36,7 +36,7 @@ type _greet_allBoc struct {
 }
 
 func (self *_greet_allBoc) Call(g Greeter) *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
+	return std.Schedule(&self.Cown, func() std.Unit {
 		self.g = g
 		return self.g.Greet().Force()
 	})

@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **53 golden + 2 error conformance tests passing** — `go test -race ./...` passes
+- **53 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -96,13 +96,13 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 - [ ] **[YZC-0009] Range iteration** — `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver
 - [ ] **[YZC-0010] HOF iteration + cown happens-before** — resolved by YZC-0036: HOF methods use `a→b→a` indirect recursion → ScheduleAsSuccessor at each step → sequential processing behaviour. No further design needed; implement as sequential closure calls.
-- [ ] **[YZC-0036] While loop yield and external caller interleaving** — **design resolved**: recursive call (callee FQN = caller FQN) → tail enqueue; non-recursive → ScheduleAsSuccessor. Gives `while` (direct recursion) producer semantics; HOF/indirect recursion gets sequential processor semantics. Indirect cycles (`a→b→a`) remain a known limitation. See `docs/Questions/While loop yield and external caller interleaving.md`. Implementation: lowerer must compare callee FQN to enclosing boc FQN before emitting Schedule vs ScheduleAsSuccessor.
+- [x] **[YZC-0036] While loop yield and external caller interleaving** — implemented: BocDecl singletons now use `std.Schedule(&self.Cown, ...)` instead of `std.Go`; recursive self-calls emit `self.Call(args)` with `IsRecursive=true` so codegen bypasses `ScheduleAsSuccessor` and uses the regular goroutine path (tail-queue semantics). Non-recursive inner calls retain `ScheduleAsSuccessor`. See `docs/Questions/solved/While loop yield and external caller interleaving.md`.
 - [ ] **[YZC-0011] Named arguments in constructor calls** — `Person(name: "Alice", age: 30)`
 - [ ] **[YZC-0012] Multiple return values** — `x, y = swap(x, y)` — multi-assign LHS not in any golden test
 - [ ] **[YZC-0013] Array append via `<<`** — `a << item` → `a.Append(item)`; `Array.Append` exists in yzrt
 - [ ] **[YZC-0014] Option/Result method chaining** — `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })`
-- [ ] **[YZC-0015] Non-word boc names** — `balance+= #(amount Int) { ... }` — parser only allows word identifiers in boc declarations; fix: accept `NON_WORD` token; map to Go-safe name via symbol table; add golden test
-- [ ] **[YZC-0016] String concatenation with `++`** — lowerer emits `Plusplus` but runtime `String` has no such method; fix: add `Plusplus` to `String` in yzrt
+- [x] **[YZC-0015] Non-word boc names** — `balance+= #(amount Int) { ... }` — parser only allows word identifiers in boc declarations; fix: accept `NON_WORD` token; map to Go-safe name via symbol table; add golden test
+- [ ] **[YZC-0016] String concatenation with `++`** — lowerer emits `Plusplus` but runtime `String` has no such method; implement `++` in Yz source when String moves to stdlib. Depends on: YZC-0031.
 - [ ] **[YZC-0017] Dict optional access** — `d[key]` should return `Option(V)`; currently panics on missing key via `At()`
 - [x] **[YZC-0018] Bool methods `&&` / `||`** — `Bool.Ampamp` / `Bool.Pipepipe` exist in yzrt; golden test 53 confirms end-to-end. *Note: current operators are eager sync calls, special-cased on built-in Bool; when Bool moves to Yz source (YZC-0031), `&&`/`||` become lazy closure-taking boc methods that go through the normal BOC cycle — see YZC-0031 sub-item.*
 - [ ] **[YZC-0019] `break` / `continue` / `return` in loops** — blocked on concurrency model settling; lowerer should emit compile error when encountered rather than silently dropping
@@ -112,6 +112,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0039] Operators audit** — systematic comparison of operators documented in spec vs. implemented in yzrt and recognised by the lowerer; covers `%`, bitwise ops, string operators, and any gaps; add golden tests for each gap found. See `docs/Questions/Operators.md`.
 - [ ] **[YZC-0040] Smart Nesting / Namespace Flattening** — when a directory name matches the boc file inside it (e.g. `house/house.yz`), the namespace is flattened so callers use `house.method` not `house.house.method`; implement in FQN resolution. Spec: `docs/Features/Smart Nesting and Namespace Flattening.md`. Depends on: YZC-0021.
 - [ ] **[YZC-0043] Captured variable reference semantics** — design question: when a boc literal captures an outer variable, does it capture by value or by reference? Mutable captured state (e.g. a counter updated across iterations) needs a clear semantic and a runtime strategy. See `docs/Questions/Memory Management.md` and `docs/Questions/Variables lifetime.md`.
+- [ ] **[YZC-0044] Producer-consumer example and golden test** — the `boring`/`while` producer-consumer in `docs/Features/Concurrency.md` cannot be exercised yet: `while` iterations run on `while.Cown`, but `boring.next()` is on `boring.Cown`; the two cowns don't interact. Full interleaving requires either (a) the "every value is a protected resource" model so `messages` has its own cown serialising push/pop (depends on YZC-0031 uppering), or (b) a simpler stand-in resource that has its own cown. Once unblocked: add a concrete runnable example and a runtime golden test that proves `boring.next()` interleaves between `while` iterations as shown in the timing diagram.
 
 ### Infrastructure
 
@@ -222,7 +223,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0044**
+- Numbers are assigned in creation order; next available: **YZC-0045**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket

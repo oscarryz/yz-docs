@@ -9,14 +9,17 @@ type _whileBoc struct {
 }
 
 func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) *std.Thunk[std.Unit] {
-	return std.Go(func() std.Unit {
-		self.cond = cond
-		self.body = body
+	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
-		if self.cond().GoBool() {
-			self.body()
-			_bg0.GoWait((&_whileBoc{}).Call(self.cond, self.body))
-		}
+		std.Schedule(&self.Cown, func() std.Unit {
+			self.cond = cond
+			self.body = body
+			if self.cond().GoBool() {
+				self.body()
+				_bg0.GoWait(self.Call(self.cond, self.body))
+			}
+			return std.TheUnit
+		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
 	})

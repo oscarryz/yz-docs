@@ -414,7 +414,10 @@ func (g *generator) emitImmediateBody(body []ir.Stmt, heldCowns map[string]bool)
 				if inner, ok := spawnForceInner(sp); ok {
 					if mc, ok := inner.(*ir.MethodCall); ok && len(heldCowns) > 0 {
 						recvStr := simpleExprStr(mc.Recv)
-						if recvStr != "" && heldCowns["&"+recvStr+".Cown"] {
+						// Recursive calls (callee FQN == enclosing BocDecl FQN) go to the
+						// tail queue so external callers can interleave between iterations.
+						// Only non-recursive calls on held cowns use ScheduleAsSuccessor.
+						if recvStr != "" && heldCowns["&"+recvStr+".Cown"] && !mc.IsRecursive {
 							// Held cown — schedule as successor to preserve spawn-order
 							// happens-before without re-acquiring the cown (already held).
 							tv := fmt.Sprintf("_st%d", hoistIdx)

@@ -55,6 +55,12 @@ type lowerer struct {
 	// are emitted as self.Call(args) rather than _f.Call(args).
 	selfBocName string
 
+	// selfBocDeclName is the Yz name of the top-level BocDecl currently being
+	// lowered. Recursive calls to this name inside the body are emitted as
+	// self.Call(args) with IsRecursive=true, triggering tail-queue scheduling
+	// instead of ScheduleAsSuccessor. (YZC-0036)
+	selfBocDeclName string
+
 	// recvMethods tracks method names on the current receiver singleton that
 	// can be called unqualified from inside a Call() body (e.g. foo() → self.Foo()).
 	// Unlike recvFields (data fields accessed as self.field), these are boc methods
@@ -1477,8 +1483,9 @@ func (l *lowerer) lowerBocDeclAsSingleton(name string, sig *ast.BocTypeExpr, bod
 	}
 
 	// Lower body with receiver context so param references → self.param.
-	// RecvCown="" uses std.Go — avoids re-entrancy deadlock for recursive singletons
-	// unless cown-typed params are present (in which case ScheduleMulti is used).
+	// Use &self.Cown so each BocDecl call is serialized through its own cown;
+	// recursive self-calls go to the tail queue (IsRecursive flag, YZC-0036).
+	// When cown-typed params are present, ScheduleMulti is used instead.
 	//
 	// Set closureHeldCowns so that method calls on held cown params inside the body
 	// are lowered as reentrant (sync) calls — not GoWait goroutines that run after
@@ -1492,9 +1499,12 @@ func (l *lowerer) lowerBocDeclAsSingleton(name string, sig *ast.BocTypeExpr, bod
 		}
 		l.closureHeldCowns = held
 	}
+	prevSelfBocDecl := l.selfBocDeclName
+	l.selfBocDeclName = name
 	prev := l.setReceiver("self", paramNames)
-	bocBodyStmts := l.lowerBocBody(body, resultType, "")
+	bocBodyStmts := l.lowerBocBody(body, resultType, "&self.Cown")
 	l.restoreReceiver(prev)
+	l.selfBocDeclName = prevSelfBocDecl
 	l.closureHeldCowns = prevHeld
 	l.syncParams = prevSyncParams
 
@@ -2087,9 +2097,10 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			if _, isStruct := sym.Type.(*sema.StructType); isStruct {
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
-			// BocDecl singletons: each call creates a fresh instance so its
-			// self.Cown is uncontested. Effective serialization comes only from
-			// any struct-typed params' cowns (acquired via ScheduleMulti).
+			// BocDecl singletons: each external call creates a fresh instance so
+			// its self.Cown is uncontested. Recursive self-calls reuse the
+			// receiver (self.Call) and are marked IsRecursive so codegen uses
+			// tail-queue scheduling instead of ScheduleAsSuccessor. (YZC-0036)
 			// Generic BocDecl (typeParams) kept as FuncDecl — plain call.
 			if bws, isBD := sym.Node.(*ast.BocDecl); isBD {
 				if bws.Sig != nil {
@@ -2097,6 +2108,15 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 				}
 				if len(collectSigTypeParams(bws.Sig)) > 0 {
 					return &FuncCall{Func: callee, Args: args}
+				}
+				// Recursive self-call inside the same BocDecl body.
+				if id.Name == l.selfBocDeclName && l.recvName != "" {
+					return &MethodCall{
+						Recv:        &Ident{Name: l.recvName},
+						Method:      "Call",
+						Args:        args,
+						IsRecursive: true,
+					}
 				}
 				return &MethodCall{
 					Recv:   &Ident{Name: "(&_" + id.Name + "Boc{})"},
