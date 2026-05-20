@@ -244,7 +244,10 @@ func (g *generator) emitFuncDecl(fd *ir.FuncDecl) {
 
 // emitBodyStmts emits a method/closure body.
 // When hasResult is true, the last ExprStmt is prefixed with "return".
+// Declared variables never referenced elsewhere in the body get a `_ = name`
+// suppressor so Go's "declared and not used" check does not fire (YZC-0007).
 func (g *generator) emitBodyStmts(stmts []ir.Stmt, hasResult bool) {
+	used := usedNames(stmts)
 	for i, s := range stmts {
 		isLast := i == len(stmts)-1
 		if hasResult && isLast {
@@ -257,6 +260,9 @@ func (g *generator) emitBodyStmts(stmts []ir.Stmt, hasResult bool) {
 			}
 		}
 		g.emitStmt(s)
+		if ds, ok := s.(*ir.DeclStmt); ok && !used[ds.Name] {
+			g.linef("_ = %s", ds.Name)
+		}
 	}
 }
 
@@ -1190,6 +1196,118 @@ func (g *generator) emitSwitchIIFE(sw *ir.SwitchExpr) string {
 	sb.WriteString(g.ind())
 	sb.WriteString("}()")
 	return sb.String()
+}
+
+// ---------------------------------------------------------------------------
+// Unused-variable analysis (YZC-0007)
+// ---------------------------------------------------------------------------
+
+// usedNames returns the set of variable names that are read within stmts.
+// Plain-Ident assignment targets (writes) are not counted as reads.
+// SpawnExpr.GroupVar, SpawnExpr.StoreVar, and WaitStmt.GroupVar are string
+// references that also count as reads.
+func usedNames(stmts []ir.Stmt) map[string]bool {
+	seen := map[string]bool{}
+	for _, s := range stmts {
+		collectUsedStmt(s, seen)
+	}
+	return seen
+}
+
+func collectUsedStmt(s ir.Stmt, seen map[string]bool) {
+	switch st := s.(type) {
+	case *ir.DeclStmt:
+		collectUsedExpr(st.Init, seen)
+	case *ir.AssignStmt:
+		// Ident target is a pure write — do not mark as used.
+		// FieldAccess/IndexExpr objects are reads of their base variable.
+		switch tgt := st.Target.(type) {
+		case *ir.FieldAccess:
+			collectUsedExpr(tgt.Object, seen)
+		case *ir.IndexExpr:
+			collectUsedExpr(tgt.Object, seen)
+			collectUsedExpr(tgt.Index, seen)
+		}
+		collectUsedExpr(st.Value, seen)
+	case *ir.ReturnStmt:
+		collectUsedExpr(st.Value, seen)
+	case *ir.ExprStmt:
+		collectUsedExpr(st.Expr, seen)
+	case *ir.IfStmt:
+		collectUsedExpr(st.Cond, seen)
+		for _, sub := range st.Then {
+			collectUsedStmt(sub, seen)
+		}
+		for _, sub := range st.Else {
+			collectUsedStmt(sub, seen)
+		}
+	case *ir.WaitStmt:
+		seen[st.GroupVar] = true
+	case *ir.SwitchStmt:
+		collectUsedExpr(st.Subject, seen)
+		for _, c := range st.Cases {
+			for _, sub := range c.Body {
+				collectUsedStmt(sub, seen)
+			}
+		}
+	}
+}
+
+func collectUsedExpr(e ir.Expr, seen map[string]bool) {
+	if e == nil {
+		return
+	}
+	switch ex := e.(type) {
+	case *ir.Ident:
+		seen[ex.Name] = true
+	case *ir.MethodCall:
+		collectUsedExpr(ex.Recv, seen)
+		for _, a := range ex.Args {
+			collectUsedExpr(a, seen)
+		}
+	case *ir.FuncCall:
+		collectUsedExpr(ex.Func, seen)
+		for _, a := range ex.Args {
+			collectUsedExpr(a, seen)
+		}
+	case *ir.FieldAccess:
+		collectUsedExpr(ex.Object, seen)
+	case *ir.IndexExpr:
+		collectUsedExpr(ex.Object, seen)
+		collectUsedExpr(ex.Index, seen)
+	case *ir.ThunkExpr:
+		for _, s := range ex.Body {
+			collectUsedStmt(s, seen)
+		}
+	case *ir.ForceExpr:
+		collectUsedExpr(ex.Thunk, seen)
+	case *ir.ClosureExpr:
+		for _, s := range ex.Body {
+			collectUsedStmt(s, seen)
+		}
+	case *ir.SpawnExpr:
+		seen[ex.GroupVar] = true
+		if ex.StoreVar != "" {
+			seen[ex.StoreVar] = true
+		}
+		for _, s := range ex.Body {
+			collectUsedStmt(s, seen)
+		}
+	case *ir.MatchExpr:
+		for _, arm := range ex.Arms {
+			collectUsedExpr(arm.Cond, seen)
+			for _, s := range arm.Body {
+				collectUsedStmt(s, seen)
+			}
+		}
+	case *ir.SwitchExpr:
+		collectUsedExpr(ex.Subject, seen)
+		for _, c := range ex.Cases {
+			for _, s := range c.Body {
+				collectUsedStmt(s, seen)
+			}
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------

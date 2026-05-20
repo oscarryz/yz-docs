@@ -1,0 +1,5 @@
+main: {
+    x : 5
+    y : "unused too"
+    print("hello")
+}
