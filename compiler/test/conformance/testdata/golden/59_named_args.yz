@@ -1,0 +1,25 @@
+Person: {
+    name String
+    age Int
+}
+
+greet #(name String, greeting String = "Hello") {
+    print(greeting)
+    print(name)
+}
+
+main: {
+    // struct constructor: named args in reversed order
+    p: Person(age: 30, name: "Alice")
+    print(p.name)
+    print(p.age)
+
+    // BocDecl: named arg
+    greet(name: "Bob")
+
+    // BocDecl: named args with explicit greeting, reversed order
+    greet(greeting: "Hi", name: "Carol")
+
+    // BocDecl: omit param that has a default
+    greet(name: "Dave")
+}

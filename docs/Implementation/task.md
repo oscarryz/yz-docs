@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **58 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **59 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -97,7 +97,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0009] Range iteration** — `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver. Depends on: YZC-0031.
 - [ ] **[YZC-0010] HOF iteration + cown happens-before** — resolved by YZC-0036: HOF methods use `a→b→a` indirect recursion → ScheduleAsSuccessor at each step → sequential processing behaviour. No further design needed; implement as sequential closure calls.
 - [x] **[YZC-0036] While loop yield and external caller interleaving** — implemented: BocDecl singletons now use `std.Schedule(&self.Cown, ...)` instead of `std.Go`; recursive self-calls emit `self.Call(args)` with `IsRecursive=true` so codegen bypasses `ScheduleAsSuccessor` and uses the regular goroutine path (tail-queue semantics). Non-recursive inner calls retain `ScheduleAsSuccessor`. See `docs/Questions/solved/While loop yield and external caller interleaving.md`.
-- [ ] **[YZC-0011] Named arguments in constructor calls** — `Person(name: "Alice", age: 30)`
+- [x] **[YZC-0011] Named arguments in constructor calls** — `Person(name: "Alice", age: 30)`: `lowerStructArgs` reorders by `st.Fields` data-field order; `lowerNamedArgs` replaces `fillDefaults` for BocDecl calls — handles reordering, order independence, and any-position defaults (not just trailing). Both struct constructors and BocDecl calls supported in the same pass. Syntax `:` preserved. Golden test 59.
 - [ ] **[YZC-0012] Multiple return values** — `x, y = swap(x, y)` — multi-assign LHS not in any golden test
 - [ ] **[YZC-0013] Array append via `<<`** — `a << item` → `a.Append(item)`; `Array.Append` exists in yzrt. Depends on: YZC-0031.
 - [ ] **[YZC-0014] Option/Result method chaining** — `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })`

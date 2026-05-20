@@ -381,6 +381,119 @@ func (l *lowerer) fillDefaults(loweredArgs []Expr, sigParams []*ast.BocParam) []
 	return result
 }
 
+// hasNamedArgs reports whether any argument in the list carries a label.
+func hasNamedArgs(args []*ast.Argument) bool {
+	for _, a := range args {
+		if a.Label != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// lowerNamedArgs lowers call arguments in canonical param order, supporting
+// named (label:) arguments, order independence, and any-position defaults.
+//
+// If no argument has a label the behaviour is identical to positional lowering
+// followed by filling trailing defaults (same as fillDefaults).  When labels
+// are present args are placed by label; unlabelled args fill the remaining
+// positions left-to-right; omitted params whose sigParam has a Default are
+// filled automatically.
+//
+// sigParams must be the filtered list of input params in declaration order
+// (same filter as fillDefaults: Label != "" && Variant == nil).
+func (l *lowerer) lowerNamedArgs(callArgs []*ast.Argument, sigParams []*ast.BocParam) []Expr {
+	if len(sigParams) == 0 {
+		var result []Expr
+		for _, a := range callArgs {
+			result = append(result, l.lowerExpr(a.Value))
+		}
+		return result
+	}
+
+	if !hasNamedArgs(callArgs) {
+		// Fast path: positional + trailing defaults (same as fillDefaults).
+		var result []Expr
+		for _, a := range callArgs {
+			result = append(result, l.lowerExpr(a.Value))
+		}
+		for i := len(result); i < len(sigParams); i++ {
+			if sigParams[i].Default != nil {
+				result = append(result, l.lowerExpr(sigParams[i].Default))
+			}
+		}
+		return result
+	}
+
+	byLabel := map[string]ast.Expr{}
+	var positional []ast.Expr
+	for _, a := range callArgs {
+		if a.Label != "" {
+			byLabel[a.Label] = a.Value
+		} else {
+			positional = append(positional, a.Value)
+		}
+	}
+
+	result := make([]Expr, len(sigParams))
+	posIdx := 0
+	for i, p := range sigParams {
+		if val, ok := byLabel[p.Label]; ok {
+			result[i] = l.lowerExpr(val)
+		} else if posIdx < len(positional) {
+			result[i] = l.lowerExpr(positional[posIdx])
+			posIdx++
+		} else if p.Default != nil {
+			result[i] = l.lowerExpr(p.Default)
+		}
+	}
+	return result
+}
+
+// lowerStructArgs lowers call arguments for a struct constructor in canonical
+// field order, supporting named (label:) arguments.  Struct fields have no
+// defaults; omitted fields produce nil entries (a type error at the call site).
+// Only non-BocType fields are constructor params.
+func (l *lowerer) lowerStructArgs(callArgs []*ast.Argument, st *sema.StructType) []Expr {
+	if !hasNamedArgs(callArgs) {
+		var result []Expr
+		for _, a := range callArgs {
+			result = append(result, l.lowerExpr(a.Value))
+		}
+		return result
+	}
+
+	// Collect data-field param names (constructor params, in declaration order).
+	var paramNames []string
+	for _, f := range st.Fields {
+		if _, isBoc := f.Type.(*sema.BocType); !isBoc {
+			paramNames = append(paramNames, f.Name)
+		}
+	}
+
+	byLabel := map[string]ast.Expr{}
+	var positional []ast.Expr
+	for _, a := range callArgs {
+		if a.Label != "" {
+			byLabel[a.Label] = a.Value
+		} else {
+			positional = append(positional, a.Value)
+		}
+	}
+
+	result := make([]Expr, len(paramNames))
+	posIdx := 0
+	for i, name := range paramNames {
+		if val, ok := byLabel[name]; ok {
+			result[i] = l.lowerExpr(val)
+		} else if posIdx < len(positional) {
+			result[i] = l.lowerExpr(positional[posIdx])
+			posIdx++
+		}
+	}
+	return result
+}
+
 // ---------------------------------------------------------------------------
 // Top-level ShortDecl dispatch
 // ---------------------------------------------------------------------------
@@ -2123,11 +2236,15 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 				return &FuncCall{Func: &Ident{Name: "New" + sym.ParentTypeName + id.Name}, Args: args}
 			}
 			// Struct type constructor call: Named("Alice") → NewNamed(args).
+			// Named args (label: value) are reordered to match field declaration order.
 			// Lowercase singletons with inner structure (IsSingleton) are called
 			// via their package-level singleton var's Call() method (YZC-0004).
 			if st, isStruct := sym.Type.(*sema.StructType); isStruct {
 				if st.IsSingleton {
 					return &MethodCall{Recv: &Ident{Name: capitalize(id.Name)}, Method: "Call", Args: args}
+				}
+				if hasNamedArgs(c.Args) {
+					args = l.lowerStructArgs(c.Args, st)
 				}
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
@@ -2138,7 +2255,14 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			// instead of ScheduleAsSuccessor. Generic BocDecl kept as FuncDecl.
 			if bws, isBD := sym.Node.(*ast.BocDecl); isBD {
 				if bws.Sig != nil {
-					args = l.fillDefaults(args, bws.Sig.Params)
+					// Collect input params (same filter as fillDefaults/lowerBocDecl).
+					var inputs []*ast.BocParam
+					for _, p := range bws.Sig.Params {
+						if p.Variant == nil && p.Label != "" {
+							inputs = append(inputs, p)
+						}
+					}
+					args = l.lowerNamedArgs(c.Args, inputs)
 				}
 				if len(collectSigTypeParams(bws.Sig)) > 0 {
 					return &FuncCall{Func: callee, Args: args}
