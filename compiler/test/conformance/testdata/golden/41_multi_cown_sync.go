@@ -69,7 +69,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
-			_bg0.GoWait((&_syncBoc{}).Call(Bank, Ledger))
+			_bg0.GoWait(Sync.Call(Bank, Ledger))
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

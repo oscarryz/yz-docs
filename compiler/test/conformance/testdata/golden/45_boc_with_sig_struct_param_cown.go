@@ -46,7 +46,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			alice = NewAccount(std.NewInt(100))
 			bob = NewAccount(std.NewInt(0))
-			_bg0.GoWait((&_transferBoc{}).Call(alice, bob, std.NewInt(30)))
+			_bg0.GoWait(Transfer.Call(alice, bob, std.NewInt(30)))
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

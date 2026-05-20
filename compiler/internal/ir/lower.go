@@ -2129,11 +2129,11 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 				}
 				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
 			}
-			// BocDecl singletons: each external call creates a fresh instance so
-			// its self.Cown is uncontested. Recursive self-calls reuse the
-			// receiver (self.Call) and are marked IsRecursive so codegen uses
-			// tail-queue scheduling instead of ScheduleAsSuccessor. (YZC-0036)
-			// Generic BocDecl (typeParams) kept as FuncDecl — plain call.
+			// BocDecl singletons: all calls (external and recursive) go through
+			// the package-level singleton so that foo.param persists and is
+			// accessible after the call (spec §4.3 / §6). Recursive self-calls
+			// are marked IsRecursive so codegen uses tail-queue scheduling
+			// instead of ScheduleAsSuccessor. Generic BocDecl kept as FuncDecl.
 			if bws, isBD := sym.Node.(*ast.BocDecl); isBD {
 				if bws.Sig != nil {
 					args = l.fillDefaults(args, bws.Sig.Params)
@@ -2151,7 +2151,7 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 					}
 				}
 				return &MethodCall{
-					Recv:   &Ident{Name: "(&_" + id.Name + "Boc{})"},
+					Recv:   &Ident{Name: capitalize(id.Name)},
 					Method: "Call",
 					Args:   args,
 				}

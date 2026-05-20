@@ -17,21 +17,6 @@ func (self *_greetBoc) Call(name std.String) *std.Thunk[std.Unit] {
 var Greet = &_greetBoc{
 }
 
-type _shoutBoc struct {
-	std.Cown
-	msg std.String
-}
-
-func (self *_shoutBoc) Call(msg std.String) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
-		self.msg = msg
-		return std.Print(self.msg)
-	})
-}
-
-var Shout = &_shoutBoc{
-}
-
 type _mainBoc struct {
 	std.Cown
 }
@@ -41,10 +26,10 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			_bg0.GoWait(Greet.Call(std.NewString("Alice")))
-			_bg0.GoWait(Shout.Call(std.NewString("hello")))
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
+		std.Print(Greet.name)
 		return std.TheUnit
 	})
 }

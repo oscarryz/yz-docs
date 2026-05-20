@@ -38,7 +38,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
 			n = std.NewInt(0)
-			_bg0.GoWait((&_whileBoc{}).Call(func() std.Bool {
+			_bg0.GoWait(While.Call(func() std.Bool {
 				return n.Lt(std.NewInt(3))
 			}, func() std.Unit {
 				n = n.Plus(std.NewInt(1))

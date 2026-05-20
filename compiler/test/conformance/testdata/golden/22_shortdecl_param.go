@@ -25,8 +25,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
-			_bg0.GoWait((&_greetBoc{}).Call(std.NewString("Alice")))
-			_bg0.GoWait((&_greetBoc{}).Call(std.NewString("Bob")))
+			_bg0.GoWait(Greet.Call(std.NewString("Alice")))
+			_bg0.GoWait(Greet.Call(std.NewString("Bob")))
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

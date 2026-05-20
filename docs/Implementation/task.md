@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **56 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **57 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -116,9 +116,10 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 ### Infrastructure
 
-- [ ] **[YZC-0033] Compiler deep review against settled spec** — the compiler was generated using the old spec which had stateless/stateful boc distinction, `Unit` as user-facing type, and boc declarations treated as Go functions (no cown, no persistent fields). Review and align: (1) boc declarations should lower to singleton structs with cowns, not plain Go functions; (2) `foo.param` should be accessible after call; (3) sema errors should say "returns nothing" not mention Unit; (4) all bocs serialized through cown — no "fully parallel" fast path for boc declarations. Depends on: YZC-0004, YZC-0006.
+- [x] **[YZC-0033] Compiler deep review against settled spec** — all four sub-items resolved: (1) BocDecl lowers to singleton structs with cowns (via YZC-0036); (2) `foo.param` accessible after call — lowerCall now uses `Foo.Call(args)` (singleton) instead of `(&_fooBoc{}).Call(args)` (fresh instance), so `greet.name` reads `Greet.name` after the BocGroup wait, golden test 57; (3) sema errors say "returns nothing" (`displayType` helper, YZC-0003 check); (4) all bocs serialized through cown (via YZC-0036).
   - [x] spec/02 grammar updated: labeled=input/unlabeled=output rule, BocDecl three forms, MixStmt removed
   - [x] sema errors say "returns nothing" instead of "Unit" (`displayType` helper, YZC-0003 check)
+  - [x] BocDecl calls use singleton (`Foo.Call`) not fresh instance (`(&_fooBoc{}).Call`) — foo.param accessible after call. Golden test 57.
 - [ ] **[YZC-0021] Directory and file bocs** — defer until in-file nesting works; extend FQN tree to directories and files as bocs
 - [x] **[YZC-0032] Rename `BocWithSig` in compiler code** — AST node `BocWithSig`, sema path `analyzeBocWithSig`, lowerer path `lowerBocWithSig`, and all related identifiers should be renamed to `BocDecl` / `analyzeBocDecl` / `lowerBocDecl` to match the settled terminology; also rename the `BocWithSig` → `BocDecl` grammar production in spec/02
 - [ ] **[YZC-0022] Multiple source roots** — `src/` + `lib/` as independent FQN mount points; compiler accepts list of source roots; builds one FQN forest per root
