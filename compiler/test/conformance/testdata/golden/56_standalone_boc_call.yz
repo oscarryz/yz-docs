@@ -1,0 +1,7 @@
+p: {
+    print("hello")
+}
+
+main: {
+    p()
+}
