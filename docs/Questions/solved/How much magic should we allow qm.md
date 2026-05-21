@@ -1,4 +1,4 @@
-#solved [Keyword Constraint](docs/Features/Keyword%20Constraint.md)
+#solved [Yz Language Design](docs/Features/Yz%20Language%20Design.md)
 
 <hr>
 

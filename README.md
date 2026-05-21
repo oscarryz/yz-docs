@@ -14,7 +14,7 @@ print("${factorial(5)}")  // prints 120
 ```
 
 ## Philosophy
-The initial goal for the language was to explore how much can be expressed without using keywords (which has to be admitted is silly goal on its own), so far the language has only 4 keywords and a handful of reserved symbols, (see [Keyword Constraint](docs/Features/Keyword%20Constraint.md) for more details).
+The initial goal for the language was to explore how much can be expressed without using keywords (which has to be admitted is silly goal on its own), so far the language has only 4 keywords and a handful of reserved symbols, (see [Yz Language Design](docs/Features/Yz%20Language%20Design.md) for more details).
 
 Yz is a programming language built around a single construct: the **block of code** (boc). Variables, functions, objects, types, modules, [concurrent execution](#async-by-default) are all blocks. 
 
@@ -581,7 +581,7 @@ process_file: {
 ## Control Flow
 
 - [Conditional Bocs + `match`](docs/Features/Conditional%20Bocs.md)
-- [return, break, continue](docs/Features/return%2C%20break%2C%20continue.md)
+- [return, break, continue](docs/Features/return,%20break,%20continue.md)
 
 ```javascript
 // ? is a method on Bool — true-branch, false-branch
