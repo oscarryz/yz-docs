@@ -185,19 +185,53 @@ string_char    = /* any Unicode character except the matching quote */
 
 ### String Interpolation
 
-Embed any expression inside a string using `${}`:
+Yz has two interpolation forms inside string literals:
+
+#### `${}` — user-facing interpolation
+
+Embeds an expression whose type must implement `to_str #(String)`. Compile error if it does not.
 
 ```yz
 name: "Alice"
-greeting: "Hello, ${name}!"    // "Hello, Alice!"
-math: 'Result: ${1 + 2}'       // "Result: 3"
+greeting: "Hello, ${name}!"    // "Hello, Alice!" — String has to_str
+math: 'Result: ${1 + 2}'       // "Result: 3"    — Int has to_str
+```
+
+For user-defined types, `to_str` must be explicitly provided:
+
+```yz
+Person : {
+    name String
+    age  Int
+    to_str : { "${name} (age ${age})" }
+}
+p: Person("Alice", 30)
+print("User: ${p}")    // "User: Alice (age 30)"
+```
+
+#### `` ` `` — compiler homoiconic interpolation
+
+Embeds an expression and produces a compiler-generated representation that mirrors the Yz source that would recreate the value. Always works — no method required. Uses backtick delimiters *inside* the string (distinct from info-string backticks at statement level, §1.14).
+
+```yz
+p: Person("Alice", 30)
+print("Debug: `p`")
+// Debug: Person(name: "Alice", age: 30)
+```
+
+Arrays and dictionaries are pretty-printed one element per line. Nested user types render recursively with cycle detection. The type itself (not an instance) renders as its signature:
+
+```yz
+print("Type: `Person`")
+// Type: Person #(name String, age Int)
 ```
 
 ```
-interpolation = '$' '{' expression '}'
+interpolation = '$' '{' expression '}'    // user-facing: requires to_str
+              | '`' expression '`'        // compiler homoiconic dump
 ```
 
-Braces inside the expression are balanced — `${foo({x})}` works correctly.
+Braces inside `${}` expressions are balanced — `${foo({x})}` works correctly.
 
 ### Escape Sequences
 
@@ -312,7 +346,7 @@ greeting: "Hello, World!"
 info(greeting).text  // "A greeting message"
 ```
 
-Info strings use backtick delimiters at the block level (not to be confused with backtick interpolation *inside* strings). Multi-line info strings use double-quote delimiters:
+Info strings use backtick delimiters at the **statement level** (not to be confused with backtick interpolation *inside* string literals — see §1.10). Multi-line info strings use double-quote delimiters:
 
 ```yz
 "
