@@ -8,7 +8,6 @@ type _counterBoc struct {
 }
 
 func (self *_counterBoc) increment(amount std.Int) std.Unit {
-	std.Print(std.NewString("incrementing ").Plus(std.NewString(std.Stringify(amount))))
 	self.count = self.count.Plus(amount)
 	return std.TheUnit
 }
@@ -33,22 +32,6 @@ var Counter = &_counterBoc{
 	count: std.NewInt(0),
 }
 
-type _pBoc struct {
-	std.Cown
-}
-
-func (self *_pBoc) call() std.Unit {
-	return std.Print(std.NewString("about to print"))
-}
-
-func (self *_pBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
-		return self.call()
-	})
-}
-
-var P = &_pBoc{}
-
 type _mainBoc struct {
 	std.Cown
 }
@@ -67,7 +50,6 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg1.GoWait(Counter.Increment(n))
 		var m std.Int
 		std.GoStore(_bg1, Counter.Value(), &m)
-		_bg1.GoWait(P.Call())
 		_bg1.Wait()
 		std.Print(std.NewString(std.Stringify(m)))
 		return std.TheUnit
