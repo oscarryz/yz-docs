@@ -819,7 +819,7 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 					continue
 				}
 				fieldSet[n.Name] = true
-				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: sym.Type})
+				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: sym.Type, HasDefault: true})
 			}
 			lastExprTypes = nil
 
@@ -1077,11 +1077,63 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 		if len(bt.TypeParams) > 0 && len(bt.TypeConstraints) > 0 {
 			a.checkGenericConstraints(c.Callee.Position(), bt, argTypes)
 		}
+		// YZC-0034: verify all required fields (TypedDecl-no-value, HasDefault=false)
+		// are covered by the constructor call.
+		a.checkStructConstructorArgs(c, bt)
 		return bt // constructor call
 	case *BuiltinType:
 		return bt // direct type value used as function
 	}
 	return Unknown
+}
+
+// checkStructConstructorArgs verifies that all required fields (HasDefault=false,
+// non-method) are covered in a constructor call. This is the YZC-0034 constructor check.
+func (a *Analyzer) checkStructConstructorArgs(c *ast.CallExpr, st *StructType) {
+	if st.IsVariant || st.IsInterface {
+		return
+	}
+	// Collect required data fields (not methods, not defaulted).
+	var required []string
+	for _, f := range st.Fields {
+		if !f.HasDefault {
+			if _, isMethod := f.Type.(*BocType); !isMethod {
+				required = append(required, f.Name)
+			}
+		}
+	}
+	if len(required) == 0 {
+		return
+	}
+	// Named args: each required field must appear by name.
+	hasNamed := false
+	for _, arg := range c.Args {
+		if arg.Label != "" {
+			hasNamed = true
+			break
+		}
+	}
+	if hasNamed {
+		provided := make(map[string]bool, len(c.Args))
+		for _, arg := range c.Args {
+			if arg.Label != "" {
+				provided[arg.Label] = true
+			}
+		}
+		for _, name := range required {
+			if !provided[name] {
+				a.errorf(c.Callee.Position(), "YZC-0034: %s() missing required field %s", st.Name, name)
+			}
+		}
+		return
+	}
+	// Positional args: count must cover required fields (required come first in declaration order).
+	if len(c.Args) < len(required) {
+		missing := required[len(c.Args):]
+		for _, name := range missing {
+			a.errorf(c.Callee.Position(), "YZC-0034: %s() missing required field %s", st.Name, name)
+		}
+	}
 }
 
 func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {

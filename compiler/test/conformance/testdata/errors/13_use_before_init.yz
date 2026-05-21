@@ -1,0 +1,6 @@
+Bar: { f String }
+
+main: {
+    b : Bar()
+    print(b.f)
+}

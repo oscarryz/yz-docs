@@ -172,8 +172,9 @@ func (t *BocType) String() string { return t.typeName() }
 
 // StructField is one field in a struct type.
 type StructField struct {
-	Name string
-	Type Type
+	Name       string
+	Type       Type
+	HasDefault bool // true when declared via ShortDecl (has an initializer); false = required param
 }
 
 // VariantCase is one constructor in a sum type (variant type).

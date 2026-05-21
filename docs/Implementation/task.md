@@ -93,7 +93,9 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 ### Language Features
 
-- [ ] **[YZC-0034] Definite assignment analysis** — `name Type` (uninitialized typed declaration) must be assigned before first use; `Bar()` with unassigned required fields is a compile error unless all paths assign before read; crossing a boc boundary requires fully initialized values at the call site. Sema pass: build per-scope control-flow graph; track assigned set; report "field f used before initialization" on unassigned reads. Spec: §3.2. Depends on: YZC-0033.
+- [x] **[YZC-0034] Definite assignment analysis (phase 1)** — constructor arity check: `Bar()` with fewer positional (or named) args than required fields (`TypedDecl`-no-value in struct body) is a compile error; `StructField.HasDefault` added to distinguish required vs optional fields; `checkStructConstructorArgs` in sema; error test 13. Deferred to YZC-0049 and YZC-0051.
+- [ ] **[YZC-0049] Lowerer: singleton boc params not emitted** — when a singleton boc body contains `TypedDecl`-no-value entries (required params), `lowerBodyOnlySingleton` ignores them and generates `Call()` with no parameters; the caller then emits `Foo.Call(a)` referencing an undefined variable, producing a Go compile error. Fix: collect leading TypedDecl-no-value elements in `lowerBodyOnlySingleton` and emit them as `Call(a std.T, ...)` params; also inject them as Go variables at the start of the body closure so references resolve. Reproducer: `foo: { n Int; print(n) }; main: { foo(5) }`.
+- [ ] **[YZC-0051] CFG-based field definite-assignment** — phase 2 of YZC-0034: build a per-boc control-flow graph and track which required struct fields (HasDefault=false) are set on all paths before each read; report "YZC-0034: field f used before initialization" when a path exists from declaration to read without an intervening assignment. Covers: `b : Bar(); print(b.f)` (field never set after 0-arg construction), `b Bar; b.f = … on only one branch; print(b.f)` (not set on all paths). Depends on: YZC-0049.
 
 - [ ] **[YZC-0009] Range iteration** — `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver. Depends on: YZC-0031.
 - [ ] **[YZC-0010] HOF iteration + cown happens-before** — resolved by YZC-0036: HOF methods use `a→b→a` indirect recursion → ScheduleAsSuccessor at each step → sequential processing behaviour. No further design needed; implement as sequential closure calls.
@@ -229,7 +231,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0049**
+- Numbers are assigned in creation order; next available: **YZC-0052**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
