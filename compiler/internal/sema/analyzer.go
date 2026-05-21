@@ -67,6 +67,12 @@ type Analyzer struct {
 	// activeContext is "StructName.methodName" for constraint attribution.
 	// Updated before each BocDecl method body is analyzed.
 	activeContext string
+
+	// fieldInit is the definite-assignment state for the current boc body.
+	// nil when outside a boc body. Only locally-constructed struct variables
+	// (ShortDecl `b : Bar(...)`) are tracked; parameters are always considered
+	// initialized.
+	fieldInit *FieldInitState
 }
 
 // NewAnalyzer creates a fresh Analyzer with built-in symbols pre-loaded.
@@ -298,6 +304,23 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 		fqn := a.currentFQN(name.Name)
 		a.define(&Symbol{Name: name.Name, Type: typ, FQN: fqn, Node: d})
 	}
+	// Track field-initialization state for locally-constructed struct variables.
+	if a.fieldInit != nil {
+		for i, name := range d.Names {
+			if i >= len(valTypes) || i >= len(d.Values) {
+				break
+			}
+			st, ok := valTypes[i].(*StructType)
+			if !ok || st.IsSingleton || st.IsInterface || st.IsVariant {
+				continue
+			}
+			call, ok := d.Values[i].(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+			initLocalVar(a.fieldInit, name.Name, st, call)
+		}
+	}
 	return TypUnit
 }
 
@@ -376,7 +399,10 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 		typ = st
 	} else {
 		// Simple lowercase boc (no inner structure): original BocType path.
+		prevFI := a.fieldInit
+		a.fieldInit = newFieldInitState()
 		bt := a.analyzeBocBody(bocLit.Elements)
+		a.fieldInit = prevFI
 		params := a.collectParams(bocLit.Elements)
 		returns := bt
 		if len(returns) == 0 {
@@ -454,6 +480,14 @@ func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
 	}
 	if asgn.Target != nil {
 		targetType := a.resolveTargetType(asgn.Target)
+		// Track field assignment for definite-assignment analysis.
+		if a.fieldInit != nil {
+			if m, ok := asgn.Target.(*ast.MemberExpr); ok {
+				if id, ok := m.Object.(*ast.Ident); ok {
+					a.fieldInit.markAssigned(id.Name, m.Member.Name)
+				}
+			}
+		}
 		if len(valTypes) > 0 && targetType != Unknown {
 			if !valTypes[0].IsCompatibleWith(targetType) {
 				a.errorf(asgn.Pos, "assignment: %s is not compatible with %s", displayType(valTypes[0]), displayType(targetType))
@@ -569,6 +603,8 @@ func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 
 		prev := a.pushScope()
 		prevFQN := a.pushFQN(bd.Name.Name)
+		prevFI := a.fieldInit
+		a.fieldInit = newFieldInitState()
 		if bd.BodyOnly {
 			// Body-only form: extract named params from body's initial TypedDecls.
 			// The body redeclares its own params; sig provides types (and names
@@ -627,6 +663,7 @@ func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 			}
 			returns = a.analyzeBocBody(bd.Body.Elements)
 		}
+		a.fieldInit = prevFI
 		a.popFQN(prevFQN)
 		a.popScope(prev)
 	}
@@ -760,6 +797,22 @@ func (a *Analyzer) analyzeBocBody(elements []ast.Node) []Type {
 		}
 	}
 	return lastExprTypes
+}
+
+// analyzeBranchBody analyzes a BocLiteral as a control-flow branch (ConditionalExpr
+// arm or match arm). Unlike the BocLiteral case in analyzeExpr, this does NOT
+// save/restore fieldInit — the caller manages cloning and merging.
+func (a *Analyzer) analyzeBranchBody(boc *ast.BocLiteral) Type {
+	prev := a.pushScope()
+	bodyReturns := a.analyzeBocBody(boc.Elements)
+	params := a.collectParams(boc.Elements)
+	a.popScope(prev)
+	if len(bodyReturns) == 0 {
+		bodyReturns = []Type{TypUnit}
+	}
+	bt := &BocType{Params: params, Returns: bodyReturns}
+	a.setType(boc, bt)
+	return bt
 }
 
 // ---------------------------------------------------------------------------
@@ -935,8 +988,30 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		t = TypString
 	case *ast.ConditionalExpr:
 		a.analyzeExpr(expr.Cond)
-		trueType := a.analyzeExpr(expr.TrueCase)
-		a.analyzeExpr(expr.FalseCase)
+		var trueType Type
+		if a.fieldInit != nil {
+			// Branch analysis: clone state for each branch, intersect after.
+			preState := a.fieldInit
+			a.fieldInit = preState.clone()
+			if trueBoc, ok := expr.TrueCase.(*ast.BocLiteral); ok {
+				trueType = a.analyzeBranchBody(trueBoc)
+			} else {
+				trueType = a.analyzeExpr(expr.TrueCase)
+			}
+			trueAfter := a.fieldInit
+			a.fieldInit = preState.clone()
+			if falseBoc, ok := expr.FalseCase.(*ast.BocLiteral); ok {
+				a.analyzeBranchBody(falseBoc)
+			} else {
+				a.analyzeExpr(expr.FalseCase)
+			}
+			falseAfter := a.fieldInit
+			trueAfter.intersect(falseAfter)
+			a.fieldInit = trueAfter
+		} else {
+			trueType = a.analyzeExpr(expr.TrueCase)
+			a.analyzeExpr(expr.FalseCase)
+		}
 		// The ? operator calls the branch; the result is the branch's return value,
 		// not the branch boc itself. Unwrap one BocType level.
 		if bt, ok := trueType.(*BocType); ok && len(bt.Returns) == 1 {
@@ -960,9 +1035,16 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		t = a.analyzeExpr(expr.Expr)
 	case *ast.BocLiteral:
 		prev := a.pushScope()
+		// Closures get an isolated copy of the field-init state so that
+		// assignments inside the closure don't affect the outer scope.
+		outerFI := a.fieldInit
+		if outerFI != nil {
+			a.fieldInit = outerFI.clone()
+		}
 		bodyReturns := a.analyzeBocBody(expr.Elements)
 		params := a.collectParams(expr.Elements)
 		a.popScope(prev)
+		a.fieldInit = outerFI // restore outer state
 		if len(bodyReturns) == 0 {
 			bodyReturns = []Type{TypUnit}
 		}
@@ -1077,9 +1159,6 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 		if len(bt.TypeParams) > 0 && len(bt.TypeConstraints) > 0 {
 			a.checkGenericConstraints(c.Callee.Position(), bt, argTypes)
 		}
-		// YZC-0034: verify all required fields (TypedDecl-no-value, HasDefault=false)
-		// are covered by the constructor call.
-		a.checkStructConstructorArgs(c, bt)
 		return bt // constructor call
 	case *BuiltinType:
 		return bt // direct type value used as function
@@ -1087,57 +1166,26 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 	return Unknown
 }
 
-// checkStructConstructorArgs verifies that all required fields (HasDefault=false,
-// non-method) are covered in a constructor call. This is the YZC-0034 constructor check.
-func (a *Analyzer) checkStructConstructorArgs(c *ast.CallExpr, st *StructType) {
-	if st.IsVariant || st.IsInterface {
-		return
-	}
-	// Collect required data fields (not methods, not defaulted).
-	var required []string
-	for _, f := range st.Fields {
-		if !f.HasDefault {
-			if _, isMethod := f.Type.(*BocType); !isMethod {
-				required = append(required, f.Name)
-			}
-		}
-	}
-	if len(required) == 0 {
-		return
-	}
-	// Named args: each required field must appear by name.
-	hasNamed := false
-	for _, arg := range c.Args {
-		if arg.Label != "" {
-			hasNamed = true
-			break
-		}
-	}
-	if hasNamed {
-		provided := make(map[string]bool, len(c.Args))
-		for _, arg := range c.Args {
-			if arg.Label != "" {
-				provided[arg.Label] = true
-			}
-		}
-		for _, name := range required {
-			if !provided[name] {
-				a.errorf(c.Callee.Position(), "YZC-0034: %s() missing required field %s", st.Name, name)
-			}
-		}
-		return
-	}
-	// Positional args: count must cover required fields (required come first in declaration order).
-	if len(c.Args) < len(required) {
-		missing := required[len(c.Args):]
-		for _, name := range missing {
-			a.errorf(c.Callee.Position(), "YZC-0034: %s() missing required field %s", st.Name, name)
-		}
-	}
-}
-
 func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
 	objType := a.analyzeExpr(m.Object)
+	// Definite-assignment check: required fields of locally-constructed structs
+	// must be assigned before they are read.
+	if a.fieldInit != nil {
+		if id, ok := m.Object.(*ast.Ident); ok {
+			if st, ok := objType.(*StructType); ok {
+				for _, f := range st.Fields {
+					if f.Name == m.Member.Name && !f.HasDefault {
+						if _, isMethod := f.Type.(*BocType); !isMethod {
+							if !a.fieldInit.isAssigned(id.Name, f.Name) {
+								a.errorf(m.Member.Pos, "YZC-0034: field %s used before initialization", f.Name)
+							}
+						}
+						break
+					}
+				}
+			}
+		}
+	}
 	return a.fieldType(objType, m.Member.Name, m.Pos)
 }
 
@@ -1256,11 +1304,40 @@ func (a *Analyzer) analyzeMatch(m *ast.MatchExpr) Type {
 		a.analyzeExpr(m.Subject)
 	}
 	var returnType Type = Unknown
+
+	if a.fieldInit == nil {
+		for _, arm := range m.Arms {
+			if arm.Condition != nil {
+				a.analyzeExpr(arm.Condition)
+			}
+			var armType Type = TypUnit
+			prev := a.pushScope()
+			for _, elem := range arm.Body {
+				t := a.analyzeNode(elem)
+				if _, ok := elem.(ast.Expr); ok {
+					armType = t
+				}
+			}
+			a.popScope(prev)
+			if returnType == Unknown {
+				returnType = armType
+			}
+		}
+		return returnType
+	}
+
+	// With fieldInit tracking: analyze each arm with a clone of the pre-match
+	// state, then intersect all arm post-states (all arms cover all paths since
+	// a default arm is always present in conditional-match form).
+	preState := a.fieldInit
+	var afterStates []*FieldInitState
+
 	for _, arm := range m.Arms {
 		if arm.Condition != nil {
 			a.analyzeExpr(arm.Condition)
 		}
 		var armType Type = TypUnit
+		a.fieldInit = preState.clone()
 		prev := a.pushScope()
 		for _, elem := range arm.Body {
 			t := a.analyzeNode(elem)
@@ -1269,10 +1346,22 @@ func (a *Analyzer) analyzeMatch(m *ast.MatchExpr) Type {
 			}
 		}
 		a.popScope(prev)
+		afterStates = append(afterStates, a.fieldInit)
 		if returnType == Unknown {
 			returnType = armType
 		}
 	}
+
+	if len(afterStates) > 0 {
+		merged := afterStates[0]
+		for _, s := range afterStates[1:] {
+			merged.intersect(s)
+		}
+		a.fieldInit = merged
+	} else {
+		a.fieldInit = preState
+	}
+
 	return returnType
 }
 

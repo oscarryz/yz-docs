@@ -1,0 +1,10 @@
+Bar: { f String }
+
+main: {
+    b : Bar()
+    flag : true
+    flag ? {
+        b.f = "hello"
+    }, {}
+    print(b.f)
+}
