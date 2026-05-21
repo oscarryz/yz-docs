@@ -13,6 +13,10 @@ func NewContainer[T any](value T) *Container[T] {
 	}
 }
 
+func (self *Container[T]) String() string {
+	return "Container(value: " + std.Stringify(self.value) + ")"
+}
+
 func (self *Container[T]) get() T {
 	return self.value
 }

@@ -13,6 +13,10 @@ func NewCounter(count std.Int) *Counter {
 	}
 }
 
+func (self *Counter) String() string {
+	return "Counter(count: " + std.Stringify(self.count) + ")"
+}
+
 func (self *Counter) increment() std.Unit {
 	self.count = self.count.Plus(std.NewInt(1))
 	return std.TheUnit

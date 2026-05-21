@@ -13,6 +13,10 @@ func NewBox(val std.Int) *Box {
 	}
 }
 
+func (self *Box) String() string {
+	return "Box(val: " + std.Stringify(self.val) + ")"
+}
+
 func (self *Box) set(v std.Int) std.Unit {
 	self.val = v
 	return std.TheUnit

@@ -1232,6 +1232,7 @@ func (p *Parser) posOf(tok token.Token) ast.Pos {
 // interpSegment is one raw slice from splitting a STRING_LIT.
 type interpSegment struct {
 	isExpr    bool
+	isDebug   bool   // true = backtick `expr` form; false = ${expr} form
 	content   string // raw text (escape sequences intact) or expression source
 	srcOffset int    // for expr segments: byte offset of content start within inner
 }
@@ -1285,7 +1286,26 @@ func splitStringInterp(raw string) []interpSegment {
 				}
 				i++
 			}
-			parts = append(parts, interpSegment{isExpr: true, content: cur.String(), srcOffset: exprStart})
+			parts = append(parts, interpSegment{isExpr: true, isDebug: false, content: cur.String(), srcOffset: exprStart})
+			cur.Reset()
+			continue
+		}
+
+		// Backtick interpolation: `expr` — compiler homoiconic dump.
+		if ch == '`' {
+			hasInterp = true
+			parts = append(parts, interpSegment{isExpr: false, content: cur.String()})
+			cur.Reset()
+			i++ // skip opening `
+			exprStart := i
+			for i < len(inner) && inner[i] != '`' {
+				cur.WriteByte(inner[i])
+				i++
+			}
+			if i < len(inner) {
+				i++ // skip closing `
+			}
+			parts = append(parts, interpSegment{isExpr: true, isDebug: true, content: cur.String(), srcOffset: exprStart})
 			cur.Reset()
 			continue
 		}
@@ -1317,7 +1337,7 @@ func (p *Parser) buildInterpExpr(pos ast.Pos, segs []interpSegment, inner string
 			if err != nil {
 				return nil, fmt.Errorf("string interpolation: %w", err)
 			}
-			node.Parts = append(node.Parts, ast.InterpPart{IsExpr: true, Expr: e})
+			node.Parts = append(node.Parts, ast.InterpPart{IsExpr: true, IsDebug: seg.isDebug, Expr: e})
 		} else {
 			// Skip empty text segments to keep the Part list minimal.
 			if seg.content == "" {

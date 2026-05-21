@@ -15,6 +15,10 @@ func NewNamed(name std.String, greet func() *std.Thunk[std.Unit]) *Named {
 	}
 }
 
+func (self *Named) String() string {
+	return "Named(name: " + std.Stringify(self.name) + ", greet: " + std.Stringify(self.greet) + ")"
+}
+
 func (self *Named) Greet() *std.Thunk[std.Unit] {
 	return self.greet()
 }

@@ -15,6 +15,10 @@ func NewPair[K any, V any](first K, second V) *Pair[K, V] {
 	}
 }
 
+func (self *Pair[K, V]) String() string {
+	return "Pair(first: " + std.Stringify(self.first) + ", second: " + std.Stringify(self.second) + ")"
+}
+
 func makePair[K any, V any](a K, b V) *std.Thunk[*Pair[K, V]] {
 	return std.Go(func() *Pair[K, V] {
 		return NewPair(a, b)

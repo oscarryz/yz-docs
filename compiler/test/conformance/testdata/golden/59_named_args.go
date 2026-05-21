@@ -15,6 +15,10 @@ func NewPerson(name std.String, age std.Int) *Person {
 	}
 }
 
+func (self *Person) String() string {
+	return "Person(name: " + std.Stringify(self.name) + ", age: " + std.Stringify(self.age) + ")"
+}
+
 type _greetBoc struct {
 	std.Cown
 	name std.String

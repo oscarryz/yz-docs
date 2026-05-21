@@ -8,3 +8,7 @@ type Point struct {
 	y std.Int
 }
 
+
+func (self *Point) String() string {
+	return "Point(x: " + std.Stringify(self.x) + ", y: " + std.Stringify(self.y) + ")"
+}

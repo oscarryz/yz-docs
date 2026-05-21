@@ -13,6 +13,10 @@ func NewGreeter(name std.String) *Greeter {
 	}
 }
 
+func (self *Greeter) String() string {
+	return "Greeter(name: " + std.Stringify(self.name) + ")"
+}
+
 func (self *Greeter) plusplus(other std.String) std.String {
 	return std.NewString(std.Stringify(self.name)).Plus(std.NewString(" and ")).Plus(std.NewString(std.Stringify(other)))
 }

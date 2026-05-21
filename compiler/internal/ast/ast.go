@@ -257,14 +257,17 @@ func (e *BocDecl) stmtNode() {}
 
 // InterpPart is one segment of an InterpolatedStringExpr.
 // Either a literal text fragment or an embedded expression.
+// IsDebug=true means the backtick form (`expr`) — compiler homoiconic dump via Stringify.
+// IsDebug=false means the ${} form — user-facing; will require to_str (YZC-0046).
 type InterpPart struct {
-	IsExpr bool
-	Text   string // raw text content (no outer quotes) for text parts
-	Expr   Expr   // non-nil for expression parts
+	IsExpr  bool
+	IsDebug bool   // true = backtick `expr`, false = ${expr}
+	Text    string // raw text content (no outer quotes) for text parts
+	Expr    Expr   // non-nil for expression parts
 }
 
-// InterpolatedStringExpr is a string with ${}-embedded expressions:
-// `"Hello, ${name}!"` desugars to a Plus chain at the IR level.
+// InterpolatedStringExpr is a string with embedded expressions.
+// Two forms: ${expr} (user-facing) and `expr` (compiler homoiconic dump).
 type InterpolatedStringExpr struct {
 	Pos
 	Parts []InterpPart

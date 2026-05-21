@@ -20,6 +20,10 @@ func NewPerson(name std.String, secret std.String) *Person {
 	}
 }
 
+func (self *Person) String() string {
+	return "Person(name: " + std.Stringify(self.name) + ", secret: " + std.Stringify(self.secret) + ")"
+}
+
 func (self *Person) greet() std.Unit {
 	return std.Print(self.name)
 }

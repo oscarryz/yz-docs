@@ -1,6 +1,9 @@
 package rt
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // ---------------------------------------------------------------------------
 // Array[T]
@@ -45,7 +48,21 @@ func (a Array[T]) Length() Int { return Int{val: int64(len(a.elems))} }
 // GoSlice returns the underlying Go slice (for interop / codegen helpers).
 func (a Array[T]) GoSlice() []T { return a.elems }
 
-func (a Array[T]) String() string { return fmt.Sprintf("%v", a.elems) }
+func (a Array[T]) String() string {
+	if len(a.elems) == 0 {
+		return "[]"
+	}
+	var sb strings.Builder
+	sb.WriteString("[")
+	for i, elem := range a.elems {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(Stringify(elem))
+	}
+	sb.WriteString("]")
+	return sb.String()
+}
 
 // Filter returns a new Array containing only elements for which fn returns Bool true.
 func (a Array[T]) Filter(fn func(T) Bool) Array[T] {
@@ -144,7 +161,25 @@ func (d Dict[K, V]) Length() Int { return Int{val: int64(len(d.m))} }
 // GoMap returns the underlying Go map (for interop / codegen helpers).
 func (d Dict[K, V]) GoMap() map[K]V { return d.m }
 
-func (d Dict[K, V]) String() string { return fmt.Sprintf("%v", d.m) }
+func (d Dict[K, V]) String() string {
+	if len(d.m) == 0 {
+		return "[:]"
+	}
+	var sb strings.Builder
+	sb.WriteString("[")
+	first := true
+	for k, v := range d.m {
+		if !first {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(Stringify(k))
+		sb.WriteString(": ")
+		sb.WriteString(Stringify(v))
+		first = false
+	}
+	sb.WriteString("]")
+	return sb.String()
+}
 
 // ---------------------------------------------------------------------------
 // Range

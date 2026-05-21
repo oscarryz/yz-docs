@@ -13,6 +13,10 @@ func NewAccount(balance std.Int) *Account {
 	}
 }
 
+func (self *Account) String() string {
+	return "Account(balance: " + std.Stringify(self.balance) + ")"
+}
+
 type _loaderBoc struct {
 	std.Cown
 	acc *Account

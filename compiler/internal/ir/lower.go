@@ -3067,15 +3067,17 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 	return stmts
 }
 
-// lowerInterpString lowers an InterpolatedStringExpr to a chain of Plus calls:
-//   "Hello, `name`!" → std.NewString("Hello, ").Plus(std.NewString(std.Stringify(name))).Plus(std.NewString("!"))
+// lowerInterpString lowers an InterpolatedStringExpr to a chain of Plus calls.
+// Backtick parts (IsDebug=true): always use std.Stringify — homoiconic dump.
+// Dollar-brace parts (IsDebug=false): also use std.Stringify for now;
+// YZC-0046 will replace this with a to_str() call + sema compile-error guard.
 func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 	var result Expr
 	for _, part := range e.Parts {
 		var node Expr
 		if part.IsExpr {
 			inner := l.lowerExprForced(part.Expr)
-			// std.NewString(std.Stringify(inner))
+			// Both forms call Stringify for now; YZC-0046 differentiates them.
 			node = &FuncCall{
 				Func: &Ident{Name: "std.NewString"},
 				Args: []Expr{&FuncCall{

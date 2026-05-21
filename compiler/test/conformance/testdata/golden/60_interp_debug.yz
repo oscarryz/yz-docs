@@ -1,0 +1,11 @@
+Person : {
+    name String
+    age  Int
+}
+
+main : {
+    p : Person("Alice", 30)
+    print("Debug: `p`")
+    print("Name: `p.name`")
+    print("Expr: `1 + 2`")
+}

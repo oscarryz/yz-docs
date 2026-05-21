@@ -13,6 +13,10 @@ func NewBox[T any](value T) *Box[T] {
 	}
 }
 
+func (self *Box[T]) String() string {
+	return "Box(value: " + std.Stringify(self.value) + ")"
+}
+
 type _mainBoc struct {
 	std.Cown
 }

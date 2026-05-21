@@ -13,6 +13,10 @@ func NewAccount(balance std.Int) *Account {
 	}
 }
 
+func (self *Account) String() string {
+	return "Account(balance: " + std.Stringify(self.balance) + ")"
+}
+
 func (self *Account) deposit(amount std.Int) std.Unit {
 	self.balance = self.balance.Plus(amount)
 	return std.TheUnit

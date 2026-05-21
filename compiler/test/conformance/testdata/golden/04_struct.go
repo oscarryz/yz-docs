@@ -14,3 +14,7 @@ func NewPerson(name std.String, age std.Int) *Person {
 		age: age,
 	}
 }
+
+func (self *Person) String() string {
+	return "Person(name: " + std.Stringify(self.name) + ", age: " + std.Stringify(self.age) + ")"
+}

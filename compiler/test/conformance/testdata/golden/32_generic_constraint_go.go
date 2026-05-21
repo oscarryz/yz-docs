@@ -13,6 +13,10 @@ func NewWrapper[T interface{ ToStr() std.String }](value T) *Wrapper[T] {
 	}
 }
 
+func (self *Wrapper[T]) String() string {
+	return "Wrapper(value: " + std.Stringify(self.value) + ")"
+}
+
 func (self *Wrapper[T]) describe() std.String {
 	return self.value.ToStr()
 }

@@ -145,6 +145,27 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 		g.line("}")
 	}
 
+	// fmt.Stringer: homoiconic String() method for backtick interpolation and print.
+	if !sd.IsVariant {
+		g.nl()
+		g.linef("func (self *%s%s) String() string {", sd.Name, typeArgs)
+		g.level++
+		if len(sd.Fields) == 0 {
+			g.linef("return %q", sd.Name+"()")
+		} else {
+			result := fmt.Sprintf("%q", sd.Name+"("+sd.Fields[0].Name+": ") +
+				" + std.Stringify(self." + sd.Fields[0].Name + ")"
+			for _, f := range sd.Fields[1:] {
+				result += " + " + fmt.Sprintf("%q", ", "+f.Name+": ") +
+					" + std.Stringify(self." + f.Name + ")"
+			}
+			result += " + \")\""
+			g.linef("return %s", result)
+		}
+		g.level--
+		g.line("}")
+	}
+
 	for _, m := range sd.Methods {
 		g.nl()
 		g.emitMethodDecl(m)
