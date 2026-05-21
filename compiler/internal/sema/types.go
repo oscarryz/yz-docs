@@ -65,6 +65,30 @@ func displayType(t Type) string {
 	return t.typeName()
 }
 
+// typeHasToStr reports whether t exposes a to_str method.
+// Used by sema to enforce YZC-0046: ${} interpolation requires to_str.
+func typeHasToStr(t Type) bool {
+	switch typ := t.(type) {
+	case *BuiltinType:
+		methods, ok := builtinMethods[typ.name]
+		if !ok {
+			return false
+		}
+		_, has := methods["to_str"]
+		return has
+	case *StructType:
+		for _, f := range typ.Fields {
+			if f.Name == "to_str" {
+				return true
+			}
+		}
+		return false
+	case *UnknownType:
+		return true // error already reported; avoid cascading errors
+	}
+	return false
+}
+
 // ---------------------------------------------------------------------------
 // Boc type
 // ---------------------------------------------------------------------------

@@ -1,0 +1,9 @@
+Person : {
+    name String
+    age  Int
+}
+
+main : {
+    p : Person("Alice", 30)
+    print("User: ${p}")
+}
