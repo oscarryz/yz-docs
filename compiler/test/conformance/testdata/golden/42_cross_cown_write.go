@@ -7,6 +7,10 @@ type _bankBoc struct {
 	balance std.Int
 }
 
+func (self *_bankBoc) String() string {
+	return "{ " + "balance: " + std.StringifyRepr(self.balance) + "; " + "deposit: {}" + " }"
+}
+
 func (self *_bankBoc) deposit(amount std.Int) std.Unit {
 	self.balance = self.balance.Plus(amount)
 	return std.TheUnit
@@ -24,6 +28,10 @@ var Bank = &_bankBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) call() std.Unit {

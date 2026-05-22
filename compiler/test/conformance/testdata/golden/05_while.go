@@ -8,6 +8,10 @@ type _whileBoc struct {
 	body func() std.Unit
 }
 
+func (self *_whileBoc) String() string {
+	return "{ " + "cond: " + std.StringifyRepr(self.cond) + "; " + "body: " + std.StringifyRepr(self.body) + "; " + "call: {}" + " }"
+}
+
 func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
@@ -30,6 +34,10 @@ var While = &_whileBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

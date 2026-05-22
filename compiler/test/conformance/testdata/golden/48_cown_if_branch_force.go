@@ -14,7 +14,7 @@ func NewBox(val std.Int) *Box {
 }
 
 func (self *Box) String() string {
-	return "Box(val: " + std.Stringify(self.val) + ")"
+	return "Box(val: " + std.StringifyRepr(self.val) + ")"
 }
 
 func (self *Box) set(v std.Int) std.Unit {
@@ -32,6 +32,10 @@ type _cond_setBoc struct {
 	std.Cown
 	a *Box
 	flag std.Bool
+}
+
+func (self *_cond_setBoc) String() string {
+	return "{ " + "a: " + std.StringifyRepr(self.a) + "; " + "flag: " + std.StringifyRepr(self.flag) + "; " + "call: {}" + " }"
 }
 
 func (self *_cond_setBoc) Call(a *Box, flag std.Bool) *std.Thunk[std.Unit] {
@@ -60,6 +64,10 @@ var Cond_set = &_cond_setBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

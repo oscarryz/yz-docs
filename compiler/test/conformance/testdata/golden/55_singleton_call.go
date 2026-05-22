@@ -6,6 +6,10 @@ type _greetingBoc struct {
 	std.Cown
 }
 
+func (self *_greetingBoc) String() string {
+	return "{ " + "call: {}" + " }"
+}
+
 func (self *_greetingBoc) call() std.String {
 	return std.NewString("Hello from singleton")
 }
@@ -20,6 +24,10 @@ var Greeting = &_greetingBoc{}
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

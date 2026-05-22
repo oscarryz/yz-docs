@@ -6,6 +6,10 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
+}
+
 func (self *_mainBoc) call() std.Unit {
 	var score std.Int = std.NewInt(85)
 	var grade std.String = func() std.String {

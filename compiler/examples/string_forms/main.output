@@ -1,0 +1,16 @@
+Point (to_str):      (3, 4)
+Point (homoiconic):  Point(x: 3, y: 4)
+Int:                 42
+String:              "hello"
+Bool:                true
+Int array:           [1, 2, 3]
+String array:        ["one", "two", "three"]
+Dict:                ["Alice": 30, "Bob": 25]
+Int box:             Box(Int, value: 99)
+String box:          Box(String, value: "hello")
+Circle:              Shape.Circle(radius: 3.14)
+Rectangle:           Shape.Rectangle(width: 4, height: 5)
+Empty:               Shape.Empty()
+Shape type:          Shape #(Empty(), Circle(radius Decimal), Rectangle(width Decimal, height Decimal))
+Box type:            Box #(T, value T)
+Person type:         Person #(name String, address Address #(street String, number Int))

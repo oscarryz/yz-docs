@@ -14,7 +14,7 @@ func NewWrapper[T interface{ ToStr() std.String }](value T) *Wrapper[T] {
 }
 
 func (self *Wrapper[T]) String() string {
-	return "Wrapper(value: " + std.Stringify(self.value) + ")"
+	return "Wrapper(" + std.YzTypeName(self.value) + ", " + "value: " + std.StringifyRepr(self.value) + ")"
 }
 
 func (self *Wrapper[T]) describe() std.String {
@@ -29,6 +29,10 @@ func (self *Wrapper[T]) Describe() *std.Thunk[std.String] {
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) call() std.Unit {

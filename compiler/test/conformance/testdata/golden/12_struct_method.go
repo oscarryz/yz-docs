@@ -14,7 +14,7 @@ func NewNamed(name std.String) *Named {
 }
 
 func (self *Named) String() string {
-	return "Named(name: " + std.Stringify(self.name) + ")"
+	return "Named(name: " + std.StringifyRepr(self.name) + ")"
 }
 
 func (self *Named) hi() std.Unit {

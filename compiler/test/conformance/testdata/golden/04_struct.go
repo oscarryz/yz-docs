@@ -16,5 +16,5 @@ func NewPerson(name std.String, age std.Int) *Person {
 }
 
 func (self *Person) String() string {
-	return "Person(name: " + std.Stringify(self.name) + ", age: " + std.Stringify(self.age) + ")"
+	return "Person(name: " + std.StringifyRepr(self.name) + ", age: " + std.StringifyRepr(self.age) + ")"
 }

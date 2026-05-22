@@ -21,7 +21,7 @@ func NewPerson(name std.String, secret std.String) *Person {
 }
 
 func (self *Person) String() string {
-	return "Person(name: " + std.Stringify(self.name) + ", secret: " + std.Stringify(self.secret) + ")"
+	return "Person(name: " + std.StringifyRepr(self.name) + ", secret: " + std.StringifyRepr(self.secret) + ")"
 }
 
 func (self *Person) greet() std.Unit {
@@ -39,6 +39,10 @@ type _greet_allBoc struct {
 	g Greeter
 }
 
+func (self *_greet_allBoc) String() string {
+	return "{ " + "g: " + std.StringifyRepr(self.g) + "; " + "call: {}" + " }"
+}
+
 func (self *_greet_allBoc) Call(g Greeter) *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
 		self.g = g
@@ -51,6 +55,10 @@ var Greet_all = &_greet_allBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

@@ -58,7 +58,7 @@ func (a Array[T]) String() string {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(Stringify(elem))
+		sb.WriteString(StringifyRepr(elem))
 	}
 	sb.WriteString("]")
 	return sb.String()
@@ -172,9 +172,9 @@ func (d Dict[K, V]) String() string {
 		if !first {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(Stringify(k))
+		sb.WriteString(StringifyRepr(k))
 		sb.WriteString(": ")
-		sb.WriteString(Stringify(v))
+		sb.WriteString(StringifyRepr(v))
 		first = false
 	}
 	sb.WriteString("]")

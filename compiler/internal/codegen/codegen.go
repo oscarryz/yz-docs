@@ -150,14 +150,47 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 		g.nl()
 		g.linef("func (self *%s%s) String() string {", sd.Name, typeArgs)
 		g.level++
-		if len(sd.Fields) == 0 {
+		// Build map: type-param name → first field that uses it.
+		firstFieldForParam := map[string]string{}
+		for _, tp := range sd.TypeParams {
+			for _, f := range sd.Fields {
+				if f.Type == tp {
+					firstFieldForParam[tp] = f.Name
+					break
+				}
+			}
+		}
+		hasTypeParams := len(sd.TypeParams) > 0 && len(firstFieldForParam) > 0
+		if len(sd.Fields) == 0 && !hasTypeParams {
 			g.linef("return %q", sd.Name+"()")
+		} else if hasTypeParams {
+			// Generic: Name(TypeA, TypeB, field: val, ...)
+			typeNames := "std.YzTypeName(self." + firstFieldForParam[sd.TypeParams[0]] + ")"
+			for _, tp := range sd.TypeParams[1:] {
+				if fn, ok := firstFieldForParam[tp]; ok {
+					typeNames += " + \", \" + std.YzTypeName(self." + fn + ")"
+				}
+			}
+			if len(sd.Fields) == 0 {
+				g.linef("return %q + %s + \")\"", sd.Name+"(", typeNames)
+			} else {
+				result := fmt.Sprintf("%q", sd.Name+"(") + " + " + typeNames +
+					" + \", \" + " + fmt.Sprintf("%q", sd.Fields[0].Name+": ") +
+					" + std.StringifyRepr(self." + sd.Fields[0].Name + ")"
+				for _, f := range sd.Fields[1:] {
+					result += " + " + fmt.Sprintf("%q", ", "+f.Name+": ") +
+						" + std.StringifyRepr(self." + f.Name + ")"
+				}
+				result += " + \")\""
+				g.linef("return %s", result)
+			}
 		} else {
+			// Non-generic: Name(field: val, ...)
 			result := fmt.Sprintf("%q", sd.Name+"("+sd.Fields[0].Name+": ") +
-				" + std.Stringify(self." + sd.Fields[0].Name + ")"
+				" + std.StringifyRepr(self." + sd.Fields[0].Name + ")"
 			for _, f := range sd.Fields[1:] {
 				result += " + " + fmt.Sprintf("%q", ", "+f.Name+": ") +
-					" + std.Stringify(self." + f.Name + ")"
+					" + std.StringifyRepr(self." + f.Name + ")"
 			}
 			result += " + \")\""
 			g.linef("return %s", result)
@@ -180,6 +213,36 @@ func (g *generator) emitSingletonDecl(sd *ir.SingletonDecl) {
 	g.line("std.Cown")
 	for _, f := range sd.Fields {
 		g.linef("%s %s", f.Name, f.Type)
+	}
+	g.level--
+	g.line("}")
+	g.nl()
+
+	// Homoiconic String() for backtick interpolation.
+	g.linef("func (self *%s) String() string {", sd.TypeName)
+	g.level++
+	if len(sd.Fields) == 0 && len(sd.Methods) == 0 {
+		g.linef("return %q", "{ }")
+	} else {
+		first := true
+		result := "\"{ \""
+		for _, f := range sd.Fields {
+			if !first {
+				result += " + \"; \""
+			}
+			result += " + " + fmt.Sprintf("%q", f.Name+": ") + " + std.StringifyRepr(self."+f.Name+")"
+			first = false
+		}
+		for _, m := range sd.Methods {
+			mYz := strings.ToLower(m.Name[:1]) + m.Name[1:]
+			if !first {
+				result += " + \"; \""
+			}
+			result += " + " + fmt.Sprintf("%q", mYz+": {}")
+			first = false
+		}
+		result += " + \" }\""
+		g.linef("return %s", result)
 	}
 	g.level--
 	g.line("}")
@@ -1181,6 +1244,32 @@ func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
 		g.line("}")
 		g.nl()
 	}
+
+	// Homoiconic String() for backtick interpolation.
+	g.linef("func (self *%s%s) String() string {", sd.Name, typeArgs)
+	g.level++
+	g.line("switch self._variant {")
+	for _, vc := range sd.Variants {
+		constName := "_" + sd.Name + vc.Name
+		g.linef("case %s:", constName)
+		g.level++
+		if len(vc.Fields) == 0 {
+			g.linef("return %q", sd.Name+"."+vc.Name+"()")
+		} else {
+			result := fmt.Sprintf("%q", sd.Name+"."+vc.Name+"("+vc.Fields[0].Name+": ") +
+				" + std.StringifyRepr(self." + vc.Fields[0].Name + ")"
+			for _, f := range vc.Fields[1:] {
+				result += " + " + fmt.Sprintf("%q", ", "+f.Name+": ") + " + std.StringifyRepr(self." + f.Name + ")"
+			}
+			result += " + \")\""
+			g.linef("return %s", result)
+		}
+		g.level--
+	}
+	g.line("}")
+	g.linef("return %q", sd.Name+"(?)")
+	g.level--
+	g.line("}")
 }
 
 // emitSwitchStmt emits a Go switch on the discriminant field.

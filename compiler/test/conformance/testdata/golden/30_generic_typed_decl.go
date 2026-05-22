@@ -14,11 +14,15 @@ func NewBox[T any](value T) *Box[T] {
 }
 
 func (self *Box[T]) String() string {
-	return "Box(value: " + std.Stringify(self.value) + ")"
+	return "Box(" + std.YzTypeName(self.value) + ", " + "value: " + std.StringifyRepr(self.value) + ")"
 }
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) call() std.Unit {

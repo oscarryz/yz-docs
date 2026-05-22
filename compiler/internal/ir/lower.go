@@ -3068,7 +3068,7 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 }
 
 // lowerInterpString lowers an InterpolatedStringExpr to a chain of Plus calls.
-// Backtick parts (IsDebug=true): use std.Stringify — homoiconic dump (YZC-0020).
+// Backtick parts (IsDebug=true): use std.StringifyRepr — homoiconic dump (YZC-0020).
 // Dollar-brace parts (IsDebug=false): call to_str() — sema guarantees the method exists.
 func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 	var result Expr
@@ -3077,13 +3077,28 @@ func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 		if part.IsExpr {
 			inner := l.lowerExprForced(part.Expr)
 			if part.IsDebug {
-				// Backtick form: homoiconic dump via std.Stringify (YZC-0020).
-				node = &FuncCall{
-					Func: &Ident{Name: "std.NewString"},
-					Args: []Expr{&FuncCall{
-						Func: &Ident{Name: "std.Stringify"},
-						Args: []Expr{inner},
-					}},
+				// Backtick form: homoiconic dump (YZC-0020).
+				// Special case: bare type name (e.g. `Shape`) — emit compile-time signature.
+				if id, ok := part.Expr.(*ast.Ident); ok {
+					sym := l.analyzer.LookupInFile(id.Name)
+					if sym != nil {
+						if st, isStruct := sym.Type.(*sema.StructType); isStruct && !st.IsSingleton {
+							// Emit std.NewString("Name #(...)") with a raw Go string literal.
+							node = &FuncCall{
+								Func: &Ident{Name: "std.NewString"},
+								Args: []Expr{&Ident{Name: fmt.Sprintf("%q", sema.TypeSignature(st))}},
+							}
+						}
+					}
+				}
+				if node == nil {
+					node = &FuncCall{
+						Func: &Ident{Name: "std.NewString"},
+						Args: []Expr{&FuncCall{
+							Func: &Ident{Name: "std.StringifyRepr"},
+							Args: []Expr{inner},
+						}},
+					}
 				}
 			} else {
 				// Dollar-brace form: call to_str() — sema ensures it exists.

@@ -6,6 +6,10 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
+}
+
 func (self *_mainBoc) call() std.Unit {
 	var x std.Int = std.NewInt(5)
 	if x.Gt(std.NewInt(3)).GoBool() {

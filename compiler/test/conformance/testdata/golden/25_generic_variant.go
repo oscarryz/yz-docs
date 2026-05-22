@@ -27,9 +27,22 @@ func NewOptionNone[V any]() *Option[V] {
 	}
 }
 
+func (self *Option[V]) String() string {
+	switch self._variant {
+	case _OptionSome:
+		return "Option.Some(value: " + std.StringifyRepr(self.value) + ")"
+	case _OptionNone:
+		return "Option.None()"
+	}
+	return "Option(?)"
+}
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) call() std.Unit {

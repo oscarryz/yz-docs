@@ -6,6 +6,7 @@ package rt
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 	"unicode"
@@ -229,6 +230,44 @@ func (u Unit) String() string { return "()" }
 // Stringify returns a human-readable string for any yzrt value.
 // It handles all boxed types plus raw Go values via fmt.Sprint.
 func Stringify(v any) string {
+	switch x := v.(type) {
+	case fmt.Stringer:
+		return x.String()
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+// YzTypeName returns the Yz type name for a value (used in homoiconic output).
+func YzTypeName(v any) string {
+	switch v.(type) {
+	case String:
+		return "String"
+	case Int:
+		return "Int"
+	case Bool:
+		return "Bool"
+	case Decimal:
+		return "Decimal"
+	default:
+		t := reflect.TypeOf(v)
+		if t == nil {
+			return "?"
+		}
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		return t.Name()
+	}
+}
+
+// StringifyRepr returns a Yz-syntax representation of v.
+// Unlike Stringify, String values are quoted so they are distinguishable
+// from identifiers inside homoiconic output (backtick interpolation).
+func StringifyRepr(v any) string {
+	if s, ok := v.(String); ok {
+		return `"` + s.val + `"`
+	}
 	switch x := v.(type) {
 	case fmt.Stringer:
 		return x.String()

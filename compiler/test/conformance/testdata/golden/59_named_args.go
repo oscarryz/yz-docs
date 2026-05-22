@@ -16,13 +16,17 @@ func NewPerson(name std.String, age std.Int) *Person {
 }
 
 func (self *Person) String() string {
-	return "Person(name: " + std.Stringify(self.name) + ", age: " + std.Stringify(self.age) + ")"
+	return "Person(name: " + std.StringifyRepr(self.name) + ", age: " + std.StringifyRepr(self.age) + ")"
 }
 
 type _greetBoc struct {
 	std.Cown
 	name std.String
 	greeting std.String
+}
+
+func (self *_greetBoc) String() string {
+	return "{ " + "name: " + std.StringifyRepr(self.name) + "; " + "greeting: " + std.StringifyRepr(self.greeting) + "; " + "call: {}" + " }"
 }
 
 func (self *_greetBoc) Call(name std.String, greeting std.String) *std.Thunk[std.Unit] {
@@ -39,6 +43,10 @@ var Greet = &_greetBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

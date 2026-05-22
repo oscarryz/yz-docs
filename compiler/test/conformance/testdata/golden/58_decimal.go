@@ -6,6 +6,10 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
+}
+
 func (self *_mainBoc) call() std.Unit {
 	var a std.Decimal = std.NewDecimal(10)
 	var b std.Decimal = std.NewDecimal(3)

@@ -14,7 +14,7 @@ func NewBox(val std.Int) *Box {
 }
 
 func (self *Box) String() string {
-	return "Box(val: " + std.Stringify(self.val) + ")"
+	return "Box(val: " + std.StringifyRepr(self.val) + ")"
 }
 
 func (self *Box) set(v std.Int) std.Unit {
@@ -32,6 +32,10 @@ type _assignBoc struct {
 	std.Cown
 	b *Box
 	v std.Int
+}
+
+func (self *_assignBoc) String() string {
+	return "{ " + "b: " + std.StringifyRepr(self.b) + "; " + "v: " + std.StringifyRepr(self.v) + "; " + "call: {}" + " }"
 }
 
 func (self *_assignBoc) Call(b *Box, v std.Int) *std.Thunk[std.Unit] {
@@ -56,6 +60,10 @@ var Assign = &_assignBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

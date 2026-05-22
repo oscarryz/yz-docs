@@ -1,0 +1,73 @@
+// ${} uses to_str — user-defined, human-friendly format.
+// `  ` uses the compiler-generated homoiconic representation.
+
+Point : {
+    x Int
+    y Int
+    to_str : { "(${x}, ${y})" }
+}
+
+Shape: {
+    Empty()
+    Circle(radius Decimal)
+    Rectangle(width Decimal, height Decimal)
+}
+
+Box: {
+    T
+    value T
+}
+
+Address : {
+    street String
+    number Int
+}
+
+Person : {
+    name    String
+    address Address
+}
+
+main : {
+    // struct instance
+    p : Point(3, 4)
+    print("Point (to_str):      ${p}")
+    print("Point (homoiconic):  `p`")
+
+    // primitives
+    n : 42
+    s : "hello"
+    b : true
+    print("Int:                 `n`")
+    print("String:              `s`")
+    print("Bool:                `b`")
+
+    // array
+    nums  : [1, 2, 3]
+    words : ["one", "two", "three"]
+    print("Int array:           `nums`")
+    print("String array:        `words`")
+
+    // dictionary
+    ages : ["Alice": 30, "Bob": 25]
+    print("Dict:                `ages`")
+
+    // generic struct
+    bi : Box(99)
+    bs : Box("hello")
+    print("Int box:             `bi`")
+    print("String box:          `bs`")
+
+    // variant
+    c : Circle(3.14)
+    r : Rectangle(4.0, 5.0)
+    e : Empty()
+    print("Circle:              `c`")
+    print("Rectangle:           `r`")
+    print("Empty:               `e`")
+
+    // type signatures
+    print("Shape type:          `Shape`")
+    print("Box type:            `Box`")
+    print("Person type:         `Person`")
+}

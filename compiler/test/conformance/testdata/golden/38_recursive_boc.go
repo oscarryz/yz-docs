@@ -7,6 +7,10 @@ type _countdownBoc struct {
 	n std.Int
 }
 
+func (self *_countdownBoc) String() string {
+	return "{ " + "n: " + std.StringifyRepr(self.n) + "; " + "call: {}" + " }"
+}
+
 func (self *_countdownBoc) Call(n std.Int) *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
@@ -30,6 +34,10 @@ var Countdown = &_countdownBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

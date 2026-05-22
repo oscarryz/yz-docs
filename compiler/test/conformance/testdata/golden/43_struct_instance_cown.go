@@ -14,7 +14,7 @@ func NewCounter(count std.Int) *Counter {
 }
 
 func (self *Counter) String() string {
-	return "Counter(count: " + std.Stringify(self.count) + ")"
+	return "Counter(count: " + std.StringifyRepr(self.count) + ")"
 }
 
 func (self *Counter) increment() std.Unit {
@@ -40,6 +40,10 @@ func (self *Counter) Value() *std.Thunk[std.Int] {
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

@@ -7,6 +7,10 @@ type _counterBoc struct {
 	count std.Int
 }
 
+func (self *_counterBoc) String() string {
+	return "{ " + "count: " + std.StringifyRepr(self.count) + "; " + "increment: {}" + "; " + "value: {}" + " }"
+}
+
 func (self *_counterBoc) increment() std.Unit {
 	self.count = self.count.Plus(std.NewInt(1))
 	return std.TheUnit
@@ -34,6 +38,10 @@ var Counter = &_counterBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

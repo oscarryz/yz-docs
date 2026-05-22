@@ -16,7 +16,7 @@ func NewNamed(name std.String, greet func() *std.Thunk[std.Unit]) *Named {
 }
 
 func (self *Named) String() string {
-	return "Named(name: " + std.Stringify(self.name) + ", greet: " + std.Stringify(self.greet) + ")"
+	return "Named(name: " + std.StringifyRepr(self.name) + ", greet: " + std.StringifyRepr(self.greet) + ")"
 }
 
 func (self *Named) Greet() *std.Thunk[std.Unit] {
@@ -25,6 +25,10 @@ func (self *Named) Greet() *std.Thunk[std.Unit] {
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) call() std.Unit {

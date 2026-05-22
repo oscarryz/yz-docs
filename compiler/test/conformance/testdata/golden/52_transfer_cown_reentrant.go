@@ -14,7 +14,7 @@ func NewAccount(balance std.Int) *Account {
 }
 
 func (self *Account) String() string {
-	return "Account(balance: " + std.Stringify(self.balance) + ")"
+	return "Account(balance: " + std.StringifyRepr(self.balance) + ")"
 }
 
 func (self *Account) deposit(amount std.Int) std.Unit {
@@ -46,6 +46,10 @@ type _transferBoc struct {
 	amount std.Int
 }
 
+func (self *_transferBoc) String() string {
+	return "{ " + "src: " + std.StringifyRepr(self.src) + "; " + "dst: " + std.StringifyRepr(self.dst) + "; " + "amount: " + std.StringifyRepr(self.amount) + "; " + "call: {}" + " }"
+}
+
 func (self *_transferBoc) Call(src *Account, dst *Account, amount std.Int) *std.Thunk[std.Unit] {
 	return func() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
@@ -74,6 +78,10 @@ var Transfer = &_transferBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

@@ -14,7 +14,7 @@ func NewAccount(balance std.Int) *Account {
 }
 
 func (self *Account) String() string {
-	return "Account(balance: " + std.Stringify(self.balance) + ")"
+	return "Account(balance: " + std.StringifyRepr(self.balance) + ")"
 }
 
 type Transfer struct {
@@ -33,7 +33,7 @@ func NewTransfer(src *Account, dst *Account, amount std.Int) *Transfer {
 }
 
 func (self *Transfer) String() string {
-	return "Transfer(src: " + std.Stringify(self.src) + ", dst: " + std.Stringify(self.dst) + ", amount: " + std.Stringify(self.amount) + ")"
+	return "Transfer(src: " + std.StringifyRepr(self.src) + ", dst: " + std.StringifyRepr(self.dst) + ", amount: " + std.StringifyRepr(self.amount) + ")"
 }
 
 func (self *Transfer) Run() *std.Thunk[std.Unit] {
@@ -46,6 +46,10 @@ func (self *Transfer) Run() *std.Thunk[std.Unit] {
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

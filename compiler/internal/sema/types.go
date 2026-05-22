@@ -254,6 +254,53 @@ func (t *StructType) IsCompatibleWith(target Type) bool {
 
 func (t *StructType) String() string { return t.typeName() }
 
+// TypeSignature returns the Yz-syntax declaration string for st, used by the
+// backtick homoiconic representation when a type name is interpolated.
+// Examples:
+//
+//	Point    → "Point #(x Int, y Int)"
+//	Shape    → "Shape #(Empty #(), Circle #(radius Decimal))"
+//	Box[T]   → "Box #(T, value T)"
+func TypeSignature(st *StructType) string {
+	if st.IsVariant {
+		var cases []string
+		for _, vc := range st.Variants {
+			if len(vc.Fields) == 0 {
+				cases = append(cases, vc.Name+"()")
+			} else {
+				var fields []string
+				for _, f := range vc.Fields {
+					fields = append(fields, f.Name+" "+typeSignatureFieldType(f.Type))
+				}
+				cases = append(cases, vc.Name+"("+strings.Join(fields, ", ")+")")
+			}
+		}
+		return st.Name + " #(" + strings.Join(cases, ", ") + ")"
+	}
+	var parts []string
+	for _, tp := range st.TypeParams {
+		parts = append(parts, tp)
+	}
+	for _, f := range st.Fields {
+		parts = append(parts, f.Name+" "+typeSignatureFieldType(f.Type))
+	}
+	return st.Name + " #(" + strings.Join(parts, ", ") + ")"
+}
+
+// typeSignatureFieldType returns the Yz-syntax type string for a field in TypeSignature.
+// Named struct types are expanded recursively; primitives and BocTypes use their names.
+func typeSignatureFieldType(t Type) string {
+	switch typ := t.(type) {
+	case *StructType:
+		if !typ.IsInterface && typ.Name != "" {
+			return TypeSignature(typ)
+		}
+		return typ.typeName()
+	default:
+		return t.typeName()
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Array type
 // ---------------------------------------------------------------------------

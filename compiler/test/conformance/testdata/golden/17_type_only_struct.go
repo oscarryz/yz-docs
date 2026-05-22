@@ -10,5 +10,5 @@ type Point struct {
 
 
 func (self *Point) String() string {
-	return "Point(x: " + std.Stringify(self.x) + ", y: " + std.Stringify(self.y) + ")"
+	return "Point(x: " + std.StringifyRepr(self.x) + ", y: " + std.StringifyRepr(self.y) + ")"
 }

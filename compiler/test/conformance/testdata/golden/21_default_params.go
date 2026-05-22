@@ -7,6 +7,10 @@ type _greetBoc struct {
 	name std.String
 }
 
+func (self *_greetBoc) String() string {
+	return "{ " + "name: " + std.StringifyRepr(self.name) + "; " + "call: {}" + " }"
+}
+
 func (self *_greetBoc) Call(name std.String) *std.Thunk[std.Unit] {
 	return std.Schedule(&self.Cown, func() std.Unit {
 		self.name = name
@@ -19,6 +23,10 @@ var Greet = &_greetBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

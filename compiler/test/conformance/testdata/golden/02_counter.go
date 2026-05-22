@@ -7,6 +7,10 @@ type _counterBoc struct {
 	count std.Int
 }
 
+func (self *_counterBoc) String() string {
+	return "{ " + "count: " + std.StringifyRepr(self.count) + "; " + "increment: {}" + "; " + "value: {}" + " }"
+}
+
 func (self *_counterBoc) increment() std.Unit {
 	self.count = self.count.Plus(std.NewInt(1))
 	return std.TheUnit

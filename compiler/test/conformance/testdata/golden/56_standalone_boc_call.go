@@ -6,6 +6,10 @@ type _pBoc struct {
 	std.Cown
 }
 
+func (self *_pBoc) String() string {
+	return "{ " + "call: {}" + " }"
+}
+
 func (self *_pBoc) call() std.Unit {
 	std.Print(std.NewString("hello"))
 	return std.TheUnit
@@ -21,6 +25,10 @@ var P = &_pBoc{}
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

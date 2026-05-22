@@ -19,7 +19,7 @@ func NewPerson(name std.String) *Person {
 }
 
 func (self *Person) String() string {
-	return "Person(name: " + std.Stringify(self.name) + ")"
+	return "Person(name: " + std.StringifyRepr(self.name) + ")"
 }
 
 func (self *Person) greet() std.Unit {

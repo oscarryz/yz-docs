@@ -6,6 +6,10 @@ type _mainBoc struct {
 	std.Cown
 }
 
+func (self *_mainBoc) String() string {
+	return "{ " + "foo: {}" + "; " + "bar: {}" + "; " + "call: {}" + " }"
+}
+
 func (self *_mainBoc) foo() std.String {
 	return std.NewString("hello")
 }

@@ -16,7 +16,7 @@ func NewPair[K any, V any](first K, second V) *Pair[K, V] {
 }
 
 func (self *Pair[K, V]) String() string {
-	return "Pair(first: " + std.Stringify(self.first) + ", second: " + std.Stringify(self.second) + ")"
+	return "Pair(" + std.YzTypeName(self.first) + ", " + std.YzTypeName(self.second) + ", " + "first: " + std.StringifyRepr(self.first) + ", second: " + std.StringifyRepr(self.second) + ")"
 }
 
 func makePair[K any, V any](a K, b V) *std.Thunk[*Pair[K, V]] {
@@ -27,6 +27,10 @@ func makePair[K any, V any](a K, b V) *std.Thunk[*Pair[K, V]] {
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

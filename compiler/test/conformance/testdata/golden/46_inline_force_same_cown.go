@@ -14,12 +14,16 @@ func NewAccount(balance std.Int) *Account {
 }
 
 func (self *Account) String() string {
-	return "Account(balance: " + std.Stringify(self.balance) + ")"
+	return "Account(balance: " + std.StringifyRepr(self.balance) + ")"
 }
 
 type _loaderBoc struct {
 	std.Cown
 	acc *Account
+}
+
+func (self *_loaderBoc) String() string {
+	return "{ " + "acc: " + std.StringifyRepr(self.acc) + "; " + "call: {}" + " }"
 }
 
 func (self *_loaderBoc) Call(acc *Account) *std.Thunk[*Account] {
@@ -35,6 +39,10 @@ var Loader = &_loaderBoc{
 type _userBoc struct {
 	std.Cown
 	acc *Account
+}
+
+func (self *_userBoc) String() string {
+	return "{ " + "acc: " + std.StringifyRepr(self.acc) + "; " + "call: {}" + " }"
 }
 
 func (self *_userBoc) Call(acc *Account) *std.Thunk[std.Unit] {
@@ -59,6 +67,10 @@ var User = &_userBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

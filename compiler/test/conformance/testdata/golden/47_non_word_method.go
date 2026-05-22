@@ -14,7 +14,7 @@ func NewGreeter(name std.String) *Greeter {
 }
 
 func (self *Greeter) String() string {
-	return "Greeter(name: " + std.Stringify(self.name) + ")"
+	return "Greeter(name: " + std.StringifyRepr(self.name) + ")"
 }
 
 func (self *Greeter) plusplus(other std.String) std.String {
@@ -29,6 +29,10 @@ func (self *Greeter) Plusplus(other std.String) *std.Thunk[std.String] {
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

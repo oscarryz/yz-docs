@@ -7,6 +7,10 @@ type _bankBoc struct {
 	balance std.Int
 }
 
+func (self *_bankBoc) String() string {
+	return "{ " + "balance: " + std.StringifyRepr(self.balance) + "; " + "deposit: {}" + " }"
+}
+
 func (self *_bankBoc) deposit(amount std.Int) std.Unit {
 	self.balance = self.balance.Plus(amount)
 	return std.TheUnit
@@ -25,6 +29,10 @@ var Bank = &_bankBoc{
 type _ledgerBoc struct {
 	std.Cown
 	total std.Int
+}
+
+func (self *_ledgerBoc) String() string {
+	return "{ " + "total: " + std.StringifyRepr(self.total) + "; " + "add: {}" + " }"
 }
 
 func (self *_ledgerBoc) add(amount std.Int) std.Unit {
@@ -48,6 +56,10 @@ type _syncBoc struct {
 	l *_ledgerBoc
 }
 
+func (self *_syncBoc) String() string {
+	return "{ " + "b: " + std.StringifyRepr(self.b) + "; " + "l: " + std.StringifyRepr(self.l) + "; " + "call: {}" + " }"
+}
+
 func (self *_syncBoc) Call(b *_bankBoc, l *_ledgerBoc) *std.Thunk[std.Unit] {
 	return std.ScheduleMulti([]*std.Cown{&self.Cown, &b.Cown, &l.Cown}, func() std.Unit {
 		self.b = b
@@ -63,6 +75,10 @@ var Sync = &_syncBoc{
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {

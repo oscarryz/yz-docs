@@ -14,7 +14,7 @@ func NewContainer[T any](value T) *Container[T] {
 }
 
 func (self *Container[T]) String() string {
-	return "Container(value: " + std.Stringify(self.value) + ")"
+	return "Container(" + std.YzTypeName(self.value) + ", " + "value: " + std.StringifyRepr(self.value) + ")"
 }
 
 func (self *Container[T]) get() T {
@@ -29,6 +29,10 @@ func (self *Container[T]) Get() *std.Thunk[T] {
 
 type _mainBoc struct {
 	std.Cown
+}
+
+func (self *_mainBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
 func (self *_mainBoc) call() std.Unit {
