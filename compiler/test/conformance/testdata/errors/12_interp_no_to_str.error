@@ -1,1 +1,1 @@
-YZC-0046: type Person does not implement to_str #(String)
+YZC-0046: Person requires to implement to_str #(String)

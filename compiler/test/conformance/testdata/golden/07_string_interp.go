@@ -9,9 +9,9 @@ type _mainBoc struct {
 func (self *_mainBoc) call() std.Unit {
 	var name std.String = std.NewString("World")
 	var n std.Int = std.NewInt(42)
-	std.Print(std.NewString("Hello, ").Plus(std.NewString(std.Stringify(name))).Plus(std.NewString("!")))
-	std.Print(std.NewString("Answer: ").Plus(std.NewString(std.Stringify(n))))
-	std.Print(std.NewString("Sum: ").Plus(std.NewString(std.Stringify(n.Plus(std.NewInt(1))))))
+	std.Print(std.NewString("Hello, ").Plus(name.ToStr()).Plus(std.NewString("!")))
+	std.Print(std.NewString("Answer: ").Plus(n.ToStr()))
+	std.Print(std.NewString("Sum: ").Plus(n.Plus(std.NewInt(1)).ToStr()))
 	return std.TheUnit
 }
 

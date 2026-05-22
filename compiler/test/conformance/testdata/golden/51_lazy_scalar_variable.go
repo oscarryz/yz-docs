@@ -51,7 +51,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var m std.Int
 		std.GoStore(_bg1, Counter.Value(), &m)
 		_bg1.Wait()
-		std.Print(std.NewString(std.Stringify(m)))
+		std.Print(m.ToStr())
 		return std.TheUnit
 	})
 }

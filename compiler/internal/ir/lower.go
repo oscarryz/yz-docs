@@ -3068,22 +3068,26 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 }
 
 // lowerInterpString lowers an InterpolatedStringExpr to a chain of Plus calls.
-// Backtick parts (IsDebug=true): always use std.Stringify — homoiconic dump.
-// Dollar-brace parts (IsDebug=false): also use std.Stringify for now;
-// YZC-0046 will replace this with a to_str() call + sema compile-error guard.
+// Backtick parts (IsDebug=true): use std.Stringify — homoiconic dump (YZC-0020).
+// Dollar-brace parts (IsDebug=false): call to_str() — sema guarantees the method exists.
 func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 	var result Expr
 	for _, part := range e.Parts {
 		var node Expr
 		if part.IsExpr {
 			inner := l.lowerExprForced(part.Expr)
-			// Both forms call Stringify for now; YZC-0046 differentiates them.
-			node = &FuncCall{
-				Func: &Ident{Name: "std.NewString"},
-				Args: []Expr{&FuncCall{
-					Func: &Ident{Name: "std.Stringify"},
-					Args: []Expr{inner},
-				}},
+			if part.IsDebug {
+				// Backtick form: homoiconic dump via std.Stringify (YZC-0020).
+				node = &FuncCall{
+					Func: &Ident{Name: "std.NewString"},
+					Args: []Expr{&FuncCall{
+						Func: &Ident{Name: "std.Stringify"},
+						Args: []Expr{inner},
+					}},
+				}
+			} else {
+				// Dollar-brace form: call to_str() — sema ensures it exists.
+				node = &MethodCall{Recv: inner, Method: "ToStr"}
 			}
 		} else {
 			node = &StringLit{Val: unquoteString(`"` + part.Text + `"`)}

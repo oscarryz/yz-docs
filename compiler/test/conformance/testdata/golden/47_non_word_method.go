@@ -18,7 +18,7 @@ func (self *Greeter) String() string {
 }
 
 func (self *Greeter) plusplus(other std.String) std.String {
-	return std.NewString(std.Stringify(self.name)).Plus(std.NewString(" and ")).Plus(std.NewString(std.Stringify(other)))
+	return self.name.ToStr().Plus(std.NewString(" and ")).Plus(other.ToStr())
 }
 
 func (self *Greeter) Plusplus(other std.String) *std.Thunk[std.String] {

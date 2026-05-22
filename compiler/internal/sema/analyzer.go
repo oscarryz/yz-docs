@@ -981,7 +981,7 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 				partType := a.analyzeExpr(part.Expr)
 				// YZC-0046: ${} requires to_str; backtick form accepts any type.
 				if !part.IsDebug && !typeHasToStr(partType) {
-					a.errorf(part.Expr.Position(), "YZC-0046: type %s does not implement to_str #(String); define to_str or use backtick interpolation for the debug dump", displayType(partType))
+					a.errorf(part.Expr.Position(), "YZC-0046: %s requires to implement to_str #(String)", displayType(partType))
 				}
 			}
 		}
