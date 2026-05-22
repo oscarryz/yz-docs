@@ -3087,7 +3087,14 @@ func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 				}
 			} else {
 				// Dollar-brace form: call to_str() — sema ensures it exists.
-				node = &MethodCall{Recv: inner, Method: "ToStr"}
+				toStrCall := &MethodCall{Recv: inner, Method: "ToStr"}
+				// Builtin ToStr() returns std.String directly; user-defined boc
+				// methods return *Thunk[String] and must be forced.
+				if _, isBuiltin := l.analyzer.ExprType(part.Expr).(*sema.BuiltinType); isBuiltin {
+					node = toStrCall
+				} else {
+					node = &ForceExpr{Thunk: toStrCall}
+				}
 			}
 		} else {
 			node = &StringLit{Val: unquoteString(`"` + part.Text + `"`)}
@@ -3463,7 +3470,7 @@ func goMethodName(ident *ast.Ident) string {
 
 // goMethodNameStr is like goMethodName but takes a plain string.
 func goMethodNameStr(name string) string {
-	return goIdentGoName(name)
+	return lowerMethodName(name)
 }
 
 func (l *lowerer) valueAt(vals []ast.Expr, i int) ast.Expr {
