@@ -84,10 +84,6 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   variants were not updated for the BOC model; see `examples/variants`
 
-- [ ] **[YZC-0002] Cross-package broken**
-
-  broke during BOC migration
-
 - [x] **[YZC-0003] Assigning Unit-returning boc to variable**
 
   `a : foo()` where `foo` returns Unit should be a sema error (analogue to Go's `x := f()` where `f` returns nothing); detect in sema; add error golden test
@@ -181,6 +177,8 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0014] Option/Result method chaining**
 
   `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })`
+  These are API methods 
+  Depends on: YZC-0031
   
 
 - [x] **[YZC-0015] Non-word boc names**
@@ -217,7 +215,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 - [ ] **[YZC-0039] Operators audit**
 
-  systematic comparison of operators documented in spec vs. implemented in yzrt and recognised by the lowerer; covers `%`, bitwise ops, string operators, and any gaps; add golden tests for each gap found. See `docs/Questions/Operators.md`.
+  systematic comparison of operators documented in spec vs. implemented in yzrt and recognised by the lowerer; covers `%`, bitwise ops, string operators, and any gaps; add golden tests for each gap found. See `docs/Questions/Operators.md`. Depends on: YZC-0031 (operators will be defined in Yz source once scalar types move out of the runtime).
 
 - [ ] **[YZC-0040] Smart Nesting / Namespace Flattening**
 
@@ -240,6 +238,18 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 	The current `Stringify` / generated `String()` chain recurses into nested struct fields without tracking visited pointers; a self-referential or mutually-referential struct graph causes a stack overflow. Fix: thread a visited-pointer set through `Stringify`; on re-entry emit `TypeName(...)` (include type params for generics). Only types with struct-typed fields need the guard — primitives cannot form cycles. Runtime `Array` and `Dict` should also be covered.
 
 	**Deferred:** Yz sema rejects forward type references, so cyclic data graphs cannot currently be produced by Yz source. A Yz-level conformance test requires YZC-0057. A Go-level unit test can verify cycle safety independently. Depends on: YZC-0020, YZC-0057.
+
+- [ ] **[YZC-0058] Native type annotation — compiler-handled `compile_time:[Native]`**
+
+  Yz types backed by Go primitives (and user-land Go library wrappers) need a way to declare their native implementation per method. This is a *compiler-internal* magic annotation — not dispatched through the user-land `Compile` interface — because bootstrapping `Compile` itself requires `Int`/`String` to already exist. The compiler detects `compile_time:[Native]` (or equivalent) and emits Go code directly for annotated methods. Per-method annotations (e.g. `go: "self % other"`) provide Go expression templates; the compiler wraps results in the appropriate `std.New*()` constructor. Open design questions: annotation key naming, template variable syntax, Go import declarations, error-return mapping, and whether the annotation is available to user-land or restricted to stdlib. See [Native Type Annotations](../Questions/Native%20Type%20Annotations.md). Depends on: YZC-0025, YZC-0059.
+
+- [ ] **[YZC-0059] Design: compile-time bocs interface interaction**
+
+  The `Compile` interface definition in [Compile Time Bocs](../Features/Compile%20Time%20Bocs.md) covers the basic structure, but concrete interaction patterns need to be designed with examples: dependency management, Go stdlib wrappers (http, json), serializers, configuration, code generation, and others. The design must clarify how `Schema` and `run` interact for each use case, handle edge cases (missing fields, multiple implementations, conflict resolution), and produce enough detail to drive the YZC-0028 implementation. See [Compile time bocs Interface interaction design](../Questions/Compile%20time%20bocs%20Interface%20interaction%20design.md). Depends on: YZC-0025.
+
+- [ ] **[YZC-0060] Design and implement `self` in Yz**
+
+  `self` is not currently a keyword — inside a method body there is no way to refer to the receiver. For user-defined methods this is needed (e.g. `to_str` returning `self.name`). The proposed mechanism is a compile-time macro (`Derive`, `Self`) that injects a `self` binding using the Native annotation infrastructure. Design must settle: whether `self` is a compiler-built-in keyword vs. a macro-generated binding, what the macro annotation looks like (see `docs/Questions/How and when include self.md`), and whether it applies to all boc methods or only those that opt in. See [How and when include self](docs/Questions/How%20and%20when%20include%20self.md). Depends on: YZC-0058, YZC-0059.
 
 - [ ] **[YZC-0057] Cyclic / mutually-recursive type declarations**
 
@@ -266,6 +276,10 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [x] **[YZC-0032] Rename `BocWithSig` in compiler code**
 
   AST node `BocWithSig`, sema path `analyzeBocWithSig`, lowerer path `lowerBocWithSig`, and all related identifiers should be renamed to `BocDecl` / `analyzeBocDecl` / `lowerBocDecl` to match the settled terminology; also rename the `BocWithSig` → `BocDecl` grammar production in spec/02
+
+- [ ] **[YZC-0002] Cross-package support**
+
+  broke during BOC migration. Deferred: re-implement in the context of the full directory/namespace system rather than patching in isolation. Depends on: YZC-0040, YZC-0022.
 
 - [ ] **[YZC-0022] Multiple source roots**
 
@@ -302,6 +316,8 @@ Blocked on concurrency model settling (see YZC-0019 and YZC-0023).
 ### YZC-0025 — Infostrings: content is a boc body
 
 Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-checked, never executed.
+
+**Intersection with Native annotations (YZC-0058):** the general `Compile` interface is a user-land macro mechanism, but `compile_time:[Native]` is a *compiler-handled* magic annotation that cannot be bootstrapped through `Compile` itself (because `Compile` depends on `Int`/`String` already existing). YZC-0025 defines the infostring infrastructure; YZC-0058 defines which annotation keys the compiler handles internally without dispatching to a `Compile` boc.
 
 - [ ] AST — `InfoString` holds `*BocLiteral` instead of `*StringLit`
 - [ ] Lexer — re-lex infostring content as Yz source
@@ -380,7 +396,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0058**
+- Numbers are assigned in creation order; next available: **YZC-0061**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
