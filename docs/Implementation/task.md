@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **62 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **62 golden + 3 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -134,9 +134,9 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   discovered during YZC-0051 (commit c7065da). When a struct is constructed with fewer args than required fields (`b : Bar()`) and fields are assigned later (`b.f = "hello"`), sema correctly accepts the code but the lowerer still emits `NewBar()` with no arguments; Go rejects it because `NewBar` expects one arg per required field. Fix: in `lowerCallExpr`, when the constructor call has zero arguments emit `&Bar{}` (a `NewStructExpr`) instead of `NewBar()`. Fields are at Go zero values until assigned; sema/CFG (YZC-0051) guarantees they are assigned before any read. Golden test 62. Depends on: YZC-0049.
 
-- [ ] **[YZC-0053] CFG check at boc-boundary crossing**
+- [x] **[YZC-0053] CFG check at boc-boundary crossing**
 
-  discovered during YZC-0051 (commit c7065da). Passing a locally-constructed struct with uninitialized required fields as an argument to another boc is not caught by the current definite-assignment analysis. Example: `b : Bar(); foo(b)` where `foo` expects a fully-initialized `Bar` and reads `b.f`. Fix: at `analyzeCall`, for each argument whose type is a `*StructType`, verify that all required fields of the corresponding local variable are definitely assigned in `a.fieldInit` before the call crosses the boc boundary.
+  discovered during YZC-0051 (commit c7065da). Passing a locally-constructed struct with uninitialized required fields as an argument to another boc is not caught by the current definite-assignment analysis. Fix: in `analyzeCall`, after analyzing arg types, for each arg that is a bare `*ast.Ident` whose type is a non-singleton `*StructType`, check all required (non-default, non-method) fields against `fieldInit.isAssigned`. Error: "YZC-0034: field f of b not initialized before call". Error test 15.
 
 - [ ] **[YZC-0054] CFG: multi-level field access not tracked**
 
@@ -199,7 +199,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 - [ ] **[YZC-0019] `break` / `continue` / `return` in loops**
 
-  blocked on concurrency model settling; lowerer should emit compile error when encountered rather than silently dropping
+  concurrency model is now settled; parser/sema/lowerer work is self-contained. Low priority until loop iteration methods (`times`, `each`, `filter`) land in stdlib, since `break`/`continue` are only useful inside those loops. Depends on: YZC-0031.
 
 - [x] **[YZC-0020] Compiler homoiconic dump — backtick interpolation inside strings**
 

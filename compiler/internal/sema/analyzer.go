@@ -1137,6 +1137,35 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 	for _, arg := range c.Args {
 		argTypes = append(argTypes, a.analyzeExpr(arg.Value))
 	}
+	// Boc-boundary check (YZC-0053): struct-typed args must have all required
+	// fields definitely assigned before crossing the call boundary.
+	if a.fieldInit != nil {
+		for _, arg := range c.Args {
+			id, ok := arg.Value.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			sym := a.currentScope.Lookup(id.Name)
+			if sym == nil {
+				continue
+			}
+			st, ok := sym.Type.(*StructType)
+			if !ok || st.IsSingleton {
+				continue
+			}
+			for _, f := range st.Fields {
+				if f.HasDefault {
+					continue
+				}
+				if _, isMethod := f.Type.(*BocType); isMethod {
+					continue
+				}
+				if !a.fieldInit.isAssigned(id.Name, f.Name) {
+					a.errorf(arg.Value.Position(), "YZC-0034: field %s of %s not initialized before call", f.Name, id.Name)
+				}
+			}
+		}
+	}
 	switch bt := calleeType.(type) {
 	case *BocType:
 		switch len(bt.Returns) {

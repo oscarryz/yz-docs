@@ -1,0 +1,11 @@
+Bar: { f String }
+
+foo: {
+    b Bar
+    print(b.f)
+}
+
+main: {
+    b : Bar()
+    foo(b)
+}
