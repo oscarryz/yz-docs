@@ -181,6 +181,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0014] Option/Result method chaining**
 
   `result.or_else({ error Error; ... })`, `result.and_then({ val T; ... })`
+  
 
 - [x] **[YZC-0015] Non-word boc names**
 
@@ -236,7 +237,13 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
 - [ ] **[YZC-0047] Cycle detection in homoiconic `Stringify`**
 
-  the current `Stringify` / generated `String()` chain recurses into nested struct fields without tracking visited pointers; a self-referential or mutually-referential struct graph causes a stack overflow. Fix: thread a `map[uintptr]bool` visited set through `Stringify`; on re-entry for a pointer already in the set, emit `TypeName(...)` (elided). Requires a `Stringify` signature change and updates to all generated `String()` call sites. Depends on: YZC-0020.
+	The current `Stringify` / generated `String()` chain recurses into nested struct fields without tracking visited pointers; a self-referential or mutually-referential struct graph causes a stack overflow. Fix: thread a visited-pointer set through `Stringify`; on re-entry emit `TypeName(...)` (include type params for generics). Only types with struct-typed fields need the guard — primitives cannot form cycles. Runtime `Array` and `Dict` should also be covered.
+
+	**Deferred:** Yz sema rejects forward type references, so cyclic data graphs cannot currently be produced by Yz source. A Yz-level conformance test requires YZC-0057. A Go-level unit test can verify cycle safety independently. Depends on: YZC-0020, YZC-0057.
+
+- [ ] **[YZC-0057] Cyclic / mutually-recursive type declarations**
+
+  sema processes declarations in source order, so `Node: { next Node }` and `Parent: { child Child }; Child: { parent Parent }` both fail with "undefined type". Fix: two-pass sema — collect all top-level type names first, then resolve field types. Codegen already emits pointer fields for struct-typed fields, so no codegen change is needed. Unblocks the Yz-level conformance test for YZC-0047.
 
 - [ ] **[YZC-0044] Producer-consumer example and golden test**
 
@@ -373,7 +380,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0057**
+- Numbers are assigned in creation order; next available: **YZC-0058**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
