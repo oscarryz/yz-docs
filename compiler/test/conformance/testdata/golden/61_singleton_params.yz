@@ -1,0 +1,19 @@
+// YZC-0049: body-only singleton boc with required parameters.
+// Leading TypedDecl-no-value entries become Call() params.
+
+greet: {
+    name String
+    print("Hello, ${name}!")
+}
+
+add: {
+    a Int
+    b Int
+    a + b
+}
+
+main: {
+    greet("World")
+    result : add(3, 4)
+    print(result)
+}

@@ -564,6 +564,20 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 		}
 	}
 
+	// Collect leading TypedDecl-no-value entries as Call() params (YZC-0049).
+	// e.g. `foo: { n Int; print(n) }` → Call(n std.Int); n captured by the closure.
+	var params []*ParamSpec
+	for _, elem := range b.Elements {
+		td, ok := elem.(*ast.TypedDecl)
+		if !ok || td.Value != nil {
+			break
+		}
+		params = append(params, &ParamSpec{
+			Name: td.Name.Name,
+			Type: l.goTypeFromTypeExpr(td.Type),
+		})
+	}
+
 	prevCtx := l.contextName
 	l.contextName = name
 	defer func() { l.contextName = prevCtx }()
@@ -591,7 +605,7 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 		RecvType: "*" + typeName,
 		RecvName: "self",
 		Name:     "Call",
-		Params:   nil,
+		Params:   params,
 		Results:  []string{"*std.Thunk[" + resultType + "]"},
 		Body:     []Stmt{&ExprStmt{Expr: thunk}},
 	}
