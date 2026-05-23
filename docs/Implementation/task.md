@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **62 golden + 3 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **62 golden + 4 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -142,9 +142,9 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   discovered during YZC-0051 (commit c7065da). `FieldInitState` only handles one level of access (`b.f`). Accessing `b.inner.field` where `inner` is itself a struct-typed required field of `b` is not tracked; the analysis neither marks `inner` as assigned when `b.inner = ...` is written, nor checks initialization when `b.inner.field` is read. Fix: extend `markAssigned` / `isAssigned` to handle chained member paths, and recurse into the struct type of `inner` when evaluating definite assignment.
 
-- [ ] **[YZC-0055] CFG: variable aliasing defeats tracking**
+- [x] **[YZC-0055] CFG: variable aliasing defeats tracking**
 
-  discovered during YZC-0051 (commit c7065da). When a tracked local variable is copied to another variable (`c : b`), `c` is not added to `FieldInitState` as a tracked var (it is a ShortDecl, but the RHS is an identifier, not a constructor call). Reads through `c.f` will always pass the check even if `b.f` is unset. Fix: at `analyzeShortDecl`, when the RHS is an `*ast.Ident` whose symbol is a tracked local struct var, clone that var's field-init state under the new name.
+  discovered during YZC-0051 (commit c7065da). When a tracked local variable is copied to another variable (`c : b`), `c` is not added to `FieldInitState` as a tracked var (it is a ShortDecl, but the RHS is an identifier, not a constructor call). Reads through `c.f` will always pass the check even if `b.f` is unset. Fix: in `analyzeShortDecl`, when the RHS is an `*ast.Ident` and the source var is tracked in `fieldInit.locals`, clone that var's field map under the new name. If source is untracked (parameter, always initialized), leave new name untracked too — `isAssigned` returns true for untracked vars. Error test 16.
 
 - [ ] **[YZC-0056] CFG: variant type construction skipped**
 

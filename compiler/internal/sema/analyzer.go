@@ -314,6 +314,20 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 			if !ok || st.IsSingleton || st.IsInterface || st.IsVariant {
 				continue
 			}
+			// Aliasing (YZC-0055): c : b — clone field-init state from source var.
+			// If source is untracked (parameter, always initialized), leave the
+			// alias untracked too so isAssigned returns true for it.
+			if id, ok := d.Values[i].(*ast.Ident); ok {
+				if srcFields, tracked := a.fieldInit.locals[id.Name]; tracked {
+					a.fieldInit.addLocalVar(name.Name)
+					for f, assigned := range srcFields {
+						if assigned {
+							a.fieldInit.locals[name.Name][f] = true
+						}
+					}
+				}
+				continue
+			}
 			call, ok := d.Values[i].(*ast.CallExpr)
 			if !ok {
 				continue
