@@ -122,7 +122,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   `StructField.HasDefault` added to distinguish required vs optional fields. Original `checkStructConstructorArgs` was too conservative (blocked valid "fill in later" pattern) and has been removed; replaced by YZC-0051.
 
-- [ ] **[YZC-0049] Lowerer: singleton boc params not emitted**
+- [x] **[YZC-0049] Lowerer: singleton boc params not emitted**
 
   when a singleton boc body contains `TypedDecl`-no-value entries (required params), `lowerBodyOnlySingleton` ignores them and generates `Call()` with no parameters; the caller then emits `Foo.Call(a)` referencing an undefined variable, producing a Go compile error. Fix: collect leading TypedDecl-no-value elements in `lowerBodyOnlySingleton` and emit them as `Call(a std.T, ...)` params; also inject them as Go variables at the start of the body closure so references resolve. Reproducer: `foo: { n Int; print(n) }; main: { foo(5) }`.
 
