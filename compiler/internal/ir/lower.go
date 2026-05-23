@@ -2257,6 +2257,10 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 				if st.IsSingleton {
 					return &MethodCall{Recv: &Ident{Name: capitalize(id.Name)}, Method: "Call", Args: args}
 				}
+				// Zero-arg constructor: emit &Bar{} directly (fill-in-later pattern, YZC-0052).
+				if len(c.Args) == 0 {
+					return &NewStructExpr{TypeName: id.Name}
+				}
 				if hasNamedArgs(c.Args) {
 					args = l.lowerStructArgs(c.Args, st)
 				}

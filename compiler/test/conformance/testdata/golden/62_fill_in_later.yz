@@ -1,0 +1,10 @@
+// YZC-0052: "fill in later" — struct constructed with zero args, fields assigned after.
+Bar: {
+    f String
+}
+
+main: {
+    b : Bar()
+    b.f = "hello"
+    print(b.f)
+}

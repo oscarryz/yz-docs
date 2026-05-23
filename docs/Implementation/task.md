@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **59 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **62 golden + 2 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -130,9 +130,9 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   `FieldInitState` in `sema/definite_assign.go` tracks which fields of locally-constructed structs (`b : Bar(...)`) are definitely assigned on all control-flow paths; reports "YZC-0034: field f used before initialization" at the READ site; correctly handles ConditionalExpr branch merge (intersect), match arm merge (intersect), while/closure isolation (conservative — don't propagate); TypedDecl-no-value parameters always considered initialized (untracked); struct fields accessed in methods always initialized (untracked); error tests 13 (updated) and 14 (new). Note: codegen for "fill in later" (`b : Bar(); b.f = …`) generates `NewBar()` with wrong arity — tracked as a codegen follow-up under YZC-0049. Commit: c7065da.
 
-- [ ] **[YZC-0052] Codegen "fill in later" — wrong arity on `NewBar()`**
+- [x] **[YZC-0052] Codegen "fill in later" — wrong arity on `NewBar()`**
 
-  discovered during YZC-0051 (commit c7065da). When a struct is constructed with fewer args than required fields (`b : Bar()`) and fields are assigned later (`b.f = "hello"`), sema correctly accepts the code but the lowerer still emits `NewBar()` with no arguments; Go rejects it because `NewBar` expects one arg per required field. Fix: either (a) extend YZC-0049's singleton-params work to struct constructors (emit a zero-arg constructor + setter calls), or (b) change the Go representation so struct fields are individual assignable vars rather than constructor params. Depends on: YZC-0049.
+  discovered during YZC-0051 (commit c7065da). When a struct is constructed with fewer args than required fields (`b : Bar()`) and fields are assigned later (`b.f = "hello"`), sema correctly accepts the code but the lowerer still emits `NewBar()` with no arguments; Go rejects it because `NewBar` expects one arg per required field. Fix: in `lowerCallExpr`, when the constructor call has zero arguments emit `&Bar{}` (a `NewStructExpr`) instead of `NewBar()`. Fields are at Go zero values until assigned; sema/CFG (YZC-0051) guarantees they are assigned before any read. Golden test 62. Depends on: YZC-0049.
 
 - [ ] **[YZC-0053] CFG check at boc-boundary crossing**
 
