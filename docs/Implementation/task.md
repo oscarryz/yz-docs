@@ -154,9 +154,9 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   `1.to(10).each({ i Int; ... })` — lowerer recognizes `.each` on Array only; extend to Range receiver. Depends on: YZC-0031.
 
-- [ ] **[YZC-0010] HOF iteration + cown happens-before**
+- [x] **[YZC-0010] HOF iteration + cown happens-before**
 
-  resolved by YZC-0036: HOF methods use `a→b→a` indirect recursion → ScheduleAsSuccessor at each step → sequential processing behaviour. No further design needed; implement as sequential closure calls.
+  implemented as sequential sync Go closures (golden test 27: `filter`, `each`). Cross-cown boc calls inside an `each` callback emit `.Force()` which blocks until the target cown processes the work — sequential happens-before guaranteed. Verified: `list.each({ item Int; counter.increment() })` with a structured singleton prints correct accumulated value. Note: `TypedDecl`-with-value fields (`n Int = 0`) in structured singletons are broken (missing `self.`); tracked separately as YZC-0061.
 
 - [x] **[YZC-0036] While loop yield and external caller interleaving**
 
@@ -254,6 +254,10 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 - [ ] **[YZC-0057] Cyclic / mutually-recursive type declarations**
 
   sema processes declarations in source order, so `Node: { next Node }` and `Parent: { child Child }; Child: { parent Parent }` both fail with "undefined type". Fix: two-pass sema — collect all top-level type names first, then resolve field types. Codegen already emits pointer fields for struct-typed fields, so no codegen change is needed. Unblocks the Yz-level conformance test for YZC-0047.
+
+- [ ] **[YZC-0061] Structured singleton: TypedDecl-with-value field missing `self.`**
+
+  `counter: { n Int = 0; increment: { n = n + 1 } }` — inner boc methods emit `n = n.Plus(...)` instead of `self.n = self.n.Plus(...)`. The `ShortDecl`-with-value form (`count: 0`) works correctly. Root cause: `collectFieldNames` or `lowerMainStmt`/`lowerAssignment` in `lowerStructuredSingleton` does not recognise `TypedDecl`-with-value as a receiver field when building `recvFields`.
 
 - [ ] **[YZC-0044] Producer-consumer example and golden test**
 
@@ -396,7 +400,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0061**
+- Numbers are assigned in creation order; next available: **YZC-0062**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
