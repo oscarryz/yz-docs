@@ -52,6 +52,47 @@ x: Some("hello")
 print(x.value)   // compile error — must use match to access variant fields
 ```
 
+## Single-arm match (non-exhaustive)
+
+When you only care about one constructor, use the infix form with `=>`:
+
+```yz
+x match Some => {
+    print(x.value)   // x is narrowed to Some inside this boc
+}
+```
+
+The compiler narrows the type of `x` inside the boc body, so its fields are accessible. No else branch is required — when the constructor does not match, the expression produces nothing.
+
+With an else branch:
+
+```yz
+x match Some => {
+    print(x.value)
+}, {
+    print("nothing")
+}
+```
+
+Without a body, `match` returns a `Bool` — useful wherever a boolean is needed:
+
+```yz
+is_some : x match Some
+
+while { x match Some } , {
+    // ...
+}
+
+somes : items.filter({ i Option; i match Some })
+```
+
+The narrowing rule is syntactic and strict: the compiler only narrows `x` inside the immediately following boc literal (`=> { ... }`). Storing the result in a variable does not propagate narrowing:
+
+```yz
+is_some : x match Some
+is_some ? { x.value }   // compile error — x not narrowed here
+```
+
 ## More examples
 
 ### Result — two type parameters

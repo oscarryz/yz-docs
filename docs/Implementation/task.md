@@ -146,6 +146,15 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   discovered during YZC-0051 (commit c7065da). When a tracked local variable is copied to another variable (`c : b`), `c` is not added to `FieldInitState` as a tracked var (it is a ShortDecl, but the RHS is an identifier, not a constructor call). Reads through `c.f` will always pass the check even if `b.f` is unset. Fix: in `analyzeShortDecl`, when the RHS is an `*ast.Ident` and the source var is tracked in `fieldInit.locals`, clone that var's field map under the new name. If source is untracked (parameter, always initialized), leave new name untracked too — `isAssigned` returns true for untracked vars. Error test 16.
 
+- [ ] **[YZC-0063] Single-arm non-exhaustive match (`p match Constructor => { }` and `p match Constructor`)**
+
+  Two new forms of `match` for working with a single variant constructor without requiring exhaustive arms. `p match Constructor` returns `Bool` — usable anywhere a boolean is needed (`?`, `while`, `filter`). `p match Constructor => { body }` is the narrowing form: the compiler narrows `p`'s type inside the boc body so its constructor-specific fields are accessible. Narrowing is syntactic only — it applies exclusively inside the immediately following boc literal; storing the result in a variable does not propagate narrowing. An optional else boc is allowed: `p match C => { ... }, { ... }`. When the constructor does not match and there is no else, the expression produces nothing. Spec: `docs/Features/Type variants.md`.
+
+  - [ ] Parser — recognize `expr match IDENT` (bool form) and `expr match IDENT => BocLiteral` (narrowing form)
+  - [ ] Sema — type-check both forms; apply constructor-field narrowing inside the body boc for the `=>` form
+  - [ ] Lowerer — emit Go type switch or discriminant check; narrowed body emits with direct field access
+  - [ ] Golden tests — bool form, narrowing form, else branch, bool form in `while`/`filter`
+
 - [x] **[YZC-0056] CFG: variant type construction skipped**
 
   discovered during YZC-0051 (commit c7065da). No fix needed: accessing a field from the wrong variant arm (`p.breed` when `p : Pet.Cat(...)`) is already a sema compile error — direct variant field access without going through `match` is rejected. CFG tracking for variants is therefore unnecessary; `initLocalVar` correctly skips them.
@@ -400,7 +409,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0063**
+- Numbers are assigned in creation order; next available: **YZC-0064**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
