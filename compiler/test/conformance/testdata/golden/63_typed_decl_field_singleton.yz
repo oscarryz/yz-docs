@@ -1,0 +1,14 @@
+// YZC-0061: TypedDecl-with-value field in structured singleton must use self. in inner methods
+counter: {
+    n Int = 0
+    increment: {
+        n = n + 1
+    }
+    value: { n }
+}
+
+main: {
+    counter.increment()
+    counter.increment()
+    print(counter.value())
+}

@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **62 golden + 4 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **63 golden + 4 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -255,9 +255,9 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   sema processes declarations in source order, so `Node: { next Node }` and `Parent: { child Child }; Child: { parent Parent }` both fail with "undefined type". Fix: two-pass sema — collect all top-level type names first, then resolve field types. Codegen already emits pointer fields for struct-typed fields, so no codegen change is needed. Unblocks the Yz-level conformance test for YZC-0047.
 
-- [ ] **[YZC-0061] Structured singleton: TypedDecl-with-value field missing `self.`**
+- [x] **[YZC-0061] Structured singleton: TypedDecl-with-value field missing `self.`**
 
-  `counter: { n Int = 0; increment: { n = n + 1 } }` — inner boc methods emit `n = n.Plus(...)` instead of `self.n = self.n.Plus(...)`. The `ShortDecl`-with-value form (`count: 0`) works correctly. Root cause: `collectFieldNames` or `lowerMainStmt`/`lowerAssignment` in `lowerStructuredSingleton` does not recognise `TypedDecl`-with-value as a receiver field when building `recvFields`.
+  `counter: { n Int = 0; increment: { n = n + 1 } }` — inner boc methods emit `n = n.Plus(...)` instead of `self.n = self.n.Plus(...)`. Fix: `collectFieldNames` in `lower.go` was gating `TypedDecl` on `e.Value == nil`; removing that condition includes `TypedDecl`-with-value fields in `recvFields`. Golden test 63.
 
 - [ ] **[YZC-0044] Producer-consumer example and golden test**
 
@@ -400,7 +400,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0062**
+- Numbers are assigned in creation order; next available: **YZC-0063**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket

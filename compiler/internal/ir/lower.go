@@ -843,9 +843,7 @@ func (l *lowerer) collectFieldNames(b *ast.BocLiteral) map[string]bool {
 				fields[n.Name] = true
 			}
 		case *ast.TypedDecl:
-			if e.Value == nil {
-				fields[e.Name.Name] = true
-			}
+			fields[e.Name.Name] = true
 		}
 	}
 	return fields
