@@ -60,6 +60,36 @@ print("Type: `Person`")
 // Type: Person #(name String, age Int)
 ```
 
+### Representation rule
+
+The backtick form uses the most specific named type the compiler has resolved for the value:
+
+- If the compiler resolved the value to a named type (through an explicit declaration or a structural match at a call site), it renders using that type's constructor form: `Person(name: "Alice")`.
+- If the value was never matched to a named type (a truly anonymous boc), it renders using the structural form: `{ name: "Alice" }`.
+
+```
+Person : { name String }
+
+e : Person("Alice")      // type resolved to Person
+f : { name: "Alice" }    // anonymous — no named type
+
+print("`e`")   // Person(name: "Alice")
+print("`f`")   // { name: "Alice" }
+```
+
+The named-type form is preferred because it preserves semantic identity: two bocs with identical fields but different names (`Person` vs `Address`) would otherwise be indistinguishable.
+
+### Backtick as text serialization
+
+For pure data bocs (fields only, no closures or external resources), the backtick output is valid Yz source that recreates the value:
+
+```
+file.write("`e`")   // writes: Person(name: "Alice")
+// reading back and evaluating gives an equivalent Person instance
+```
+
+This makes backtick a natural text serialization format for data bocs — no separate library needed. Binary serialization is out of scope for this mechanism.
+
 Backtick interpolation inside strings is distinct from info-string backticks at statement level (see [Info strings](Info%20strings.md)).
 
 ## Prefer interpolation over concatenation
