@@ -146,9 +146,9 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   discovered during YZC-0051 (commit c7065da). When a tracked local variable is copied to another variable (`c : b`), `c` is not added to `FieldInitState` as a tracked var (it is a ShortDecl, but the RHS is an identifier, not a constructor call). Reads through `c.f` will always pass the check even if `b.f` is unset. Fix: in `analyzeShortDecl`, when the RHS is an `*ast.Ident` and the source var is tracked in `fieldInit.locals`, clone that var's field map under the new name. If source is untracked (parameter, always initialized), leave new name untracked too — `isAssigned` returns true for untracked vars. Error test 16.
 
-- [ ] **[YZC-0056] CFG: variant type construction skipped**
+- [x] **[YZC-0056] CFG: variant type construction skipped**
 
-  discovered during YZC-0051 (commit c7065da). `initLocalVar` in `definite_assign.go` skips `IsVariant` structs, so variant-typed locals are never added to `FieldInitState`. If a variant constructor sets only some fields (non-exhaustive per-variant field sets), reads of unset fields will pass the check unchallenged. Fix: determine the correct exhaustiveness rule for variants (each variant provides exactly its declared fields; the variant constructor call covers them) and apply `initLocalVar` to variant-typed ShortDecl locals with the per-variant field list.
+  discovered during YZC-0051 (commit c7065da). No fix needed: accessing a field from the wrong variant arm (`p.breed` when `p : Pet.Cat(...)`) is already a sema compile error — direct variant field access without going through `match` is rejected. CFG tracking for variants is therefore unnecessary; `initLocalVar` correctly skips them.
 
 - [ ] **[YZC-0009] Range iteration**
 

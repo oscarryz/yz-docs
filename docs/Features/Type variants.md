@@ -45,6 +45,13 @@ match x
 - `x.value` accesses the field carried by the matched constructor.
 - Every constructor must be handled; the compiler enforces exhaustiveness.
 
+Accessing a variant's fields outside a `match` is a **compile error**. The compiler cannot know which constructor is active without a dispatch:
+
+```yz
+x: Some("hello")
+print(x.value)   // compile error — must use match to access variant fields
+```
+
 ## More examples
 
 ### Result — two type parameters
