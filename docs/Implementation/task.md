@@ -146,6 +146,25 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   discovered during YZC-0051 (commit c7065da). When a tracked local variable is copied to another variable (`c : b`), `c` is not added to `FieldInitState` as a tracked var (it is a ShortDecl, but the RHS is an identifier, not a constructor call). Reads through `c.f` will always pass the check even if `b.f` is unset. Fix: in `analyzeShortDecl`, when the RHS is an `*ast.Ident` and the source var is tracked in `fieldInit.locals`, clone that var's field map under the new name. If source is untracked (parameter, always initialized), leave new name untracked too — `isAssigned` returns true for untracked vars. Error test 16.
 
+- [ ] **[YZC-0065] Type-directed variant constructor disambiguation**
+
+  When multiple types define a constructor with the same name (e.g. `Shape` and `Color` both define `Circle`), the compiler uses the **known type from context** to resolve which constructor is meant — bidirectional type inference. Resolution rules:
+
+  - `s Shape = Circle(5)` — explicit annotation flows inward → resolves to `Shape.Circle`
+  - `s Shape` then `s = Circle(5)` — prior typed declaration → resolves to `Shape.Circle`
+  - `foo: { s Shape; ... }; foo(Circle(5))` — typed parameter → resolves to `Shape.Circle`
+  - `s : Circle(5)` with ambiguity — no type context → error: "Circle is defined in Shape and Color; add a type annotation or use Shape.Circle(5)"
+  - `s : Shape.Circle(5)` — qualified form always works regardless of ambiguity
+
+  Currently, conflicting constructor names silently overwrite each other in scope (last-defined wins). This ticket fixes correctness and adds the qualified construction form.
+
+  - [ ] Sema — detect duplicate constructor names across variant types; register all definitions, not just the last
+  - [ ] Sema — propagate expected type inward through `analyzeShortDecl`, `analyzeAssignment`, and `analyzeCall` arg positions; use it to resolve ambiguous constructor calls
+  - [ ] Parser — support `TypeName.ConstructorName(args)` as a qualified variant construction form (distinct from member access on an instance)
+  - [ ] Sema — resolve qualified form `Shape.Circle(5)` to the correct variant constructor
+  - [ ] Error messages — "Circle is defined in Shape and Color; use Shape.Circle(5) or add a type annotation"
+  - [ ] Golden tests — unambiguous free use, annotation-directed, parameter-directed, qualified form, ambiguous error
+
 - [x] **[YZC-0063] Single-arm non-exhaustive match (`p match Constructor => { }` and `p match Constructor`)**
 
   Two new forms of `match` for working with a single variant constructor without requiring exhaustive arms. `p match Constructor` returns `Bool` — usable anywhere a boolean is needed (`?`, `while`, `filter`). `p match Constructor => { body }` is the body form: the compiler allows access to the constructor's fields inside the boc body. An optional else boc is allowed: `p match C => { ... }, { ... }`. When the constructor does not match and there is no else, the expression produces nothing. Narrowing is syntactic only — applies only inside the immediately following boc literal. Spec: `docs/Features/Type variants.md`. Golden test 64.
@@ -411,7 +430,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0065**
+- Numbers are assigned in creation order; next available: **YZC-0066**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket
