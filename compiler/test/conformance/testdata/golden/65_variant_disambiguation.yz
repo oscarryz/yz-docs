@@ -1,0 +1,22 @@
+// YZC-0065: type-directed variant constructor disambiguation
+Shape: {
+    Circle(radius Int)
+    Rectangle(width Int, height Int)
+}
+
+Color: {
+    Circle(hue Int)
+    Square(side Int)
+}
+
+main: {
+    // Qualified form — always unambiguous
+    s : Shape.Circle(5)
+    c : Color.Circle(180)
+    print(s.radius)
+    print(c.hue)
+
+    // Annotation-directed: TypedDecl with value
+    s2 Shape = Circle(10)
+    print(s2.radius)
+}

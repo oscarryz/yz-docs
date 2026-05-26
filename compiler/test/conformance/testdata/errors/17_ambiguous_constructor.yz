@@ -1,0 +1,13 @@
+// YZC-0065: ambiguous variant constructor — no type context
+Shape: {
+    Circle(radius Int)
+}
+
+Color: {
+    Circle(hue Int)
+}
+
+main: {
+    s : Circle(5)
+    print(s.radius)
+}

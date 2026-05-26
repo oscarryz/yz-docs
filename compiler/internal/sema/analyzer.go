@@ -73,6 +73,12 @@ type Analyzer struct {
 	// (ShortDecl `b : Bar(...)`) are tracked; parameters are always considered
 	// initialized.
 	fieldInit *FieldInitState
+
+	// expectedType is the type expected at the current expression position.
+	// Set by analyzeTypedDecl, analyzeAssignment, and analyzeCall before
+	// recursing into a RHS/argument expression; used by analyzeCall to
+	// disambiguate ambiguous variant constructor calls.
+	expectedType Type
 }
 
 // NewAnalyzer creates a fresh Analyzer with built-in symbols pre-loaded.
@@ -439,12 +445,26 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 			for j, f := range vc.Fields {
 				params[j] = BocParam{Label: f.Name, Type: f.Type}
 			}
-			a.define(&Symbol{
+			newSym := &Symbol{
 				Name:           vc.Name,
 				Type:           &BocType{Params: params, Returns: []Type{st}},
 				Node:           decl,
 				ParentTypeName: st.Name,
-			})
+			}
+			// Detect collision with another variant constructor of the same name.
+			if existing := a.currentScope.LookupLocal(vc.Name); existing != nil &&
+				(existing.ParentTypeName != "" || len(existing.Alternatives) > 0) {
+				if len(existing.Alternatives) == 0 {
+					// First collision: seed the alternatives list with the original symbol.
+					clone := *existing
+					existing.Alternatives = []*Symbol{&clone}
+					existing.Type = Unknown
+					existing.ParentTypeName = ""
+				}
+				existing.Alternatives = append(existing.Alternatives, newSym)
+			} else {
+				a.define(newSym)
+			}
 		}
 	}
 
@@ -472,7 +492,10 @@ func (a *Analyzer) collectParams(elements []ast.Node) []BocParam {
 func (a *Analyzer) analyzeTypedDecl(d *ast.TypedDecl) Type {
 	typ := a.resolveTypeExpr(d.Type)
 	if d.Value != nil {
+		prev := a.expectedType
+		a.expectedType = typ
 		valTyp := a.analyzeExpr(d.Value)
+		a.expectedType = prev
 		if valTyp != Unknown && !valTyp.IsCompatibleWith(typ) {
 			a.errorf(d.Pos, "type mismatch: %s is not compatible with %s", displayType(valTyp), displayType(typ))
 		}
@@ -488,12 +511,26 @@ func (a *Analyzer) analyzeTypedDecl(d *ast.TypedDecl) Type {
 // ---------------------------------------------------------------------------
 
 func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
+	// Determine the expected type before analyzing values so that ambiguous
+	// variant constructor calls (YZC-0065) can be resolved by type context.
+	var targetType Type
+	if asgn.Target != nil {
+		targetType = a.resolveTargetType(asgn.Target)
+	} else if len(asgn.Names) == 1 {
+		if sym := a.currentScope.Lookup(asgn.Names[0].Name); sym != nil {
+			targetType = sym.Type
+		}
+	}
+
+	prev := a.expectedType
+	a.expectedType = targetType
 	var valTypes []Type
 	for _, v := range asgn.Values {
 		valTypes = append(valTypes, a.analyzeExpr(v))
 	}
+	a.expectedType = prev
+
 	if asgn.Target != nil {
-		targetType := a.resolveTargetType(asgn.Target)
 		// Track field assignment for definite-assignment analysis.
 		if a.fieldInit != nil {
 			if m, ok := asgn.Target.(*ast.MemberExpr); ok {
@@ -1148,10 +1185,33 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 	}
 
 	calleeType := a.analyzeExpr(c.Callee)
+
+	// Ambiguous variant constructor (YZC-0065): callee is an identifier that maps
+	// to multiple variant constructors with the same name. Use expected type to pick.
+	if calleeType == Unknown {
+		if id, ok := c.Callee.(*ast.Ident); ok {
+			if sym := a.currentScope.Lookup(id.Name); sym != nil && len(sym.Alternatives) > 0 {
+				calleeType = a.disambiguateConstructor(c, id.Name, sym.Alternatives)
+			}
+		}
+	}
+
 	// Collect arg types — needed for generic constraint checking at instantiation.
+	// Per-argument expectedType lets nested calls resolve their own ambiguities.
 	var argTypes []Type
-	for _, arg := range c.Args {
+	var formalParams []BocParam
+	if bt, ok := calleeType.(*BocType); ok {
+		formalParams = bt.Params
+	}
+	for i, arg := range c.Args {
+		prev := a.expectedType
+		if i < len(formalParams) {
+			a.expectedType = formalParams[i].Type
+		} else {
+			a.expectedType = nil
+		}
 		argTypes = append(argTypes, a.analyzeExpr(arg.Value))
+		a.expectedType = prev
 	}
 	// Boc-boundary check (YZC-0053): struct-typed args must have all required
 	// fields definitely assigned before crossing the call boundary.
@@ -1211,6 +1271,37 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 	return Unknown
 }
 
+// disambiguateConstructor resolves an ambiguous constructor call using the
+// current expectedType. Returns the BocType of the chosen constructor, or
+// Unknown after emitting an error when no match is found.
+func (a *Analyzer) disambiguateConstructor(c *ast.CallExpr, name string, alts []*Symbol) Type {
+	// Try to match against expectedType.
+	if a.expectedType != nil {
+		if expSt, ok := a.expectedType.(*StructType); ok {
+			for _, alt := range alts {
+				if bt, ok := alt.Type.(*BocType); ok && len(bt.Returns) == 1 {
+					if retSt, ok := bt.Returns[0].(*StructType); ok && retSt.Name == expSt.Name {
+						a.setType(c, retSt)
+						return bt
+					}
+				}
+			}
+		}
+	}
+	// Still ambiguous — build error listing parent type names.
+	var parents []string
+	seen := map[string]bool{}
+	for _, alt := range alts {
+		if alt.ParentTypeName != "" && !seen[alt.ParentTypeName] {
+			parents = append(parents, alt.ParentTypeName)
+			seen[alt.ParentTypeName] = true
+		}
+	}
+	a.errorf(c.Callee.Position(), "YZC-0065: %s is defined in %s; add a type annotation or use %s.%s(...)",
+		name, strings.Join(parents, " and "), parents[0], name)
+	return Unknown
+}
+
 func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
 	objType := a.analyzeExpr(m.Object)
 	// Definite-assignment check: required fields of locally-constructed structs
@@ -1240,6 +1331,18 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 		for _, f := range ot.Fields {
 			if f.Name == fieldName {
 				return f.Type
+			}
+		}
+		// Qualified variant constructor: Shape.Circle — look up by constructor name.
+		if ot.IsVariant {
+			for _, vc := range ot.Variants {
+				if vc.Name == fieldName {
+					params := make([]BocParam, len(vc.Fields))
+					for j, f := range vc.Fields {
+						params[j] = BocParam{Label: f.Name, Type: f.Type}
+					}
+					return &BocType{Params: params, Returns: []Type{ot}}
+				}
 			}
 		}
 		a.errorf(pos, "type %s has no field %q", displayType(objType), fieldName)

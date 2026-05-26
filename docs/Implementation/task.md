@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **64 golden + 4 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **65 golden + 17 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -146,7 +146,7 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   discovered during YZC-0051 (commit c7065da). When a tracked local variable is copied to another variable (`c : b`), `c` is not added to `FieldInitState` as a tracked var (it is a ShortDecl, but the RHS is an identifier, not a constructor call). Reads through `c.f` will always pass the check even if `b.f` is unset. Fix: in `analyzeShortDecl`, when the RHS is an `*ast.Ident` and the source var is tracked in `fieldInit.locals`, clone that var's field map under the new name. If source is untracked (parameter, always initialized), leave new name untracked too — `isAssigned` returns true for untracked vars. Error test 16.
 
-- [ ] **[YZC-0065] Type-directed variant constructor disambiguation**
+- [x] **[YZC-0065] Type-directed variant constructor disambiguation**
 
   When multiple types define a constructor with the same name (e.g. `Shape` and `Color` both define `Circle`), the compiler uses the **known type from context** to resolve which constructor is meant — bidirectional type inference. Resolution rules:
 
@@ -156,14 +156,14 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
   - `s : Circle(5)` with ambiguity — no type context → error: "Circle is defined in Shape and Color; add a type annotation or use Shape.Circle(5)"
   - `s : Shape.Circle(5)` — qualified form always works regardless of ambiguity
 
-  Currently, conflicting constructor names silently overwrite each other in scope (last-defined wins). This ticket fixes correctness and adds the qualified construction form.
-
-  - [ ] Sema — detect duplicate constructor names across variant types; register all definitions, not just the last
-  - [ ] Sema — propagate expected type inward through `analyzeShortDecl`, `analyzeAssignment`, and `analyzeCall` arg positions; use it to resolve ambiguous constructor calls
-  - [ ] Parser — support `TypeName.ConstructorName(args)` as a qualified variant construction form (distinct from member access on an instance)
-  - [ ] Sema — resolve qualified form `Shape.Circle(5)` to the correct variant constructor
-  - [ ] Error messages — "Circle is defined in Shape and Color; use Shape.Circle(5) or add a type annotation"
-  - [ ] Golden tests — unambiguous free use, annotation-directed, parameter-directed, qualified form, ambiguous error
+  - [x] Sema — detect duplicate constructor names; `Symbol.Alternatives []*Symbol` stores all options; first collision seeds ambiguous bucket
+  - [x] Sema — propagate `expectedType` inward through `analyzeTypedDecl`, `analyzeAssignment`, and per-argument in `analyzeCall`; `disambiguateConstructor` picks the matching alternative
+  - [x] Parser — qualified form `Shape.Circle(5)` parsed as `CallExpr(MemberExpr(Shape, Circle), args)` (no new AST node needed)
+  - [x] Sema — `fieldType` handles variant namespace lookup: when object is `*StructType{IsVariant: true}`, looks up constructor by name in `st.Variants`
+  - [x] Lowerer — intercepts `MemberExpr{Object: TypeIdent, Member: ConstructorName}` callee before generic FieldAccess handling; falls back to `ExprType` for ambiguous unqualified calls
+  - [x] Error messages — "YZC-0065: Circle is defined in Shape and Color; add a type annotation or use Shape.Circle(...)"
+  - [x] Golden test 65 — qualified form + annotation-directed; error test 17 — ambiguous no-context
+  - Note: `s Shape; s = Circle(5)` (assignment-directed) not yet supported — TypedDecl-no-value in a body is currently treated as a boc parameter, so no local var is emitted; deferred
 
 - [x] **[YZC-0063] Single-arm non-exhaustive match (`p match Constructor => { }` and `p match Constructor`)**
 

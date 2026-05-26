@@ -2192,6 +2192,22 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		}
 	}
 
+	// Qualified variant constructor: Shape.Circle(5) → NewShapeCircle(args). (YZC-0065)
+	if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+		if baseIdent, ok := mem.Object.(*ast.Ident); ok {
+			baseSym := l.analyzer.LookupInFile(baseIdent.Name)
+			if baseSym != nil {
+				if st, ok := baseSym.Type.(*sema.StructType); ok && st.IsVariant {
+					var qargs []Expr
+					for _, arg := range c.Args {
+						qargs = append(qargs, l.lowerExpr(arg.Value))
+					}
+					return &FuncCall{Func: &Ident{Name: "New" + st.Name + mem.Member.Name}, Args: qargs}
+				}
+			}
+		}
+	}
+
 	callee := l.lowerExpr(c.Callee)
 	var args []Expr
 	for _, arg := range c.Args {
@@ -2233,6 +2249,12 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			// Variant constructor call: Cat("Whiskers", 9) → NewPetCat(...)
 			if sym.ParentTypeName != "" {
 				return &FuncCall{Func: &Ident{Name: "New" + sym.ParentTypeName + id.Name}, Args: args}
+			}
+			// Ambiguous variant constructor resolved by type context (YZC-0065).
+			if len(sym.Alternatives) > 0 {
+				if callType, ok := l.analyzer.ExprType(c).(*sema.StructType); ok {
+					return &FuncCall{Func: &Ident{Name: "New" + callType.Name + id.Name}, Args: args}
+				}
 			}
 			// Struct type constructor call: Named("Alice") → NewNamed(args).
 			// Named args (label: value) are reordered to match field declaration order.
