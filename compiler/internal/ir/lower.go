@@ -1909,6 +1909,8 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		return l.lowerConditionalExpr(expr)
 	case *ast.MatchExpr:
 		return l.lowerMatchExpr(expr)
+	case *ast.InfixMatchExpr:
+		return l.lowerInfixMatchExpr(expr)
 	case *ast.ArrayLiteral:
 		return l.lowerArrayLit(expr)
 	case *ast.DictLiteral:
@@ -2751,10 +2753,13 @@ func (l *lowerer) lowerMatchExpr(m *ast.MatchExpr) Expr {
 	return &MatchExpr{ResultType: resultType, Arms: arms}
 }
 
-// tryLowerMatch detects a MatchExpr and lowers it to a statement.
+// tryLowerMatch detects a MatchExpr or InfixMatchExpr and lowers it to a statement.
 // Discriminant match (Subject != nil) → SwitchStmt.
 // Condition match (Subject == nil) → IfStmt chain.
 func (l *lowerer) tryLowerMatch(e ast.Expr) (Stmt, bool) {
+	if im, ok := e.(*ast.InfixMatchExpr); ok {
+		return l.lowerInfixMatchStmt(im)
+	}
 	m, ok := e.(*ast.MatchExpr)
 	if !ok {
 		return nil, false
@@ -2877,6 +2882,52 @@ func (l *lowerer) armVariantName(arm *ast.ConditionalBoc) (string, bool) {
 		return "", false
 	}
 	return id.Name, true
+}
+
+// ---------------------------------------------------------------------------
+// Infix match lowering  (YZC-0063)
+// ---------------------------------------------------------------------------
+
+// variantTestExpr builds a VariantTestExpr for `subject match Constructor`.
+func (l *lowerer) variantTestExpr(subject ast.Expr, constructorName string) *VariantTestExpr {
+	typeName := l.variantStructName(subject)
+	return &VariantTestExpr{
+		Subject:   l.lowerExpr(subject),
+		ConstName: "_" + typeName + constructorName,
+	}
+}
+
+// lowerInfixMatchStmt lowers `p match C => { body }` in statement position.
+// Bool form (`p match C` with no body) is a no-op as a statement.
+func (l *lowerer) lowerInfixMatchStmt(m *ast.InfixMatchExpr) (Stmt, bool) {
+	if m.Body == nil {
+		return nil, false // bool form in statement position — discard
+	}
+	cond := l.variantTestExpr(m.Subject, m.Constructor.Name)
+	then := l.lowerElementStmts(m.Body.Elements)
+	var els []Stmt
+	if m.ElseBody != nil {
+		els = l.lowerElementStmts(m.ElseBody.Elements)
+	}
+	return &IfStmt{Cond: cond, Then: then, Else: els}, true
+}
+
+// lowerInfixMatchExpr lowers `p match C` (bool) or `p match C => { body }`
+// (IIFE) in expression position.
+func (l *lowerer) lowerInfixMatchExpr(m *ast.InfixMatchExpr) Expr {
+	test := l.variantTestExpr(m.Subject, m.Constructor.Name)
+	if m.Body == nil {
+		return test // bool form — the VariantTestExpr itself is the expression
+	}
+	semType := l.analyzer.ExprType(m)
+	resultType := l.goType(semType)
+	bodyStmts := l.lowerMatchArmBody(m.Body.Elements, resultType)
+	arms := []*MatchArm{{Cond: test, Body: bodyStmts}}
+	if m.ElseBody != nil {
+		elseStmts := l.lowerMatchArmBody(m.ElseBody.Elements, resultType)
+		arms = append(arms, &MatchArm{Cond: nil, Body: elseStmts})
+	}
+	return &MatchExpr{ResultType: resultType, Arms: arms}
 }
 
 // lowerMatchArmBody lowers a match arm's body elements for expression-position

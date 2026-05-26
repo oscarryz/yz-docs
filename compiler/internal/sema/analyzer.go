@@ -1069,6 +1069,8 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		t = a.analyzeDictLiteral(expr)
 	case *ast.MatchExpr:
 		t = a.analyzeMatch(expr)
+	case *ast.InfixMatchExpr:
+		t = a.analyzeInfixMatch(expr)
 	case *ast.InfoString:
 		t = TypUnit
 	default:
@@ -1406,6 +1408,46 @@ func (a *Analyzer) analyzeMatch(m *ast.MatchExpr) Type {
 	}
 
 	return returnType
+}
+
+func (a *Analyzer) analyzeInfixMatch(m *ast.InfixMatchExpr) Type {
+	subjType := a.analyzeExpr(m.Subject)
+	st, ok := subjType.(*StructType)
+	if !ok || !st.IsVariant {
+		a.errorf(m.Pos, "left side of 'match' must be a variant type, got %s", displayType(subjType))
+		return Unknown
+	}
+	found := false
+	for _, vc := range st.Variants {
+		if vc.Name == m.Constructor.Name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		a.errorfLen(m.Constructor.Pos, len(m.Constructor.Name), "%s is not a constructor of %s", m.Constructor.Name, st.Name)
+		return Unknown
+	}
+	if m.Body == nil {
+		return TypBool
+	}
+	var bodyType Type = TypUnit
+	prev := a.pushScope()
+	for _, elem := range m.Body.Elements {
+		t := a.analyzeNode(elem)
+		if _, ok := elem.(ast.Expr); ok {
+			bodyType = t
+		}
+	}
+	a.popScope(prev)
+	if m.ElseBody != nil {
+		prev2 := a.pushScope()
+		for _, elem := range m.ElseBody.Elements {
+			a.analyzeNode(elem)
+		}
+		a.popScope(prev2)
+	}
+	return bodyType
 }
 
 // ---------------------------------------------------------------------------

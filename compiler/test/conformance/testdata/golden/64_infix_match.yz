@@ -1,0 +1,32 @@
+// YZC-0063: infix match — bool form, body form, else form
+Shape: {
+    Circle(radius Int)
+    Rectangle(width Int, height Int)
+}
+
+main: {
+    s : Circle(5)
+
+    // bool form — used as condition
+    s match Circle ? {
+        print("is a circle")
+    }
+
+    // body form — narrowed access
+    s match Circle => {
+        print(s.radius)
+    }
+
+    // body form with else
+    s match Rectangle => {
+        print(s.width)
+    }, {
+        print("not a rectangle")
+    }
+
+    // bool form bound to variable
+    is_circle : s match Circle
+    is_circle ? {
+        print("still a circle")
+    }
+}

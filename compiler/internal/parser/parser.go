@@ -517,6 +517,33 @@ func (p *Parser) parsePostfix() (ast.Expr, error) {
 				return base, nil
 			}
 
+		case token.MATCH:
+			// Infix match: `expr match Constructor` or `expr match Constructor => { body }`
+			pos := p.curPos()
+			p.advance() // consume 'match'
+			if !p.at(token.TYPE_IDENT) {
+				return nil, p.errorf("expected constructor name after 'match'")
+			}
+			constructor := p.parseIdent()
+			infix := &ast.InfixMatchExpr{Pos: pos, Subject: base, Constructor: constructor}
+			if p.at(token.FAT_ARROW) {
+				p.advance() // consume '=>'
+				body, err := p.parseBocLiteral()
+				if err != nil {
+					return nil, err
+				}
+				infix.Body = body
+				if p.at(token.COMMA) && p.peekIs(token.LBRACE) {
+					p.advance() // consume ','
+					elseBody, err := p.parseBocLiteral()
+					if err != nil {
+						return nil, err
+					}
+					infix.ElseBody = elseBody
+				}
+			}
+			base = infix
+
 		default:
 			return base, nil
 		}

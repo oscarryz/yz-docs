@@ -326,6 +326,22 @@ type MatchExpr struct {
 
 func (e *MatchExpr) exprNode() {}
 
+// InfixMatchExpr is `expr match Constructor` (bool form, returns Bool) or
+// `expr match Constructor => BocLiteral` (body form, type-narrowed access).
+//
+//   Bool form:  `p match Dog`               — returns Bool, no body
+//   Body form:  `p match Dog => { p.breed }` — executes body when matched
+//   With else:  `p match Dog => { ... }, { ... }`
+type InfixMatchExpr struct {
+	Pos
+	Subject     Expr        // the value being tested
+	Constructor *Ident      // variant constructor name (TYPE_IDENT)
+	Body        *BocLiteral // nil for bool form
+	ElseBody    *BocLiteral // optional else boc (only when Body != nil)
+}
+
+func (e *InfixMatchExpr) exprNode() {}
+
 // ConditionalBoc is one `{ [condition =>] body }` arm of a match expression.
 type ConditionalBoc struct {
 	Pos

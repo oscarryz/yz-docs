@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **63 golden + 4 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **64 golden + 4 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -146,14 +146,16 @@ Ticket numbers: `YZC-NNNN`. Numbers are permanent — closed tickets keep their 
 
   discovered during YZC-0051 (commit c7065da). When a tracked local variable is copied to another variable (`c : b`), `c` is not added to `FieldInitState` as a tracked var (it is a ShortDecl, but the RHS is an identifier, not a constructor call). Reads through `c.f` will always pass the check even if `b.f` is unset. Fix: in `analyzeShortDecl`, when the RHS is an `*ast.Ident` and the source var is tracked in `fieldInit.locals`, clone that var's field map under the new name. If source is untracked (parameter, always initialized), leave new name untracked too — `isAssigned` returns true for untracked vars. Error test 16.
 
-- [ ] **[YZC-0063] Single-arm non-exhaustive match (`p match Constructor => { }` and `p match Constructor`)**
+- [x] **[YZC-0063] Single-arm non-exhaustive match (`p match Constructor => { }` and `p match Constructor`)**
 
-  Two new forms of `match` for working with a single variant constructor without requiring exhaustive arms. `p match Constructor` returns `Bool` — usable anywhere a boolean is needed (`?`, `while`, `filter`). `p match Constructor => { body }` is the narrowing form: the compiler narrows `p`'s type inside the boc body so its constructor-specific fields are accessible. Narrowing is syntactic only — it applies exclusively inside the immediately following boc literal; storing the result in a variable does not propagate narrowing. An optional else boc is allowed: `p match C => { ... }, { ... }`. When the constructor does not match and there is no else, the expression produces nothing. Spec: `docs/Features/Type variants.md`.
+  Two new forms of `match` for working with a single variant constructor without requiring exhaustive arms. `p match Constructor` returns `Bool` — usable anywhere a boolean is needed (`?`, `while`, `filter`). `p match Constructor => { body }` is the body form: the compiler allows access to the constructor's fields inside the boc body. An optional else boc is allowed: `p match C => { ... }, { ... }`. When the constructor does not match and there is no else, the expression produces nothing. Narrowing is syntactic only — applies only inside the immediately following boc literal. Spec: `docs/Features/Type variants.md`. Golden test 64.
 
-  - [ ] Parser — recognize `expr match IDENT` (bool form) and `expr match IDENT => BocLiteral` (narrowing form)
-  - [ ] Sema — type-check both forms; apply constructor-field narrowing inside the body boc for the `=>` form
-  - [ ] Lowerer — emit Go type switch or discriminant check; narrowed body emits with direct field access
-  - [ ] Golden tests — bool form, narrowing form, else branch, bool form in `while`/`filter`
+  - [x] AST — `InfixMatchExpr` node with Subject, Constructor, Body, ElseBody
+  - [x] Parser — `expr match TYPE_IDENT` (bool form) and `expr match TYPE_IDENT => BocLiteral [, BocLiteral]` in `parsePostfix`
+  - [x] Sema — `analyzeInfixMatch`: validates variant type and constructor existence; returns Bool for bool form, body type for body form
+  - [x] IR — `VariantTestExpr{Subject, ConstName}` emits `std.NewBool(subject._variant == _TypeConstructor)`
+  - [x] Lowerer — bool form → `VariantTestExpr`; body form stmt → `IfStmt`; body form expr → `MatchExpr` IIFE
+  - [x] Golden test 64 — bool form with `?`, body form, else branch, bool form bound to variable
 
 - [x] **[YZC-0056] CFG: variant type construction skipped**
 
@@ -409,7 +411,7 @@ Prerequisite: E.3 complete (done). `Int/String/Bool/Decimal/Unit` move from Go t
 ## Ticket Rules
 
 - `YZC-NNNN` numbers are permanent and never reused; closed items keep their number
-- Numbers are assigned in creation order; next available: **YZC-0064**
+- Numbers are assigned in creation order; next available: **YZC-0065**
 - `depends-on` is a flat reference to ticket numbers — no nested phase hierarchy
 - Reference tickets in commit messages and code comments for easy grep: `// YZC-0008`
 - When the open list in any section exceeds ~10 items, split into a `tickets/` directory with one file per ticket

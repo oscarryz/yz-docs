@@ -210,8 +210,9 @@ func (*ClosureExpr) irExpr()  {}
 func (*SpawnExpr) irExpr()    {}
 func (*NewGroupExpr) irExpr() {}
 func (*NewStructExpr) irExpr(){}
-func (*MatchExpr) irExpr()    {}
-func (*SwitchExpr) irExpr()   {}
+func (*MatchExpr) irExpr()         {}
+func (*SwitchExpr) irExpr()        {}
+func (*VariantTestExpr) irExpr()   {}
 
 // Literal nodes — codegen boxes these into std.NewXxx(...) calls.
 type IntLit struct{ Val int64 }
@@ -317,4 +318,11 @@ type SwitchExpr struct {
 	Subject    Expr
 	ResultType string
 	Cases      []*SwitchCase
+}
+
+// VariantTestExpr is `subject._variant == ConstName` — the boolean check emitted
+// for `p match Constructor` and as the Cond of an IfStmt for the body form.
+type VariantTestExpr struct {
+	Subject   Expr
+	ConstName string // e.g. "_PetDog"
 }

@@ -436,6 +436,8 @@ func (g *generator) expr(e ir.Expr) string {
 		return g.emitMatchIIFE(ex)
 	case *ir.SwitchExpr:
 		return g.emitSwitchIIFE(ex)
+	case *ir.VariantTestExpr:
+		return fmt.Sprintf("std.NewBool(%s._variant == %s)", g.expr(ex.Subject), ex.ConstName)
 	default:
 		return "/* ? */"
 	}
@@ -1282,6 +1284,8 @@ func collectUsedExpr(e ir.Expr, seen map[string]bool) {
 				collectUsedStmt(s, seen)
 			}
 		}
+	case *ir.VariantTestExpr:
+		collectUsedExpr(ex.Subject, seen)
 	}
 }
 
