@@ -2,6 +2,7 @@ package rt
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -165,17 +166,24 @@ func (d Dict[K, V]) String() string {
 	if len(d.m) == 0 {
 		return "[:]"
 	}
+	type kv struct {
+		ks string
+		vs string
+	}
+	pairs := make([]kv, 0, len(d.m))
+	for k, v := range d.m {
+		pairs = append(pairs, kv{StringifyRepr(k), StringifyRepr(v)})
+	}
+	sort.Slice(pairs, func(i, j int) bool { return pairs[i].ks < pairs[j].ks })
 	var sb strings.Builder
 	sb.WriteString("[")
-	first := true
-	for k, v := range d.m {
-		if !first {
+	for i, p := range pairs {
+		if i > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(StringifyRepr(k))
+		sb.WriteString(p.ks)
 		sb.WriteString(": ")
-		sb.WriteString(StringifyRepr(v))
-		first = false
+		sb.WriteString(p.vs)
 	}
 	sb.WriteString("]")
 	return sb.String()

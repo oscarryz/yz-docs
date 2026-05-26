@@ -614,11 +614,6 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 
 	// Multi-cown: atomically acquire self + extra cowns via ScheduleMulti.
 	if len(th.ExtraCowns) > 0 {
-		// If the body contains an inline-forced thunkVar (partial-reentrant: the
-		// sub-boc needs its own cown plus a held cown), use ScheduleFlatten.
-		if thunkFindInlineThunkVar(th.Body) >= 0 {
-			return g.emitScheduleFlatten(th)
-		}
 		// If the body contains a WaitStmt (from Phase E.1 implicit BocGroup), use
 		// the IIFE split-BocGroup pattern so SpawnExprs establish their cown queue
 		// positions eagerly while ScheduleMulti holds the cowns.
@@ -743,14 +738,6 @@ func thunkFindWaitIdx(body []ir.Stmt) int {
 	return -1
 }
 
-// thunkFindInlineThunkVar returns -1 always in Phase E.3.
-// Previously detected DeclStmt{IsThunk:true} vars that would be forced inline
-// inside a cown closure. With E.3, boc-call vars are always GoStore'd via
-// SpawnExpr{StoreVar} and never forced inline, so ScheduleFlatten is no longer needed.
-func thunkFindInlineThunkVar(body []ir.Stmt) int {
-	return -1
-}
-
 // extractSingleCownThunk returns the ThunkExpr if body is a single ExprStmt
 // wrapping a single-cown ThunkExpr (RecvCown set, ExtraCowns empty, no WaitStmt).
 // Returns nil for multi-cown, spawn-only, or split-BocGroup method shapes.
@@ -788,70 +775,6 @@ func simpleExprStr(e ir.Expr) string {
 	default:
 		return ""
 	}
-}
-
-// emitScheduleFlatten emits the cown-suspension pattern for a multi-cown method
-// body that contains an inline-forced thunkVar. The body is split at the first
-// thunkVar declaration:
-//
-//   Phase 1 (inside ScheduleFlatten's protected fn): everything up to and
-//   including the thunkVar DeclStmt — sub-boc registered while cowns held.
-//
-//   Phase 2 (inside returned NewThunk): force the thunkVar (cowns released),
-//   then reacquire cowns via ScheduleMulti for the remainder of the body.
-//
-// If phase2 itself contains another inline thunkVar, the pattern recurses.
-func (g *generator) emitScheduleFlatten(th *ir.ThunkExpr) string {
-	cowns := append([]string{th.RecvCown}, th.ExtraCowns...)
-	cownList := "[]*std.Cown{" + strings.Join(cowns, ", ") + "}"
-
-	splitIdx := thunkFindInlineThunkVar(th.Body)
-	phase1 := th.Body[:splitIdx+1] // up to and including the thunkVar DeclStmt
-	phase2 := th.Body[splitIdx+1:] // continuation
-
-	// The thunkVar name — used to force it in phase2.
-	thunkVarName := th.Body[splitIdx].(*ir.DeclStmt).Name
-
-	var sb strings.Builder
-	sb.WriteString("std.ScheduleFlatten(")
-	sb.WriteString(cownList)
-	sb.WriteString(", func() *std.Thunk[")
-	sb.WriteString(th.ResultType)
-	sb.WriteString("] {\n")
-
-	p1 := g.sub(g.level + 1)
-	p1.emitBodyStmts(phase1, false) // false: don't auto-return last expr
-	p1.write(p1.ind())
-	p1.write("return std.NewThunk(func() ")
-	p1.write(th.ResultType)
-	p1.write(" {\n")
-
-	p2 := p1.sub(p1.level + 1)
-	// Force the thunkVar — safe here, cowns are released.
-	p2.linef("%s := %s.Force()", thunkVarName, thunkVarName)
-	// Reacquire cowns for the continuation.
-	if len(phase2) > 0 {
-		// Remove ForceExpr wrappers around thunkVarName in phase2: after the
-		// forcing above, the variable is already the concrete type, not a thunk.
-		phase2clean := stripThunkForce(phase2, thunkVarName)
-		inner2 := &ir.ThunkExpr{
-			ResultType: th.ResultType,
-			Body:       phase2clean,
-			Spawn:      false,
-			RecvCown:   th.RecvCown,
-			ExtraCowns: th.ExtraCowns,
-		}
-		p2.linef("return %s.Force()", p2.expr(inner2))
-	}
-
-	p1.write(p2.sb.String())
-	p1.write(p1.ind())
-	p1.write("})\n")
-
-	sb.WriteString(p1.sb.String())
-	sb.WriteString(g.ind())
-	sb.WriteString("})")
-	return sb.String()
 }
 
 // emitScheduleMultiSplit handles multi-cown method bodies that contain an
@@ -937,64 +860,6 @@ func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, waitIdx int) string
 	sb.WriteString(g.ind())
 	sb.WriteString("}()")
 	return sb.String()
-}
-
-// stripThunkForce walks body and removes ForceExpr wrappers around the named
-// identifier. Used in emitScheduleFlatten so that phase2 statements (which the
-// lowerer emitted with auto-Force on the thunk var) do not double-force a
-// variable that has already been forced before being captured by phase2.
-func stripThunkForce(body []ir.Stmt, name string) []ir.Stmt {
-	result := make([]ir.Stmt, len(body))
-	for i, s := range body {
-		result[i] = stripForceStmt(s, name)
-	}
-	return result
-}
-
-func stripForceStmt(s ir.Stmt, name string) ir.Stmt {
-	switch st := s.(type) {
-	case *ir.ReturnStmt:
-		return &ir.ReturnStmt{Value: stripForceExprNode(st.Value, name)}
-	case *ir.ExprStmt:
-		return &ir.ExprStmt{Expr: stripForceExprNode(st.Expr, name)}
-	case *ir.DeclStmt:
-		return &ir.DeclStmt{Name: st.Name, Type: st.Type, Init: stripForceExprNode(st.Init, name)}
-	case *ir.AssignStmt:
-		return &ir.AssignStmt{Target: stripForceExprNode(st.Target, name), Value: stripForceExprNode(st.Value, name)}
-	default:
-		return s
-	}
-}
-
-func stripForceExprNode(e ir.Expr, name string) ir.Expr {
-	if e == nil {
-		return nil
-	}
-	switch ex := e.(type) {
-	case *ir.ForceExpr:
-		if id, ok := ex.Thunk.(*ir.Ident); ok && id.Name == name {
-			return id
-		}
-		return &ir.ForceExpr{Thunk: stripForceExprNode(ex.Thunk, name)}
-	case *ir.FieldAccess:
-		return &ir.FieldAccess{Object: stripForceExprNode(ex.Object, name), Field: ex.Field}
-	case *ir.MethodCall:
-		args := make([]ir.Expr, len(ex.Args))
-		for i, a := range ex.Args {
-			args[i] = stripForceExprNode(a, name)
-		}
-		return &ir.MethodCall{Recv: stripForceExprNode(ex.Recv, name), Method: ex.Method, Args: args}
-	case *ir.FuncCall:
-		args := make([]ir.Expr, len(ex.Args))
-		for i, a := range ex.Args {
-			args[i] = stripForceExprNode(a, name)
-		}
-		return &ir.FuncCall{Func: stripForceExprNode(ex.Func, name), Args: args}
-	case *ir.IndexExpr:
-		return &ir.IndexExpr{Object: stripForceExprNode(ex.Object, name), Index: stripForceExprNode(ex.Index, name)}
-	default:
-		return e
-	}
 }
 
 // emitClosure generates func(params) T { body }.

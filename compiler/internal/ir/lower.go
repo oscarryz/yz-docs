@@ -391,14 +391,38 @@ func hasNamedArgs(args []*ast.Argument) bool {
 	return false
 }
 
+// lowerArgsByLabel dispatches labeled/positional call arguments into a result
+// slice of len(names). defaults[i] is the default expression for position i, or
+// nil when there is no default. Pass a nil defaults slice when defaults are not
+// supported (e.g. struct constructors).
+func (l *lowerer) lowerArgsByLabel(callArgs []*ast.Argument, names []string, defaults []*ast.BocParam) []Expr {
+	byLabel := map[string]ast.Expr{}
+	var positional []ast.Expr
+	for _, a := range callArgs {
+		if a.Label != "" {
+			byLabel[a.Label] = a.Value
+		} else {
+			positional = append(positional, a.Value)
+		}
+	}
+
+	result := make([]Expr, len(names))
+	posIdx := 0
+	for i, name := range names {
+		if val, ok := byLabel[name]; ok {
+			result[i] = l.lowerExpr(val)
+		} else if posIdx < len(positional) {
+			result[i] = l.lowerExpr(positional[posIdx])
+			posIdx++
+		} else if defaults != nil && defaults[i] != nil && defaults[i].Default != nil {
+			result[i] = l.lowerExpr(defaults[i].Default)
+		}
+	}
+	return result
+}
+
 // lowerNamedArgs lowers call arguments in canonical param order, supporting
 // named (label:) arguments, order independence, and any-position defaults.
-//
-// If no argument has a label the behaviour is identical to positional lowering
-// followed by filling trailing defaults (same as fillDefaults).  When labels
-// are present args are placed by label; unlabelled args fill the remaining
-// positions left-to-right; omitted params whose sigParam has a Default are
-// filled automatically.
 //
 // sigParams must be the filtered list of input params in declaration order
 // (same filter as fillDefaults: Label != "" && Variant == nil).
@@ -412,7 +436,7 @@ func (l *lowerer) lowerNamedArgs(callArgs []*ast.Argument, sigParams []*ast.BocP
 	}
 
 	if !hasNamedArgs(callArgs) {
-		// Fast path: positional + trailing defaults (same as fillDefaults).
+		// Fast path: positional + trailing defaults.
 		var result []Expr
 		for _, a := range callArgs {
 			result = append(result, l.lowerExpr(a.Value))
@@ -425,29 +449,11 @@ func (l *lowerer) lowerNamedArgs(callArgs []*ast.Argument, sigParams []*ast.BocP
 		return result
 	}
 
-	byLabel := map[string]ast.Expr{}
-	var positional []ast.Expr
-	for _, a := range callArgs {
-		if a.Label != "" {
-			byLabel[a.Label] = a.Value
-		} else {
-			positional = append(positional, a.Value)
-		}
-	}
-
-	result := make([]Expr, len(sigParams))
-	posIdx := 0
+	names := make([]string, len(sigParams))
 	for i, p := range sigParams {
-		if val, ok := byLabel[p.Label]; ok {
-			result[i] = l.lowerExpr(val)
-		} else if posIdx < len(positional) {
-			result[i] = l.lowerExpr(positional[posIdx])
-			posIdx++
-		} else if p.Default != nil {
-			result[i] = l.lowerExpr(p.Default)
-		}
+		names[i] = p.Label
 	}
-	return result
+	return l.lowerArgsByLabel(callArgs, names, sigParams)
 }
 
 // lowerStructArgs lowers call arguments for a struct constructor in canonical
@@ -464,34 +470,13 @@ func (l *lowerer) lowerStructArgs(callArgs []*ast.Argument, st *sema.StructType)
 	}
 
 	// Collect data-field param names (constructor params, in declaration order).
-	var paramNames []string
+	var names []string
 	for _, f := range st.Fields {
 		if _, isBoc := f.Type.(*sema.BocType); !isBoc {
-			paramNames = append(paramNames, f.Name)
+			names = append(names, f.Name)
 		}
 	}
-
-	byLabel := map[string]ast.Expr{}
-	var positional []ast.Expr
-	for _, a := range callArgs {
-		if a.Label != "" {
-			byLabel[a.Label] = a.Value
-		} else {
-			positional = append(positional, a.Value)
-		}
-	}
-
-	result := make([]Expr, len(paramNames))
-	posIdx := 0
-	for i, name := range paramNames {
-		if val, ok := byLabel[name]; ok {
-			result[i] = l.lowerExpr(val)
-		} else if posIdx < len(positional) {
-			result[i] = l.lowerExpr(positional[posIdx])
-			posIdx++
-		}
-	}
-	return result
+	return l.lowerArgsByLabel(callArgs, names, nil)
 }
 
 // ---------------------------------------------------------------------------
@@ -2792,7 +2777,7 @@ func (l *lowerer) tryLowerMatch(e ast.Expr) (Stmt, bool) {
 	var topIf *IfStmt
 	for i := len(m.Arms) - 1; i >= 0; i-- {
 		arm := m.Arms[i]
-		body := l.lowerBocAsStmts2(arm.Body)
+		body := l.lowerElementStmts(arm.Body)
 		if arm.Condition == nil {
 			// Default arm — becomes the else body of the arm above.
 			pendingElse = body
@@ -2831,7 +2816,7 @@ func (l *lowerer) tryLowerDiscriminantMatch(m *ast.MatchExpr) (Stmt, bool) {
 			return nil, false
 		}
 		constName := "_" + l.variantStructName(m.Subject) + variantName
-		body := l.lowerBocAsStmts2(arm.Body)
+		body := l.lowerElementStmts(arm.Body)
 		sw.Cases = append(sw.Cases, &SwitchCase{ConstName: constName, Body: body})
 	}
 	return sw, true
@@ -2928,34 +2913,12 @@ func (l *lowerer) lowerMatchArmBody(elements []ast.Node, resultType string) []St
 	return stmts
 }
 
-// lowerBocAsStmts2 lowers a slice of ast.Node elements (a match arm body) as
-// flat statements with no return-wrapping. Used for statement-position match.
-func (l *lowerer) lowerBocAsStmts2(elements []ast.Node) []Stmt {
+// lowerElementStmts lowers a slice of AST nodes as flat statements with no
+// return-wrapping. Used for match arm bodies and conditional branch bodies.
+// trySyncExpr is applied when closureHeldCowns is non-nil (inside ScheduleMulti).
+func (l *lowerer) lowerElementStmts(elements []ast.Node) []Stmt {
 	var stmts []Stmt
 	for _, elem := range elements {
-		switch e := elem.(type) {
-		case *ast.Assignment:
-			stmts = append(stmts, l.lowerAssignment(e))
-		case *ast.ShortDecl:
-			stmts = append(stmts, l.lowerBodyShortDecl(e, false, "std.Unit")...)
-		case ast.Expr:
-			if is, ok := l.tryLowerConditional(e); ok {
-				stmts = append(stmts, is)
-			} else if ms, ok := l.tryLowerMatch(e); ok {
-				stmts = append(stmts, ms)
-			} else {
-				stmts = append(stmts, &ExprStmt{Expr: l.lowerExprOrSpawn(e)})
-			}
-		}
-	}
-	return stmts
-}
-
-// lowerBocAsStmts lowers boc elements as a flat list of statements without
-// goroutine wrapping. Used for conditional branch bodies.
-func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
-	var stmts []Stmt
-	for _, elem := range b.Elements {
 		switch e := elem.(type) {
 		case *ast.Assignment:
 			stmts = append(stmts, l.lowerAssignment(e))
@@ -2974,6 +2937,11 @@ func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
 		}
 	}
 	return stmts
+}
+
+// lowerBocAsStmts lowers boc literal elements as flat statements.
+func (l *lowerer) lowerBocAsStmts(b *ast.BocLiteral) []Stmt {
+	return l.lowerElementStmts(b.Elements)
 }
 
 // lowerBuiltinCall emits a direct std.Xxx(...) call.
@@ -3512,13 +3480,6 @@ func (l *lowerer) valueAt(vals []ast.Expr, i int) ast.Expr {
 	}
 	return nil
 }
-
-// isMainIdent checks whether an identifier token is the literal string "main".
-func isMainIdent(name *ast.Ident) bool {
-	return name.TokType == token.IDENT && name.Name == "main"
-}
-
-var _ = isMainIdent // suppress unused warning
 
 // unquoteString strips the surrounding quote characters from a raw string
 // literal value (e.g. `"hello"` → `hello`, `'world'` → `world`).
