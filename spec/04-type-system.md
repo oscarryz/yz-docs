@@ -304,13 +304,17 @@ e.id             // OK — e is still Employee
 
 Yz uses **single uppercase letters** as generic type parameters, following the same convention as Go, Rust, Java, and Scala.
 
+### The `#()` metatype
+
+`#()` — the empty interface — is the **metatype**: the type whose values are types. Every UpperCase boc (`Int`, `String`, `Person`, …) satisfies `#()` structurally. It is the implicit type of every bare type parameter, analogous to how `Unit` is the implicit return type of bocs that return nothing: you never write it, the compiler infers it.
+
 ### Declaration
 
-Type parameters are always **declared explicitly** in the type body as bare uppercase identifiers, before the fields that reference them:
+Type parameters are declared as bare uppercase identifiers before the fields that reference them. Semantically they are **fields of type `#()`** — they hold a type value:
 
 ```yz
 Box: {
-    T          // T is a type parameter — not a field
+    T          // field of type #() — holds the element type
     value T    // field whose type is T
 }
 ```
@@ -324,7 +328,7 @@ Bad: {
 }
 ```
 
-This explicit-declaration rule is consistent with every mainstream statically-typed language and avoids ambiguity about which identifiers are type parameters vs concrete type names.
+This explicit-declaration rule avoids ambiguity between type parameters and concrete type names.
 
 ### Instantiation by Inference
 
@@ -398,7 +402,102 @@ Pair: {
 p: Pair("name", 42)  // K = String, V = Int
 ```
 
-## 4.8 Equality Semantics
+## 4.8 Type Aliases
+
+`Name : ExistingType` declares a **type alias** — `Name` is another name for `ExistingType`. They are structurally identical; the compiler treats them as the same type.
+
+```yz
+Bar : Foo     // Bar and Foo are the same type
+```
+
+This uses the same `:` short-declaration syntax as value declarations (`x : 42`). The compiler copies `Foo`'s signature into `Bar`.
+
+### Generic instantiation via alias
+
+A type alias where the right-hand side is a parameterized type creates a concrete specialization:
+
+```yz
+StringList : List(String)   // StringList.T = String
+IntPair    : Pair(Int, Int)
+```
+
+### Associated type binding
+
+Inside a concrete boc, type aliases bind the abstract type fields of an interface (see §4.9):
+
+```yz
+SocialGraph : {
+    Node : User         // Node is bound to User in this boc
+    Edge : Relationship
+    ...
+}
+```
+
+> **Implementation note:** simple structural aliases (`Bar : Foo`) are tracked in YZC-0027. Generic instantiation and associated type binding depend on YZC-0066.
+
+---
+
+## 4.9 Path-Dependent Types and Associated Types
+
+A boc can declare **type fields** — fields whose values are types. Other bocs that satisfy the interface bind those fields to concrete types. Functions access them via the instance path.
+
+### Declaring type fields (associated types)
+
+```yz
+Graph : {
+    Node #()                       // Node is a type field (type = #())
+    Edge #()
+    add_node  #( Node )
+    add_edge  #( Node, Node, Edge )
+    neighbors #( Node, List(Node) )
+}
+```
+
+### Binding in a concrete boc
+
+```yz
+SocialGraph : {
+    Node : User          // type alias — Node = User in SocialGraph
+    Edge : Relationship
+    add_node  #( Node ) = { ... }
+    neighbors #( Node, List(Node) ) = { ... }
+}
+```
+
+`SocialGraph.Node` is `User`. `SocialGraph.Edge` is `Relationship`.
+
+### Path-dependent type in a signature
+
+A function that works on any `Graph` accesses the associated type through the instance:
+
+```yz
+process #( g Graph, n g.Node )
+```
+
+`g.Node` is a **path-dependent type**: its concrete value depends on which graph `g` holds. The compiler resolves it statically at the call site:
+
+```yz
+sg : SocialGraph()
+u  : User("Alice")
+process(sg, u)   // g.Node = SocialGraph.Node = User — verified at compile time
+process(sg, 42)  // ERROR: Int does not satisfy SocialGraph.Node (User)
+```
+
+### Type variable form
+
+When a function relates two type-parameterized arguments, single-uppercase letters serve as unbound type variables in the signature (implicit `#()`):
+
+```yz
+map #( collection List(A), fn #(A, B), List(B) )
+```
+
+`A` and `B` are inferred at the call site from the concrete types of the arguments.
+
+> **Implementation note:** path-dependent types and associated types are tracked in YZC-0066 and YZC-0030.
+
+---
+
+## 4.10 Equality Semantics
 
 The `==` method is defined on **every type** and performs **structural equality**:
 
@@ -408,20 +507,26 @@ The `==` method is defined on **every type** and performs **structural equality*
 - **Arrays**: Same length AND element-wise `==`
 - **Dictionaries**: Same keys AND value-wise `==`
 
-## 4.9 Type Summary
+## 4.11 Type Summary
 
 ```
 Types:
-  Built-in     : Int, Decimal, String, Bool, Unit
-  Boc type     : #(params..., return_types...)
-  Array type   : [ElementType]
-  Dict type    : [KeyType:ValueType]
-  User-defined : Uppercase-named boc with fields/methods
-  Variant      : Constructor-based subtypes within a user-defined type
-  Generic      : Single uppercase letter (T, E, K, V, etc.)
+  Built-in         : Int, Decimal, String, Bool, Unit
+  Boc type         : #(params..., return_types...)
+  Array type       : [ElementType]
+  Dict type        : [KeyType:ValueType]
+  User-defined     : Uppercase-named boc with fields/methods
+  Variant          : Constructor-based subtypes within a user-defined type
+  Generic          : Single uppercase letter (T, E, K, V, etc.) — field of type #()
+  Type alias       : Name : ExistingType
+  Metatype         : #() — the type of types; implicit, never written
 
 Compatibility:
   Structural — based on field names + types, not type names
   Width subtyping — wider types assignable to narrower types
   No nominal typing — name is a label, not identity
+
+Path-dependent:
+  g.Node — type stored in field Node of instance g, resolved at compile time
+  T in signatures — unbound type variable, inferred at call site
 ```

@@ -162,7 +162,47 @@ max("a", "b")          // OK if String has >
 max([1], [2])          // ERROR if [Int] has no >
 ```
 
-## 5.5 Structural Compatibility Inference
+## 5.5 Path-Dependent Type Inference
+
+When a function signature contains a path-dependent type (`g.Node`), the compiler resolves the type by:
+
+1. Inferring or checking the type of the leading variable (`g`)
+2. Looking up the named field on that type (`Node` on whatever struct `g` is)
+3. Using the stored type value as the expected type for the parameter
+
+```yz
+Graph : {
+    Node #()
+    ...
+}
+
+SocialGraph : {
+    Node : User
+    ...
+}
+
+process #( g Graph, n g.Node )
+
+sg : SocialGraph()
+u  : User("Alice")
+process(sg, u)   // step 1: g = SocialGraph; step 2: SocialGraph.Node = User; step 3: n must be User
+```
+
+Parameters to the left of a path-dependent parameter are resolved first, in declaration order. If the leading variable's type cannot be determined statically, the compiler reports an error.
+
+When a function uses unbound single-uppercase type variables (`A`, `B`) across multiple parameters, the compiler unifies them against argument types in order:
+
+```yz
+map #( collection List(A), fn #(A, B), List(B) )
+```
+
+Step 1: bind `A` from `collection`'s element type. Step 2: verify `fn`'s first parameter type matches `A`; bind `B` from `fn`'s return type. Step 3: the return type `List(B)` is now concrete.
+
+> **Implementation note:** path-dependent inference is tracked in YZC-0066.
+
+---
+
+## 5.6 Structural Compatibility Inference
 
 When a value is assigned to a variable with an explicit type, the compiler checks structural compatibility:
 
@@ -184,7 +224,7 @@ e: Employee("Alice", 30, 1001)
 p Person = e     // OK — width subtyping
 ```
 
-## 5.6 Match Expression Type Inference
+## 5.7 Match Expression Type Inference
 
 ### Condition Match
 
@@ -221,7 +261,7 @@ match r {
 }
 ```
 
-## 5.7 Array and Dictionary Inference
+## 5.8 Array and Dictionary Inference
 
 ### Array Literal
 
@@ -251,7 +291,7 @@ items: [Int]()             // Empty [Int]
 lookup: [String:Bool]()    // Empty [String:Bool]
 ```
 
-## 5.8 Inference Limitations
+## 5.9 Inference Limitations
 
 Type inference is **local** — it does not propagate across boc boundaries in complex ways. When inference is ambiguous, the compiler requires an explicit annotation:
 
@@ -267,13 +307,15 @@ identity: {
 n: identity(42)  // OK — T = Int from argument
 ```
 
-## 5.9 Summary of Inference Rules
+## 5.10 Summary of Inference Rules
 
 | Context | Inferred From |
 |---------|---------------|
 | Short declaration `x: expr` | Type of `expr` |
 | Boc return type | Last expression(s) in boc body |
 | Generic parameter `T` | Concrete type of argument at call site |
+| Path-dependent `g.Node` | Static type of `g`, field lookup on its struct type |
+| Type variable `A` in signature | Unified against concrete argument types in order |
 | Array `[a, b, c]` | Common type of elements |
 | Dict `[k1:v1, k2:v2]` | Common key type, common value type |
 | Match expression | Common return type of all branches |

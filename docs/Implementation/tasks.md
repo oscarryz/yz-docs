@@ -31,11 +31,12 @@ YZC-0017 -- Dict optional access -- S
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S
 YZC-0057 -- Cyclic / mutually-recursive type declarations -- S
 YZC-0012 -- Multiple return values -- M
-YZC-0027 -- `:` as Type Alias -- M
+YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066
+YZC-0066 -- Path-Dependent Types: `#()` metatype, T fields, `g.Node` -- L
 YZC-0038 -- `Result(T,E)` type -- M
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011
-YZC-0026 -- Generics: Explicit Constraint Declaration -- M
-YZC-0030 -- Associated Types -- M
+YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066
+YZC-0030 -- Associated Types -- M -- needs YZC-0066
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031
 YZC-0009 -- Range iteration -- S -- needs YZC-0031
@@ -65,7 +66,7 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
 # Details
 
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0066**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0067**.
 
 ---
 
@@ -334,12 +335,26 @@ Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-
 
 ### YZC-0027 — `:` as Type Alias
 
-`Name : SomeType` declares a type alias.
+`Name : SomeType` declares a type alias. Depends on YZC-0066 for the unified model; can be implemented as a limited special form before YZC-0066 lands (emit `type Name = GoType` in Go, no `#()` metatype required).
 
 - [ ] Parser — distinguish from `Name TypeExpr` (typed decl) and `name : value` (short decl)
 - [ ] Sema — register alias; resolve as aliased type
 - [ ] Lowerer — emit `type Name = GoType`
 - [ ] Spec 04 — add
+- [ ] Deferred to YZC-0066: generic instantiation via alias (`StringList : List(String)`), associated type binding (`Node : User` inside a boc)
+
+### YZC-0066 — Path-Dependent Types: `#()` metatype, T fields, `g.Node`
+
+Unified model for generics, type aliases, and associated types. See `docs/Features/Path Dependent Types.md`.
+
+- [ ] Sema — `#()` recognized as metatype; bare GENERIC_IDENT field given implicit `#()` type
+- [ ] Sema — type fields in constructors (`List(Int)` binds `T = Int`)
+- [ ] Sema — path-dependent resolution: `g.Node` in type position looks up `Node` field of `g`'s struct type
+- [ ] Sema — type variable inference: unify GENERIC_IDENT against call-site argument types
+- [ ] Lowerer/Codegen — emit specialized (monomorphized) Go types per concrete instantiation
+- [ ] `Node : User` inside a boc body treated as type alias, not value alias
+- [ ] Golden tests: generic boc, `g.Node` signature, `StringList : List(String)` alias
+- [ ] Spec 04 — generics section; Spec 05 — associated types section
 
 ### YZC-0028 — Compile-Time Bocs (`Compile` interface)
 
@@ -365,11 +380,11 @@ Compiler removal done.
 
 ### YZC-0030 — Associated Types: Path-Dependent Type References
 
-`process(g Graph, n g.Node)` — sema resolves `g.Node` against concrete type of `g`.
+`process #(g Graph, n g.Node)` — sema resolves `g.Node` against the concrete type of `g`. Design resolved; see `docs/Features/Path Dependent Types.md` and `docs/Features/Associated Types.md`. Depends on YZC-0066.
 
-- [ ] Sema — `value.TypeName` in type position
+- [ ] Sema — `value.TypeName` in type position (path-dependent resolution)
 - [ ] Lowerer — emit concrete Go type at resolution site
-- [ ] Golden test
+- [ ] Golden test: Graph/SocialGraph/process example
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 

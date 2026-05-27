@@ -237,7 +237,28 @@ See also: [Compile Time Bocs](Compile%20Time%20Bocs.md)
 
 ---
 
+## Path-Dependent Types and Associated Types
+
+Type parameters are fields that hold type values. This enables path-dependent access (`list.T`) and associated types (`g.Node`) as natural extensions:
+
+```yz
+Graph : {
+    Node #()                    // Node is a type field, implicitly #()
+    neighbors #( Node, List(Node) )
+}
+
+process #( g Graph, n g.Node )  // n's type depends on g
+```
+
+The `#()` type on `Node` is implicit and never written. Constraints narrow it: `T Comparable` means T's type is `Comparable` rather than the unconstrained `#()`.
+
+See [Path Dependent Types](Path%20Dependent%20Types.md) for the full model.
+
+---
+
 ## Not Yet Implemented
 
 - **`Box(String)` as type-only constructor** — declare `word Box(String)` without providing a value, then assign later. Requires passing a type as a runtime constructor argument.
+- **Generic instantiation via alias** — `StringList : List(String)` — tracked in YZC-0066.
+- **Path-dependent types in signatures** — `g.Node` in parameter position — tracked in YZC-0066.
 - **Explicit constraint propagation across module boundaries** — tooling surfaces inferred constraints; explicit cross-module constraint annotations are not yet designed.
