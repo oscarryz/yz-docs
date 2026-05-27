@@ -96,14 +96,28 @@ Generic type parameters are resolved at the **use site** — the compiler examin
 
 ### Basic Inference
 
+With **explicit T** (`T` declared as a `#()` field), T is inferred when a named parameter is used for the value argument:
+
 ```yz
 Box: {
-    T
+    T          // #() field — holds the element type
     value T
 }
 
-b: Box(42)         // T is bound to Int
-s: Box("hello")    // T is bound to String
+b: Box(value: 42)    // T inferred as Int from named argument
+b: Box(Int, 42)      // T explicit — also valid
+b: Box(42)           // ERROR: 42 assigned to T field which expects #()
+```
+
+With **implicit T** (no bare declaration line), T is inferred directly from the positional argument:
+
+```yz
+Box: {
+    value T    // anonymous type variable — inferred from constructor argument
+}
+
+b: Box(42)        // T inferred as Int
+s: Box("hello")   // T inferred as String
 ```
 
 ### Inference from Context
@@ -115,8 +129,8 @@ identity: {
     x           // returns T
 }
 
-n: identity(42)        // T = Int, n : Int
-s: identity("hello")   // T = String, s : String
+n: identity(x: 42)        // T inferred as Int from named x argument; n : Int
+s: identity(x: "hello")   // T inferred as String; s : String
 ```
 
 ### Multiple Type Parameters

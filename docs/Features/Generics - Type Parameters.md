@@ -11,44 +11,63 @@ A **single uppercase letter** (any Unicode uppercase character) is a type parame
 
 ### Explicit declaration
 
-A bare single-letter line inside a boc body declares `T` as a type parameter for that boc:
+A bare single-letter line inside a boc body declares `T` as a type parameter. Under the PDT model, `T` is a **field of type `#()`** — it stores the type value. Construction must supply it:
 
 ```yz
 Box: {
-    T          // explicit declaration: T is a type parameter
+    T          // field of type #() — holds the element type
     value T
 }
 ```
 
-Fields after the declaration may use `T` as a type. Construction infers the concrete type from the argument:
+Because `T` is the first declared field, positional args map to it first. To pass only the value and let the compiler infer T, use a named parameter:
 
 ```yz
-b: Box(42)        // T = Int
-s: Box("hello")   // T = String
+b: Box(Int, 42)      // positional: T = Int, value = 42
+b: Box(value: 42)    // named: T inferred as Int from value argument
+b.T                  // valid — returns the type Int
+```
+
+Passing a value positionally where T expects a `#()` type is an error:
+
+```yz
+b: Box(42)   // ERROR — 42 is an Int value, not a type; T expects #()
 ```
 
 ### Implicit (inferred from use)
 
-If `T` is used in a field type without a bare declaration line, the compiler infers it from the constructor arguments:
+If `T` is used in a field type without a bare declaration line, `T` is an anonymous inferred type variable — not a field. Construction infers T from the value argument directly:
 
 ```yz
 Box: {
-    value T    // T not declared — inferred from use
+    value T    // T not declared — anonymous type variable, inferred from use
 }
 
-stringBox: Box("hola")   // T inferred as String
+b: Box(42)       // T inferred as Int — no T field passed
+b: Box("hola")   // T inferred as String
+b.T              // INVALID — no T field exists
 ```
 
-Both forms are valid. Explicit declaration is clearer for readers; implicit is more concise.
+Both forms are valid with different constructor syntax and different capabilities:
+
+| Form | Constructor | `b.T` |
+|---|---|---|
+| `{ T; value T }` | `Box(Int, 42)` or `Box(value: 42)` | valid |
+| `{ value T }` | `Box(42)` | invalid — no T field |
 
 ---
 
 ## Typed Variable Declaration
 
-To name the type argument explicitly — for documentation, to constrain later assignment, or to declare an uninitialized generic variable:
+To name the type argument explicitly in a variable declaration, use `TypeName(TypeArg)` in type-annotation position:
 
 ```yz
+// Using implicit-T Box: { value T }
 s Box(String) = Box("hello")    // T is explicitly String
+
+// Using explicit-T Box: { T; value T }
+s Box(String) = Box(value: "hello")   // named param — T inferred and matches annotation
+s Box(String) = Box(String, "hello")  // fully explicit
 ```
 
 `Box(String)` in type-annotation position means "a Box parameterized with String" — analogous to `Box<String>` in Java/Rust or `Box[String]` in Go/Scala. The `()` syntax is Yz's notation for type arguments.

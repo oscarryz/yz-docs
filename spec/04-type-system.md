@@ -319,36 +319,51 @@ Box: {
 }
 ```
 
-A bare single-letter uppercase identifier on its own line declares a type parameter. This is required — using a single-letter type name in a field without declaring it first is an error:
+There are two forms:
+
+**Explicit declaration** — `T` on its own line makes it a named `#()` field. The constructor must supply it, either positionally or via a named parameter for inference:
 
 ```yz
-// WRONG — T not declared, causes "undefined type: T"
-Bad: {
+Box: {
+    T          // field of type #() — holds the element type
     value T
 }
+
+b: Box(Int, 42)      // positional: T = Int, value = 42
+b: Box(value: 42)    // named: T inferred as Int — preferred ergonomic form
+b.T                  // valid — resolves to the type Int
+
+b: Box(42)           // ERROR — 42 is an Int value, not a type; T expects #()
 ```
 
-This explicit-declaration rule avoids ambiguity between type parameters and concrete type names.
-
-### Instantiation by Inference
-
-Generic types are resolved at the **use site** by inferring the type argument from the constructor arguments:
+**Implicit declaration** — `T` used in field types without a bare declaration line is an anonymous inferred type variable. It is not a field; `b.T` is invalid.
 
 ```yz
-b: Box(42)          // T inferred as Int
-s: Box("hello")     // T inferred as String
+Box: {
+    value T    // T not declared — anonymous, inferred from constructor argument
+}
+
+b: Box(42)       // T inferred as Int
+b: Box("hello")  // T inferred as String
+b.T              // ERROR — no T field
 ```
+
+The two forms have different constructor syntax and different capabilities. Use explicit T when callers need to inspect the type via path-dependent access (`b.T`) or when T is part of the public interface.
 
 ### Typed Variable Declaration
 
 To declare a variable with an explicit type annotation, use `TypeName(TypeArg)` in type position:
 
 ```yz
-s Box(String) = Box("hello")    // explicit: s is a Box[String]
-b Box(Int) = Box(42)            // explicit: b is a Box[Int]
+// Implicit-T Box: { value T }
+s Box(String) = Box("hello")    // T inferred from value, annotation confirms String
+
+// Explicit-T Box: { T; value T }
+s Box(String) = Box(value: "hello")   // named param; T inferred and matches annotation
+s Box(String) = Box(String, "hello")  // fully positional
 ```
 
-`Box(String)` in a type-annotation position means "Box parameterized with String" — analogous to `Box<String>` in Java/Rust or `Box[String]` in Go/Scala. This is distinct from `Box("hello")` in expression position, which is a constructor call.
+`Box(String)` in type-annotation position means "Box parameterized with String" — analogous to `Box<String>` in Java/Rust or `Box[String]` in Go/Scala. This is distinct from the constructor call in expression position.
 
 ### Generic Constraints — Inferred Automatically
 
