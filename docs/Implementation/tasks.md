@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **65 golden + 17 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **65 golden + 18 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -27,7 +27,6 @@
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0054 -- CFG: multi-level field access not tracked -- S
 YZC-0017 -- Dict optional access -- S
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S
 YZC-0057 -- Cyclic / mutually-recursive type declarations -- S
@@ -132,9 +131,9 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
   `analyzeCall` checks all required fields of struct-typed args are assigned before the call. Error test 15.
 
-- [ ] **[YZC-0054] CFG: multi-level field access not tracked**
+- [x] **[YZC-0054] CFG: multi-level field access not tracked**
 
-  `FieldInitState` only handles one level (`b.f`). Accessing `b.inner.field` is not tracked. Fix: extend `markAssigned`/`isAssigned` to handle chained member paths.
+  `FieldInitState` now uses dotted string keys (`"inner.field"`). `markAssigned` marks all prefixes; `isAssigned` checks all prefixes. `memberPath` helper extracts root var + full dotted path from nested `MemberExpr`. Error test 18.
 
 - [x] **[YZC-0055] CFG: variable aliasing defeats tracking**
 

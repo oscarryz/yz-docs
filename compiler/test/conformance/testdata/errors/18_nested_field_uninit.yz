@@ -1,0 +1,8 @@
+// YZC-0054: multi-level field access — inner field never assigned
+Inner: { field String }
+Outer: { inner Inner }
+
+main: {
+    b : Outer()
+    print(b.inner.field)
+}

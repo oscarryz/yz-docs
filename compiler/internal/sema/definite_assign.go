@@ -1,6 +1,9 @@
 package sema
 
-import "yz/internal/ast"
+import (
+	"strings"
+	"yz/internal/ast"
+)
 
 // FieldInitState tracks which fields of LOCALLY CONSTRUCTED struct variables
 // are definitely assigned on the current control-flow path.
@@ -24,22 +27,58 @@ func (s *FieldInitState) addLocalVar(varName string) {
 	s.locals[varName] = make(map[string]bool)
 }
 
-// markAssigned marks varName.field as definitely assigned.
+// markAssigned marks varName.fieldPath as definitely assigned.
+// fieldPath may be dotted ("inner.field"); every prefix is also marked so that
+// isAssigned prefix-checks pass ("inner" is implicitly assigned when "inner.field" is).
 // No-op if varName is not tracked (it's a parameter — already initialized).
-func (s *FieldInitState) markAssigned(varName, field string) {
-	if fields, ok := s.locals[varName]; ok {
-		fields[field] = true
+func (s *FieldInitState) markAssigned(varName, fieldPath string) {
+	fields, ok := s.locals[varName]
+	if !ok {
+		return
+	}
+	fields[fieldPath] = true
+	// Mark all prefixes: "inner.field" → also mark "inner".
+	parts := strings.Split(fieldPath, ".")
+	for i := 1; i < len(parts); i++ {
+		fields[strings.Join(parts[:i], ".")] = true
 	}
 }
 
-// isAssigned reports whether varName.field is definitely assigned.
+// isAssigned reports whether varName.fieldPath is definitely assigned.
+// For a dotted path every prefix must also be assigned (e.g. "inner" before "inner.field").
 // Returns true if varName is not tracked (parameters are always initialized).
-func (s *FieldInitState) isAssigned(varName, field string) bool {
+func (s *FieldInitState) isAssigned(varName, fieldPath string) bool {
 	fields, ok := s.locals[varName]
 	if !ok {
 		return true // untracked = parameter or inherited field = always initialized
 	}
-	return fields[field]
+	parts := strings.Split(fieldPath, ".")
+	var prefix string
+	for i, p := range parts {
+		if i == 0 {
+			prefix = p
+		} else {
+			prefix += "." + p
+		}
+		if !fields[prefix] {
+			return false
+		}
+	}
+	return true
+}
+
+// propagateInner copies the field-init state of innerFI[innerVar] into
+// varName under fieldPrefix. Used when varName.fieldPrefix is assigned a
+// struct value whose own init state is already known.
+func (s *FieldInitState) propagateInner(varName, fieldPrefix string, innerFI *FieldInitState, innerVar string) {
+	if _, ok := s.locals[varName]; !ok {
+		return
+	}
+	for f, assigned := range innerFI.locals[innerVar] {
+		if assigned {
+			s.markAssigned(varName, fieldPrefix+"."+f)
+		}
+	}
 }
 
 // clone returns a deep copy of s for branch analysis.

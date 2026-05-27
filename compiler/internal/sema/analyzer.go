@@ -510,6 +510,27 @@ func (a *Analyzer) analyzeTypedDecl(d *ast.TypedDecl) Type {
 // Assignment
 // ---------------------------------------------------------------------------
 
+// memberPath walks a (possibly nested) MemberExpr and returns the root
+// variable name and the dotted field path.
+// b.inner.field → ("b", "inner.field")
+// b.field       → ("b", "field")
+// Returns ("", "") if the chain is not rooted at a simple identifier.
+func memberPath(expr ast.Expr) (rootVar, dotPath string) {
+	var parts []string
+	cur := expr
+	for {
+		switch e := cur.(type) {
+		case *ast.MemberExpr:
+			parts = append([]string{e.Member.Name}, parts...)
+			cur = e.Object
+		case *ast.Ident:
+			return e.Name, strings.Join(parts, ".")
+		default:
+			return "", ""
+		}
+	}
+}
+
 func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
 	// Determine the expected type before analyzing values so that ambiguous
 	// variant constructor calls (YZC-0065) can be resolved by type context.
@@ -533,9 +554,42 @@ func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
 	if asgn.Target != nil {
 		// Track field assignment for definite-assignment analysis.
 		if a.fieldInit != nil {
-			if m, ok := asgn.Target.(*ast.MemberExpr); ok {
-				if id, ok := m.Object.(*ast.Ident); ok {
-					a.fieldInit.markAssigned(id.Name, m.Member.Name)
+			if mem, ok := asgn.Target.(*ast.MemberExpr); ok {
+				if varName, path := memberPath(mem); varName != "" {
+					a.fieldInit.markAssigned(varName, path)
+					// For a direct field assignment (no dots in path) whose RHS is a
+					// struct value, propagate the inner struct's init state so that
+					// nested reads like b.inner.field don't false-positive. (YZC-0054)
+					if !strings.Contains(path, ".") && len(valTypes) > 0 {
+						if innerSt, ok := valTypes[0].(*StructType); ok &&
+							!innerSt.IsSingleton && !innerSt.IsVariant && !innerSt.IsInterface {
+							var innerFI *FieldInitState
+							if call, ok := asgn.Values[0].(*ast.CallExpr); ok {
+								innerFI = newFieldInitState()
+								initLocalVar(innerFI, "_", innerSt, call)
+							} else if rhsId, ok := asgn.Values[0].(*ast.Ident); ok {
+								if _, tracked := a.fieldInit.locals[rhsId.Name]; tracked {
+									innerFI = a.fieldInit // propagateInner reads from rhsId.Name
+									a.fieldInit.propagateInner(varName, path, innerFI, rhsId.Name)
+									innerFI = nil // already propagated
+								} else {
+									// Untracked source (parameter) — all fields initialized.
+									innerFI = newFieldInitState()
+									innerFI.addLocalVar("_")
+									for _, f := range innerSt.Fields {
+										if !f.HasDefault {
+											if _, isMethod := f.Type.(*BocType); !isMethod {
+												innerFI.locals["_"][f.Name] = true
+											}
+										}
+									}
+								}
+							}
+							if innerFI != nil {
+								a.fieldInit.propagateInner(varName, path, innerFI, "_")
+							}
+						}
+					}
 				}
 			}
 		}
@@ -1305,18 +1359,25 @@ func (a *Analyzer) disambiguateConstructor(c *ast.CallExpr, name string, alts []
 func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
 	objType := a.analyzeExpr(m.Object)
 	// Definite-assignment check: required fields of locally-constructed structs
-	// must be assigned before they are read.
+	// must be assigned before they are read. Handles nested paths (YZC-0054).
 	if a.fieldInit != nil {
-		if id, ok := m.Object.(*ast.Ident); ok {
-			if st, ok := objType.(*StructType); ok {
-				for _, f := range st.Fields {
-					if f.Name == m.Member.Name && !f.HasDefault {
-						if _, isMethod := f.Type.(*BocType); !isMethod {
-							if !a.fieldInit.isAssigned(id.Name, f.Name) {
-								a.errorf(m.Member.Pos, "YZC-0034: field %s used before initialization", f.Name)
+		if varName, path := memberPath(m); varName != "" {
+			if sym := a.currentScope.Lookup(varName); sym != nil {
+				if _, ok := sym.Type.(*StructType); ok {
+					// Only check non-method fields (methods are never tracked).
+					isMethod := false
+					if st, ok := objType.(*StructType); ok {
+						for _, f := range st.Fields {
+							if f.Name == m.Member.Name {
+								if _, isBoc := f.Type.(*BocType); isBoc {
+									isMethod = true
+								}
+								break
 							}
 						}
-						break
+					}
+					if !isMethod && !a.fieldInit.isAssigned(varName, path) {
+						a.errorf(m.Member.Pos, "YZC-0034: field %s used before initialization", m.Member.Name)
 					}
 				}
 			}
