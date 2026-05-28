@@ -27,40 +27,40 @@
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0017 -- Dict optional access -- S
-YZC-0047 -- Cycle detection in homoiconic Stringify -- S
-YZC-0057 -- Cyclic / mutually-recursive type declarations -- S
-YZC-0012 -- Multiple return values -- M
-YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066
-YZC-0066 -- Path-Dependent Types: `#()` metatype, T fields, `g.Node` -- L
-YZC-0038 -- `Result(T,E)` type -- M
-YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011
-YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066
-YZC-0030 -- Associated Types -- M -- needs YZC-0066
-YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
-YZC-0013 -- Array `<<` append -- S -- needs YZC-0031
-YZC-0009 -- Range iteration -- S -- needs YZC-0031
-YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031
-YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031
-YZC-0039 -- Operators audit -- L -- needs YZC-0031
-YZC-0043 -- Captured variable reference semantics -- *design*
-YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-0025
-YZC-0008 -- Reentrant inline calls unsafe in HOF closures -- S -- dormant
-YZC-0021 -- Directory and file bocs -- L
-YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- needs YZC-0021
-YZC-0022 -- Multiple source roots -- M
-YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031
-YZC-0002 -- Cross-package support -- L -- needs YZC-0040, YZC-0022
-YZC-0023 -- Cancellation / non-local return -- L
-YZC-0058 -- Native type annotation -- L -- needs YZC-0025, YZC-0059
-YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, YZC-0059
-YZC-0041 -- Dependency management -- L
-YZC-0042 -- Package management (`yz` tool) -- L -- needs YZC-0041
-YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023
-YZC-0025 -- Infostrings: content is a boc body -- L
-YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030
-YZC-0029 -- Remove `mix`: runtime + spec -- M -- needs YZC-0028
-YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028
+YZC-0017 -- Dict optional access -- S  
+YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
+YZC-0057 -- Cyclic / mutually-recursive type declarations -- S  
+YZC-0012 -- Multiple return values -- M  
+YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066  
+YZC-0066 -- Path-Dependent Types: `#()` metatype, T fields, `g.Node` -- L  
+YZC-0038 -- `Result(T,E)` type -- M  
+YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
+YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066  
+YZC-0030 -- Associated Types -- M -- needs YZC-0066  
+YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
+YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
+YZC-0009 -- Range iteration -- S -- needs YZC-0031  
+YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
+YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
+YZC-0039 -- Operators audit -- L -- needs YZC-0031  
+YZC-0043 -- Captured variable reference semantics -- *design*  
+YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-0025  
+YZC-0008 -- Reentrant inline calls unsafe in HOF closures -- S -- dormant  
+YZC-0021 -- Directory and file bocs -- L  
+YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- needs YZC-0021  
+YZC-0022 -- Multiple source roots -- M  
+YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
+YZC-0002 -- Cross-package support -- L -- needs YZC-0040, YZC-0022  
+YZC-0023 -- Cancellation / non-local return -- L  
+YZC-0058 -- Native type annotation -- L -- needs YZC-0025, YZC-0059  
+YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, YZC-0059  
+YZC-0041 -- Dependency management -- L  
+YZC-0042 -- Package management (`yz` tool) -- L -- needs YZC-0041  
+YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
+YZC-0025 -- Infostrings: content is a boc body -- L  
+YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030  
+YZC-0029 -- Remove `mix`: runtime + spec -- M -- needs YZC-0028  
+YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028 
 
 ---
 
