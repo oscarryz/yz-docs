@@ -1,0 +1,23 @@
+// Error: argument type does not match path-dependent type g.Node
+// Graph declares Node as an abstract type field (#()).
+// SocialGraph binds Node: User concretely.
+// accept(sg, 42) fails because sg.Node = User, but 42 is Int.
+User: {
+    name String
+}
+
+Graph: {
+    Node #()
+}
+
+SocialGraph: {
+    Node: User
+}
+
+accept #(g Graph, n g.Node) {
+}
+
+main: {
+    sg: SocialGraph()
+    accept(sg, 42)
+}

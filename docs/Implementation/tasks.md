@@ -36,7 +36,8 @@ YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066  
-YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M  
+YZC-0067 -- Emit Go interfaces for structural Yz types -- M  
+YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M -- needs YZC-0067  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -66,7 +67,7 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
 # Details
 
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0067**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0068**.
 
 ---
 
@@ -387,7 +388,7 @@ Compiler removal done.
 
 `process #(g Graph, n g.Node)` — sema resolves `g.Node` against the **abstract** type of `g` (interface parameter), not just the concrete static type. Design resolved; see `docs/Features/Path Dependent Types.md` and `docs/Features/Associated Types.md`.
 
-Note: was originally named "Associated Types" — name corrected; the associated-type machinery (YZC-0066) is now complete and is the prerequisite for this ticket.
+Note: was originally named "Associated Types" — name corrected; the associated-type machinery (YZC-0066) is now complete. Depends on YZC-0067: until Graph is emitted as a Go interface, passing a concrete subtype (SocialGraph) as an abstract parameter (Graph) fails Go's type checker.
 
 When `g` is a concrete local variable, `g.Node` already resolves correctly (done in YZC-0066). This ticket covers the abstract case: two different `g1: Graph` and `g2: Graph` values have distinct, incompatible `g1.Node` vs `g2.Node` types at the type-checker level.
 
@@ -395,6 +396,21 @@ When `g` is a concrete local variable, `g.Node` already resolves correctly (done
 - [ ] Sema — enforce `g1.Node` and `g2.Node` are distinct types even when both satisfy `Graph`
 - [ ] Lowerer — emit concrete Go type at resolution site instead of `any`
 - [ ] Golden test: Graph/SocialGraph/process with abstract Graph parameter
+
+### YZC-0067 — Emit Go interfaces for structural Yz types
+
+In Yz, any struct that has the required fields/methods satisfies a type structurally. In Go, this only works when the target type is a Go `interface`, not a Go `struct`. Currently all Yz boc types (including those with only method fields) are emitted as Go structs, so passing `*SocialGraph` where `*Graph` is expected fails Go's type checker.
+
+The fix: boc types that have `IsInterface=true` (all fields are BocType methods) should be emitted as Go interfaces. Any Yz struct that satisfies the interface structurally will then automatically satisfy the Go interface, no casting required.
+
+YZC-0030 depends on this: path-dependent type params (`g Graph, n g.Node`) resolve correctly in sema but the generated Go doesn't compile when passing `*SocialGraph` as `*Graph` until Graph is a Go interface.
+
+- [ ] Codegen — emit `type Name interface { ... }` for `IsInterface=true` structs instead of `type Name struct { ... }`
+- [ ] Codegen — emit Go interface methods (no receiver, no `std.Cown` embed)
+- [ ] Lowerer — when a param type is an interface, pass the arg directly (no pointer wrapping)
+- [ ] Sema — extend `IsInterface` detection: a boc type with a mix of abstract type fields (`Node #()`) and method fields should also be treated as an interface
+- [ ] Golden test: Graph/SocialGraph/process — `process(sg, u)` compiles in Go with `sg *SocialGraph` satisfying `Graph` interface
+- [ ] Verify existing `IsInterface` golden tests (structural typing tests) still pass
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 

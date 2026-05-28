@@ -1,0 +1,26 @@
+// YZC-0030: path-dependent type resolution at call site.
+// Graph declares Node as an abstract type field.
+// SocialGraph binds Node: User concretely.
+// accept #(g Graph, n g.Node) — g.Node resolves to User when called with sg:SocialGraph.
+User: {
+    name String
+}
+
+Graph: {
+    Node #()
+}
+
+SocialGraph: {
+    Node: User
+}
+
+accept #(g Graph, n g.Node, String) {
+    "ok"
+}
+
+main: {
+    sg: SocialGraph()
+    u: User(name: "Alice")
+    s: accept(sg, u)
+    print(s)
+}

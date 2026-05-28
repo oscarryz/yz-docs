@@ -3428,6 +3428,8 @@ func (l *lowerer) goType(t sema.Type) string {
 			args[i] = l.goType(arg)
 		}
 		return "*" + tt.Name + "[" + strings.Join(args, ", ") + "]"
+	case *sema.PathDependentType:
+		return "any" // abstract at definition site; concrete at call site
 	case *sema.UnknownType:
 		return "any"
 	}
@@ -3458,6 +3460,9 @@ func (l *lowerer) goTypeForVar(t sema.Type) string {
 			}
 		}
 		return l.goType(t)
+	}
+	if _, ok := t.(*sema.PathDependentType); ok {
+		return "" // abstract; let Go infer via :=
 	}
 	return l.goType(t)
 }

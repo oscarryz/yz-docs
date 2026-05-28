@@ -434,6 +434,22 @@ func (t *GenericInstType) IsCompatibleWith(_ Type) bool { return true }
 func (t *GenericInstType) String() string               { return t.typeName() }
 
 // ---------------------------------------------------------------------------
+// PathDependentType — g.Node where g has an abstract (interface) type
+// ---------------------------------------------------------------------------
+
+// PathDependentType represents `g.Node` in a boc signature where g's type is an
+// interface and Node is an abstract type field (MetaType). It is resolved to a
+// concrete type at each call site by substituting the concrete type of g.
+type PathDependentType struct {
+	Param  string // parameter name in the enclosing sig (e.g. "g")
+	Member string // type field name on Param's type (e.g. "Node")
+}
+
+func (t *PathDependentType) typeName() string             { return t.Param + "." + t.Member }
+func (t *PathDependentType) IsCompatibleWith(_ Type) bool { return true }
+func (t *PathDependentType) String() string               { return t.typeName() }
+
+// ---------------------------------------------------------------------------
 // Thunk type (lazy boc invocation result)
 // ---------------------------------------------------------------------------
 

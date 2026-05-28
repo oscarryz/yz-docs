@@ -80,6 +80,12 @@ type Analyzer struct {
 	// recursing into a RHS/argument expression; used by analyzeCall to
 	// disambiguate ambiguous variant constructor calls.
 	expectedType Type
+
+	// currentSigParams maps parameter label → resolved Type for the sig params
+	// processed so far in resolveBocSigParams. Allows later params to reference
+	// earlier ones in path-dependent type expressions like `n g.Node` where `g`
+	// is a preceding parameter. nil when outside a sig resolution.
+	currentSigParams map[string]Type
 }
 
 // NewAnalyzer creates a fresh Analyzer with built-in symbols pre-loaded.
@@ -916,6 +922,12 @@ func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 // When bodyOnly is true (the `= { body }` form), all params are treated as
 // inputs: unlabeled types are anonymous inputs, not return-type annotations.
 func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr, bodyOnly bool) []BocParam {
+	// Populate currentSigParams so that later params can reference earlier ones
+	// in path-dependent type expressions (e.g. `n g.Node` where `g` precedes `n`).
+	prevSigParams := a.currentSigParams
+	a.currentSigParams = make(map[string]Type)
+	defer func() { a.currentSigParams = prevSigParams }()
+
 	var params []BocParam
 	for _, p := range sig.Params {
 		if p.Variant != nil {
@@ -936,6 +948,10 @@ func (a *Analyzer) resolveBocSigParams(sig *ast.BocTypeExpr, bodyOnly bool) []Bo
 			HasDefault: p.Default != nil,
 			IsReturn:   isReturn,
 		})
+		// Register input param for subsequent path-dependent lookups.
+		if p.Label != "" && !isReturn {
+			a.currentSigParams[p.Label] = typ
+		}
 	}
 	return params
 }
@@ -1128,6 +1144,18 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			lastExprTypes = nil
 
 		case *ast.BocDecl:
+			// `TypeName #()` with no body and empty signature: abstract type field.
+			// Declares that this struct requires a concrete type to be bound to TypeName
+			// at instantiation. Equivalent to an associated type in Rust/Swift.
+			if e.Name.TokType == token.TYPE_IDENT && e.Body == nil &&
+				e.Sig != nil && len(e.Sig.Params) == 0 {
+				if !fieldSet[e.Name.Name] {
+					fieldSet[e.Name.Name] = true
+					st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: TypMeta, IsTypeField: true})
+				}
+				lastExprTypes = nil
+				continue
+			}
 			// Set the constraint attribution context before analyzing the method body
 			// so that any T-method calls recorded during analysis are tagged correctly.
 			if a.activeConstraints != nil {
@@ -1474,12 +1502,63 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 		if len(bt.Returns) == 0 {
 			return TypUnit
 		}
+		// Build a label→argType map for path-dependent resolution.
+		labelToArgType := make(map[string]Type)
+		for i, param := range bt.Params {
+			if param.Label != "" && i < len(argTypes) {
+				labelToArgType[param.Label] = argTypes[i]
+			}
+		}
+		// YZC-0030: resolve PathDependentType params and type-check their args.
+		for i, param := range bt.Params {
+			pdt, ok := param.Type.(*PathDependentType)
+			if !ok || i >= len(argTypes) {
+				continue
+			}
+			objType, found := labelToArgType[pdt.Param]
+			if !found {
+				continue
+			}
+			if st, ok := objType.(*StructType); ok {
+				for _, f := range st.Fields {
+					if f.Name == pdt.Member && f.IsTypeField {
+						if _, isMeta := f.Type.(*MetaType); !isMeta {
+							if !argTypes[i].IsCompatibleWith(f.Type) {
+								a.errorf(c.Args[i].Value.Position(),
+									"YZC-0030: argument type %s is not compatible with %s.%s (expected %s)",
+									argTypes[i].typeName(), pdt.Param, pdt.Member, f.Type.typeName())
+							}
+						}
+					}
+				}
+			}
+		}
 		// Phase C (YZC-0066): unify formal params against actual arg types to
-		// resolve any generic type variables in the return type.
+		// resolve any generic type variables and path-dependent types in the return.
 		bindings := make(map[string]Type)
 		for i, param := range bt.Params {
 			if i < len(argTypes) {
 				unifyTypes(param.Type, argTypes[i], bindings)
+			}
+		}
+		// YZC-0030: add path-dependent bindings ("g.Node" → concrete type).
+		for i, param := range bt.Params {
+			pdt, ok := param.Type.(*PathDependentType)
+			if !ok || i >= len(argTypes) {
+				continue
+			}
+			objType, found := labelToArgType[pdt.Param]
+			if !found {
+				continue
+			}
+			if st, ok := objType.(*StructType); ok {
+				for _, f := range st.Fields {
+					if f.Name == pdt.Member && f.IsTypeField {
+						if _, isMeta := f.Type.(*MetaType); !isMeta {
+							bindings[pdt.Param+"."+pdt.Member] = f.Type
+						}
+					}
+				}
 			}
 		}
 		retType := substituteType(bt.Returns[0], bindings)
@@ -1847,22 +1926,32 @@ func (a *Analyzer) resolveTypeExpr(te ast.TypeExpr) Type {
 		return &BocType{Params: inputParams, Returns: returns}
 	case *ast.MemberTypeExpr:
 		// Path-dependent type: `g.Node` — look up g's struct type and find its
-		// type field named Node.
-		sym := a.currentScope.Lookup(t.Object)
-		if sym == nil {
+		// type field named Node. First check the normal scope (for struct fields),
+		// then check currentSigParams (for preceding sig params like `g` in
+		// `#(g Graph, n g.Node)`).
+		var objType Type
+		if sym := a.currentScope.Lookup(t.Object); sym != nil {
+			objType = sym.Type
+		} else if a.currentSigParams != nil {
+			if typ, ok := a.currentSigParams[t.Object]; ok {
+				objType = typ
+			}
+		}
+		if objType == nil {
 			a.errorf(t.Pos, "undefined: %s", t.Object)
 			return Unknown
 		}
-		st, ok := sym.Type.(*StructType)
+		st, ok := objType.(*StructType)
 		if !ok {
-			a.errorf(t.Pos, "%s is not a struct type (got %s)", t.Object, sym.Type.typeName())
+			a.errorf(t.Pos, "%s is not a struct type (got %s)", t.Object, objType.typeName())
 			return Unknown
 		}
 		for _, f := range st.Fields {
 			if f.Name == t.Member && f.IsTypeField {
 				if _, isMeta := f.Type.(*MetaType); isMeta {
-					// Abstract type field — no concrete type known yet; emit any in Go.
-					return Unknown
+					// Abstract type field: return a PathDependentType so call sites
+					// can resolve the concrete type from the actual argument.
+					return &PathDependentType{Param: t.Object, Member: t.Member}
 				}
 				return f.Type
 			}
@@ -2064,6 +2153,10 @@ func substituteType(t Type, bindings map[string]Type) Type {
 			args[i] = substituteType(arg, bindings)
 		}
 		return &GenericInstType{Name: tt.Name, TypeArgs: args}
+	case *PathDependentType:
+		if bound, ok := bindings[tt.Param+"."+tt.Member]; ok {
+			return bound
+		}
 	}
 	return t
 }
