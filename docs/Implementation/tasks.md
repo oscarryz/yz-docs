@@ -58,7 +58,7 @@ YZC-0041 -- Dependency management -- L
 YZC-0042 -- Package management (`yz` tool) -- L -- needs YZC-0041  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
 YZC-0025 -- Infostrings: content is a boc body -- L  
-YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030  
+YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030,YZC-0066, YZC-0059   
 YZC-0029 -- Remove `mix`: runtime + spec -- M -- needs YZC-0028  
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028 
 
@@ -358,7 +358,7 @@ Unified model for generics, type aliases, and associated types. See `docs/Featur
 
 ### YZC-0028 — Compile-Time Bocs (`Compile` interface)
 
-Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Compile`. Depends on: YZC-0025, YZC-0026, YZC-0027, YZC-0030.
+Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Compile`. Depends on: YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059.
 
 - [ ] Sema — recognize `Compile` structural interface
 - [ ] Sema — scan infostring for `compile_time: [...]`
