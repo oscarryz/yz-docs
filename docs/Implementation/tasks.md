@@ -347,6 +347,8 @@ Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-
 
 Unified model for generics, type aliases, and associated types. See `docs/Features/Path Dependent Types.md`.
 
+Full implementation plan: [`docs/Implementation/yzc-0066-plan.md`](yzc-0066-plan.md)
+
 - [ ] Sema — `#()` recognized as metatype; bare GENERIC_IDENT field given implicit `#()` type
 - [ ] Sema — type fields in constructors (`List(Int)` binds `T = Int`)
 - [ ] Sema — path-dependent resolution: `g.Node` in type position looks up `Node` field of `g`'s struct type
