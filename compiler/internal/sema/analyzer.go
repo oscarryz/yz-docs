@@ -1229,6 +1229,26 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 		a.activeContext = prevContext
 	}
 
+	// YZC-0067: a struct whose fields are only abstract type fields (MetaType)
+	// and/or BocType method declarations — no concrete data — is a Go interface.
+	if !st.IsVariant && !st.IsSingleton {
+		isIface := true
+		for _, f := range st.Fields {
+			if f.IsTypeField {
+				if _, isMeta := f.Type.(*MetaType); !isMeta {
+					isIface = false
+					break
+				}
+				continue
+			}
+			if _, isBoc := f.Type.(*BocType); !isBoc {
+				isIface = false
+				break
+			}
+		}
+		st.IsInterface = isIface
+	}
+
 	return st, lastExprTypes
 }
 

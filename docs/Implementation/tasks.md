@@ -36,7 +36,7 @@ YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066  
-YZC-0067 -- Emit Go interfaces for structural Yz types -- M  
+~~YZC-0067 -- Emit Go interfaces for structural Yz types -- M~~  
 YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M -- needs YZC-0067  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
@@ -405,12 +405,12 @@ The fix: boc types that have `IsInterface=true` (all fields are BocType methods)
 
 YZC-0030 depends on this: path-dependent type params (`g Graph, n g.Node`) resolve correctly in sema but the generated Go doesn't compile when passing `*SocialGraph` as `*Graph` until Graph is a Go interface.
 
-- [ ] Codegen — emit `type Name interface { ... }` for `IsInterface=true` structs instead of `type Name struct { ... }`
-- [ ] Codegen — emit Go interface methods (no receiver, no `std.Cown` embed)
-- [ ] Lowerer — when a param type is an interface, pass the arg directly (no pointer wrapping)
-- [ ] Sema — extend `IsInterface` detection: a boc type with a mix of abstract type fields (`Node #()`) and method fields should also be treated as an interface
-- [ ] Golden test: Graph/SocialGraph/process — `process(sg, u)` compiles in Go with `sg *SocialGraph` satisfying `Graph` interface
-- [ ] Verify existing `IsInterface` golden tests (structural typing tests) still pass
+- [x] Codegen — emit `type Name interface { ... }` for `IsInterface=true` structs instead of `type Name struct { ... }`
+- [x] Codegen — emit Go interface methods (no receiver, no `std.Cown` embed)
+- [x] Lowerer — when a param type is an interface, pass the arg directly (no pointer wrapping)
+- [x] Sema — extend `IsInterface` detection: a boc type with a mix of abstract type fields (`Node #()`) and method fields should also be treated as an interface
+- [x] Golden test: Graph/SocialGraph/process — `process(sg, u)` compiles in Go with `sg *SocialGraph` satisfying `Graph` interface
+- [x] Verify existing `IsInterface` golden tests (structural typing tests) still pass
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 

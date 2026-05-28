@@ -240,6 +240,40 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	return l.lowerBocDeclAsSingleton(id.Name, sig, bocLit, params, resultType)
 }
 
+// buildInterfaceDecl builds an InterfaceDecl from a StructType whose fields
+// are BocType methods and/or abstract type fields (MetaType). Used by both
+// lowerTypeOnlyDecl (sig form) and lowerStructBoc (body form).
+func (l *lowerer) buildInterfaceDecl(name string, st *sema.StructType) *InterfaceDecl {
+	id := &InterfaceDecl{Name: name}
+	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue
+		}
+		bt, _ := f.Type.(*sema.BocType)
+		resultType := "std.Unit"
+		if bt != nil && len(bt.Returns) == 1 {
+			resultType = l.goType(bt.Returns[0])
+		}
+		var params []*ParamSpec
+		if bt != nil {
+			for _, p := range bt.Params {
+				if !p.IsReturn && p.Label != "" {
+					params = append(params, &ParamSpec{
+						Name: p.Label,
+						Type: l.goType(p.Type),
+					})
+				}
+			}
+		}
+		id.Methods = append(id.Methods, &InterfaceMethod{
+			Name:       f.Name,
+			Params:     params,
+			ResultType: resultType,
+		})
+	}
+	return id
+}
+
 // lowerTypeOnlyDecl lowers `Name #(params)` (no body) into a Go struct
 // declaration without a constructor. The struct type exists so it can be used
 // as a parameter/variable type; instances cannot be created until a body is
@@ -251,35 +285,7 @@ func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocDecl) Decl {
 		return nil
 	}
 	if st.IsInterface {
-		// All fields are BocTypes → emit a Go interface.
-		id := &InterfaceDecl{Name: bws.Name.Name}
-		for _, f := range st.Fields {
-			if f.IsTypeField {
-				continue
-			}
-			bt, _ := f.Type.(*sema.BocType)
-			resultType := "std.Unit"
-			if bt != nil && len(bt.Returns) == 1 {
-				resultType = l.goType(bt.Returns[0])
-			}
-			var params []*ParamSpec
-			if bt != nil {
-				for _, p := range bt.Params {
-					if !p.IsReturn && p.Label != "" {
-						params = append(params, &ParamSpec{
-							Name: p.Label,
-							Type: l.goType(p.Type),
-						})
-					}
-				}
-			}
-			id.Methods = append(id.Methods, &InterfaceMethod{
-				Name:       f.Name,
-				Params:     params,
-				ResultType: resultType,
-			})
-		}
-		return id
+		return l.buildInterfaceDecl(bws.Name.Name, st)
 	}
 	// Mixed or data-only: separate data fields from BocType fields.
 	var dataFields, bocFields []sema.StructField
@@ -1247,10 +1253,18 @@ func (l *lowerer) lowerCrossCownWrite(singletonYzName, fieldName string, values 
 // Struct type boc (uppercase)
 // ---------------------------------------------------------------------------
 
-func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
+func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 	// Detect variant (sum) type: body consists entirely of VariantDef elements.
 	if l.isVariantBoc(b) {
 		return l.lowerVariantBoc(name, b)
+	}
+
+	// YZC-0067: struct-body interfaces (only abstract type fields + BocType methods)
+	// emit as Go interface declarations.
+	if sym := l.analyzer.LookupInFile(name); sym != nil {
+		if st, ok := sym.Type.(*sema.StructType); ok && st.IsInterface {
+			return l.buildInterfaceDecl(name, st)
+		}
 	}
 
 	sd := &StructDecl{Name: name}

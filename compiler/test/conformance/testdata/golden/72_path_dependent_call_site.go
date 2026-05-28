@@ -17,18 +17,9 @@ func (self *User) String() string {
 	return "User(name: " + std.StringifyRepr(self.name) + ")"
 }
 
-type Graph struct {
-	std.Cown
+type Graph interface {
 }
 
-func NewGraph() *Graph {
-	return &Graph{
-	}
-}
-
-func (self *Graph) String() string {
-	return "Graph()"
-}
 
 type SocialGraph struct {
 	std.Cown
@@ -45,7 +36,7 @@ func (self *SocialGraph) String() string {
 
 type _acceptBoc struct {
 	std.Cown
-	g *Graph
+	g Graph
 	n any
 }
 
@@ -53,8 +44,8 @@ func (self *_acceptBoc) String() string {
 	return "{ " + "g: " + std.StringifyRepr(self.g) + "; " + "n: " + std.StringifyRepr(self.n) + "; " + "call: {}" + " }"
 }
 
-func (self *_acceptBoc) Call(g *Graph, n any) *std.Thunk[std.String] {
-	return std.ScheduleMulti([]*std.Cown{&self.Cown, &g.Cown}, func() std.String {
+func (self *_acceptBoc) Call(g Graph, n any) *std.Thunk[std.String] {
+	return std.Schedule(&self.Cown, func() std.String {
 		self.g = g
 		self.n = n
 		return std.NewString("ok")
