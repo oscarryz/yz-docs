@@ -1,0 +1,11 @@
+// YZC-0066 Phase B Step 5: implicit generic type param auto-collect
+// Box: { value T } — T appears in a field type but is never declared on its
+// own line. TypeParams is populated automatically → Box[T any] in Go.
+Box: {
+    value T
+}
+
+main: {
+    b: Box(42)
+    print(b.value)
+}

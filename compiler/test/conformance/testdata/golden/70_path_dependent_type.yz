@@ -1,0 +1,22 @@
+// YZC-0066 Phase B Step 9: g.Node in type-annotation position
+// Resolver has a field sg SocialGraph; its method resolve uses sg.Node as
+// the return type — resolved to User because SocialGraph.Node aliases User.
+User: { name String }
+
+SocialGraph: {
+    Node: User
+}
+
+Resolver: {
+    sg SocialGraph
+    resolve #(sg.Node) {
+        User(name: "Alice")
+    }
+}
+
+main: {
+    sg: SocialGraph()
+    r: Resolver(sg)
+    u: r.resolve()
+    print(u.name)
+}

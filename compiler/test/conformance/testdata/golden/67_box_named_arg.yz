@@ -1,0 +1,11 @@
+// YZC-0066 Phase A: explicit type field + named constructor arg
+// Box: { T; value T } — T is an explicit IsTypeField; Box(value: 42) infers T from arg.
+Box: {
+    T
+    value T
+}
+
+main: {
+    b: Box(value: 42)
+    print(b.value)
+}

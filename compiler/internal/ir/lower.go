@@ -254,6 +254,9 @@ func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocDecl) Decl {
 		// All fields are BocTypes → emit a Go interface.
 		id := &InterfaceDecl{Name: bws.Name.Name}
 		for _, f := range st.Fields {
+			if f.IsTypeField {
+				continue
+			}
 			bt, _ := f.Type.(*sema.BocType)
 			resultType := "std.Unit"
 			if bt != nil && len(bt.Returns) == 1 {
@@ -281,6 +284,9 @@ func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocDecl) Decl {
 	// Mixed or data-only: separate data fields from BocType fields.
 	var dataFields, bocFields []sema.StructField
 	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue // compile-time only; no runtime slot
+		}
 		if _, isBoc := f.Type.(*sema.BocType); isBoc {
 			bocFields = append(bocFields, f)
 		} else {
@@ -472,9 +478,13 @@ func (l *lowerer) lowerStructArgs(callArgs []*ast.Argument, st *sema.StructType)
 	// Collect data-field param names (constructor params, in declaration order).
 	var names []string
 	for _, f := range st.Fields {
-		if _, isBoc := f.Type.(*sema.BocType); !isBoc {
-			names = append(names, f.Name)
+		if _, isBoc := f.Type.(*sema.BocType); isBoc {
+			continue
 		}
+		if f.IsTypeField {
+			continue // compile-time only; not a runtime constructor parameter
+		}
+		names = append(names, f.Name)
 	}
 	return l.lowerArgsByLabel(callArgs, names, nil)
 }
@@ -1245,12 +1255,34 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 
 	sd := &StructDecl{Name: name}
 
-	// Pre-scan for generic type params so we can build the correct receiver type
-	// before processing method bodies (type params must be declared before fields
-	// that use them, so this pre-scan sees all params before any method is lowered).
-	for _, elem := range b.Elements {
-		if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
-			sd.TypeParams = append(sd.TypeParams, id.Name)
+	// Build a map of IsTypeField entries from the sema StructType so we can
+	// skip them when emitting runtime fields below (Step 6/7, YZC-0066).
+	typeFieldNames := make(map[string]bool)
+	if sym := l.analyzer.LookupInFile(name); sym != nil {
+		if st, ok := sym.Type.(*sema.StructType); ok {
+			for _, f := range st.Fields {
+				if f.IsTypeField {
+					typeFieldNames[f.Name] = true
+				}
+			}
+		}
+	}
+
+	// Pre-scan for generic type params (explicit and implicit via Step 5) so we
+	// can build the correct receiver type before processing method bodies.
+	// Use the sema TypeParams list (populated by analyzeStructBoc incl. Step 5)
+	// rather than re-scanning AST GENERIC_IDENTs, which misses implicit params.
+	if sym := l.analyzer.LookupInFile(name); sym != nil {
+		if st, ok := sym.Type.(*sema.StructType); ok {
+			sd.TypeParams = append(sd.TypeParams, st.TypeParams...)
+		}
+	}
+	// Fallback: if no sema type found (shouldn't happen), scan AST directly.
+	if len(sd.TypeParams) == 0 {
+		for _, elem := range b.Elements {
+			if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
+				sd.TypeParams = append(sd.TypeParams, id.Name)
+			}
 		}
 	}
 
@@ -1313,6 +1345,9 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) *StructDecl {
 				}
 			}
 			for i, n := range e.Names {
+				if typeFieldNames[n.Name] {
+					continue // compile-time type alias; no runtime slot
+				}
 				var initExpr Expr
 				if i < len(e.Values) {
 					initExpr = l.lowerExpr(e.Values[i])
@@ -3387,6 +3422,12 @@ func (l *lowerer) goType(t sema.Type) string {
 		return fmt.Sprintf("*std.Thunk[%s]", l.goType(tt.Inner))
 	case *sema.GenericType:
 		return tt.Name
+	case *sema.GenericInstType:
+		args := make([]string, len(tt.TypeArgs))
+		for i, arg := range tt.TypeArgs {
+			args[i] = l.goType(arg)
+		}
+		return "*" + tt.Name + "[" + strings.Join(args, ", ") + "]"
 	case *sema.UnknownType:
 		return "any"
 	}
@@ -3405,6 +3446,18 @@ func (l *lowerer) goTypeForVar(t sema.Type) string {
 	}
 	if st, ok := t.(*sema.StructType); ok && len(st.TypeParams) > 0 {
 		return ""
+	}
+	if _, ok := t.(*sema.GenericType); ok {
+		return "" // unresolved type var — let Go infer via :=
+	}
+	if git, ok := t.(*sema.GenericInstType); ok {
+		// If any type arg is still generic (unresolved), let Go infer.
+		for _, arg := range git.TypeArgs {
+			if _, isGen := arg.(*sema.GenericType); isGen {
+				return ""
+			}
+		}
+		return l.goType(t)
 	}
 	return l.goType(t)
 }
@@ -3476,6 +3529,25 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 			}
 		}
 		return fmt.Sprintf("func(%s) %s", strings.Join(inputTypes, ", "), returnType)
+	case *ast.MemberTypeExpr:
+		// Path-dependent type `g.Node`: resolve via sema.
+		sym := l.analyzer.LookupInFile(t.Object)
+		if sym == nil {
+			// Local variable — resolve via sema's ExprType is not available here;
+			// fall back to `any` and let the Go compiler infer.
+			return "any"
+		}
+		if st, ok := sym.Type.(*sema.StructType); ok {
+			for _, f := range st.Fields {
+				if f.Name == t.Member && f.IsTypeField {
+					if _, isMeta := f.Type.(*sema.MetaType); isMeta {
+						return "any"
+					}
+					return l.goType(f.Type)
+				}
+			}
+		}
+		return "any"
 	}
 	return "any"
 }

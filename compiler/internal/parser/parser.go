@@ -207,6 +207,14 @@ func (p *Parser) isTypedDeclStart() bool {
 	save := p.pos
 	p.advance() // skip ident
 	isType := p.at(token.TYPE_IDENT) || p.at(token.GENERIC_IDENT)
+	if !isType && p.at(token.IDENT) {
+		// Path-dependent type: `n g.Node` — check for ident.TYPE_IDENT
+		p.advance()
+		if p.at(token.DOT) {
+			p.advance()
+			isType = p.at(token.TYPE_IDENT)
+		}
+	}
 	p.pos = save
 	return isType
 }
@@ -907,12 +915,25 @@ func (p *Parser) parseTypeExpr() (ast.TypeExpr, error) {
 	}
 }
 
-func (p *Parser) parseSimpleType() (*ast.SimpleTypeExpr, error) {
+func (p *Parser) parseSimpleType() (ast.TypeExpr, error) {
 	tok := p.cur()
 	pos := p.posOf(tok)
 	name := tok.Literal
 	tokType := tok.Type
 	p.advance()
+
+	// Path-dependent type: lowercase `ident.TypeIdent` (e.g. `sg.Node`).
+	// Only triggered when the base token is a plain lowercase IDENT.
+	if tokType == token.IDENT && p.at(token.DOT) {
+		save := p.pos
+		p.advance() // consume '.'
+		if p.at(token.TYPE_IDENT) {
+			member := p.cur().Literal
+			p.advance()
+			return &ast.MemberTypeExpr{Pos: pos, Object: name, Member: member}, nil
+		}
+		p.pos = save // not a path-dependent type; restore
+	}
 
 	// Generic application: Type(T, U)
 	var typeArgs []ast.TypeExpr
@@ -992,22 +1013,34 @@ func (p *Parser) parseBocTypeExpr() (*ast.BocTypeExpr, error) {
 func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 	pos := p.curPos()
 
-	// Variant constructor: TYPE_IDENT '('
-	if p.at(token.TYPE_IDENT) && p.peekIs(token.LPAREN) {
-		v, err := p.parseVariantDef()
-		if err != nil {
-			return nil, err
-		}
-		return &ast.BocParam{Pos: pos, Variant: v}, nil
-	}
-
-	// Anonymous type param (return type): TYPE_IDENT or GENERIC_IDENT not followed by type
+	// Anonymous type param (return type): TYPE_IDENT or GENERIC_IDENT not followed by type.
+	// Also handles generic applications like Box(A) — TYPE_IDENT followed by '('.
 	if (p.at(token.TYPE_IDENT) || p.at(token.GENERIC_IDENT)) && !p.peekIsType() {
 		typ, err := p.parseTypeExpr()
 		if err != nil {
 			return nil, err
 		}
 		return &ast.BocParam{Pos: pos, Type: typ}, nil
+	}
+
+	// Anonymous path-dependent type param: `ident.TypeName` (e.g. `sg.Node`).
+	// Must be checked before the named-param IDENT branch, which would
+	// consume `sg` as a label and then fail on the DOT.
+	if p.at(token.IDENT) {
+		save := p.pos
+		p.advance() // skip ident
+		if p.at(token.DOT) {
+			p.advance()
+			if p.at(token.TYPE_IDENT) {
+				p.pos = save
+				typ, err := p.parseTypeExpr()
+				if err != nil {
+					return nil, err
+				}
+				return &ast.BocParam{Pos: pos, Type: typ}, nil
+			}
+		}
+		p.pos = save
 	}
 
 	// Named param: ident TypeExpr [= expr]  OR  ShortDecl param: ident : expr

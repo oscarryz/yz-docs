@@ -41,6 +41,8 @@ func (t *BuiltinType) IsCompatibleWith(target Type) bool {
 		return true
 	case *GenericType:
 		return true // generics are resolved at use-site; always compatible for now
+	case *MetaType:
+		return true // every type satisfies the metatype
 	}
 	return false
 }
@@ -172,9 +174,10 @@ func (t *BocType) String() string { return t.typeName() }
 
 // StructField is one field in a struct type.
 type StructField struct {
-	Name       string
-	Type       Type
-	HasDefault bool // true when declared via ShortDecl (has an initializer); false = required param
+	Name        string
+	Type        Type
+	HasDefault  bool // true when declared via ShortDecl (has an initializer); false = required param
+	IsTypeField bool // field holds a type value (bare GENERIC_IDENT); compile-time only, no runtime slot
 }
 
 // VariantCase is one constructor in a sum type (variant type).
@@ -244,10 +247,14 @@ func (t *StructType) IsCompatibleWith(target Type) bool {
 			}
 		}
 		return true
+	case *GenericInstType:
+		return t.Name == u.Name // same generic struct, possibly different instantiation
 	case *UnknownType:
 		return true
 	case *GenericType:
 		return true
+	case *MetaType:
+		return true // every type satisfies the metatype
 	}
 	return false
 }
@@ -282,6 +289,9 @@ func TypeSignature(st *StructType) string {
 		parts = append(parts, tp)
 	}
 	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue // already represented by TypeParams above
+		}
 		parts = append(parts, f.Name+" "+typeSignatureFieldType(f.Type))
 	}
 	return st.Name + " #(" + strings.Join(parts, ", ") + ")"
@@ -384,7 +394,44 @@ func (t *GenericType) typeName() string { return t.Name }
 
 func (t *GenericType) IsCompatibleWith(_ Type) bool { return true }
 
+// ---------------------------------------------------------------------------
+// MetaType — the type of types (#())
+// ---------------------------------------------------------------------------
+
+// MetaType is the type whose values are types. Every UpperCase boc satisfies it.
+// It is written #() in the language; users rarely write it directly.
+type MetaType struct{}
+
+func (t *MetaType) typeName() string             { return "#()" }
+func (t *MetaType) IsCompatibleWith(_ Type) bool { return true }
+func (t *MetaType) String() string               { return "#()" }
+
+// TypMeta is the singleton MetaType instance.
+var TypMeta = &MetaType{}
+
 func (t *GenericType) String() string { return t.Name }
+
+// ---------------------------------------------------------------------------
+// GenericInstType — a generic struct applied to type arguments
+// ---------------------------------------------------------------------------
+
+// GenericInstType represents a generic struct instantiation like Box(A) or Option(Int).
+// It preserves the type arguments so that substituteType can replace them.
+type GenericInstType struct {
+	Name     string
+	TypeArgs []Type
+}
+
+func (t *GenericInstType) typeName() string {
+	args := make([]string, len(t.TypeArgs))
+	for i, a := range t.TypeArgs {
+		args[i] = a.typeName()
+	}
+	return t.Name + "(" + strings.Join(args, ", ") + ")"
+}
+
+func (t *GenericInstType) IsCompatibleWith(_ Type) bool { return true }
+func (t *GenericInstType) String() string               { return t.typeName() }
 
 // ---------------------------------------------------------------------------
 // Thunk type (lazy boc invocation result)

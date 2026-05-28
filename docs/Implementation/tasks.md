@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **65 golden + 18 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **69 golden + 15 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -32,11 +32,11 @@ YZC-0047 -- Cycle detection in homoiconic Stringify -- S
 ~~YZC-0057 -- Cyclic / mutually-recursive type declarations -- S~~  
 YZC-0012 -- Multiple return values -- M  
 YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066  
-YZC-0066 -- Path-Dependent Types: `#()` metatype, T fields, `g.Node` -- L -- [plan](yzc-0066-plan.md)  
+~~YZC-0066 -- Associated Types: `#()` metatype, T fields, type aliases, call-site unification -- L~~  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066  
-YZC-0030 -- Associated Types -- M -- needs YZC-0066  
+YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -58,7 +58,7 @@ YZC-0041 -- Dependency management -- L
 YZC-0042 -- Package management (`yz` tool) -- L -- needs YZC-0041  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
 YZC-0025 -- Infostrings: content is a boc body -- L  
-YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030,YZC-0066, YZC-0059   
+YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0059   
 YZC-0029 -- Remove `mix`: runtime + spec -- M -- needs YZC-0028  
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028 
 
@@ -345,19 +345,20 @@ Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-
 - [ ] Spec 04 — add
 - [ ] Deferred to YZC-0066: generic instantiation via alias (`StringList : List(String)`), associated type binding (`Node : User` inside a boc)
 
-### YZC-0066 — Path-Dependent Types: `#()` metatype, T fields, `g.Node`
+### YZC-0066 — Associated Types: `#()` metatype, T fields, type aliases, call-site unification ✓
 
 Unified model for generics, type aliases, and associated types. See `docs/Features/Path Dependent Types.md`.
 
 Full implementation plan: [`docs/Implementation/yzc-0066-plan.md`](yzc-0066-plan.md)
 
-- [ ] Sema — `#()` recognized as metatype; bare GENERIC_IDENT field given implicit `#()` type
-- [ ] Sema — type fields in constructors (`List(Int)` binds `T = Int`)
-- [ ] Sema — path-dependent resolution: `g.Node` in type position looks up `Node` field of `g`'s struct type
-- [ ] Sema — type variable inference: unify GENERIC_IDENT against call-site argument types
-- [ ] Lowerer/Codegen — emit specialized (monomorphized) Go types per concrete instantiation
-- [ ] `Node : User` inside a boc body treated as type alias, not value alias
-- [ ] Golden tests: generic boc, `g.Node` signature, `StringList : List(String)` alias
+Note: was originally named "Path-Dependent Types" — name corrected; YZC-0030 covers the remaining path-dependent resolution for abstract types.
+
+- [x] Sema — `#()` recognized as metatype; bare GENERIC_IDENT field given implicit `#()` type
+- [x] Sema — type fields in constructors (`List(Int)` binds `T = Int`) — Go inference handles monomorphization
+- [x] Sema — `g.Node` in type position resolves when `g`'s concrete type is statically known
+- [x] Sema — type variable inference: unify GENERIC_IDENT against call-site argument types (`GenericInstType`)
+- [x] `Node : User` inside a boc body treated as type alias (IsTypeField), not value alias
+- [x] Golden tests: 68 (type alias), 69 (implicit TypeParams), 70 (path-dependent), 71 (type var unification)
 - [ ] Spec 04 — generics section; Spec 05 — associated types section
 
 ### YZC-0028 — Compile-Time Bocs (`Compile` interface)
@@ -382,13 +383,18 @@ Compiler removal done.
 - [ ] Runtime — implement `Mix` as a `Compile` boc
 - [ ] Spec 09 — remove `mix`; document `Mix` compile implementation
 
-### YZC-0030 — Associated Types: Path-Dependent Type References
+### YZC-0030 — Path-Dependent Types: abstract `g.Node` resolution
 
-`process #(g Graph, n g.Node)` — sema resolves `g.Node` against the concrete type of `g`. Design resolved; see `docs/Features/Path Dependent Types.md` and `docs/Features/Associated Types.md`. Depends on YZC-0066.
+`process #(g Graph, n g.Node)` — sema resolves `g.Node` against the **abstract** type of `g` (interface parameter), not just the concrete static type. Design resolved; see `docs/Features/Path Dependent Types.md` and `docs/Features/Associated Types.md`.
 
-- [ ] Sema — `value.TypeName` in type position (path-dependent resolution)
-- [ ] Lowerer — emit concrete Go type at resolution site
-- [ ] Golden test: Graph/SocialGraph/process example
+Note: was originally named "Associated Types" — name corrected; the associated-type machinery (YZC-0066) is now complete and is the prerequisite for this ticket.
+
+When `g` is a concrete local variable, `g.Node` already resolves correctly (done in YZC-0066). This ticket covers the abstract case: two different `g1: Graph` and `g2: Graph` values have distinct, incompatible `g1.Node` vs `g2.Node` types at the type-checker level.
+
+- [ ] Sema — `g.Node` in type position when `g` has an abstract/interface type (currently emits `any`)
+- [ ] Sema — enforce `g1.Node` and `g2.Node` are distinct types even when both satisfy `Graph`
+- [ ] Lowerer — emit concrete Go type at resolution site instead of `any`
+- [ ] Golden test: Graph/SocialGraph/process with abstract Graph parameter
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 

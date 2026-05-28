@@ -19,7 +19,7 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
-		var x V
+		var x std.String
 		std.Schedule(&self.Cown, func() std.Unit {
 			std.GoStore(_bg0, identity(std.NewString("hello")), &x)
 			return std.TheUnit

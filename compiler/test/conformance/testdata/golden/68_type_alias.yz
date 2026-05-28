@@ -1,0 +1,13 @@
+// YZC-0066 Phase B Step 6: type alias inside struct body
+// Node: User — uppercase LHS + bare ident RHS resolving to struct type
+// → IsTypeField=true; no runtime slot, not a constructor parameter.
+User: { name String }
+
+SocialGraph: {
+    Node: User
+}
+
+main: {
+    u: User(name: "Alice")
+    print(u.name)
+}

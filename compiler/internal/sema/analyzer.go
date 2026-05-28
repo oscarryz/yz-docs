@@ -3,6 +3,7 @@ package sema
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"yz/internal/ast"
 	"yz/internal/token"
@@ -324,6 +325,9 @@ func (a *Analyzer) propagateConstructorArgInits(varName string, st *StructType, 
 	}
 	var required []StructField
 	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue
+		}
 		if !f.HasDefault {
 			if _, isMethod := f.Type.(*BocType); !isMethod {
 				required = append(required, f)
@@ -431,6 +435,14 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 			}
 			call, ok := d.Values[i].(*ast.CallExpr)
 			if !ok {
+				continue
+			}
+			// Only track field-init state for direct constructor calls (e.g. Bar()).
+			// Method calls or boc calls returning a struct (e.g. r.resolve()) return
+			// a fully initialized value; leave the variable untracked so isAssigned
+			// returns true for all fields without explicit tracking.
+			calleeIdent, isDirectCall := call.Callee.(*ast.Ident)
+			if !isDirectCall || calleeIdent.Name != st.Name {
 				continue
 			}
 			initLocalVar(a.fieldInit, name.Name, st, call)
@@ -1084,7 +1096,18 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 					continue
 				}
 				fieldSet[n.Name] = true
-				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: sym.Type, HasDefault: true})
+				// Step 6 (YZC-0066): detect type-alias bindings.
+				// `Node: User` — uppercase LHS + bare ident RHS resolving to a
+				// non-singleton, non-interface StructType → compile-time type alias.
+				isTypeAlias := false
+				if isUppercaseName(n.Name) && len(e.Values) == 1 {
+					if _, ok := e.Values[0].(*ast.Ident); ok {
+						if st2, ok2 := sym.Type.(*StructType); ok2 && !st2.IsSingleton && !st2.IsInterface && !st2.IsVariant {
+							isTypeAlias = true
+						}
+					}
+				}
+				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: sym.Type, HasDefault: true, IsTypeField: isTypeAlias})
 			}
 			lastExprTypes = nil
 
@@ -1093,6 +1116,12 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			// Register as GenericType in current scope and record on the struct.
 			if e.TokType == token.GENERIC_IDENT {
 				st.TypeParams = append(st.TypeParams, e.Name)
+				// Also add as an IsTypeField so b.T member access and constructor
+				// type-argument matching work correctly (Phase A of YZC-0066).
+				if !fieldSet[e.Name] {
+					fieldSet[e.Name] = true
+					st.Fields = append(st.Fields, StructField{Name: e.Name, Type: TypMeta, IsTypeField: true})
+				}
 			}
 			gt := &GenericType{Name: e.Name}
 			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
@@ -1138,6 +1167,31 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 		}
 	}
 
+	// Step 5 (YZC-0066): auto-collect implicit generic type vars into TypeParams.
+	// If T appears in a field type but was never declared on its own line (no
+	// IsTypeField entry), it still needs to be in TypeParams so the emitted Go
+	// struct is generic (e.g. Box: { value T } → Box[T any]).
+	{
+		inTypeParams := make(map[string]bool, len(st.TypeParams))
+		for _, tp := range st.TypeParams {
+			inTypeParams[tp] = true
+		}
+		// Process fields in declaration order for deterministic TypeParams ordering.
+		for _, f := range st.Fields {
+			if f.IsTypeField {
+				continue
+			}
+			discovered := make(map[string]bool)
+			collectGenericNames(f.Type, discovered)
+			for gname := range discovered {
+				if !inTypeParams[gname] {
+					st.TypeParams = append(st.TypeParams, gname)
+					inTypeParams[gname] = true
+				}
+			}
+		}
+	}
+
 	// Freeze the inferred constraints into the struct type and restore outer state.
 	if isGeneric {
 		if len(a.activeConstraints) > 0 {
@@ -1148,6 +1202,15 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 	}
 
 	return st, lastExprTypes
+}
+
+func containsString(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // collectVariantCase resolves a VariantDef into a VariantCase for the parent struct.
@@ -1391,6 +1454,9 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 				continue
 			}
 			for _, f := range st.Fields {
+				if f.IsTypeField {
+					continue
+				}
 				if f.HasDefault {
 					continue
 				}
@@ -1405,14 +1471,22 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 	}
 	switch bt := calleeType.(type) {
 	case *BocType:
-		switch len(bt.Returns) {
-		case 0:
+		if len(bt.Returns) == 0 {
 			return TypUnit
-		case 1:
-			return bt.Returns[0]
-		default:
-			return Unknown // multi-return
 		}
+		// Phase C (YZC-0066): unify formal params against actual arg types to
+		// resolve any generic type variables in the return type.
+		bindings := make(map[string]Type)
+		for i, param := range bt.Params {
+			if i < len(argTypes) {
+				unifyTypes(param.Type, argTypes[i], bindings)
+			}
+		}
+		retType := substituteType(bt.Returns[0], bindings)
+		if len(bt.Returns) == 1 {
+			return retType
+		}
+		return Unknown // multi-return
 	case *StructType:
 		if bt.IsSingleton {
 			// Calling a singleton boc runs the body; return type is the body's last expr.
@@ -1472,18 +1546,21 @@ func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
 			if sym := a.currentScope.Lookup(varName); sym != nil {
 				if _, ok := sym.Type.(*StructType); ok {
 					// Only check non-method fields (methods are never tracked).
-					isMethod := false
+					skipCheck := false
 					if st, ok := objType.(*StructType); ok {
 						for _, f := range st.Fields {
 							if f.Name == m.Member.Name {
 								if _, isBoc := f.Type.(*BocType); isBoc {
-									isMethod = true
+									skipCheck = true // method field
+								}
+								if f.IsTypeField {
+									skipCheck = true // compile-time type field; always available
 								}
 								break
 							}
 						}
 					}
-					if !isMethod && !a.fieldInit.isAssigned(varName, path) {
+					if !skipCheck && !a.fieldInit.isAssigned(varName, path) {
 						a.errorf(m.Member.Pos, "YZC-0034: field %s used before initialization", m.Member.Name)
 					}
 				}
@@ -1737,6 +1814,14 @@ func (a *Analyzer) resolveTypeExpr(te ast.TypeExpr) Type {
 		}
 		sym := a.currentScope.Lookup(t.Name)
 		if sym != nil {
+			if len(t.TypeArgs) > 0 {
+				// Generic application: Box(A) → GenericInstType{Name:"Box", TypeArgs:[GenericType{A}]}
+				args := make([]Type, len(t.TypeArgs))
+				for i, arg := range t.TypeArgs {
+					args[i] = a.resolveTypeExpr(arg)
+				}
+				return &GenericInstType{Name: t.Name, TypeArgs: args}
+			}
 			return sym.Type
 		}
 		a.errorfLen(t.Pos, len(t.Name), "undefined type: %s", t.Name)
@@ -1760,6 +1845,30 @@ func (a *Analyzer) resolveTypeExpr(te ast.TypeExpr) Type {
 			}
 		}
 		return &BocType{Params: inputParams, Returns: returns}
+	case *ast.MemberTypeExpr:
+		// Path-dependent type: `g.Node` — look up g's struct type and find its
+		// type field named Node.
+		sym := a.currentScope.Lookup(t.Object)
+		if sym == nil {
+			a.errorf(t.Pos, "undefined: %s", t.Object)
+			return Unknown
+		}
+		st, ok := sym.Type.(*StructType)
+		if !ok {
+			a.errorf(t.Pos, "%s is not a struct type (got %s)", t.Object, sym.Type.typeName())
+			return Unknown
+		}
+		for _, f := range st.Fields {
+			if f.Name == t.Member && f.IsTypeField {
+				if _, isMeta := f.Type.(*MetaType); isMeta {
+					// Abstract type field — no concrete type known yet; emit any in Go.
+					return Unknown
+				}
+				return f.Type
+			}
+		}
+		a.errorf(t.Pos, "%s has no type field named %s", t.Object, t.Member)
+		return Unknown
 	}
 	return Unknown
 }
@@ -1801,6 +1910,9 @@ func (a *Analyzer) checkGenericConstraints(callPos ast.Pos, st *StructType, argT
 	for _, field := range st.Fields {
 		if _, isBoc := field.Type.(*BocType); isBoc {
 			continue // method fields are not constructor params
+		}
+		if field.IsTypeField {
+			continue // compile-time only; not a constructor value parameter
 		}
 		if argIdx >= len(argTypes) {
 			break
@@ -1870,4 +1982,120 @@ func (a *Analyzer) typeHasMethod(typ Type, methodName string) bool {
 		return true // can't check; assume satisfied to avoid cascading errors
 	}
 	return false
+}
+
+// ---------------------------------------------------------------------------
+// Phase C — call-site type-variable unification (YZC-0066)
+// ---------------------------------------------------------------------------
+
+// unifyTypes builds type-variable bindings by structurally matching formal
+// against actual. Bindings for already-bound variables are not overwritten.
+func unifyTypes(formal, actual Type, bindings map[string]Type) {
+	switch f := formal.(type) {
+	case *GenericType:
+		if _, already := bindings[f.Name]; !already {
+			if _, isGeneric := actual.(*GenericType); !isGeneric {
+				bindings[f.Name] = actual
+			}
+		}
+	case *ArrayType:
+		if a, ok := actual.(*ArrayType); ok {
+			unifyTypes(f.Elem, a.Elem, bindings)
+		}
+	case *DictType:
+		if a, ok := actual.(*DictType); ok {
+			unifyTypes(f.Key, a.Key, bindings)
+			unifyTypes(f.Val, a.Val, bindings)
+		}
+	case *BocType:
+		if a, ok := actual.(*BocType); ok {
+			for i := range f.Params {
+				if i < len(a.Params) {
+					unifyTypes(f.Params[i].Type, a.Params[i].Type, bindings)
+				}
+			}
+			for i := range f.Returns {
+				if i < len(a.Returns) {
+					unifyTypes(f.Returns[i], a.Returns[i], bindings)
+				}
+			}
+		}
+	case *GenericInstType:
+		if a, ok := actual.(*GenericInstType); ok && a.Name == f.Name {
+			for i := range f.TypeArgs {
+				if i < len(a.TypeArgs) {
+					unifyTypes(f.TypeArgs[i], a.TypeArgs[i], bindings)
+				}
+			}
+		}
+	}
+}
+
+// substituteType replaces all GenericType occurrences in t using bindings.
+func substituteType(t Type, bindings map[string]Type) Type {
+	if len(bindings) == 0 {
+		return t
+	}
+	switch tt := t.(type) {
+	case *GenericType:
+		if bound, ok := bindings[tt.Name]; ok {
+			return bound
+		}
+	case *ArrayType:
+		return &ArrayType{Elem: substituteType(tt.Elem, bindings)}
+	case *DictType:
+		return &DictType{
+			Key: substituteType(tt.Key, bindings),
+			Val: substituteType(tt.Val, bindings),
+		}
+	case *BocType:
+		params := make([]BocParam, len(tt.Params))
+		for i, p := range tt.Params {
+			params[i] = BocParam{Label: p.Label, Type: substituteType(p.Type, bindings), HasDefault: p.HasDefault, IsReturn: p.IsReturn}
+		}
+		returns := make([]Type, len(tt.Returns))
+		for i, r := range tt.Returns {
+			returns[i] = substituteType(r, bindings)
+		}
+		return &BocType{Params: params, Returns: returns}
+	case *GenericInstType:
+		args := make([]Type, len(tt.TypeArgs))
+		for i, arg := range tt.TypeArgs {
+			args[i] = substituteType(arg, bindings)
+		}
+		return &GenericInstType{Name: tt.Name, TypeArgs: args}
+	}
+	return t
+}
+
+func isUppercaseName(name string) bool {
+	if name == "" {
+		return false
+	}
+	return unicode.IsUpper(rune(name[0]))
+}
+
+// collectGenericNames adds all GenericType names found in t (recursively) to
+// names if not already present. Used by Step 5 (implicit T auto-collect).
+func collectGenericNames(t Type, names map[string]bool) {
+	switch tt := t.(type) {
+	case *GenericType:
+		names[tt.Name] = true
+	case *ArrayType:
+		collectGenericNames(tt.Elem, names)
+	case *DictType:
+		collectGenericNames(tt.Key, names)
+		collectGenericNames(tt.Val, names)
+	case *BocType:
+		for _, p := range tt.Params {
+			collectGenericNames(p.Type, names)
+		}
+		for _, r := range tt.Returns {
+			collectGenericNames(r, names)
+		}
+	case *GenericInstType:
+		for _, arg := range tt.TypeArgs {
+			collectGenericNames(arg, names)
+		}
+	}
 }

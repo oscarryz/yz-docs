@@ -1,0 +1,24 @@
+// YZC-0066 Phase C: call-site type variable unification
+// identity #(val A, A) — A resolved to Int and String at each call site;
+// wrap #(val A, Box(A)) — A resolved, return type is concrete Box(Int).
+identity #(val A, A) {
+    val
+}
+
+Box: {
+    T
+    value T
+}
+
+wrap #(val A, Box(A)) {
+    Box(value: val)
+}
+
+main: {
+    n: identity(42)
+    s: identity("hello")
+    b: wrap(99)
+    print(n)
+    print(s)
+    print(b.value)
+}

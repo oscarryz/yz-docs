@@ -122,6 +122,9 @@ func initLocalVar(fi *FieldInitState, varName string, st *StructType, call *ast.
 
 	// Optional fields (HasDefault=true) always have a value — mark them assigned.
 	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue // compile-time only; always "assigned"
+		}
 		if f.HasDefault {
 			if _, isMethod := f.Type.(*BocType); !isMethod {
 				fi.locals[varName][f.Name] = true
@@ -151,6 +154,9 @@ func initLocalVar(fi *FieldInitState, varName string, st *StructType, call *ast.
 	// in declaration order.
 	var required []string
 	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue // compile-time only; not a constructor value parameter
+		}
 		if !f.HasDefault {
 			if _, isMethod := f.Type.(*BocType); !isMethod {
 				required = append(required, f.Name)

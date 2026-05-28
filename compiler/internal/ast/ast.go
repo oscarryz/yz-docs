@@ -410,6 +410,17 @@ type BocTypeExpr struct {
 
 func (t *BocTypeExpr) typeNode() {}
 
+// MemberTypeExpr is a path-dependent type expression `ident.TypeName`
+// in type-annotation position (e.g. `sg.Node` in `n sg.Node`).
+// Phase B of YZC-0066 restricts this to single-level `ident.TypeIdent` only.
+type MemberTypeExpr struct {
+	Pos
+	Object string // the variable whose type field is accessed (lowercase ident)
+	Member string // the type field name (TYPE_IDENT)
+}
+
+func (t *MemberTypeExpr) typeNode() {}
+
 // BocParam is one entry in a boc signature parameter list.
 // It covers three forms:
 //
