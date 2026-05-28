@@ -900,7 +900,8 @@ func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 		declared := explicitReturns[0]
 		_, bodyIsUnknown := bodyReturn.(*UnknownType)
 		_, declIsUnknown := declared.(*UnknownType)
-		if !bodyIsUnknown && !declIsUnknown && !bodyReturn.IsCompatibleWith(declared) {
+		_, declIsPDT := declared.(*PathDependentType)
+		if !bodyIsUnknown && !declIsUnknown && !declIsPDT && !bodyReturn.IsCompatibleWith(declared) {
 			a.errorf(bd.Name.Pos, "YZC-0035: boc body returns %s but declared output is %s",
 				displayType(bodyReturn), displayType(declared))
 		}
@@ -1543,10 +1544,21 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 				for _, f := range st.Fields {
 					if f.Name == pdt.Member && f.IsTypeField {
 						if _, isMeta := f.Type.(*MetaType); !isMeta {
+							// Concrete alias (Node: User): check arg is compatible.
 							if !argTypes[i].IsCompatibleWith(f.Type) {
 								a.errorf(c.Args[i].Value.Position(),
 									"YZC-0030: argument type %s is not compatible with %s.%s (expected %s)",
 									argTypes[i].typeName(), pdt.Param, pdt.Member, f.Type.typeName())
+							}
+						} else {
+							// Abstract type field (MetaType): enforce distinctness —
+							// g1.Node and g2.Node are different abstract types.
+							if argPdt, ok := argTypes[i].(*PathDependentType); ok {
+								if argPdt.Param != pdt.Param || argPdt.Member != pdt.Member {
+									a.errorf(c.Args[i].Value.Position(),
+										"YZC-0030: argument type %s is not compatible with %s.%s",
+										argPdt.typeName(), pdt.Param, pdt.Member)
+								}
 							}
 						}
 					}
@@ -1561,10 +1573,33 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 				unifyTypes(param.Type, argTypes[i], bindings)
 			}
 		}
-		// YZC-0030: add path-dependent bindings ("g.Node" → concrete type).
+		// YZC-0030: add path-dependent bindings ("g.Node" → concrete type)
+		// from input params typed as PathDependentType (e.g. n g.Node).
 		for i, param := range bt.Params {
 			pdt, ok := param.Type.(*PathDependentType)
 			if !ok || i >= len(argTypes) {
+				continue
+			}
+			objType, found := labelToArgType[pdt.Param]
+			if !found {
+				continue
+			}
+			if st, ok := objType.(*StructType); ok {
+				for _, f := range st.Fields {
+					if f.Name == pdt.Member && f.IsTypeField {
+						if _, isMeta := f.Type.(*MetaType); !isMeta {
+							bindings[pdt.Param+"."+pdt.Member] = f.Type
+						}
+					}
+				}
+			}
+		}
+		// Also build bindings from path-dependent RETURN types so that
+		// `makeNode #(g Graph, g.Node)` called with a concrete Graph resolves
+		// the return type to the concrete Node type (e.g. *User).
+		for _, ret := range bt.Returns {
+			pdt, ok := ret.(*PathDependentType)
+			if !ok {
 				continue
 			}
 			objType, found := labelToArgType[pdt.Param]

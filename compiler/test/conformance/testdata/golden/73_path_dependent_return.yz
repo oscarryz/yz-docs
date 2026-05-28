@@ -1,0 +1,24 @@
+// YZC-0030: path-dependent return type resolved to concrete type at call site.
+// makeNode returns g.Node; called with sg:SocialGraph whose Node aliases User.
+// The generated variable for node should be typed as *User, not any.
+User: {
+    name String
+}
+
+Graph: {
+    Node #()
+}
+
+SocialGraph: {
+    Node: User
+}
+
+makeNode #(g Graph, g.Node) {
+    User(name: "test")
+}
+
+main: {
+    sg: SocialGraph()
+    node: makeNode(sg)
+    print(node.name)
+}

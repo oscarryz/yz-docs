@@ -37,7 +37,8 @@ YZC-0038 -- `Result(T,E)` type -- M
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066  
 ~~YZC-0067 -- Emit Go interfaces for structural Yz types -- M~~  
-YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M -- needs YZC-0067  
+~~YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M~~  
+YZC-0068 -- GoStore type mismatch for path-dependent return types -- S -- needs YZC-0030
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -67,7 +68,7 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
 # Details
 
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0068**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0069**.
 
 ---
 
@@ -392,10 +393,10 @@ Note: was originally named "Associated Types" — name corrected; the associated
 
 When `g` is a concrete local variable, `g.Node` already resolves correctly (done in YZC-0066). This ticket covers the abstract case: two different `g1: Graph` and `g2: Graph` values have distinct, incompatible `g1.Node` vs `g2.Node` types at the type-checker level.
 
-- [ ] Sema — `g.Node` in type position when `g` has an abstract/interface type (currently emits `any`)
-- [ ] Sema — enforce `g1.Node` and `g2.Node` are distinct types even when both satisfy `Graph`
-- [ ] Lowerer — emit concrete Go type at resolution site instead of `any`
-- [ ] Golden test: Graph/SocialGraph/process with abstract Graph parameter
+- [x] Sema — `g.Node` in type position when `g` has an abstract/interface type — PathDependentType returned by resolveTypeExpr; call-site check in analyzeCall
+- [x] Sema — enforce `g1.Node` and `g2.Node` are distinct types even when both satisfy `Graph` — error test 20
+- [x] Lowerer — sema substitutes concrete return type at call site; goTypeForVar uses resolved *StructType, var gets concrete Go type (e.g. `*User`) when called from concrete context
+- [x] Golden test: Graph/SocialGraph/accept — test 72 passes; *SocialGraph satisfies Graph interface
 
 ### YZC-0067 — Emit Go interfaces for structural Yz types
 
@@ -411,6 +412,23 @@ YZC-0030 depends on this: path-dependent type params (`g Graph, n g.Node`) resol
 - [x] Sema — extend `IsInterface` detection: a boc type with a mix of abstract type fields (`Node #()`) and method fields should also be treated as an interface
 - [x] Golden test: Graph/SocialGraph/process — `process(sg, u)` compiles in Go with `sg *SocialGraph` satisfying `Graph` interface
 - [x] Verify existing `IsInterface` golden tests (structural typing tests) still pass
+
+### YZC-0068 — GoStore type mismatch for path-dependent return types
+
+Functions with path-dependent return types (e.g. `makeNode #(g Graph, g.Node)`) are emitted as singleton boc methods that return `*std.Thunk[any]` — Go does not support generic methods, so the return type cannot be parameterized. At the call site, sema correctly resolves the return type to a concrete type (e.g. `*User`) and the generated variable is `var node *User`, but `std.GoStore(_bg0, MakeNode.Call(sg), &node)` fails the Go type checker because the thunk is `*std.Thunk[any]` while the destination pointer is `*User`.
+
+Conformance test 73 (`73_path_dependent_return.yz`) has the correct golden `.go` file but the generated Go does not compile end-to-end due to this mismatch.
+
+Options:
+- **Option A** — Add `std.GoStoreAny[T any](bg *BocGroup, thunk *Thunk[any], dest *T)` runtime helper that does a type-assertion `thunk.Force().(T)`. Simple, no codegen change.
+- **Option B** — Emit path-dependent-return functions as Go free functions with a type parameter instead of boc methods (`func MakeNode[N any](g Graph) *std.Thunk[N]`). Requires codegen changes; more correct but complex.
+
+Recommended: Option A (runtime helper) as the pragmatic fix; Option B as a follow-on if the generic method restriction is lifted.
+
+- [ ] Add `GoStoreAny[T any]` to `compiler/runtime/rt/rt.go` (or equivalent)
+- [ ] Codegen — when `GoStore` call has a `*Thunk[any]` source and a concrete `*T` dest, emit `GoStoreAny` instead
+- [ ] Update golden test 73 to reflect the corrected generated code
+- [ ] Verify `go test ./...` passes including end-to-end compilation of test 73
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 

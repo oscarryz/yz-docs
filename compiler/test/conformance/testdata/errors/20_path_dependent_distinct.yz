@@ -1,0 +1,9 @@
+// Error: g1.Node and g2.Node are distinct types even though both satisfy Graph.
+// wrap takes n g2.Node and tries to pass it where g.Node (bound to g1) is expected.
+Graph: { Node #() }
+
+accept #(g Graph, n g.Node) {}
+
+wrap #(g1 Graph, g2 Graph, n g2.Node) {
+    accept(g1, n)
+}
