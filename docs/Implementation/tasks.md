@@ -32,7 +32,7 @@ YZC-0047 -- Cycle detection in homoiconic Stringify -- S
 YZC-0057 -- Cyclic / mutually-recursive type declarations -- S  
 YZC-0012 -- Multiple return values -- M  
 YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066  
-YZC-0066 -- Path-Dependent Types: `#()` metatype, T fields, `g.Node` -- L  
+YZC-0066 -- Path-Dependent Types: `#()` metatype, T fields, `g.Node` -- L -- [plan](yzc-0066-plan.md)  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066  
