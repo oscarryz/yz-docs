@@ -1,0 +1,8 @@
+mapList #(list [A], fn #(input A, B), [B]) {
+    list.map({ item A; fn(item) })
+}
+
+main: {
+    doubled: mapList([1, 2, 3], { x Int; x * 2 })
+    print(doubled)
+}

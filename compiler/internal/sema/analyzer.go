@@ -1633,7 +1633,49 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 		if len(bt.TypeParams) > 0 && len(bt.TypeConstraints) > 0 {
 			a.checkGenericConstraints(c.Callee.Position(), bt, argTypes)
 		}
-		return bt // constructor call
+		// For generic structs, infer concrete type args from constructor args so that
+		// passing the result to a generic HOF can unify the type variables.
+		if len(bt.TypeParams) > 0 {
+			// Collect data fields (skip IsTypeField and method fields).
+			var dataFields []StructField
+			labeledFields := make(map[string]StructField)
+			for _, f := range bt.Fields {
+				if f.IsTypeField {
+					continue
+				}
+				if _, isMethod := f.Type.(*BocType); isMethod {
+					continue
+				}
+				dataFields = append(dataFields, f)
+				labeledFields[f.Name] = f
+			}
+			bindings := make(map[string]Type)
+			dataIdx := 0
+			for i, arg := range c.Args {
+				var ftype Type
+				if arg.Label != "" {
+					if f, ok := labeledFields[arg.Label]; ok {
+						ftype = f.Type
+					}
+				} else if dataIdx < len(dataFields) {
+					ftype = dataFields[dataIdx].Type
+					dataIdx++
+				}
+				if ftype != nil && i < len(argTypes) {
+					unifyTypes(ftype, argTypes[i], bindings)
+				}
+			}
+			typeArgs := make([]Type, len(bt.TypeParams))
+			for j, tp := range bt.TypeParams {
+				if bound, ok := bindings[tp]; ok {
+					typeArgs[j] = bound
+				} else {
+					typeArgs[j] = &GenericType{Name: tp}
+				}
+			}
+			return &GenericInstType{Name: bt.Name, TypeArgs: typeArgs}
+		}
+		return bt // constructor call (non-generic struct)
 	case *BuiltinType:
 		return bt // direct type value used as function
 	}
@@ -1706,6 +1748,30 @@ func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
 
 func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 	switch ot := objType.(type) {
+	case *GenericInstType:
+		// e.g. b: Box(value:42) has type GenericInstType{Box,[Int]}.
+		// Look up the base struct and substitute type params to get the concrete field type.
+		sym := a.currentScope.Lookup(ot.Name)
+		if sym == nil {
+			return Unknown
+		}
+		st, ok := sym.Type.(*StructType)
+		if !ok {
+			return Unknown
+		}
+		subst := make(map[string]Type)
+		for i, tp := range st.TypeParams {
+			if i < len(ot.TypeArgs) {
+				subst[tp] = ot.TypeArgs[i]
+			}
+		}
+		for _, f := range st.Fields {
+			if f.Name == fieldName {
+				return substituteType(f.Type, subst)
+			}
+		}
+		a.errorf(pos, "type %s has no field %q", displayType(objType), fieldName)
+		return Unknown
 	case *StructType:
 		for _, f := range ot.Fields {
 			if f.Name == fieldName {

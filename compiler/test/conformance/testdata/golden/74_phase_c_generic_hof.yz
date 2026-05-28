@@ -1,0 +1,23 @@
+// YZC-0069 Phase C: call-site type variable unification
+// Case 1: boc-arg return type binds B — transform(42, {x Int; x*2}) → var n std.Int
+// Case 2: generic struct instance passed to HOF — unwrap(Box(value:99)) → var v std.Int
+transform #(val A, fn #(input A, B), B) {
+    fn(val)
+}
+
+Box: {
+    T
+    value T
+}
+
+unwrap #(box Box(A), A) {
+    box.value
+}
+
+main: {
+    n: transform(42, { x Int; x * 2 })
+    b: Box(value: 99)
+    v: unwrap(b)
+    print(n)
+    print(v)
+}

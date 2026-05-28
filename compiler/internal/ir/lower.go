@@ -690,7 +690,10 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 				if exprRefsAny(sd.Values[0], pendingNames) {
 					flushGroup()
 				}
-				goType := l.goType(l.analyzer.ExprType(sd.Values[0]))
+				goType := l.goTypeForVar(l.analyzer.ExprType(sd.Values[0]))
+				if goType == "" {
+					goType = "any"
+				}
 				addPending(pendingBocDecl{name: sd.Names[0].Name, typ: goType, expr: sd.Values[0]})
 				continue
 			}
@@ -704,7 +707,10 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 			if exprRefsAny(td.Value, pendingNames) {
 				flushGroup()
 			}
-			goType := l.goType(l.analyzer.ExprType(td.Value))
+			goType := l.goTypeForVar(l.analyzer.ExprType(td.Value))
+			if goType == "" {
+				goType = "any"
+			}
 			addPending(pendingBocDecl{name: td.Name.Name, typ: goType, expr: td.Value})
 			continue
 		}
@@ -1163,7 +1169,10 @@ func (l *lowerer) lowerBodyShortDecl(d *ast.ShortDecl, isLast bool, resultType s
 		val := d.Values[0]
 		expr := l.lowerExpr(val)
 		if l.isBocMethodCall(val) {
-			goType := l.goType(l.analyzer.ExprType(val))
+			goType := l.goTypeForVar(l.analyzer.ExprType(val))
+			if goType == "" {
+				goType = "any"
+			}
 			return []Stmt{&DeclStmt{Name: name.Name, Type: goType}}
 		}
 		typ := l.goTypeForVar(l.analyzer.ExprType(val))
@@ -1596,9 +1605,22 @@ func (l *lowerer) lowerBocDecl(bws *ast.BocDecl) Decl {
 	// Generic BocDecl: Go methods can't have free type params not on the receiver.
 	// Keep as FuncDecl until generic singletons are supported.
 	if len(typeParams) > 0 {
+		// Register BocType params as syncParams so fn(item) is called directly, not wrapped in std.Go.
+		prevSyncParams := l.syncParams
+		if bws.Sig != nil {
+			for _, p := range bws.Sig.Params {
+				if _, isBocType := p.Type.(*ast.BocTypeExpr); isBocType && p.Label != "" {
+					if l.syncParams == nil {
+						l.syncParams = map[string]bool{}
+					}
+					l.syncParams[p.Label] = true
+				}
+			}
+		}
 		prev := l.setReceiver("", nil)
 		bocBodyStmts := l.lowerBocBody(bws.Body, resultType, "")
 		l.restoreReceiver(prev)
+		l.syncParams = prevSyncParams
 		var funcBody []Stmt
 		if len(bocBodyStmts) == 1 {
 			if es, ok := bocBodyStmts[0].(*ExprStmt); ok {
@@ -2412,7 +2434,8 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	// Non-word infix operator on a struct: `a ++ b` → a.Plusplus(b) → *Thunk[T].
 	if bin, ok := e.(*ast.BinaryExpr); ok {
 		_, isStruct := l.analyzer.ExprType(bin.Left).(*sema.StructType)
-		return isStruct
+		_, isGenInst := l.analyzer.ExprType(bin.Left).(*sema.GenericInstType)
+		return isStruct || isGenInst
 	}
 	c, ok := e.(*ast.CallExpr)
 	if !ok {
@@ -2431,7 +2454,11 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 			}
 		}
 		// Struct instance method call (n.hi() where n is *Named) → returns *Thunk.
-		if _, isStruct := l.analyzer.ExprType(mem.Object).(*sema.StructType); isStruct {
+		objType := l.analyzer.ExprType(mem.Object)
+		if _, isStruct := objType.(*sema.StructType); isStruct {
+			return true
+		}
+		if _, isGenInst := objType.(*sema.GenericInstType); isGenInst {
 			return true
 		}
 		// Singleton boc method call (counter.increment()) → returns *Thunk.

@@ -36,7 +36,7 @@ func (self *_mainBoc) String() string {
 }
 
 func (self *_mainBoc) call() std.Unit {
-	w := NewWrapper(std.NewString("hello"))
+	var w *Wrapper[std.String] = NewWrapper(std.NewString("hello"))
 	std.Print(w.Describe().Force())
 	return std.TheUnit
 }

@@ -36,8 +36,8 @@ func (self *_mainBoc) String() string {
 }
 
 func (self *_mainBoc) call() std.Unit {
-	c := NewContainer(std.NewInt(42))
-	s := NewContainer(std.NewString("hello"))
+	var c *Container[std.Int] = NewContainer(std.NewInt(42))
+	var s *Container[std.String] = NewContainer(std.NewString("hello"))
 	std.Print(c.Get().Force())
 	std.Print(s.Get().Force())
 	return std.TheUnit

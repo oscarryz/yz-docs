@@ -26,7 +26,7 @@ func (self *_mainBoc) String() string {
 }
 
 func (self *_mainBoc) call() std.Unit {
-	b := NewBox(std.NewInt(42))
+	var b *Box[std.Int] = NewBox(std.NewInt(42))
 	var s *Box[std.String] = NewBox(std.NewString("hello"))
 	std.Print(b.value)
 	std.Print(s.value)

@@ -40,6 +40,7 @@ YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066
 ~~YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M~~  
 YZC-0068 -- GoStore type mismatch for path-dependent return types -- S -- needs YZC-0030
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
+~~YZC-0069 -- Call-site type variable unification (Phase C generics) -- M~~
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
 YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
@@ -68,7 +69,7 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
 # Details
 
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0069**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0070**.
 
 ---
 
@@ -429,6 +430,107 @@ Recommended: Option A (runtime helper) as the pragmatic fix; Option B as a follo
 - [ ] Codegen — when `GoStore` call has a `*Thunk[any]` source and a concrete `*T` dest, emit `GoStoreAny` instead
 - [ ] Update golden test 73 to reflect the corrected generated code
 - [ ] Verify `go test ./...` passes including end-to-end compilation of test 73
+
+### YZC-0069 — Call-site type variable unification (Phase C generics)
+
+This is Phase C of YZC-0066. Phases A and B (direct type variable unification) already work — see golden test 71 (`71_type_var_unification.yz`). Phase C covers the two harder cases where the existing unifier falls short.
+
+#### What already works (test 71)
+
+When a type variable appears *directly* as a parameter type, it is unified with the argument type at the call site and substituted into the return type:
+
+```yz
+identity #(val A, A)    // A = typeof(val) — direct match → var n std.Int  ✓
+wrap #(val A, Box(A))   // A = typeof(val), return Box(A) → Box[Int]       ✓
+```
+
+#### Gap 1 — Structural (nested) unification
+
+A type variable buried inside a generic wrapper in the parameter type:
+
+```yz
+map #(collection List(A), fn #(A, B), List(B))
+//               ^^^^^^^
+// Matching List(Int) against List(A) requires recursing into the generic's type arguments.
+// Current behavior: A stays GenericType{A} → emitted as `any` in Go.
+```
+
+The current unifier only matches `argType == GenericType{A}` directly. It does not recurse into `GenericInstType` wrappers.
+
+#### Gap 2 — Boc-argument inference
+
+A type variable that is only knowable from the *return type* of a boc (closure) argument:
+
+```yz
+map #(collection List(A), fn #(A, B), List(B))
+//                            ^^^
+// B comes from what fn returns, not from fn's type directly.
+// Need to analyze the closure argument, observe it returns Int, then bind B = Int.
+```
+
+This requires a two-pass strategy: first unify all non-boc arguments (binding as many variables as possible), then analyze boc-literal arguments with the partial substitution already in scope, then unify the boc's inferred return type to bind remaining variables.
+
+#### Why this is different from YZC-0030
+
+YZC-0030 (path-dependent types) is field lookup: `g.Node` means "find the `Node` field on `g`'s concrete type." It is a single-step table lookup on a named parameter.
+
+Phase C is a proper unification algorithm: match a *pattern* type (containing free variables) against a *concrete* type (no free variables), collecting a substitution map. The two problems are orthogonal.
+
+#### Implementation
+
+Add a `unify` function in `compiler/internal/sema/`:
+
+```go
+// unify matches pattern (which may contain GenericType free variables) against
+// concrete, adding bindings to subst. One-directional: pattern has the free vars.
+func unify(pattern, concrete Type, subst map[string]Type) {
+    switch p := pattern.(type) {
+    case *GenericType:
+        if existing, ok := subst[p.Name]; ok {
+            // consistency check: existing binding must match concrete
+        } else {
+            subst[p.Name] = concrete
+        }
+    case *GenericInstType:
+        // e.g. List(A) vs List(Int): recurse into type arguments
+        if c, ok := concrete.(*GenericInstType); ok && p.Name == c.Name {
+            for i := range p.Args {
+                unify(p.Args[i], c.Args[i], subst)
+            }
+        }
+    case *BocType:
+        // e.g. #(A, B) vs #(Int, String): unify params and returns pairwise
+        if c, ok := concrete.(*BocType); ok {
+            for i := range p.Params { unify(p.Params[i].Type, c.Params[i].Type, subst) }
+            for i := range p.Returns { unify(p.Returns[i], c.Returns[i], subst) }
+        }
+    }
+}
+```
+
+Wire it into `analyzeCall` when the callee has generic type variables:
+
+1. **Pass 1** — non-boc arguments: for each `(param, arg)` pair where the arg is not a boc literal, call `unify(param.Type, argType, subst)`.
+2. **Pass 2** — boc-literal arguments: analyze each closure argument with the partial substitution applied to its expected parameter types; infer the closure's return type; call `unify(param.ReturnType, closureReturnType, subst)` to bind any remaining variables.
+3. **Apply substitution** to the callee's declared return type to produce the concrete return type for this call expression.
+
+The substitution application (`applySubst(t Type, subst map[string]Type) Type`) mirrors `unify` structurally: replace `GenericType` leaves, recurse into `GenericInstType` args and `BocType` params/returns.
+
+#### Implementation notes (actual vs. planned)
+
+`unifyTypes` and `substituteType` already existed and already handled `GenericType`, `ArrayType`, `BocType`, and `GenericInstType` structurally — the two-pass unification was already wired into `analyzeCall`. The real gap was that generic struct **constructor calls** returned bare `StructType` (no concrete type args), so passing the result to a generic HOF couldn't unify the type variables. Also, the lowerer used `goType` (which emits the raw variable name e.g. `"A"`) instead of `goTypeForVar` in GoStore paths, producing invalid Go like `var v A`.
+
+#### Checklist
+
+- [x] `unifyTypes(formal, actual, bindings)` already in sema — handles GenericType/ArrayType/BocType/GenericInstType
+- [x] `substituteType(t, bindings)` already in sema — mirrors unify structurally
+- [x] Two-pass unification already wired in `analyzeCall` (boc-literal args produce a BocType, unifyTypes handles BocType returns)
+- [x] Constructor calls: `analyzeCall` for `*StructType` with TypeParams now infers concrete type args and returns `GenericInstType{Name,[concreteArgs]}` — `Box(value:42)` → `GenericInstType{Box,[Int]}`
+- [x] `fieldType` extended with `*GenericInstType` case: looks up base struct, builds subst TypeParams→TypeArgs, returns substituted field type
+- [x] `isBocMethodCall` in lowerer extended to recognise `GenericInstType` as struct-like (method calls on generic struct instances still treated as boc calls)
+- [x] GoStore and method-body paths use `goTypeForVar` (with `"any"` fallback) instead of `goType` — prevents invalid `var v A` when type var is unresolved
+- [x] Golden test 74 (`74_phase_c_generic_hof.yz`): `transform` (boc-arg inference) + `unwrap(Box(...))` (generic struct → HOF) — both result vars typed concretely
+- [x] All 52 golden + 20 error tests pass
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 

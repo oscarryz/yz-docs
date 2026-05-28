@@ -36,7 +36,7 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
-		var p *Pair[K, V]
+		var p any
 		std.Schedule(&self.Cown, func() std.Unit {
 			std.GoStore(_bg0, makePair(std.NewInt(42), std.NewString("hello")), &p)
 			return std.TheUnit
