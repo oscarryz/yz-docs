@@ -29,7 +29,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 
 YZC-0017 -- Dict optional access -- S  
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
-YZC-0057 -- Cyclic / mutually-recursive type declarations -- S  
+~~YZC-0057 -- Cyclic / mutually-recursive type declarations -- S~~  
 YZC-0012 -- Multiple return values -- M  
 YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066  
 YZC-0066 -- Path-Dependent Types: `#()` metatype, T fields, `g.Node` -- L -- [plan](yzc-0066-plan.md)  
@@ -272,9 +272,11 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
   `boring`/`while` producer-consumer in `docs/Features/Concurrency.md`. Depends on: YZC-0031.
 
-- [ ] **[YZC-0057] Cyclic / mutually-recursive type declarations**
+- [x] **[YZC-0057] Cyclic / mutually-recursive type declarations**
 
   two-pass sema: collect all top-level type names first, then resolve field types.
+  Implemented: `AnalyzeFile` first pass pre-registers stubs; `analyzeStructBoc` reuses
+  stub pointer so forward/mutual refs stay valid. Golden test: `66_forward_type_ref.yz`.
 
 - [ ] **[YZC-0058] Native type annotation — `compile_time:[Native]`**
 

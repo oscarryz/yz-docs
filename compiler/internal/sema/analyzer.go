@@ -94,6 +94,18 @@ func NewAnalyzer() *Analyzer {
 
 // AnalyzeFile performs semantic analysis on the given SourceFile.
 func (a *Analyzer) AnalyzeFile(sf *ast.SourceFile) error {
+	// First pass: pre-register all top-level type names as empty *StructType
+	// stubs so that forward and mutually-recursive references resolve to a
+	// stable pointer. analyzeStructBoc reuses these pointers and fills them in,
+	// so any field that captured the pointer during this pass sees the completed
+	// type once the second pass finishes.
+	for _, node := range sf.Stmts {
+		if name, ok := topLevelTypeName(node); ok {
+			a.fileScope.Define(&Symbol{Name: name, Type: &StructType{Name: name}, FQN: name})
+		}
+	}
+
+	// Second pass: full analysis.
 	for _, node := range sf.Stmts {
 		a.analyzeNode(node)
 		a.lastExpr = node
@@ -102,6 +114,25 @@ func (a *Analyzer) AnalyzeFile(sf *ast.SourceFile) error {
 		return a.errors
 	}
 	return nil
+}
+
+// topLevelTypeName returns the declared name if node is a top-level uppercase
+// struct declaration (ShortDecl with a BocLiteral RHS, or a BocDecl).
+func topLevelTypeName(node ast.Node) (string, bool) {
+	switch n := node.(type) {
+	case *ast.ShortDecl:
+		if len(n.Names) == 1 && n.Names[0].TokType == token.TYPE_IDENT &&
+			len(n.Values) == 1 {
+			if _, ok := n.Values[0].(*ast.BocLiteral); ok {
+				return n.Names[0].Name, true
+			}
+		}
+	case *ast.BocDecl:
+		if n.Name.TokType == token.TYPE_IDENT {
+			return n.Name.Name, true
+		}
+	}
+	return "", false
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +310,70 @@ func (a *Analyzer) analyzeNode(n ast.Node) Type {
 	}
 }
 
+// propagateConstructorArgInits propagates sub-field init state for struct-typed
+// constructor arguments. When varName is constructed with a struct-valued arg
+// (e.g. w : Wrapper(i)), this ensures that w.inner.field accesses are
+// considered initialized when i.field is known to be initialized.
+func (a *Analyzer) propagateConstructorArgInits(varName string, st *StructType, call *ast.CallExpr) {
+	hasNamed := false
+	for _, arg := range call.Args {
+		if arg.Label != "" {
+			hasNamed = true
+			break
+		}
+	}
+	var required []StructField
+	for _, f := range st.Fields {
+		if !f.HasDefault {
+			if _, isMethod := f.Type.(*BocType); !isMethod {
+				required = append(required, f)
+			}
+		}
+	}
+	for j, arg := range call.Args {
+		var field *StructField
+		if hasNamed {
+			for k := range required {
+				if required[k].Name == arg.Label {
+					field = &required[k]
+					break
+				}
+			}
+		} else if j < len(required) {
+			f := required[j]
+			field = &f
+		}
+		if field == nil {
+			continue
+		}
+		innerSt, ok := field.Type.(*StructType)
+		if !ok || innerSt.IsSingleton || innerSt.IsInterface || innerSt.IsVariant {
+			continue
+		}
+		if rhsId, ok := arg.Value.(*ast.Ident); ok {
+			if _, tracked := a.fieldInit.locals[rhsId.Name]; tracked {
+				a.fieldInit.propagateInner(varName, field.Name, a.fieldInit, rhsId.Name)
+			} else {
+				// Untracked (parameter) — all sub-fields are initialized.
+				innerFI := newFieldInitState()
+				innerFI.addLocalVar("_")
+				for _, f := range innerSt.Fields {
+					if !f.HasDefault {
+						if _, isMethod := f.Type.(*BocType); !isMethod {
+							innerFI.locals["_"][f.Name] = true
+						}
+					}
+				}
+				a.fieldInit.propagateInner(varName, field.Name, innerFI, "_")
+			}
+		} else if innerCall, ok := arg.Value.(*ast.CallExpr); ok {
+			innerFI := newFieldInitState()
+			initLocalVar(innerFI, "_", innerSt, innerCall)
+			a.fieldInit.propagateInner(varName, field.Name, innerFI, "_")
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Short declaration
 // ---------------------------------------------------------------------------
@@ -339,6 +434,10 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 				continue
 			}
 			initLocalVar(a.fieldInit, name.Name, st, call)
+			// Propagate sub-field init state for struct-typed args so that
+			// chained access (w.inner.field) does not false-positive. This
+			// mirrors the same propagation done in analyzeAssignment.
+			a.propagateConstructorArgInits(name.Name, st, call)
 		}
 	}
 	return TypUnit
@@ -929,7 +1028,15 @@ func (a *Analyzer) analyzeBranchBody(boc *ast.BocLiteral) Type {
 // It is used for both uppercase struct declarations and lowercase singleton
 // bocs that have inner structure (inner bocs or BocDecl methods).
 func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType, []Type) {
+	// Reuse the stub pre-registered by AnalyzeFile so that forward references
+	// (fields declared before their type is analyzed) capture a stable pointer
+	// that gets filled in here.
 	st := &StructType{Name: name}
+	if sym := a.fileScope.LookupLocal(name); sym != nil {
+		if stub, ok := sym.Type.(*StructType); ok {
+			st = stub
+		}
+	}
 	fieldSet := make(map[string]bool)
 	var lastExprTypes []Type
 

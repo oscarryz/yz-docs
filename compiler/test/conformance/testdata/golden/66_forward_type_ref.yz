@@ -1,0 +1,15 @@
+// YZC-0057: forward and mutually-recursive type references
+// Wrapper is declared before Inner; Inner references Pair which comes after it.
+Wrapper: {
+    inner Inner
+}
+
+Inner: {
+    value Int
+}
+
+main: {
+    i : Inner(42)
+    w : Wrapper(i)
+    print(w.inner.value)
+}
