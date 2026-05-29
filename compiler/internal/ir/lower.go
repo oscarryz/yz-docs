@@ -35,8 +35,9 @@ type lowerer struct {
 	irFile   *File // current output file — used to accumulate extra imports
 
 	// When lowering a method body, these describe the receiver.
-	recvName   string
-	recvFields map[string]bool // fields accessible via receiver
+	recvName       string
+	recvFields     map[string]bool     // fields accessible via receiver
+	recvStructType *sema.StructType    // sema type of the receiver struct (for path-dep resolution)
 
 	// localBocVars tracks local function-literal variables declared via
 	// BocDecl inside a boc body (e.g. `foo #(String) { "hello" }`).
@@ -266,7 +267,7 @@ func (l *lowerer) buildInterfaceDecl(name string, st *sema.StructType) *Interfac
 			}
 		}
 		id.Methods = append(id.Methods, &InterfaceMethod{
-			Name:       f.Name,
+			Name:       goMethodNameStr(f.Name),
 			Params:     params,
 			ResultType: resultType,
 		})
@@ -642,9 +643,10 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 		for _, pc := range pending {
 			callExpr := l.lowerExpr(pc.expr)
 			if pc.name != "" {
+				storeAnyType := l.pathDepStoreType(pc.expr, pc.typ)
 				stmts = append(stmts,
 					&DeclStmt{Name: pc.name, Type: pc.typ},
-					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: pc.name, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
+					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: pc.name, StoreAnyType: storeAnyType, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
 				)
 			} else {
 				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, Body: []Stmt{&ReturnStmt{Value: callExpr}}}})
@@ -1056,21 +1058,24 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					emitPendingWait()
 					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Init: synced})
 				} else if bgVar != "" {
+					storeAnyType := l.pathDepStoreType(e.Values[0], goType)
 					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Type: goType})
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
-						GroupVar: bgVar,
-						StoreVar: e.Names[0].Name,
-						Body:     []Stmt{&ReturnStmt{Value: callExpr}},
+						GroupVar:     bgVar,
+						StoreVar:     e.Names[0].Name,
+						StoreAnyType: storeAnyType,
+						Body:         []Stmt{&ReturnStmt{Value: callExpr}},
 					}})
 					hasPendingSpawns = true
 				} else {
 					// No shared BocGroup: per-variable group with immediate Wait so
 					// dependent statements land in postWait (after cown release).
+					storeAnyType := l.pathDepStoreType(e.Values[0], goType)
 					perBg := "_bgs_" + e.Names[0].Name
 					inner = append(inner,
 						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
 						&DeclStmt{Name: e.Names[0].Name, Type: goType},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Names[0].Name, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Names[0].Name, StoreAnyType: storeAnyType, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
 						&WaitStmt{GroupVar: perBg},
 					)
 				}
@@ -1540,6 +1545,20 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 func (l *lowerer) lowerBocDeclAsMethod(bws *ast.BocDecl, recvType string, parentFields map[string]bool) *MethodDecl {
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
+
+	// Set recvStructType so path-dependent return types (sg.Node) can be resolved.
+	prevRecvST := l.recvStructType
+	structName := strings.TrimPrefix(recvType, "*")
+	// Strip generic suffix e.g. "Foo[T]" → "Foo"
+	if idx := strings.Index(structName, "["); idx >= 0 {
+		structName = structName[:idx]
+	}
+	if sym := l.analyzer.LookupInFile(structName); sym != nil {
+		if st, ok := sym.Type.(*sema.StructType); ok {
+			l.recvStructType = st
+		}
+	}
+	defer func() { l.recvStructType = prevRecvST }()
 
 	// Use AST sig for return type to preserve generic TypeArgs.
 	// Methods are always in shorthand form (BodyOnly=false).
@@ -2949,9 +2968,8 @@ func (l *lowerer) tryLowerDiscriminantMatchExpr(m *ast.MatchExpr) (Expr, bool) {
 // variantDiscriminantType returns the Go discriminant type name for the subject
 // expression (e.g. "_PetVariant") if the subject is a variant struct, else "".
 func (l *lowerer) variantDiscriminantType(subject ast.Expr) (string, bool) {
-	semType := l.analyzer.ExprType(subject)
-	st, ok := semType.(*sema.StructType)
-	if !ok || !st.IsVariant || st.Name == "" {
+	st := l.resolveVariantStruct(subject)
+	if st == nil {
 		return "", false
 	}
 	return "_" + st.Name + "Variant", true
@@ -2959,11 +2977,28 @@ func (l *lowerer) variantDiscriminantType(subject ast.Expr) (string, bool) {
 
 // variantStructName returns the struct name from a subject expression.
 func (l *lowerer) variantStructName(subject ast.Expr) string {
-	semType := l.analyzer.ExprType(subject)
-	if st, ok := semType.(*sema.StructType); ok {
+	st := l.resolveVariantStruct(subject)
+	if st != nil {
 		return st.Name
 	}
 	return ""
+}
+
+// resolveVariantStruct returns the StructType for a variant expression,
+// resolving through GenericInstType when needed (e.g. Option[String] → Option).
+func (l *lowerer) resolveVariantStruct(subject ast.Expr) *sema.StructType {
+	semType := l.analyzer.ExprType(subject)
+	if st, ok := semType.(*sema.StructType); ok && st.IsVariant && st.Name != "" {
+		return st
+	}
+	if git, ok := semType.(*sema.GenericInstType); ok {
+		if sym := l.analyzer.LookupInFile(git.Name); sym != nil {
+			if st, ok := sym.Type.(*sema.StructType); ok && st.IsVariant {
+				return st
+			}
+		}
+	}
+	return nil
 }
 
 // armVariantName extracts the variant name from a match arm condition.
@@ -3304,12 +3339,13 @@ func (l *lowerer) lowerDictLit(d *ast.DictLiteral) Expr {
 // ---------------------------------------------------------------------------
 
 type receiverState struct {
-	name   string
-	fields map[string]bool
+	name       string
+	fields     map[string]bool
+	structType *sema.StructType
 }
 
 func (l *lowerer) setReceiver(name string, fields map[string]bool) receiverState {
-	prev := receiverState{name: l.recvName, fields: l.recvFields}
+	prev := receiverState{name: l.recvName, fields: l.recvFields, structType: l.recvStructType}
 	l.recvName = name
 	l.recvFields = fields
 	return prev
@@ -3318,6 +3354,7 @@ func (l *lowerer) setReceiver(name string, fields map[string]bool) receiverState
 func (l *lowerer) restoreReceiver(prev receiverState) {
 	l.recvName = prev.name
 	l.recvFields = prev.fields
+	l.recvStructType = prev.structType
 }
 
 // ---------------------------------------------------------------------------
@@ -3577,10 +3614,19 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 		return fmt.Sprintf("func(%s) %s", strings.Join(inputTypes, ", "), returnType)
 	case *ast.MemberTypeExpr:
 		// Path-dependent type `g.Node`: resolve via sema.
+		// First try file-level lookup (e.g. g is a file-level singleton).
+		// If that fails, check if t.Object is a field of the current receiver struct
+		// (e.g. sg in Resolver.resolve #(sg.Node)).
 		sym := l.analyzer.LookupInFile(t.Object)
+		if sym == nil && l.recvStructType != nil {
+			for _, f := range l.recvStructType.Fields {
+				if f.Name == t.Object {
+					sym = &sema.Symbol{Type: f.Type}
+					break
+				}
+			}
+		}
 		if sym == nil {
-			// Local variable — resolve via sema's ExprType is not available here;
-			// fall back to `any` and let the Go compiler infer.
 			return "any"
 		}
 		if st, ok := sym.Type.(*sema.StructType); ok {
@@ -3668,6 +3714,38 @@ func (l *lowerer) valueAt(vals []ast.Expr, i int) ast.Expr {
 		return vals[i]
 	}
 	return nil
+}
+
+// pathDepStoreType returns typ when expr is a BocDecl call whose return type is
+// PathDependentType (emits *Thunk[any]) but the declared variable type is concrete.
+// This signals that GoStoreAny[typ] should be used instead of GoStore.
+func (l *lowerer) pathDepStoreType(expr ast.Expr, typ string) string {
+	if typ == "" || typ == "any" {
+		return ""
+	}
+	c, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return ""
+	}
+	id, ok := c.Callee.(*ast.Ident)
+	if !ok {
+		return ""
+	}
+	sym := l.analyzer.LookupInFile(id.Name)
+	if sym == nil {
+		return ""
+	}
+	bt, ok := sym.Type.(*sema.BocType)
+	if !ok {
+		return ""
+	}
+	if len(bt.Returns) == 0 {
+		return ""
+	}
+	if _, isPDT := bt.Returns[0].(*sema.PathDependentType); isPDT {
+		return typ
+	}
+	return ""
 }
 
 // unquoteString strips the surrounding quote characters from a raw string

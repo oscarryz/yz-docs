@@ -93,3 +93,13 @@ func GoStore[T any](g *BocGroup, th *Thunk[T], dest *T) {
 
 // Wait blocks until all goroutines registered with this group complete.
 func (g *BocGroup) Wait() { g.wg.Wait() }
+
+// GoStoreAny is like GoStore but for path-dependent return types that produce
+// *Thunk[any] at the Go level. It type-asserts the forced value to T.
+func GoStoreAny[T any](g *BocGroup, th *Thunk[any], dest *T) {
+	g.wg.Add(1)
+	go func() {
+		defer g.wg.Done()
+		*dest = th.Force().(T)
+	}()
+}

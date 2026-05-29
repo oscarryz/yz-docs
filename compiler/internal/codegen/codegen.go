@@ -894,6 +894,9 @@ func (g *generator) emitSpawn(s *ir.SpawnExpr) string {
 		if rs, ok := s.Body[0].(*ir.ReturnStmt); ok && rs.Value != nil {
 			thunkExpr := g.expr(rs.Value)
 			if s.StoreVar != "" {
+				if s.StoreAnyType != "" {
+					return "std.GoStoreAny[" + s.StoreAnyType + "](" + s.GroupVar + ", " + thunkExpr + ", &" + s.StoreVar + ")"
+				}
 				return "std.GoStore(" + s.GroupVar + ", " + thunkExpr + ", &" + s.StoreVar + ")"
 			}
 			return s.GroupVar + ".GoWait(" + thunkExpr + ")"

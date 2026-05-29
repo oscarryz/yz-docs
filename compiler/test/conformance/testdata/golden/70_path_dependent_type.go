@@ -45,8 +45,8 @@ func (self *Resolver) String() string {
 	return "Resolver(sg: " + std.StringifyRepr(self.sg) + ")"
 }
 
-func (self *Resolver) Resolve() *std.Thunk[any] {
-	return std.ScheduleMulti([]*std.Cown{&self.Cown, &self.sg.Cown}, func() any {
+func (self *Resolver) Resolve() *std.Thunk[*User] {
+	return std.ScheduleMulti([]*std.Cown{&self.Cown, &self.sg.Cown}, func() *User {
 		return NewUser(std.NewString("Alice"))
 	})
 }

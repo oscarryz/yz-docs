@@ -2094,7 +2094,7 @@ func (a *Analyzer) methodReturnType(receiverType Type, methodName string, pos as
 		return Unknown
 	case *StructType:
 		for _, f := range rt.Fields {
-			if f.Name == methodName {
+			if f.Name == methodName || NonWordMethodName(f.Name) == methodName {
 				if bt, ok := f.Type.(*BocType); ok && len(bt.Returns) == 1 {
 					return bt.Returns[0]
 				}
@@ -2274,6 +2274,20 @@ func substituteType(t Type, bindings map[string]Type) Type {
 			args[i] = substituteType(arg, bindings)
 		}
 		return &GenericInstType{Name: tt.Name, TypeArgs: args}
+	case *StructType:
+		// A bare generic struct name used as return type (e.g. `Pair` in `makePair #(a K, b V, Pair)`).
+		// Substitute TypeParams to produce a concrete GenericInstType.
+		if len(tt.TypeParams) > 0 {
+			typeArgs := make([]Type, len(tt.TypeParams))
+			for i, tp := range tt.TypeParams {
+				if bound, ok := bindings[tp]; ok {
+					typeArgs[i] = bound
+				} else {
+					typeArgs[i] = &GenericType{Name: tp}
+				}
+			}
+			return &GenericInstType{Name: tt.Name, TypeArgs: typeArgs}
+		}
 	case *PathDependentType:
 		if bound, ok := bindings[tt.Param+"."+tt.Member]; ok {
 			return bound

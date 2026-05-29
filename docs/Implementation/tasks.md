@@ -29,18 +29,13 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 
 YZC-0017 -- Dict optional access -- S  
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
-~~YZC-0057 -- Cyclic / mutually-recursive type declarations -- S~~  
 YZC-0012 -- Multiple return values -- M  
-YZC-0027 -- `:` as Type Alias -- M -- needs YZC-0066  
-~~YZC-0066 -- Associated Types: `#()` metatype, T fields, type aliases, call-site unification -- L~~  
+YZC-0027 -- `:` as Type Alias -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
-YZC-0026 -- Generics: Explicit Constraint Declaration -- M -- needs YZC-0066  
-~~YZC-0067 -- Emit Go interfaces for structural Yz types -- M~~  
-~~YZC-0030 -- Path-Dependent Types: abstract `g.Node` resolution -- M~~  
-YZC-0068 -- GoStore type mismatch for path-dependent return types -- S -- needs YZC-0030
-YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
-~~YZC-0069 -- Call-site type variable unification (Phase C generics) -- M~~
+YZC-0026 -- Generics: Explicit Constraint Declaration -- M  
+YZC-0068 -- GoStore type mismatch for path-dependent return types -- S  
+YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
 YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
@@ -348,7 +343,7 @@ Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-
 - [ ] Spec 04 — add
 - [ ] Deferred to YZC-0066: generic instantiation via alias (`StringList : List(String)`), associated type binding (`Node : User` inside a boc)
 
-### YZC-0066 — Associated Types: `#()` metatype, T fields, type aliases, call-site unification ✓
+### [x] YZC-0066 — Associated Types: `#()` metatype, T fields, type aliases, call-site unification ✓
 
 Unified model for generics, type aliases, and associated types. See `docs/Features/Path Dependent Types.md`.
 
@@ -386,7 +381,7 @@ Compiler removal done.
 - [ ] Runtime — implement `Mix` as a `Compile` boc
 - [ ] Spec 09 — remove `mix`; document `Mix` compile implementation
 
-### YZC-0030 — Path-Dependent Types: abstract `g.Node` resolution
+### [x] YZC-0030 — Path-Dependent Types: abstract `g.Node` resolution ✓
 
 `process #(g Graph, n g.Node)` — sema resolves `g.Node` against the **abstract** type of `g` (interface parameter), not just the concrete static type. Design resolved; see `docs/Features/Path Dependent Types.md` and `docs/Features/Associated Types.md`.
 
@@ -399,7 +394,7 @@ When `g` is a concrete local variable, `g.Node` already resolves correctly (done
 - [x] Lowerer — sema substitutes concrete return type at call site; goTypeForVar uses resolved *StructType, var gets concrete Go type (e.g. `*User`) when called from concrete context
 - [x] Golden test: Graph/SocialGraph/accept — test 72 passes; *SocialGraph satisfies Graph interface
 
-### YZC-0067 — Emit Go interfaces for structural Yz types
+### [x] YZC-0067 — Emit Go interfaces for structural Yz types ✓
 
 In Yz, any struct that has the required fields/methods satisfies a type structurally. In Go, this only works when the target type is a Go `interface`, not a Go `struct`. Currently all Yz boc types (including those with only method fields) are emitted as Go structs, so passing `*SocialGraph` where `*Graph` is expected fails Go's type checker.
 
@@ -431,7 +426,7 @@ Recommended: Option A (runtime helper) as the pragmatic fix; Option B as a follo
 - [ ] Update golden test 73 to reflect the corrected generated code
 - [ ] Verify `go test ./...` passes including end-to-end compilation of test 73
 
-### YZC-0069 — Call-site type variable unification (Phase C generics)
+### [x] YZC-0069 — Call-site type variable unification (Phase C generics) ✓
 
 This is Phase C of YZC-0066. Phases A and B (direct type variable unification) already work — see golden test 71 (`71_type_var_unification.yz`). Phase C covers the two harder cases where the existing unifier falls short.
 

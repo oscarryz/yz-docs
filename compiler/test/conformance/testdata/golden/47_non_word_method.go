@@ -38,7 +38,7 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 	return std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
-		var c any
+		var c std.String
 		var a *Greeter
 		std.Schedule(&self.Cown, func() std.Unit {
 			a = NewGreeter(std.NewString("Ann"))

@@ -46,7 +46,7 @@ func (self *_mainBoc) String() string {
 }
 
 func (self *_mainBoc) call() std.Unit {
-	x := NewOptionSome(std.NewString("hello"))
+	var x *Option[std.String] = NewOptionSome(std.NewString("hello"))
 	switch x._variant {
 	case _OptionSome:
 		std.Print(x.value)

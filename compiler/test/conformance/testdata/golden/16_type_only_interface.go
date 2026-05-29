@@ -3,7 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Greeter interface {
-	greet() *std.Thunk[std.Unit]
+	Greet() *std.Thunk[std.Unit]
 }
 
 

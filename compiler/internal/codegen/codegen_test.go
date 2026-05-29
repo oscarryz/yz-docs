@@ -375,7 +375,7 @@ main: {
         { None => print("nothing") }
 }`)
 	contains(t, got,
-		"x := NewOptionSome(",
+		"NewOptionSome(",
 		"switch x._variant {",
 		"case _OptionSome:",
 		"case _OptionNone:",

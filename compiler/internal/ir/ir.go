@@ -283,10 +283,12 @@ type ClosureExpr struct {
 // SpawnExpr registers a boc-call goroutine on a BocGroup.
 // When StoreVar is empty, codegen emits _bg.GoWait(thunk) — for Unit returns.
 // When StoreVar is non-empty, codegen emits std.GoStore(_bg, thunk, &StoreVar) — for value returns.
+// When StoreAnyType is also non-empty, uses std.GoStoreAny[T] to coerce *Thunk[any] to T.
 type SpawnExpr struct {
-	GroupVar string // the *std.BocGroup local var
-	Body     []Stmt
-	StoreVar string // if non-empty: emit GoStore; if empty: emit GoWait
+	GroupVar     string // the *std.BocGroup local var
+	Body         []Stmt
+	StoreVar     string // if non-empty: emit GoStore; if empty: emit GoWait
+	StoreAnyType string // if non-empty: use GoStoreAny[T] instead of GoStore
 }
 
 // NewGroupExpr creates a new BocGroup: &std.BocGroup{}.
