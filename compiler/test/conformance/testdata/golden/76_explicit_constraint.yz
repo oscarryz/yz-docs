@@ -1,0 +1,27 @@
+// YZC-0026 — explicit type param constraints
+// Describable is a structural interface: any type with a describe method satisfies it.
+Describable: {
+    describe #(String)
+}
+
+// Animal implements Describable.
+Animal: {
+    name String
+    describe #(String) = { name }
+}
+
+// Box wraps any V that implements Describable.
+// desc delegates to value.describe() — tests calling interface method on generic field.
+Box: {
+    V Describable
+    value V
+    desc #(String) {
+        value.describe()
+    }
+}
+
+main: {
+    a : Animal(name: "Cat")
+    b : Box(value: a)
+    print(b.desc())
+}

@@ -206,8 +206,9 @@ type StructType struct {
 	IsSingleton     bool                            // true for lowercase bocs with inner structure
 	Returns         []Type                          // body return types (only when IsSingleton=true)
 	Variants        []VariantCase                   // variant constructors (only when IsVariant=true)
-	TypeParams      []string                        // formal type parameter names (non-nil for generic types)
-	TypeConstraints map[string][]*GenericConstraint // typeParam → inferred method requirements
+	TypeParams          []string                        // formal type parameter names (non-nil for generic types)
+	TypeConstraints     map[string][]*GenericConstraint // typeParam → inferred method requirements
+	ExplicitConstraints map[string][]string             // typeParam → explicit interface names from source
 }
 
 func (t *StructType) typeName() string {

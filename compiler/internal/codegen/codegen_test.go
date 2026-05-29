@@ -362,6 +362,58 @@ func TestGenerateGenericVariantDecl(t *testing.T) {
 	)
 }
 
+// ---------------------------------------------------------------------------
+// 14 — Explicit constraint declaration (YZC-0026)
+// ---------------------------------------------------------------------------
+
+func TestGenerateExplicitConstraintStruct(t *testing.T) {
+	got := gen(t, `Stringer: {
+    to_str #(String)
+}
+Box: {
+    V Stringer
+    value V
+}`)
+	contains(t, got,
+		"type Box[V Stringer] struct {",
+		"func NewBox[V Stringer](value V) *Box[V] {",
+	)
+	notContains(t, got, "V any")
+}
+
+func TestGenerateExplicitConstraintVariant(t *testing.T) {
+	got := gen(t, `Printable: {
+    print #(String)
+}
+Result: {
+    V Printable
+    Ok(value V)
+    Err(msg String)
+}`)
+	contains(t, got,
+		"type Result[V Printable] struct {",
+		"func NewResultOk[V Printable](value V) *Result[V] {",
+		"func NewResultErr[V Printable](msg std.String) *Result[V] {",
+	)
+}
+
+func TestGenerateMultipleExplicitConstraints(t *testing.T) {
+	got := gen(t, `Stringer: {
+    to_str #(String)
+}
+Equatable: {
+    equals #(Equatable, Bool)
+}
+Pair: {
+    V Stringer Equatable
+    first V
+    second V
+}`)
+	contains(t, got,
+		"interface{ Stringer; Equatable }",
+	)
+}
+
 func TestGenerateGenericVariantMatch(t *testing.T) {
 	got := gen(t, `Option: {
     V

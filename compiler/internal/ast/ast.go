@@ -428,10 +428,25 @@ func (t *MemberTypeExpr) typeNode() {}
 //   2. Anonymous parameter:      `Type`                 (Name empty, Type set)
 //   3. Named with default:       `name Type = default`  (all fields set)
 //   4. Variant constructor:      `Ok(value T)`          (Variant set)
+//   5. Named with constraints:   `name T Bound1 Bound2` (Constraints non-nil)
+//   6. Bare with constraints:    `T Bound1 Bound2`      (Label empty, Constraints non-nil)
 type BocParam struct {
 	Pos
-	Label   string   // parameter label; empty for anonymous or variant
-	Type    TypeExpr // nil if Variant is set
-	Default Expr     // nil if no default value
-	Variant *VariantDef // non-nil for a variant constructor param
+	Label       string      // parameter label; empty for anonymous or variant
+	Type        TypeExpr    // nil if Variant is set
+	Default     Expr        // nil if no default value
+	Variant     *VariantDef // non-nil for a variant constructor param
+	Constraints []TypeExpr  // explicit interface constraints on a GENERIC_IDENT type (may be nil)
 }
+
+// TypeParamDecl is a constrained type parameter declaration used inside a boc body.
+// It is produced when a body statement begins with GENERIC_IDENT TYPE_IDENT+,
+// e.g. `V Talker` or `T Serializable Comparable`.
+// Without constraints (bare `V`), the parser emits a plain *Ident expression instead.
+type TypeParamDecl struct {
+	Pos
+	Name        *Ident     // the GENERIC_IDENT token
+	Constraints []TypeExpr // one or more constraint interface names
+}
+
+func (d *TypeParamDecl) stmtNode() {}

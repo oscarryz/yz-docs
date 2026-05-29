@@ -1320,14 +1320,19 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 		recvType = "*" + name + "[" + strings.Join(sd.TypeParams, ", ") + "]"
 	}
 
-	// Populate Go interface constraints from sema TypeConstraints.
-	// For each generic type param, collect the Go interface method signatures
-	// inferred from how T-typed values are used inside the struct's method bodies.
+	// Populate Go interface constraints from sema TypeConstraints (inferred) and
+	// ExplicitConstraints (declared in source). Explicit constraints take priority:
+	// when a type param has explicit constraints, inferred method sigs are skipped.
 	if len(sd.TypeParams) > 0 {
 		if sym := l.analyzer.LookupInFile(name); sym != nil {
-			if st, ok := sym.Type.(*sema.StructType); ok && len(st.TypeConstraints) > 0 {
+			if st, ok := sym.Type.(*sema.StructType); ok {
 				for _, tp := range sd.TypeParams {
-					if constraints, has := st.TypeConstraints[tp]; has {
+					if explicit, hasExplicit := st.ExplicitConstraints[tp]; hasExplicit && len(explicit) > 0 {
+						if sd.ExplicitConstraints == nil {
+							sd.ExplicitConstraints = make(map[string][]string)
+						}
+						sd.ExplicitConstraints[tp] = explicit
+					} else if constraints, has := st.TypeConstraints[tp]; has {
 						sigs := constraintGoSigs(constraints, tp)
 						if len(sigs) > 0 {
 							if sd.TypeConstraints == nil {
@@ -1411,7 +1416,10 @@ func (l *lowerer) isVariantBoc(b *ast.BocLiteral) bool {
 		if _, ok := elem.(*ast.VariantDef); ok {
 			hasVariant = true
 		} else if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
-			// Generic type parameter (e.g., V in Option: { V; Some(value V); None() })
+			// Bare generic type parameter (e.g., V in Option: { V; Some(value V); None() })
+			continue
+		} else if _, ok := elem.(*ast.TypeParamDecl); ok {
+			// Constrained type parameter (e.g., V Talker in Result: { V Talker; Ok(V); Err(String) })
 			continue
 		} else {
 			return false // mixed with non-variant content
@@ -1428,9 +1436,22 @@ func (l *lowerer) lowerVariantBoc(name string, b *ast.BocLiteral) *StructDecl {
 	fieldSet := map[string]bool{}
 
 	for _, elem := range b.Elements {
-		// Collect generic type params (e.g., V in Option: { V; Some(value V); ... }).
+		// Collect generic type params — bare (e.g., V) or constrained (e.g., V Talker).
 		if id, ok := elem.(*ast.Ident); ok && id.TokType == token.GENERIC_IDENT {
 			sd.TypeParams = append(sd.TypeParams, id.Name)
+			continue
+		}
+		if tpd, ok := elem.(*ast.TypeParamDecl); ok {
+			sd.TypeParams = append(sd.TypeParams, tpd.Name.Name)
+			// Propagate explicit constraints (interface names) to the IR struct.
+			for _, c := range tpd.Constraints {
+				if ste, ok2 := c.(*ast.SimpleTypeExpr); ok2 {
+					if sd.ExplicitConstraints == nil {
+						sd.ExplicitConstraints = make(map[string][]string)
+					}
+					sd.ExplicitConstraints[tpd.Name.Name] = append(sd.ExplicitConstraints[tpd.Name.Name], ste.Name)
+				}
+			}
 			continue
 		}
 		vd, ok := elem.(*ast.VariantDef)
@@ -2479,6 +2500,16 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		}
 		if _, isGenInst := objType.(*sema.GenericInstType); isGenInst {
 			return true
+		}
+		// Generic type param with explicit Yz interface constraint (V Describable):
+		// methods on such params go through the interface's Yz boc methods, which
+		// return *Thunk. Inferred constraints use direct-return Go interface methods.
+		if gt, isGeneric := objType.(*sema.GenericType); isGeneric {
+			if l.recvStructType != nil {
+				if constrs, ok := l.recvStructType.ExplicitConstraints[gt.Name]; ok && len(constrs) > 0 {
+					return true
+				}
+			}
 		}
 		// Singleton boc method call (counter.increment()) → returns *Thunk.
 		objIdent, ok := mem.Object.(*ast.Ident)

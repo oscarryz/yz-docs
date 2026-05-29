@@ -118,6 +118,12 @@ func (p *Parser) parseStatement() (ast.Node, error) {
 		return p.parseBocDecl()
 	}
 
+	// Check for constrained type param declaration in a type body: `T Bound1 Bound2...`
+	// A bare `T` with no following TYPE_IDENT is handled as a plain expression (IdentExpr).
+	if tok.Type == token.GENERIC_IDENT && p.peekAt(token.TYPE_IDENT) {
+		return p.parseTypeParamDecl()
+	}
+
 	// Check for TypedDecl: `name TypeName` or `name TypeName = expr`
 	// (distinct from a call `name(args)` by the next token being a type identifier)
 	if p.isTypedDeclStart() {
@@ -1013,9 +1019,21 @@ func (p *Parser) parseBocTypeExpr() (*ast.BocTypeExpr, error) {
 func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 	pos := p.curPos()
 
-	// Anonymous type param (return type): TYPE_IDENT or GENERIC_IDENT not followed by type.
+	// Bare GENERIC_IDENT — type param, optionally followed by one or more constraint TYPE_IDENTs.
+	// `V` → anonymous type param (no constraint)
+	// `V Talker` / `V Talker Serializable` → anonymous type param with constraints
+	if p.at(token.GENERIC_IDENT) {
+		typ, err := p.parseTypeExpr()
+		if err != nil {
+			return nil, err
+		}
+		constraints := p.parseConstraintList()
+		return &ast.BocParam{Pos: pos, Type: typ, Constraints: constraints}, nil
+	}
+
+	// Anonymous return type: TYPE_IDENT not followed by a type (e.g. `String` in `#(x Int, String)`).
 	// Also handles generic applications like Box(A) — TYPE_IDENT followed by '('.
-	if (p.at(token.TYPE_IDENT) || p.at(token.GENERIC_IDENT)) && !p.peekIsType() {
+	if p.at(token.TYPE_IDENT) && !p.peekIsType() {
 		typ, err := p.parseTypeExpr()
 		if err != nil {
 			return nil, err
@@ -1043,7 +1061,7 @@ func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 		p.pos = save
 	}
 
-	// Named param: ident TypeExpr [= expr]  OR  ShortDecl param: ident : expr
+	// Named param: ident TypeExpr [Constraint...] [= expr]  OR  ShortDecl param: ident : expr
 	if p.at(token.IDENT) {
 		label := p.cur().Literal
 		p.advance()
@@ -1058,9 +1076,15 @@ func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 			return &ast.BocParam{Pos: pos, Label: label, Default: def}, nil
 		}
 
+		isGenericType := p.at(token.GENERIC_IDENT)
 		typ, err := p.parseTypeExpr()
 		if err != nil {
 			return nil, err
+		}
+		// Collect explicit constraints only when the type is a GENERIC_IDENT (type variable).
+		var constraints []ast.TypeExpr
+		if isGenericType {
+			constraints = p.parseConstraintList()
 		}
 		var def ast.Expr
 		if p.at(token.ASSIGN) {
@@ -1070,7 +1094,7 @@ func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 				return nil, err
 			}
 		}
-		return &ast.BocParam{Pos: pos, Label: label, Type: typ, Default: def}, nil
+		return &ast.BocParam{Pos: pos, Label: label, Type: typ, Constraints: constraints, Default: def}, nil
 	}
 
 	// Type-only param with complex type (array, dict, boc)
@@ -1085,6 +1109,20 @@ func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 	return nil, p.errorf("expected boc parameter, got %v", p.cur())
 }
 
+// parseConstraintList consumes zero or more consecutive TYPE_IDENT tokens that
+// follow a GENERIC_IDENT type parameter, returning them as TypeExpr constraint nodes.
+func (p *Parser) parseConstraintList() []ast.TypeExpr {
+	var constraints []ast.TypeExpr
+	for p.at(token.TYPE_IDENT) {
+		c, err := p.parseTypeExpr()
+		if err != nil {
+			break
+		}
+		constraints = append(constraints, c)
+	}
+	return constraints
+}
+
 // peekIsType returns true when the token AFTER the current one is a type-starting token.
 func (p *Parser) peekIsType() bool {
 	if p.pos+1 >= len(p.tokens) {
@@ -1096,6 +1134,28 @@ func (p *Parser) peekIsType() bool {
 		return true
 	}
 	return false
+}
+
+// peekAt reports whether the token immediately after the current one has type t.
+func (p *Parser) peekAt(t token.Type) bool {
+	if p.pos+1 >= len(p.tokens) {
+		return false
+	}
+	return p.tokens[p.pos+1].Type == t
+}
+
+// parseTypeParamDecl parses a constrained type parameter statement in a boc body:
+//
+//	T Bound1 Bound2...
+//
+// The GENERIC_IDENT is the type param name; each following TYPE_IDENT is a constraint.
+func (p *Parser) parseTypeParamDecl() (*ast.TypeParamDecl, error) {
+	pos := p.curPos()
+	tok := p.cur()
+	p.advance() // consume GENERIC_IDENT
+	name := &ast.Ident{Pos: pos, Name: tok.Literal, TokType: token.GENERIC_IDENT}
+	constraints := p.parseConstraintList()
+	return &ast.TypeParamDecl{Pos: pos, Name: name, Constraints: constraints}, nil
 }
 
 // ---------------------------------------------------------------------------

@@ -33,7 +33,8 @@ YZC-0012 -- Multiple return values -- M
 YZC-0027 -- `:` as Type Alias -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
-YZC-0026 -- Generics: Explicit Constraint Declaration -- M  
+YZC-0071 -- Implicit constraint synthesis for type params used in method params -- M  
+YZC-0070 -- Anonymous boc literal as structural interface value -- M  
 YZC-0068 -- GoStore type mismatch for path-dependent return types -- S  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
@@ -64,7 +65,7 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
 # Details
 
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0070**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0072**.
 
 ---
 
@@ -325,13 +326,153 @@ Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-
 - [ ] Codegen — attach compiled infostring boc to declaration metadata
 - [ ] Spec 01 — update
 
-### YZC-0026 — Generics: Explicit Constraint Declaration
+### [x] YZC-0026 — Generics: Explicit Constraint Declaration ✓
 
 `thing T Talker` declares `T` must implement `Talker`; additive with inference.
+Multiple constraints supported: `T Talker Serializable`.
 
-- [ ] Parser — `T Constraint` optional suffix after single-uppercase type param
-- [ ] Sema — validate at instantiation; union with inferred constraints
+- [x] Parser — `T Constraint` optional suffix after single-uppercase type param; `parseConstraintList` collects trailing TYPE_IDENTs; new `TypeParamDecl` AST node for body-context form (`V Talker` as a statement)
+- [x] Sema — `StructType.ExplicitConstraints map[string][]string`; constraints stored from both `TypeParamDecl` (body) and `BocParam.Constraints` (signature); pre-scan updated for `TypeParamDecl`; abstract method return types now correctly propagated from signature when body is nil
+- [x] IR — `StructDecl.ExplicitConstraints`; lowerer propagates from sema; `isVariantBoc`/`lowerVariantBoc` accept `TypeParamDecl` elements
+- [x] Codegen — `buildTypeParamConstraints` emits `[V Talker]` (single), `[V interface{A;B}]` (multiple), or `[V any]` (none); replaces inline loop in both struct and variant paths
+- [x] Golden test 76 — `Box[V Describable]` + `Animal` satisfying `Describable`
 - [ ] Spec 04 — update
+
+### YZC-0070 — Anonymous boc literal as structural interface value
+
+A boc literal with inner boc-valued fields (`{ describe: { "a boc" } }`) should satisfy
+a structural interface constraint at the call site:
+
+```yz
+Describable: { describe #(String) }
+
+Box: {
+    V Describable
+    value V
+}
+
+main: {
+    c : Box(value: { describe: { "a boc" } })  // should work
+    print(c.value.describe())
+}
+```
+
+Currently fails with a constraint-violation sema error because boc literals are typed as
+`BocType` (a plain function type) rather than as anonymous structs.
+
+#### What needs to change
+
+**Sema** — In `analyzeExpr` for `*ast.BocLiteral`, detect when the literal has named
+boc-valued fields (the existing `hasInnerBocsOrMethods` predicate already covers this).
+When true, type the literal as an anonymous `StructType{IsSingleton:true}` whose fields
+are the inner boc-field names and types, rather than as a `BocType`. This makes
+`typeHasMethod` find the methods during constraint checking, and makes structural
+compatibility with interfaces work.
+
+**Lowerer** — `lowerBocLitExpr` currently always emits a `ClosureExpr` (Go func
+literal). When the sema type for the `BocLiteral` is a `StructType`, generate an
+anonymous Go struct type instead:
+1. Assign a unique name `_anonBoc<N>` (counter on the lowerer).
+2. Build a `StructDecl{Name:"_anonBoc0", NoConstructor:true}` with one `MethodDecl`
+   per inner boc-valued field (using the existing `lowerMethod` helper).
+3. Collect these into `l.anonDecls []*StructDecl` on the lowerer; prepend to
+   `f.Decls` after the file is fully lowered.
+4. Return `&_anonBoc0{}` as the call-site expression.
+
+**Codegen** — No changes needed: `StructDecl` with `NoConstructor=true` already
+emits the struct type + methods without a constructor function.
+
+#### Edge cases to defer
+
+- Anonymous boc literals that capture outer variables (closures over `self.*` fields).
+  These require storing captured values in the anonymous struct as fields.
+- Nested anonymous bocs inside an anonymous boc method body.
+- Multiple uses of structurally identical anonymous boc patterns (dedup opportunity).
+
+#### Acceptance criteria
+
+- `Box(value: { describe: { "a boc" } })` compiles and runs.
+- The anonymous struct type satisfies the `Describable` Go interface.
+- All existing tests continue to pass.
+- New golden test (e.g. test 77) covers the pattern.
+
+- [ ] Sema — type boc literals with inner boc fields as anonymous `StructType`
+- [ ] Lowerer — emit anonymous Go struct type + methods; collect as `anonDecls`
+- [ ] Golden test 77 — anonymous boc literal satisfying interface constraint
+
+### YZC-0071 — Implicit constraint synthesis for type params used in method params
+
+When a struct has a bare type param `V` (no explicit constraint) and a method uses `V` as a **method parameter type** and calls methods on it, the compiler must infer the required constraint from those calls and emit it in the Go type parameter.
+
+#### Problem
+
+The existing inferred-constraint mechanism (`activeConstraints`) works when `V` is a struct **field** type and methods are called via `self.field.method()`. It does NOT currently work when `V` appears as a method **parameter** type:
+
+```yz
+Foo: {
+    V
+    do #(value V) {
+        value.hola()   // V must have hola() — but constraint is NOT inferred
+    }
+}
+```
+
+Generated Go fails: `V any` doesn't have `hola()`.
+
+#### Desired behaviour
+
+The compiler synthesises the constraint from usage. Two equivalent spellings the user may use:
+
+**Option A — named interface** (compiler generates):
+```yz
+Foo: {
+    V Holer    // compiler synthesises Holer
+    ...
+}
+Holer: {
+    hola #()
+}
+```
+
+**Option B — inline constraint syntax** (user writes):
+```yz
+Foo: {
+    V #( hola #() )
+    ...
+}
+```
+
+For now, Option A (infer from method-param usage, emit as `interface{ ... }` inline in Go type param, same as the existing field-usage path) is sufficient.
+
+#### Root cause
+
+`analyzeCall` records constraints when `a.activeConstraints != nil` and the receiver is `*GenericType`. This fires for field accesses because `self.value.hola()` resolves `self.value` to `*GenericType{V}`. But for a method parameter `value V`, the resolution of `value` inside the method body also returns `*GenericType{V}` — so the same path *should* fire.
+
+Investigate whether `activeConstraints` is nil when the method body is entered (e.g. if `analyzeBocDeclNode` clears it), or if there is a scope/resolution issue preventing `value` from being typed as `*GenericType` inside the method body.
+
+#### Acceptance criteria
+
+```yz
+Foo: {
+    V
+    do #(value V) {
+        value.hola()
+    }
+}
+Holer: {
+    hola #()
+}
+main: {
+    h : Holer()
+    Foo(do: h)
+}
+```
+Compiles and runs without explicit `V Holer` in `Foo`.
+
+- [ ] Investigate why `activeConstraints` doesn't fire for method-param receivers
+- [ ] Fix constraint recording for method-param usage of generic type params
+- [ ] Golden test 78 — bare `V` inferred from method-param usage
+- [ ] Spec 04 — document implicit constraint inference
 
 ### YZC-0027 — `:` as Type Alias
 

@@ -907,6 +907,11 @@ func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 		}
 		returns = explicitReturns
 	}
+	// For abstract (body-less) method declarations (interface members), use the
+	// signature's explicit return types rather than defaulting to Unit.
+	if len(returns) == 0 && bd.Body == nil && len(explicitReturns) > 0 {
+		returns = explicitReturns
+	}
 	if len(returns) == 0 {
 		returns = []Type{TypUnit}
 	}
@@ -1077,6 +1082,10 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			isGeneric = true
 			break
 		}
+		if _, ok := elem.(*ast.TypeParamDecl); ok {
+			isGeneric = true
+			break
+		}
 	}
 
 	// Save outer constraint state and activate fresh collection for generic structs.
@@ -1128,17 +1137,19 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			}
 			lastExprTypes = nil
 
+		case *ast.TypeParamDecl:
+			// Constrained type param declaration in a type body: `V Talker` or `T A B`.
+			a.registerTypeParam(st, &fieldSet, e.Name.Name)
+			a.storeExplicitConstraints(st, e.Name.Name, e.Constraints)
+			gt := &GenericType{Name: e.Name.Name}
+			a.currentScope.Define(&Symbol{Name: e.Name.Name, Type: gt, Node: e.Name})
+			lastExprTypes = nil
+
 		case *ast.Ident:
 			// Generic type param declaration (T, E inside type boc body).
 			// Register as GenericType in current scope and record on the struct.
 			if e.TokType == token.GENERIC_IDENT {
-				st.TypeParams = append(st.TypeParams, e.Name)
-				// Also add as an IsTypeField so b.T member access and constructor
-				// type-argument matching work correctly (Phase A of YZC-0066).
-				if !fieldSet[e.Name] {
-					fieldSet[e.Name] = true
-					st.Fields = append(st.Fields, StructField{Name: e.Name, Type: TypMeta, IsTypeField: true})
-				}
+				a.registerTypeParam(st, &fieldSet, e.Name)
 			}
 			gt := &GenericType{Name: e.Name}
 			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
@@ -2301,6 +2312,32 @@ func isUppercaseName(name string) bool {
 		return false
 	}
 	return unicode.IsUpper(rune(name[0]))
+}
+
+// registerTypeParam adds the type param name to st.TypeParams and creates an
+// IsTypeField entry so member access and constructor matching work correctly.
+func (a *Analyzer) registerTypeParam(st *StructType, fieldSet *map[string]bool, name string) {
+	st.TypeParams = append(st.TypeParams, name)
+	if !(*fieldSet)[name] {
+		(*fieldSet)[name] = true
+		st.Fields = append(st.Fields, StructField{Name: name, Type: TypMeta, IsTypeField: true})
+	}
+}
+
+// storeExplicitConstraints resolves the TypeExpr constraints and stores their
+// interface names in st.ExplicitConstraints[paramName].
+func (a *Analyzer) storeExplicitConstraints(st *StructType, paramName string, constraints []ast.TypeExpr) {
+	if len(constraints) == 0 {
+		return
+	}
+	if st.ExplicitConstraints == nil {
+		st.ExplicitConstraints = make(map[string][]string)
+	}
+	for _, c := range constraints {
+		if ste, ok := c.(*ast.SimpleTypeExpr); ok {
+			st.ExplicitConstraints[paramName] = append(st.ExplicitConstraints[paramName], ste.Name)
+		}
+	}
 }
 
 // collectGenericNames adds all GenericType names found in t (recursively) to

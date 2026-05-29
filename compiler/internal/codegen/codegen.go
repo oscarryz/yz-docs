@@ -100,18 +100,12 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 	}
 
 	// Build type parameter strings for generic structs.
-	// typeConstraints: "[T any]" or "[T interface{...}]" for declarations; typeArgs: "[T]" for references.
+	// typeConstraints: "[T any]", "[T Talker]", or "[T interface{A;B}]" for declarations;
+	// typeArgs: "[T]" for references.
 	typeConstraints := ""
 	typeArgs := ""
 	if len(sd.TypeParams) > 0 {
-		var constraintParts []string
-		for _, tp := range sd.TypeParams {
-			if sigs, ok := sd.TypeConstraints[tp]; ok && len(sigs) > 0 {
-				constraintParts = append(constraintParts, tp+" interface{ "+strings.Join(sigs, "; ")+" }")
-			} else {
-				constraintParts = append(constraintParts, tp+" any")
-			}
-		}
+		constraintParts := buildTypeParamConstraints(sd.TypeParams, sd.ExplicitConstraints, sd.TypeConstraints)
 		typeConstraints = "[" + strings.Join(constraintParts, ", ") + "]"
 		typeArgs = "[" + strings.Join(sd.TypeParams, ", ") + "]"
 	}
@@ -1047,18 +1041,12 @@ func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
 	discType := "_" + sd.Name + "Variant"
 
 	// Build type parameter strings for generic variants.
-	// typeConstraints: "[V any]" or "[V interface{...}]" for declarations; typeArgs: "[V]" for references.
+	// typeConstraints: "[V any]", "[V Talker]", or "[V interface{A;B}]" for declarations;
+	// typeArgs: "[V]" for references.
 	typeConstraints := ""
 	typeArgs := ""
 	if len(sd.TypeParams) > 0 {
-		var constraintParts []string
-		for _, tp := range sd.TypeParams {
-			if sigs, ok := sd.TypeConstraints[tp]; ok && len(sigs) > 0 {
-				constraintParts = append(constraintParts, tp+" interface{ "+strings.Join(sigs, "; ")+" }")
-			} else {
-				constraintParts = append(constraintParts, tp+" any")
-			}
-		}
+		constraintParts := buildTypeParamConstraints(sd.TypeParams, sd.ExplicitConstraints, sd.TypeConstraints)
 		typeConstraints = "[" + strings.Join(constraintParts, ", ") + "]"
 		typeArgs = "[" + strings.Join(sd.TypeParams, ", ") + "]"
 	}
@@ -1308,11 +1296,39 @@ func formatTypeParams(tps []string) string {
 	if len(tps) == 0 {
 		return ""
 	}
-	constraints := make([]string, len(tps))
+	parts := make([]string, len(tps))
 	for i, tp := range tps {
-		constraints[i] = tp + " any"
+		parts[i] = tp + " any"
 	}
-	return "[" + strings.Join(constraints, ", ") + "]"
+	return "[" + strings.Join(parts, ", ") + "]"
+}
+
+// buildTypeParamConstraints returns the per-param constraint string for a
+// Go generic parameter list. It checks explicit constraints first (source-declared
+// interface names like "Talker"), falling back to inferred method-signature
+// constraints, and finally to "any".
+//
+//   - 0 explicit, 0 inferred → "T any"
+//   - 1 explicit              → "T Talker"
+//   - 2+ explicit             → "T interface{ Talker; Serializable }"
+//   - 0 explicit, n inferred  → "T interface{ MethodSig; ... }" (existing behaviour)
+func buildTypeParamConstraints(typeParams []string, explicit, inferred map[string][]string) []string {
+	parts := make([]string, len(typeParams))
+	for i, tp := range typeParams {
+		if names, ok := explicit[tp]; ok && len(names) > 0 {
+			switch len(names) {
+			case 1:
+				parts[i] = tp + " " + names[0]
+			default:
+				parts[i] = tp + " interface{ " + strings.Join(names, "; ") + " }"
+			}
+		} else if sigs, ok := inferred[tp]; ok && len(sigs) > 0 {
+			parts[i] = tp + " interface{ " + strings.Join(sigs, "; ") + " }"
+		} else {
+			parts[i] = tp + " any"
+		}
+	}
+	return parts
 }
 
 func formatResults(results []string) string {

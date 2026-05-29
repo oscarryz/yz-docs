@@ -47,8 +47,9 @@ type StructDecl struct {
 	NoConstructor   bool
 	IsVariant       bool
 	Variants        []*IRVariantCase
-	TypeParams      []string            // formal type params for generic variants (e.g., ["V"])
-	TypeConstraints map[string][]string // typeParam → Go interface method signature strings
+	TypeParams          []string            // formal type params for generic variants (e.g., ["V"])
+	TypeConstraints     map[string][]string // typeParam → Go interface method signature strings (inferred)
+	ExplicitConstraints map[string][]string // typeParam → explicit interface names from source (e.g., ["Talker"])
 }
 
 // IRVariantCase is one constructor arm of a variant struct.
