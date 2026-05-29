@@ -33,6 +33,7 @@ YZC-0012 -- Multiple return values -- M
 YZC-0027 -- `:` as Type Alias -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
+YZC-0072 -- Inline anonymous interface constraint in type params: V #(method #(T)) -- S  
 YZC-0071 -- Implicit constraint synthesis for type params used in method params -- M  
 YZC-0070 -- Anonymous boc literal as structural interface value -- M  
 YZC-0068 -- GoStore type mismatch for path-dependent return types -- S  
@@ -65,7 +66,7 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
 # Details
 
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0072**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0073**.
 
 ---
 
@@ -399,6 +400,65 @@ emits the struct type + methods without a constructor function.
 - [ ] Sema — type boc literals with inner boc fields as anonymous `StructType`
 - [ ] Lowerer — emit anonymous Go struct type + methods; collect as `anonDecls`
 - [ ] Golden test 77 — anonymous boc literal satisfying interface constraint
+
+### YZC-0072 — Inline anonymous interface constraint in type params: `V #(method #(T))`
+
+Allow a generic type parameter to be constrained by an inline anonymous interface signature instead of requiring a named interface:
+
+```yz
+// Desired — inline constraint, no separate Describable declaration needed
+Box: {
+    V #( describe #(String) )
+    value V
+}
+
+// Equivalent to (already works):
+Describable #( describe #(String) )
+Box: {
+    V Describable
+    value V
+}
+```
+
+#### Analysis of related syntax
+
+**`Foo #(describe #(String))`** (named, no body) — already supported via `analyzeBocDeclNode`. Any uppercase-name boc declaration with no body creates a structural interface. You can then use `V Foo` as an explicit constraint (YZC-0026). So the named form is fully working.
+
+**`foo #(describe #(String)) = { describe: { "hola" } }`** — this is a concrete boc implementation in expanded form; `describe` is a callback parameter. Not a type constraint — this is a call signature.
+
+**`V #( describe #(String) )`** — NOT currently supported. The parser sees `GENERIC_IDENT` followed by `#` (not `TYPE_IDENT`), falls through to `parseTypedDecl`, and treats `V` as a field name with boc type `#(describe #(String))`. This creates a regular boc-typed field called `V`, not a constrained type parameter.
+
+#### Required changes
+
+**Parser** — in `parseStatement`, before the `GENERIC_IDENT TYPE_IDENT` → `parseTypeParamDecl` check, add:
+
+```go
+// V #(...) — type param with inline anonymous constraint
+if tok.Type == token.GENERIC_IDENT && p.peekAt(token.HASH) {
+    return p.parseInlineConstraintTypeParam()
+}
+```
+
+`parseInlineConstraintTypeParam` should:
+1. Consume the GENERIC_IDENT (name)
+2. Parse the `#(...)` as a `BocTypeExpr` (reuse `parseBocTypeExpr`)
+3. Return a `TypeParamDecl{Name: name, InlineConstraint: bocTypeExpr}`
+
+**AST** — add `InlineConstraint *BocTypeExpr` to `TypeParamDecl` (alongside the existing `Constraints []TypeExpr` for named constraints).
+
+**Sema** — in `storeExplicitConstraints` (or new helper): when `InlineConstraint` is present, synthesise an anonymous interface name (e.g. `_V_constraint`) and register it as a `StructType{IsInterface:true}` in the current scope, then store it as the explicit constraint for the type param.
+
+**IR/Codegen** — no changes needed; the explicit constraint path already handles named interfaces; the anonymous one just gets a generated name.
+
+#### Acceptance criteria
+
+`Box: { V #(describe #(String)); value V; desc #(String) { value.describe() } }` compiles and runs without a separate named interface declaration.
+
+- [ ] AST — `TypeParamDecl.InlineConstraint *ast.BocTypeExpr`
+- [ ] Parser — detect `GENERIC_IDENT HASH` and route to `parseInlineConstraintTypeParam`
+- [ ] Sema — synthesise anonymous interface from inline constraint; store as explicit constraint
+- [ ] Golden test 78 — `V #(method #(T))` inline constraint used and satisfied
+- [ ] Spec 04 — document inline constraint syntax
 
 ### YZC-0071 — Implicit constraint synthesis for type params used in method params
 
