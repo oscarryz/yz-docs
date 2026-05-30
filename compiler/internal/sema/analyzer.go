@@ -955,6 +955,15 @@ func (a *Analyzer) analyzeBocDeclNode(bd *ast.BocDecl) Type {
 	if len(returns) == 0 {
 		returns = []Type{TypUnit}
 	}
+	// When a method body's sole inferred return type is Unknown (e.g. a call on
+	// a generic type param: value.hola()) and there is no explicit return type,
+	// treat the method as returning Unit. Unknown here means "can't resolve" not
+	// "returns a concrete non-Unit type", and the method is called for side effects.
+	if len(returns) == 1 && len(explicitReturns) == 0 && bd.Body != nil {
+		if _, isUnknown := returns[0].(*UnknownType); isUnknown {
+			returns = []Type{TypUnit}
+		}
+	}
 
 	bocType := &BocType{Params: inputParams, Returns: returns}
 	fqn := a.currentFQN(bd.Name.Name)
@@ -1280,6 +1289,13 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 		}
 	}
 
+	// YZC-0073: synthesize anonymous interface constraints for user-defined method
+	// calls on generic type params when no named interface is in scope.
+	// E.g. value.hola() where V has no named Holer → synthesize _StructVConstraint.
+	if isGeneric && a.activeConstraints != nil {
+		a.synthesizeConstraints(st, name)
+	}
+
 	// Freeze the inferred constraints into the struct type and restore outer state.
 	if isGeneric {
 		if len(a.activeConstraints) > 0 {
@@ -1501,20 +1517,22 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 		if memExpr, ok := c.Callee.(*ast.MemberExpr); ok {
 			objType := a.analyzeExpr(memExpr.Object)
 			if gt, ok := objType.(*GenericType); ok {
+				// Analyze args first so ParamTypes are available for constraint synthesis.
+				var paramTypes []Type
+				for _, arg := range c.Args {
+					paramTypes = append(paramTypes, a.analyzeExpr(arg.Value))
+				}
 				a.activeConstraints[gt.Name] = append(a.activeConstraints[gt.Name], &GenericConstraint{
 					TypeParam:  gt.Name,
 					MethodName: memExpr.Member.Name,
+					ParamTypes: paramTypes,
 					Line:       memExpr.Member.Pos.Line,
 					Col:        memExpr.Member.Pos.Col,
 					Context:    a.activeContext,
 				})
-				// Analyze args for their side-effects (scope bindings, nested analysis).
-				for _, arg := range c.Args {
-					a.analyzeExpr(arg.Value)
-				}
 				// Try to infer the return type from a matching interface method signature.
-				// This lets the boc body's return type be concrete (e.g. Unit) rather
-				// than Unknown, so codegen emits the correct Go return type (YZC-0071).
+				// Default to Unit when no named interface is found — user-defined methods
+				// called for side effects (discarded result) return Unit (YZC-0071/0073).
 				retType := a.findInterfaceMethodReturnType(memExpr.Member.Name)
 				a.setType(c.Callee, &BocType{Returns: []Type{retType}})
 				return retType
@@ -2416,6 +2434,68 @@ func (a *Analyzer) storeInlineConstraint(st *StructType, structName, paramName s
 		st.ExplicitConstraints = make(map[string][]string)
 	}
 	st.ExplicitConstraints[paramName] = append(st.ExplicitConstraints[paramName], syntheticName)
+}
+
+// builtinOpMethods is the set of method names that correspond to Yz built-in
+// operators and std-library methods. These are handled by constraintGoSigs in
+// the lowerer (builtinConstraintSig) and must NOT be synthesized as anonymous
+// interface constraints. Must stay in sync with lower.go:builtinConstraintSig.
+var builtinOpMethods = map[string]bool{
+	"to_string": true, "to_str": true, "length": true,
+	"plus": true, "minus": true, "star": true, "slash": true, "percent": true,
+	"lt": true, "gt": true, "lteq": true, "gteq": true,
+	"eqeq": true, "neq": true, "ampamp": true, "pipepipe": true,
+}
+
+// synthesizeConstraints creates anonymous interface constraints for type params
+// whose inferred method-call constraints (activeConstraints) cannot be satisfied
+// by any named interface already in scope (YZC-0073). For each such constraint,
+// a synthetic interface `_StructTPConstraint` is registered at file scope and
+// added to st.ExplicitConstraints so the lowerer emits it as a Go interface.
+func (a *Analyzer) synthesizeConstraints(st *StructType, structName string) {
+	for tp, constraints := range a.activeConstraints {
+		// Skip type params that already have explicit constraints.
+		if _, hasExplicit := st.ExplicitConstraints[tp]; hasExplicit {
+			continue
+		}
+		// Collect unique user-defined methods that need synthesis.
+		type methodSig struct {
+			paramTypes []Type
+		}
+		methodsToSynth := make(map[string]methodSig)
+		for _, c := range constraints {
+			if builtinOpMethods[c.MethodName] {
+				continue
+			}
+			if a.FindInterfaceWithMethod(c.MethodName) != "" {
+				continue // a named interface covers this method; lowerer handles it
+			}
+			if _, already := methodsToSynth[c.MethodName]; !already {
+				methodsToSynth[c.MethodName] = methodSig{paramTypes: c.ParamTypes}
+			}
+		}
+		if len(methodsToSynth) == 0 {
+			continue
+		}
+		// Build the synthetic interface.
+		syntheticName := "_" + structName + tp + "Constraint"
+		iface := &StructType{Name: syntheticName, IsInterface: true}
+		for methodName, sig := range methodsToSynth {
+			params := make([]BocParam, len(sig.paramTypes))
+			for i, t := range sig.paramTypes {
+				params[i] = BocParam{Type: t}
+			}
+			iface.Fields = append(iface.Fields, StructField{
+				Name: methodName,
+				Type: &BocType{Params: params, Returns: []Type{TypUnit}},
+			})
+		}
+		a.fileScope.Define(&Symbol{Name: syntheticName, Type: iface})
+		if st.ExplicitConstraints == nil {
+			st.ExplicitConstraints = make(map[string][]string)
+		}
+		st.ExplicitConstraints[tp] = append(st.ExplicitConstraints[tp], syntheticName)
+	}
 }
 
 // collectGenericNames adds all GenericType names found in t (recursively) to

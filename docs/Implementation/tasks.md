@@ -1,8 +1,10 @@
 #impl
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0074**.
+
 # Yz Compiler Implementation
 
 ## Status
-- **78 golden + 22 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **80 golden + 22 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -62,10 +64,6 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 ---
 
 # Details
-
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0073**.
-
----
 
 ## Bugs
 
@@ -503,6 +501,21 @@ Three bugs fixed:
 - [x] Fix constraint recording: `ExplicitConstraints` updated in both sema and IR
 - [x] Fix return type: `findInterfaceMethodReturnType` infers concrete return type from matching interface
 - [x] Golden test 79 — `Wrapper[V Holer]` inferred from `value.hola()` in method param
+
+### [x] YZC-0073 — Synthesize anonymous interface constraint when no named interface in scope ✓
+
+When a generic type param `V` has methods called on it but no named interface exists in the file scope
+that matches those method names, the compiler synthesizes an internal `_StructVConstraint` interface
+and emits it as a Go interface before the struct declaration.
+
+Example: `Wrapper: { V; item V; doIt #(value V) { value.hola() } }` with no `Holer` interface declared
+generates `type _WrapperVConstraint interface { Hola() *std.Thunk[std.Unit] }` and
+`type Wrapper[V _WrapperVConstraint] struct { ... }`.
+
+- [x] Sema — `synthesizeConstraints`: generates `_StructVConstraint` `StructType` for non-builtin methods not matched by named interface
+- [x] Sema — registers synthesized interface in file scope; adds to `ExplicitConstraints`
+- [x] Lowerer — `emitSyntheticInterface` already handles `_`-prefixed names; no lowerer change needed
+- [x] Golden test 80 — synthesized constraint (no named interface in scope)
 
 ### YZC-0027 — `:` as Type Alias
 

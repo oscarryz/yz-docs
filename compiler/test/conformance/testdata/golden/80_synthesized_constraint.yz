@@ -1,0 +1,3 @@
+HolerImpl: { hola #() = { print("hola") } }
+Wrapper: { V; item V; doIt #(value V) { value.hola() } }
+main: { h : HolerImpl(); w : Wrapper(item: h); w.doIt(h) }

@@ -375,6 +375,7 @@ func (t *DictType) String() string { return t.typeName() }
 type GenericConstraint struct {
 	TypeParam  string // which type param needs this (e.g. "T")
 	MethodName string // required method name (e.g. "to_string", "eqeq")
+	ParamTypes []Type // arg types at the call site (for constraint synthesis)
 	Line       int    // source line where this call appears in the generic body
 	Col        int    // source column
 	Context    string // "StructName.methodName" — which method requires this
