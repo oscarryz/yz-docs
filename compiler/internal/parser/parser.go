@@ -113,15 +113,21 @@ func (p *Parser) parseStatement() (ast.Node, error) {
 		return p.parseMultiNameStmt()
 	}
 
+	// Check for constrained type param declaration in a type body: `T Bound1 Bound2...`
+	// or inline anonymous constraint: `V #(method #(T))`. These must come before
+	// isBocDeclStart because GENERIC_IDENT followed by HASH would otherwise be
+	// parsed as a BocDecl (abstract type declaration).
+	// A bare `T` with no following TYPE_IDENT or HASH is handled as a plain expression.
+	if tok.Type == token.GENERIC_IDENT && p.peekAt(token.TYPE_IDENT) {
+		return p.parseTypeParamDecl()
+	}
+	if tok.Type == token.GENERIC_IDENT && p.peekAt(token.HASH) {
+		return p.parseInlineConstraintTypeParam()
+	}
+
 	// Check for BocDecl: `name #(...)` or `name #(...) { ... }` or `name #(...) = { ... }`
 	if p.isBocDeclStart() {
 		return p.parseBocDecl()
-	}
-
-	// Check for constrained type param declaration in a type body: `T Bound1 Bound2...`
-	// A bare `T` with no following TYPE_IDENT is handled as a plain expression (IdentExpr).
-	if tok.Type == token.GENERIC_IDENT && p.peekAt(token.TYPE_IDENT) {
-		return p.parseTypeParamDecl()
 	}
 
 	// Check for TypedDecl: `name TypeName` or `name TypeName = expr`
@@ -1156,6 +1162,21 @@ func (p *Parser) parseTypeParamDecl() (*ast.TypeParamDecl, error) {
 	name := &ast.Ident{Pos: pos, Name: tok.Literal, TokType: token.GENERIC_IDENT}
 	constraints := p.parseConstraintList()
 	return &ast.TypeParamDecl{Pos: pos, Name: name, Constraints: constraints}, nil
+}
+
+// parseInlineConstraintTypeParam parses `V #(method #(T))` — a type param with an
+// inline anonymous interface constraint instead of a named one.
+func (p *Parser) parseInlineConstraintTypeParam() (*ast.TypeParamDecl, error) {
+	pos := p.curPos()
+	tok := p.cur()
+	p.advance() // consume GENERIC_IDENT
+	name := &ast.Ident{Pos: pos, Name: tok.Literal, TokType: token.GENERIC_IDENT}
+	p.advance() // consume HASH
+	inline, err := p.parseBocTypeExpr()
+	if err != nil {
+		return nil, err
+	}
+	return &ast.TypeParamDecl{Pos: pos, Name: name, InlineConstraint: inline}, nil
 }
 
 // ---------------------------------------------------------------------------

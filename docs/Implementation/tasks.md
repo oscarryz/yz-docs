@@ -33,7 +33,6 @@ YZC-0012 -- Multiple return values -- M
 YZC-0027 -- `:` as Type Alias -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
-YZC-0072 -- Inline anonymous interface constraint in type params: V #(method #(T)) -- S  
 YZC-0071 -- Implicit constraint synthesis for type params used in method params -- M  
 YZC-0070 -- Anonymous boc literal as structural interface value -- M  
 YZC-0068 -- GoStore type mismatch for path-dependent return types -- S  
@@ -401,7 +400,7 @@ emits the struct type + methods without a constructor function.
 - [ ] Lowerer — emit anonymous Go struct type + methods; collect as `anonDecls`
 - [ ] Golden test 77 — anonymous boc literal satisfying interface constraint
 
-### YZC-0072 — Inline anonymous interface constraint in type params: `V #(method #(T))`
+### [x] YZC-0072 — Inline anonymous interface constraint in type params: `V #(method #(T))` ✓
 
 Allow a generic type parameter to be constrained by an inline anonymous interface signature instead of requiring a named interface:
 
@@ -454,10 +453,11 @@ if tok.Type == token.GENERIC_IDENT && p.peekAt(token.HASH) {
 
 `Box: { V #(describe #(String)); value V; desc #(String) { value.describe() } }` compiles and runs without a separate named interface declaration.
 
-- [ ] AST — `TypeParamDecl.InlineConstraint *ast.BocTypeExpr`
-- [ ] Parser — detect `GENERIC_IDENT HASH` and route to `parseInlineConstraintTypeParam`
-- [ ] Sema — synthesise anonymous interface from inline constraint; store as explicit constraint
-- [ ] Golden test 78 — `V #(method #(T))` inline constraint used and satisfied
+- [x] AST — `TypeParamDecl.InlineConstraint *ast.BocTypeExpr`
+- [x] Parser — detect `GENERIC_IDENT HASH` before `isBocDeclStart`; route to `parseInlineConstraintTypeParam`
+- [x] Sema — `storeInlineConstraint` synthesises `_StructParamConstraint` at file scope; stored in `ExplicitConstraints`
+- [x] Lowerer — `emitSyntheticInterface` emits `InterfaceDecl` for synthetic names before the struct
+- [x] Golden test 78 — `V #(method #(T))` inline constraint used and satisfied
 - [ ] Spec 04 — document inline constraint syntax
 
 ### YZC-0071 — Implicit constraint synthesis for type params used in method params

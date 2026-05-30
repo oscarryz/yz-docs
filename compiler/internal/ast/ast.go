@@ -442,11 +442,13 @@ type BocParam struct {
 // TypeParamDecl is a constrained type parameter declaration used inside a boc body.
 // It is produced when a body statement begins with GENERIC_IDENT TYPE_IDENT+,
 // e.g. `V Talker` or `T Serializable Comparable`.
+// It is also produced for `V #(method #(T))` inline anonymous constraints.
 // Without constraints (bare `V`), the parser emits a plain *Ident expression instead.
 type TypeParamDecl struct {
 	Pos
-	Name        *Ident     // the GENERIC_IDENT token
-	Constraints []TypeExpr // one or more constraint interface names
+	Name             *Ident       // the GENERIC_IDENT token
+	Constraints      []TypeExpr   // one or more named constraint interface names
+	InlineConstraint *BocTypeExpr // anonymous inline constraint: V #(method #(T))
 }
 
 func (d *TypeParamDecl) stmtNode() {}

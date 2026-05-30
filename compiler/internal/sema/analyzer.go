@@ -1138,9 +1138,12 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			lastExprTypes = nil
 
 		case *ast.TypeParamDecl:
-			// Constrained type param declaration in a type body: `V Talker` or `T A B`.
+			// Constrained type param declaration: `V Talker`, `T A B`, or `V #(m #(T))`.
 			a.registerTypeParam(st, &fieldSet, e.Name.Name)
 			a.storeExplicitConstraints(st, e.Name.Name, e.Constraints)
+			if e.InlineConstraint != nil {
+				a.storeInlineConstraint(st, name, e.Name.Name, e.InlineConstraint)
+			}
 			gt := &GenericType{Name: e.Name.Name}
 			a.currentScope.Define(&Symbol{Name: e.Name.Name, Type: gt, Node: e.Name})
 			lastExprTypes = nil
@@ -2338,6 +2341,30 @@ func (a *Analyzer) storeExplicitConstraints(st *StructType, paramName string, co
 			st.ExplicitConstraints[paramName] = append(st.ExplicitConstraints[paramName], ste.Name)
 		}
 	}
+}
+
+// storeInlineConstraint synthesises an anonymous interface StructType from an
+// inline BocTypeExpr constraint (e.g. V #(describe #(String))). It registers
+// the interface at file scope under a generated name (_StructParamConstraint) so
+// the lowerer can find it, then stores that name as the explicit constraint.
+func (a *Analyzer) storeInlineConstraint(st *StructType, structName, paramName string, inline *ast.BocTypeExpr) {
+	syntheticName := "_" + structName + paramName + "Constraint"
+	params := a.resolveBocSigParams(inline, false)
+
+	iface := &StructType{Name: syntheticName, IsInterface: true}
+	for _, p := range params {
+		if !p.IsReturn && p.Label != "" {
+			iface.Fields = append(iface.Fields, StructField{Name: p.Label, Type: p.Type})
+		}
+	}
+
+	// Register at file scope so the lowerer can find it via LookupInFile.
+	a.fileScope.Define(&Symbol{Name: syntheticName, Type: iface})
+
+	if st.ExplicitConstraints == nil {
+		st.ExplicitConstraints = make(map[string][]string)
+	}
+	st.ExplicitConstraints[paramName] = append(st.ExplicitConstraints[paramName], syntheticName)
 }
 
 // collectGenericNames adds all GenericType names found in t (recursively) to

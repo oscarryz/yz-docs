@@ -275,6 +275,21 @@ func (l *lowerer) buildInterfaceDecl(name string, st *sema.StructType) *Interfac
 	return id
 }
 
+// emitSyntheticInterface looks up a sema-synthesised interface by name (these
+// start with "_") and appends its InterfaceDecl to the current IR file so it
+// appears in the Go output before the struct that references it.
+func (l *lowerer) emitSyntheticInterface(name string) {
+	sym := l.analyzer.LookupInFile(name)
+	if sym == nil {
+		return
+	}
+	st, ok := sym.Type.(*sema.StructType)
+	if !ok || !st.IsInterface {
+		return
+	}
+	l.irFile.Decls = append(l.irFile.Decls, l.buildInterfaceDecl(name, st))
+}
+
 // lowerTypeOnlyDecl lowers `Name #(params)` (no body) into a Go struct
 // declaration without a constructor. The struct type exists so it can be used
 // as a parameter/variable type; instances cannot be created until a body is
@@ -1332,6 +1347,13 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 							sd.ExplicitConstraints = make(map[string][]string)
 						}
 						sd.ExplicitConstraints[tp] = explicit
+						// Inline constraints (synthetic names starting with "_") need a
+						// Go interface declaration emitted before this struct.
+						for _, cName := range explicit {
+							if strings.HasPrefix(cName, "_") {
+								l.emitSyntheticInterface(cName)
+							}
+						}
 					} else if constraints, has := st.TypeConstraints[tp]; has {
 						sigs := constraintGoSigs(constraints, tp)
 						if len(sigs) > 0 {
@@ -1443,13 +1465,29 @@ func (l *lowerer) lowerVariantBoc(name string, b *ast.BocLiteral) *StructDecl {
 		}
 		if tpd, ok := elem.(*ast.TypeParamDecl); ok {
 			sd.TypeParams = append(sd.TypeParams, tpd.Name.Name)
-			// Propagate explicit constraints (interface names) to the IR struct.
+			// Propagate named explicit constraints from AST.
 			for _, c := range tpd.Constraints {
 				if ste, ok2 := c.(*ast.SimpleTypeExpr); ok2 {
 					if sd.ExplicitConstraints == nil {
 						sd.ExplicitConstraints = make(map[string][]string)
 					}
 					sd.ExplicitConstraints[tpd.Name.Name] = append(sd.ExplicitConstraints[tpd.Name.Name], ste.Name)
+				}
+			}
+			// Propagate inline anonymous constraints from sema ExplicitConstraints.
+			if tpd.InlineConstraint != nil {
+				if vSym := l.analyzer.LookupInFile(name); vSym != nil {
+					if vSt, ok2 := vSym.Type.(*sema.StructType); ok2 {
+						for _, cName := range vSt.ExplicitConstraints[tpd.Name.Name] {
+							if strings.HasPrefix(cName, "_") {
+								l.emitSyntheticInterface(cName)
+								if sd.ExplicitConstraints == nil {
+									sd.ExplicitConstraints = make(map[string][]string)
+								}
+								sd.ExplicitConstraints[tpd.Name.Name] = append(sd.ExplicitConstraints[tpd.Name.Name], cName)
+							}
+						}
+					}
 				}
 			}
 			continue
