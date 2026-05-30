@@ -3,6 +3,7 @@
 //
 // Usage:
 //
+//	yzc [dir]           Build and run the project in dir (default ".")
 //	yzc build [dir]     Compile and build the project in dir (default ".")
 //	yzc run   [dir]     Build and immediately run the project
 //	yzc new   <name>    Create a new Yz project skeleton
@@ -16,9 +17,13 @@ import (
 var version = "dev"
 
 func main() {
+	// No arguments: run the current directory.
 	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
+		if err := cmdRun("."); err != nil {
+			fmt.Fprintf(os.Stderr, "yzc: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	switch os.Args[1] {
@@ -56,16 +61,20 @@ func main() {
 		fmt.Printf("yzc %s\n", version)
 
 	default:
-		fmt.Fprintf(os.Stderr, "yzc: unknown command %q\n", os.Args[1])
-		printUsage()
-		os.Exit(1)
+		// Treat an unrecognised first argument as a directory to run.
+		if err := cmdRun(os.Args[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "yzc: %v\n", err)
+			os.Exit(1)
+		}
 	}
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr, `Usage: yzc <command> [arguments]
+	fmt.Fprintln(os.Stderr, `Usage: yzc [dir]
+       yzc <command> [arguments]
 
 Commands:
+  [dir]          Build and run the project (default dir: ".")
   build [dir]    Compile and build the project (default dir: ".")
   run   [dir]    Build and run the project
   new   <name>   Create a new Yz project
