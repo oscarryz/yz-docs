@@ -1,0 +1,20 @@
+// YZC-0074: bind site violation — concrete type lacks required method.
+// Graph.Node is bounded by #(label #(String)).
+// Pixel has no label() method → passing PixelGraph as Graph is a compile error.
+
+Graph: { Node #(label #(String)) }
+
+Pixel: {
+    x Int
+    y Int
+}
+
+PixelGraph: { Node: Pixel }
+
+describe #(g Graph, node g.Node) { print(node.label()) }
+
+main: {
+    pg: PixelGraph()
+    p: Pixel(x: 1, y: 2)
+    describe(pg, p)
+}

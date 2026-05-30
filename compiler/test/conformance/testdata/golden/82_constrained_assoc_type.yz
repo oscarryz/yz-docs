@@ -1,0 +1,22 @@
+// YZC-0074: constrained associated types.
+// Graph declares Node #(label #(String)) — Node must support label().
+// describe() calls node.label() which is valid because Node is bounded.
+// PointGraph binds Node: Point; Point has label() → satisfies the constraint.
+
+Graph: { Node #(label #(String)) }
+
+Point: {
+    x Int
+    y Int
+    label #(String) = { "${x},${y}" }
+}
+
+PointGraph: { Node: Point }
+
+describe #(g Graph, node g.Node) { print(node.label()) }
+
+main: {
+    pg: PointGraph()
+    p: Point(x: 1, y: 2)
+    describe(pg, p)
+}

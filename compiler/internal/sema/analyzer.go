@@ -1188,6 +1188,19 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			lastExprTypes = nil
 
 		case *ast.TypeParamDecl:
+			if e.Name.TokType == token.TYPE_IDENT {
+				// YZC-0074: `Node Sizer` — named associated type with a named-type bound.
+				var bound Type
+				if len(e.Constraints) == 1 {
+					bound = a.resolveTypeExpr(e.Constraints[0])
+				}
+				if !fieldSet[e.Name.Name] {
+					fieldSet[e.Name.Name] = true
+					st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: TypMeta, IsTypeField: true, Bound: bound})
+				}
+				lastExprTypes = nil
+				continue
+			}
 			// Constrained type param declaration: `V Talker`, `T A B`, or `V #(m #(T))`.
 			a.registerTypeParam(st, &fieldSet, e.Name.Name)
 			a.storeExplicitConstraints(st, e.Name.Name, e.Constraints)
@@ -1209,14 +1222,18 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			lastExprTypes = nil
 
 		case *ast.BocDecl:
-			// `TypeName #()` with no body and empty signature: abstract type field.
-			// Declares that this struct requires a concrete type to be bound to TypeName
-			// at instantiation. Equivalent to an associated type in Rust/Swift.
-			if e.Name.TokType == token.TYPE_IDENT && e.Body == nil &&
-				e.Sig != nil && len(e.Sig.Params) == 0 {
+			// `TypeName #(...)` with no body: abstract associated type field.
+			// Empty sig (#()) = unconstrained; non-empty sig (#(method #(T))) = constrained bound.
+			// Equivalent to an associated type in Rust/Swift.
+			if e.Name.TokType == token.TYPE_IDENT && e.Body == nil && e.Sig != nil {
+				var bound Type
+				if len(e.Sig.Params) > 0 {
+					// YZC-0074: inline constraint — build an anonymous interface from the sig params.
+					bound = a.buildAssocTypeBound(name, e.Name.Name, e.Sig)
+				}
 				if !fieldSet[e.Name.Name] {
 					fieldSet[e.Name.Name] = true
-					st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: TypMeta, IsTypeField: true})
+					st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: TypMeta, IsTypeField: true, Bound: bound})
 				}
 				lastExprTypes = nil
 				continue
@@ -1648,6 +1665,45 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 				}
 			}
 		}
+		// YZC-0074: verify associated type bounds when a concrete graph type is passed
+		// as a formal interface param that declares bounded associated types.
+		for i, param := range bt.Params {
+			if param.IsReturn || i >= len(argTypes) {
+				continue
+			}
+			paramSt, ok := param.Type.(*StructType)
+			if !ok {
+				continue
+			}
+			argSt, ok := argTypes[i].(*StructType)
+			if !ok {
+				continue
+			}
+			for _, pf := range paramSt.Fields {
+				if !pf.IsTypeField || pf.Bound == nil {
+					continue
+				}
+				// Find the matching type field in the actual arg struct.
+				for _, af := range argSt.Fields {
+					if af.Name != pf.Name || !af.IsTypeField {
+						continue
+					}
+					if _, isMeta := af.Type.(*MetaType); !isMeta {
+						// Concrete binding: verify it satisfies the bound.
+						if !af.Type.IsCompatibleWith(pf.Bound) {
+							pos := c.Callee.Position()
+							if i < len(c.Args) {
+								pos = c.Args[i].Value.Position()
+							}
+							a.errorf(pos,
+								"YZC-0074: %s.%s (type %s) does not satisfy the required bound %s",
+								argSt.Name, af.Name, af.Type.typeName(), pf.Bound.typeName())
+						}
+					}
+					break
+				}
+			}
+		}
 		// Phase C (YZC-0066): unify formal params against actual arg types to
 		// resolve any generic type variables and path-dependent types in the return.
 		bindings := make(map[string]Type)
@@ -1921,6 +1977,26 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 			return &BocType{Returns: []Type{ot}}
 		}
 		return Unknown // extensible — no error for unknown array methods
+	case *PathDependentType:
+		// YZC-0074: `node.label()` where node has type `g.Node` — resolve via bound.
+		// Look up the param `g` in scope to find Graph's Node field and its bound.
+		var paramType Type
+		if sym := a.currentScope.Lookup(ot.Param); sym != nil {
+			paramType = sym.Type
+		} else if a.currentSigParams != nil {
+			paramType = a.currentSigParams[ot.Param]
+		}
+		if paramType != nil {
+			if st, ok := paramType.(*StructType); ok {
+				for _, f := range st.Fields {
+					if f.Name == ot.Member && f.IsTypeField && f.Bound != nil {
+						return a.fieldType(f.Bound, fieldName, pos)
+					}
+				}
+			}
+		}
+		a.errorf(pos, "type %s has no field %q (associated type has no bound)", ot.typeName(), fieldName)
+		return Unknown
 	case *UnknownType:
 		return Unknown
 	default:
@@ -2434,6 +2510,24 @@ func (a *Analyzer) storeInlineConstraint(st *StructType, structName, paramName s
 		st.ExplicitConstraints = make(map[string][]string)
 	}
 	st.ExplicitConstraints[paramName] = append(st.ExplicitConstraints[paramName], syntheticName)
+}
+
+// buildAssocTypeBound synthesises an anonymous interface StructType from an
+// inline BocTypeExpr constraint on an abstract associated type field
+// (e.g. Node #(label #(String))). The interface is registered at file scope
+// under a generated name (_StructFieldBound) so the lowerer can emit it, and
+// its StructType is stored in StructField.Bound.
+func (a *Analyzer) buildAssocTypeBound(structName, fieldName string, sig *ast.BocTypeExpr) *StructType {
+	syntheticName := "_" + structName + fieldName + "Bound"
+	params := a.resolveBocSigParams(sig, false)
+	iface := &StructType{Name: syntheticName, IsInterface: true}
+	for _, p := range params {
+		if !p.IsReturn && p.Label != "" {
+			iface.Fields = append(iface.Fields, StructField{Name: p.Label, Type: p.Type})
+		}
+	}
+	a.fileScope.Define(&Symbol{Name: syntheticName, Type: iface})
+	return iface
 }
 
 // builtinOpMethods is the set of method names that correspond to Yz built-in

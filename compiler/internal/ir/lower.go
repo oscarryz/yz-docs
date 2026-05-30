@@ -1301,6 +1301,15 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 	// emit as Go interface declarations.
 	if sym := l.analyzer.LookupInFile(name); sym != nil {
 		if st, ok := sym.Type.(*sema.StructType); ok && st.IsInterface {
+			// YZC-0074: emit bound interfaces for constrained associated type fields
+			// before the interface that references them.
+			for _, f := range st.Fields {
+				if f.IsTypeField && f.Bound != nil {
+					if bst, ok := f.Bound.(*sema.StructType); ok && strings.HasPrefix(bst.Name, "_") {
+						l.emitSyntheticInterface(bst.Name)
+					}
+				}
+			}
 			return l.buildInterfaceDecl(name, st)
 		}
 	}
@@ -2598,6 +2607,12 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		if _, isGenInst := objType.(*sema.GenericInstType); isGenInst {
 			return true
 		}
+		// YZC-0074: method call on a path-dependent typed variable (node g.Node)
+		// where the associated type has a bound interface. The bound's methods return
+		// *Thunk[T], so this is a boc method call.
+		if _, isPDT := objType.(*sema.PathDependentType); isPDT {
+			return true
+		}
 		// Generic type param with explicit Yz interface constraint (V Describable):
 		// methods on such params go through the interface's Yz boc methods, which
 		// return *Thunk. Inferred constraints use direct-return Go interface methods.
@@ -3526,6 +3541,14 @@ func (l *lowerer) sigParams(sig *ast.BocTypeExpr, bt *sema.BocType) []*ParamSpec
 			if p.IsReturn || p.Label == "" {
 				continue
 			}
+			// YZC-0074: for PathDependentType params (e.g. node g.Node), resolve the
+			// Go type via the formal BocType params — goTypeFromTypeExpr can't find
+			// function-level param `g` because it's not a file-level symbol.
+			if pdt, ok := p.Type.(*sema.PathDependentType); ok {
+				goTyp := l.resolvePDTGoType(pdt, bt)
+				params = append(params, &ParamSpec{Name: p.Label, Type: goTyp})
+				continue
+			}
 			goTyp := l.goType(p.Type) // default: sema-resolved type
 			if astTE, ok := astParamByLabel[p.Label]; ok {
 				goTyp = l.goTypeFromTypeExpr(astTE) // prefer AST (preserves TypeArgs)
@@ -3534,6 +3557,33 @@ func (l *lowerer) sigParams(sig *ast.BocTypeExpr, bt *sema.BocType) []*ParamSpec
 		}
 	}
 	return params
+}
+
+// resolvePDTGoType returns the Go type string for a PathDependentType parameter
+// (e.g. node g.Node) by looking up `g`'s type among the formal BocType params
+// and finding the associated type field's bound interface.
+func (l *lowerer) resolvePDTGoType(pdt *sema.PathDependentType, bt *sema.BocType) string {
+	for _, param := range bt.Params {
+		if param.Label != pdt.Param {
+			continue
+		}
+		if st, ok := param.Type.(*sema.StructType); ok {
+			for _, f := range st.Fields {
+				if f.Name == pdt.Member && f.IsTypeField {
+					if _, isMeta := f.Type.(*sema.MetaType); isMeta {
+						// YZC-0074: use bound interface if available.
+						if f.Bound != nil {
+							return l.goType(f.Bound)
+						}
+						return "any"
+					}
+					return l.goType(f.Type)
+				}
+			}
+		}
+		break
+	}
+	return "any"
 }
 
 // collectSigTypeParams scans a BocTypeExpr's param type expressions and
@@ -3778,6 +3828,10 @@ func (l *lowerer) goTypeFromTypeExpr(te ast.TypeExpr) string {
 			for _, f := range st.Fields {
 				if f.Name == t.Member && f.IsTypeField {
 					if _, isMeta := f.Type.(*sema.MetaType); isMeta {
+						// YZC-0074: use bound interface if available.
+						if f.Bound != nil {
+							return l.goType(f.Bound)
+						}
 						return "any"
 					}
 					return l.goType(f.Type)

@@ -178,6 +178,7 @@ type StructField struct {
 	Type        Type
 	HasDefault  bool // true when declared via ShortDecl (has an initializer); false = required param
 	IsTypeField bool // field holds a type value (bare GENERIC_IDENT); compile-time only, no runtime slot
+	Bound       Type // non-nil when IsTypeField=true: interface constraint on the associated type
 }
 
 // VariantCase is one constructor in a sum type (variant type).
@@ -245,6 +246,15 @@ func (t *StructType) IsCompatibleWith(target Type) bool {
 			}
 			if !srcType.IsCompatibleWith(tf.Type) {
 				return false
+			}
+			// YZC-0074: if target has a bound on an abstract type field, verify
+			// that the source's concrete binding satisfies the bound structurally.
+			if tf.IsTypeField && tf.Bound != nil {
+				if _, isMeta := srcType.(*MetaType); !isMeta {
+					if !srcType.IsCompatibleWith(tf.Bound) {
+						return false
+					}
+				}
 			}
 		}
 		return true

@@ -124,6 +124,13 @@ func (p *Parser) parseStatement() (ast.Node, error) {
 	if tok.Type == token.GENERIC_IDENT && p.peekAt(token.HASH) {
 		return p.parseInlineConstraintTypeParam()
 	}
+	// YZC-0074: `Node Sizer` — named associated type with a named-type bound.
+	// TYPE_IDENT followed by TYPE_IDENT (both uppercase, multi-letter).
+	// Reuses TypeParamDecl so sema can detect the TYPE_IDENT name and handle it
+	// as a constrained associated type field rather than a generic type param.
+	if tok.Type == token.TYPE_IDENT && p.peekAt(token.TYPE_IDENT) {
+		return p.parseTypeParamDecl()
+	}
 
 	// Check for BocDecl: `name #(...)` or `name #(...) { ... }` or `name #(...) = { ... }`
 	if p.isBocDeclStart() {
@@ -1158,8 +1165,8 @@ func (p *Parser) peekAt(t token.Type) bool {
 func (p *Parser) parseTypeParamDecl() (*ast.TypeParamDecl, error) {
 	pos := p.curPos()
 	tok := p.cur()
-	p.advance() // consume GENERIC_IDENT
-	name := &ast.Ident{Pos: pos, Name: tok.Literal, TokType: token.GENERIC_IDENT}
+	p.advance() // consume GENERIC_IDENT or TYPE_IDENT
+	name := &ast.Ident{Pos: pos, Name: tok.Literal, TokType: tok.Type}
 	constraints := p.parseConstraintList()
 	return &ast.TypeParamDecl{Pos: pos, Name: name, Constraints: constraints}, nil
 }

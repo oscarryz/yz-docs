@@ -1,10 +1,10 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0075**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0076**.
 
 # Yz Compiler Implementation
 
 ## Status
-- **81 golden + 22 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **83 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -29,7 +29,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0074 -- Constrained associated types: `Node #(method #(T))` / `Node Iface` -- M -- needs YZC-0030, YZC-0066  
+YZC-0075 -- Existential types over associated types (`Array Graph` hides `Node`) -- L -- *design* -- needs YZC-0074  
 YZC-0017 -- Dict optional access -- S  
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
 YZC-0012 -- Multiple return values -- M  
@@ -517,43 +517,54 @@ generates `type _WrapperVConstraint interface { Hola() *std.Thunk[std.Unit] }` a
 - [x] Lowerer — `emitSyntheticInterface` already handles `_`-prefixed names; no lowerer change needed
 - [x] Golden test 80 — synthesized constraint (no named interface in scope)
 
-### YZC-0074 — Constrained associated types
+### YZC-0075 — Existential types over associated types
 
-Currently `Node #()` in an interface is unconstrained — it means "any type". Because the
-compiler knows nothing about what `Node` can do, function bodies cannot call methods on
-values of type `g.Node`, making path-dependent typed parameters almost useless inside
-function bodies.
+See open question: `docs/Questions/Existential Types and Associated Types.md`
 
-The fix: allow the associated type field to carry an interface bound. Two equivalent forms
-(consistent with Yz's rule that every named type implies its interface):
+When two concrete graph types are placed in the same array (`[cg, sg]`), the element type generalises
+to `Graph` and `Node` becomes existential — the compiler knows it exists but not which concrete type
+it is. This ticket covers the full design and implementation of existential handling.
+
+Key design questions (from the open question doc):
+
+1. **Implicit vs explicit wildcard** — does `Array Graph` silently erase `Node`, or must the user
+   write `Array Graph{Node: #}` (or similar) to opt in?
+2. **Opaque-token rule** — a value produced by `g` (e.g. `g.firstNode()`) is known to have type
+   `g.Node`; passing it back to operations on the *same* `g` is safe, but not to a different graph.
+3. **Constraint interaction (YZC-0074)** — if `Node #(name #(String))`, the erased type still
+   satisfies the bound; `g.firstNode().name()` should be allowed on an existential `g.Node`.
+4. **Error message quality** — `visit(myGraphs[0], london)` should say something like
+   _"Node is existential here; cannot match against City"_.
+
+Scope (to be refined after design decision):
+
+- [ ] *design* — decide implicit vs explicit wildcard syntax; pick wildcard token (`#`, `?`, `_`)
+- [ ] Sema — represent existential associated types in the type system; track path identity (`g.Node` vs `h.Node`)
+- [ ] Sema — allow method calls on existential `g.Node` when the associated type is constrained (YZC-0074 bound)
+- [ ] Sema — error when an existential `g.Node` value is used with a different path root
+- [ ] Sema — good error message at the point where the existential causes a type mismatch
+- [ ] Conformance tests — array of mixed concrete graphs, opaque-token round-trip, constrained existential method call
+
+### [x] YZC-0074 — Constrained associated types ✓
+
+Allow associated type fields to carry an interface bound in two equivalent forms:
 
 ```yz
-// Inline anonymous interface — same syntax as YZC-0072 for generic type params:
-Graph: { Node #(size #(Int)) }
+// Inline anonymous interface:
+Graph: { Node #(label #(String)) }
 
-// Named type — Node must satisfy the interface of Sizer:
+// Named type as bound:
 Sizer: { size #(Int) }
 Graph: { Node Sizer }
 ```
 
-Both forms say the same thing: whatever concrete type is bound to `Node` must implement
-`size #(Int)`. Once the constraint is known, the compiler can:
-
-1. **In function bodies** — allow `node.size()` when `node : g.Node`; the constraint
-   gives the interface, just as explicit type constraints do for generic type params.
-2. **At bind sites** — verify the concrete type satisfies the constraint:
-   `CityGraph: { Node: City }` is valid only if `City` has `size #(Int)`.
-
-The two forms are semantically identical: in Yz every named type implies its interface,
-so `Node Sizer` and `Node #(size #(Int))` are interchangeable (when Sizer has exactly
-that one method). The compiler should treat them uniformly.
-
-- [ ] Sema — parse and store the interface bound on `IsTypeField` entries (extend `StructField` or `MetaType`)
-- [ ] Sema — at bind site, verify concrete type satisfies the bound
-- [ ] Sema — when resolving `g.Node` in a body, return the bound interface as the usable type so method calls type-check
-- [ ] Lowerer/codegen — propagate the constraint to the Go type bound on the associated type parameter
-- [ ] Error test — bind site violation: concrete type missing required method
-- [ ] Golden test — function body calls `node.size()` via constrained `g.Node`
+- [x] Sema — `StructField.Bound Type` stores the constraint; `buildAssocTypeBound` creates synthetic `_GraphNodeBound` interface from inline params; `TypeParamDecl` with TYPE_IDENT name handles `Node Sizer` form
+- [x] Sema — bind site check in `analyzeCall` (YZC-0074 error) + `IsCompatibleWith` check in `StructType`
+- [x] Sema — `fieldType` PathDependentType case returns bound interface so method calls type-check in bodies
+- [x] Parser — `TYPE_IDENT + TYPE_IDENT` case routes to `parseTypeParamDecl`; preserves actual token type
+- [x] Lowerer — `resolvePDTGoType` emits bound interface as Go type; `isBocMethodCall` extended for PDT-typed values; `lowerStructBoc` emits synthetic interfaces before the containing interface
+- [x] Error test 21 — bind site violation: concrete type missing required method
+- [x] Golden test 82 — function body calls `node.label()` via constrained `g.Node`; output `1,2`
 
 ### [x] YZC-0027 — `:` as Type Alias ✓
 
