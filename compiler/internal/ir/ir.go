@@ -28,6 +28,7 @@ func (*StructDecl) irDecl()    {}
 func (*SingletonDecl) irDecl() {}
 func (*FuncDecl) irDecl()      {}
 func (*InterfaceDecl) irDecl() {}
+func (*TypeAliasDecl) irDecl() {}
 
 // StructDecl represents a user-defined Go struct type (from an uppercase Yz boc).
 // Each call to the type creates a new instance via the generated constructor.
@@ -103,6 +104,12 @@ type InterfaceMethod struct {
 	Name       string
 	Params     []*ParamSpec
 	ResultType string // the T in *std.Thunk[T]
+}
+
+// TypeAliasDecl is a top-level type alias: `Bar : Foo` → `type Bar = Foo`.
+type TypeAliasDecl struct {
+	Name   string // alias name (e.g. "Bar")
+	Target string // Go target type name (e.g. "Foo")
 }
 
 // FieldSpec is one field in a struct with an optional initializer.

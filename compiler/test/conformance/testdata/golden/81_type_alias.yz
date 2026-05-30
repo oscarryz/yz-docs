@@ -1,0 +1,11 @@
+// YZC-0027 — type alias: Bar: Foo declares Bar as another name for Foo.
+// `Bar(name: "Bob")` constructs via NewFoo; type Bar = Foo in generated Go.
+Foo: { name String }
+Bar: Foo
+
+main: {
+    b1 : Foo(name: "Alice")
+    b2 : Bar(name: "Bob")
+    print(b1.name)
+    print(b2.name)
+}

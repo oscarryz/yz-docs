@@ -522,6 +522,15 @@ func (l *lowerer) lowerTopShortDecl(d *ast.ShortDecl) Decl {
 	name := d.Names[0]
 	bocLit, isBoc := d.Values[0].(*ast.BocLiteral)
 	if !isBoc {
+		// Type alias: uppercase name + bare-ident RHS that resolves to a struct type.
+		// e.g. `Bar : Foo` → `type Bar = Foo`
+		if isUppercase(name.Name) {
+			if ident, ok := d.Values[0].(*ast.Ident); ok {
+				if st, ok := l.analyzer.ExprType(d.Values[0]).(*sema.StructType); ok && st.Name == ident.Name {
+					return &TypeAliasDecl{Name: name.Name, Target: ident.Name}
+				}
+			}
+		}
 		// A simple `x: expr` at top level — treat as a singleton with one field.
 		return l.lowerSimpleTopDecl(name.Name, d.Values[0])
 	}
@@ -2461,7 +2470,7 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 				if hasNamedArgs(c.Args) {
 					args = l.lowerStructArgs(c.Args, st)
 				}
-				return &FuncCall{Func: &Ident{Name: "New" + id.Name}, Args: args}
+				return &FuncCall{Func: &Ident{Name: "New" + st.Name}, Args: args}
 			}
 			// BocDecl singletons: all calls (external and recursive) go through
 			// the package-level singleton so that foo.param persists and is

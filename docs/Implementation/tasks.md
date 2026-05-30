@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **80 golden + 22 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **81 golden + 22 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -32,7 +32,6 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 YZC-0017 -- Dict optional access -- S  
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
 YZC-0012 -- Multiple return values -- M  
-YZC-0027 -- `:` as Type Alias -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0070 -- Anonymous boc literal as structural interface value -- M  
@@ -517,15 +516,16 @@ generates `type _WrapperVConstraint interface { Hola() *std.Thunk[std.Unit] }` a
 - [x] Lowerer — `emitSyntheticInterface` already handles `_`-prefixed names; no lowerer change needed
 - [x] Golden test 80 — synthesized constraint (no named interface in scope)
 
-### YZC-0027 — `:` as Type Alias
+### [x] YZC-0027 — `:` as Type Alias ✓
 
-`Name : SomeType` declares a type alias. Depends on YZC-0066 for the unified model; can be implemented as a limited special form before YZC-0066 lands (emit `type Name = GoType` in Go, no `#()` metatype required).
+`Name : SomeType` declares a type alias. Sema already registers the alias with the target `*StructType`; lowerer detects uppercase-name + bare-ident RHS and emits a `TypeAliasDecl`; codegen emits `type Bar = Foo`. Constructor calls `Bar(...)` naturally lower to `NewFoo(...)` via `st.Name`.
 
-- [ ] Parser — distinguish from `Name TypeExpr` (typed decl) and `name : value` (short decl)
-- [ ] Sema — register alias; resolve as aliased type
-- [ ] Lowerer — emit `type Name = GoType`
-- [ ] Spec 04 — add
-- [ ] Deferred to YZC-0066: generic instantiation via alias (`StringList : List(String)`), associated type binding (`Node : User` inside a boc)
+- [x] Sema — `analyzeShortDecl` already registers `Bar` with `*StructType{Name:"Foo"}`; no parser change needed
+- [x] IR — `TypeAliasDecl{Name, Target}` added
+- [x] Lowerer — `lowerTopShortDecl` detects type alias; constructor calls use `st.Name` (not callee id)
+- [x] Codegen — emits `type Name = Target`
+- [x] Golden test 81 — `Bar: Foo`; both `Foo(...)` and `Bar(...)` constructors work
+- [ ] Generic instantiation (`StringList : List(String)`) — deferred
 
 ### [x] YZC-0066 — Associated Types: `#()` metatype, T fields, type aliases, call-site unification ✓
 

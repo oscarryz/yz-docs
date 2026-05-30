@@ -74,6 +74,9 @@ func (g *generator) emitDecl(d ir.Decl) {
 		g.emitSingletonDecl(decl)
 	case *ir.FuncDecl:
 		g.emitFuncDecl(decl)
+	case *ir.TypeAliasDecl:
+		g.linef("type %s = %s", decl.Name, decl.Target)
+		g.nl()
 	}
 }
 
