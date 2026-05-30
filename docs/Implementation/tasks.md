@@ -33,7 +33,6 @@ YZC-0012 -- Multiple return values -- M
 YZC-0027 -- `:` as Type Alias -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
-YZC-0071 -- Implicit constraint synthesis for type params used in method params -- M  
 YZC-0070 -- Anonymous boc literal as structural interface value -- M  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
@@ -486,79 +485,24 @@ if tok.Type == token.GENERIC_IDENT && p.peekAt(token.HASH) {
 - [x] Golden test 78 — `V #(method #(T))` inline constraint used and satisfied
 - [ ] Spec 04 — document inline constraint syntax
 
-### YZC-0071 — Implicit constraint synthesis for type params used in method params
+### [x] YZC-0071 — Implicit constraint synthesis for type params used in method params ✓
 
-When a struct has a bare type param `V` (no explicit constraint) and a method uses `V` as a **method parameter type** and calls methods on it, the compiler must infer the required constraint from those calls and emit it in the Go type parameter.
+When a bare type param `V` appears as a **method parameter type** and methods are called on it,
+the compiler infers the required interface constraint and emits it in the Go type parameter.
 
-#### Problem
+Three bugs fixed:
+1. `analyzeStructBoc` YZC-0067 check: structs with method bodies were incorrectly classified as
+   Go interfaces when they had no concrete data fields. Added `hasBocBody` guard.
+2. `constraintGoSigs` skipped user-defined method names. The lowerer now calls
+   `analyzer.FindInterfaceWithMethod` to find matching named interfaces and upgrades
+   inferred `TypeConstraints` to `ExplicitConstraints` (both sema and IR).
+3. `analyzeCall` returned `Unknown` for method calls on generic type params, so codegen
+   emitted `any` return type. Now calls `findInterfaceMethodReturnType` to get the concrete type.
 
-The existing inferred-constraint mechanism (`activeConstraints`) works when `V` is a struct **field** type and methods are called via `self.field.method()`. It does NOT currently work when `V` appears as a method **parameter** type:
-
-```yz
-Foo: {
-    V
-    do #(value V) {
-        value.hola()   // V must have hola() — but constraint is NOT inferred
-    }
-}
-```
-
-Generated Go fails: `V any` doesn't have `hola()`.
-
-#### Desired behaviour
-
-The compiler synthesises the constraint from usage. Two equivalent spellings the user may use:
-
-**Option A — named interface** (compiler generates):
-```yz
-Foo: {
-    V Holer    // compiler synthesises Holer
-    ...
-}
-Holer: {
-    hola #()
-}
-```
-
-**Option B — inline constraint syntax** (user writes):
-```yz
-Foo: {
-    V #( hola #() )
-    ...
-}
-```
-
-For now, Option A (infer from method-param usage, emit as `interface{ ... }` inline in Go type param, same as the existing field-usage path) is sufficient.
-
-#### Root cause
-
-`analyzeCall` records constraints when `a.activeConstraints != nil` and the receiver is `*GenericType`. This fires for field accesses because `self.value.hola()` resolves `self.value` to `*GenericType{V}`. But for a method parameter `value V`, the resolution of `value` inside the method body also returns `*GenericType{V}` — so the same path *should* fire.
-
-Investigate whether `activeConstraints` is nil when the method body is entered (e.g. if `analyzeBocDeclNode` clears it), or if there is a scope/resolution issue preventing `value` from being typed as `*GenericType` inside the method body.
-
-#### Acceptance criteria
-
-```yz
-Foo: {
-    V
-    do #(value V) {
-        value.hola()
-    }
-}
-Holer: {
-    hola #()
-}
-main: {
-    h : Holer()
-    Foo(do: h)
-}
-```
-Compiles and runs without explicit `V Holer` in `Foo`.
-
-- [ ] Investigate why `activeConstraints` doesn't fire for method-param receivers
-- [ ] Fix constraint recording for method-param usage of generic type params
-- [ ] Golden test 78 — bare `V` inferred from method-param usage
-- [ ] Spec 04 — document implicit constraint inference
+- [x] Fix interface classification: structs with method bodies are not interfaces
+- [x] Fix constraint recording: `ExplicitConstraints` updated in both sema and IR
+- [x] Fix return type: `findInterfaceMethodReturnType` infers concrete return type from matching interface
+- [x] Golden test 79 — `Wrapper[V Holer]` inferred from `value.hola()` in method param
 
 ### YZC-0027 — `:` as Type Alias
 

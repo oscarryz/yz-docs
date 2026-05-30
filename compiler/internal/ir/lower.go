@@ -1362,6 +1362,47 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 							}
 							sd.TypeConstraints[tp] = sigs
 						}
+						// For user-defined method constraints, find the matching named
+						// interface in the file scope and add it as an explicit constraint
+						// (YZC-0071: implicit constraint synthesis from method-param usage).
+						for _, c := range constraints {
+							if _, isBuiltin := builtinConstraintSig[c.MethodName]; isBuiltin {
+								continue
+							}
+							ifaceName := l.analyzer.FindInterfaceWithMethod(c.MethodName)
+							if ifaceName == "" {
+								continue
+							}
+							// Update sema ExplicitConstraints so isBocMethodCall sees
+							// the constraint when lowering this struct's methods.
+							if st.ExplicitConstraints == nil {
+								st.ExplicitConstraints = make(map[string][]string)
+							}
+							inSema := false
+							for _, n := range st.ExplicitConstraints[tp] {
+								if n == ifaceName {
+									inSema = true
+									break
+								}
+							}
+							if !inSema {
+								st.ExplicitConstraints[tp] = append(st.ExplicitConstraints[tp], ifaceName)
+							}
+							// Also add to IR ExplicitConstraints for codegen emission.
+							if sd.ExplicitConstraints == nil {
+								sd.ExplicitConstraints = make(map[string][]string)
+							}
+							inIR := false
+							for _, n := range sd.ExplicitConstraints[tp] {
+								if n == ifaceName {
+									inIR = true
+									break
+								}
+							}
+							if !inIR {
+								sd.ExplicitConstraints[tp] = append(sd.ExplicitConstraints[tp], ifaceName)
+							}
+						}
 					}
 				}
 			}

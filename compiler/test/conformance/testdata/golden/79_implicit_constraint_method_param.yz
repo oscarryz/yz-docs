@@ -1,0 +1,25 @@
+// YZC-0071 — implicit constraint synthesis from method-param usage
+// V is used only as a method parameter type; no explicit constraint declared.
+// The compiler infers V must satisfy Holer from the value.hola() call.
+
+Holer: {
+    hola #()
+}
+
+HolerImpl: {
+    hola #() = { print("hola") }
+}
+
+Wrapper: {
+    V
+    item V
+    doIt #(value V) {
+        value.hola()
+    }
+}
+
+main: {
+    h : HolerImpl()
+    w : Wrapper(item: h)
+    w.doIt(h)
+}

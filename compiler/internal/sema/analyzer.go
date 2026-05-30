@@ -160,6 +160,46 @@ func (a *Analyzer) LookupInFile(name string) *Symbol {
 	return a.fileScope.Lookup(name)
 }
 
+// FindInterfaceWithMethod returns the name of an interface in the file scope
+// that has a method with the given name. Returns "" if not found.
+// Used by the lowerer to synthesise explicit constraints for bare type params
+// whose constraints are inferred from method-param usage (YZC-0071).
+func (a *Analyzer) FindInterfaceWithMethod(methodName string) string {
+	for _, sym := range a.fileScope.syms {
+		st, ok := sym.Type.(*StructType)
+		if !ok || !st.IsInterface {
+			continue
+		}
+		for _, f := range st.Fields {
+			if f.Name == methodName {
+				return st.Name
+			}
+		}
+	}
+	return ""
+}
+
+// findInterfaceMethodReturnType returns the return type of methodName from
+// the first matching interface in the file scope, or Unknown if not found.
+// Used in analyzeCall to give concrete return types to calls on generic params.
+func (a *Analyzer) findInterfaceMethodReturnType(methodName string) Type {
+	for _, sym := range a.fileScope.syms {
+		st, ok := sym.Type.(*StructType)
+		if !ok || !st.IsInterface {
+			continue
+		}
+		for _, f := range st.Fields {
+			if f.Name == methodName {
+				if bt, ok := f.Type.(*BocType); ok && len(bt.Returns) > 0 {
+					return bt.Returns[0]
+				}
+				return TypUnit
+			}
+		}
+	}
+	return Unknown
+}
+
 func (a *Analyzer) LastExpr() ast.Node { return a.lastExpr }
 
 // ExportedSymbols returns a snapshot of all symbols defined at file scope.
@@ -1073,6 +1113,7 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 	}
 	fieldSet := make(map[string]bool)
 	var lastExprTypes []Type
+	hasBocBody := false // true when any BocDecl element has a method body
 
 	// Pre-scan: detect whether this is a generic struct so we can activate
 	// constraint collection before processing method bodies.
@@ -1171,6 +1212,10 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 				lastExprTypes = nil
 				continue
 			}
+			// Track whether any method has a body (used in YZC-0067 interface check).
+			if e.Body != nil {
+				hasBocBody = true
+			}
 			// Set the constraint attribution context before analyzing the method body
 			// so that any T-method calls recorded during analysis are tagged correctly.
 			if a.activeConstraints != nil {
@@ -1246,19 +1291,22 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 
 	// YZC-0067: a struct whose fields are only abstract type fields (MetaType)
 	// and/or BocType method declarations — no concrete data — is a Go interface.
+	// A struct with any method body is NOT an interface (it has an implementation).
 	if !st.IsVariant && !st.IsSingleton {
-		isIface := true
-		for _, f := range st.Fields {
-			if f.IsTypeField {
-				if _, isMeta := f.Type.(*MetaType); !isMeta {
+		isIface := !hasBocBody
+		if isIface {
+			for _, f := range st.Fields {
+				if f.IsTypeField {
+					if _, isMeta := f.Type.(*MetaType); !isMeta {
+						isIface = false
+						break
+					}
+					continue
+				}
+				if _, isBoc := f.Type.(*BocType); !isBoc {
 					isIface = false
 					break
 				}
-				continue
-			}
-			if _, isBoc := f.Type.(*BocType); !isBoc {
-				isIface = false
-				break
 			}
 		}
 		st.IsInterface = isIface
@@ -1464,9 +1512,12 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 				for _, arg := range c.Args {
 					a.analyzeExpr(arg.Value)
 				}
-				// Tag the callee and call as producing Unknown so downstream analysis continues.
-				a.setType(c.Callee, &BocType{Returns: []Type{Unknown}})
-				return Unknown
+				// Try to infer the return type from a matching interface method signature.
+				// This lets the boc body's return type be concrete (e.g. Unit) rather
+				// than Unknown, so codegen emits the correct Go return type (YZC-0071).
+				retType := a.findInterfaceMethodReturnType(memExpr.Member.Name)
+				a.setType(c.Callee, &BocType{Returns: []Type{retType}})
+				return retType
 			}
 		}
 	}
