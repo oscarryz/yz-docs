@@ -2,7 +2,7 @@
 # Yz Compiler Implementation
 
 ## Status
-- **69 golden + 15 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **78 golden + 22 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -35,7 +35,6 @@ YZC-0038 -- `Result(T,E)` type -- M
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0071 -- Implicit constraint synthesis for type params used in method params -- M  
 YZC-0070 -- Anonymous boc literal as structural interface value -- M  
-YZC-0068 -- GoStore type mismatch for path-dependent return types -- S  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -610,7 +609,7 @@ YZC-0030 depends on this: path-dependent type params (`g Graph, n g.Node`) resol
 - [x] Golden test: Graph/SocialGraph/process — `process(sg, u)` compiles in Go with `sg *SocialGraph` satisfying `Graph` interface
 - [x] Verify existing `IsInterface` golden tests (structural typing tests) still pass
 
-### YZC-0068 — GoStore type mismatch for path-dependent return types
+### [x] YZC-0068 — GoStore type mismatch for path-dependent return types ✓
 
 Functions with path-dependent return types (e.g. `makeNode #(g Graph, g.Node)`) are emitted as singleton boc methods that return `*std.Thunk[any]` — Go does not support generic methods, so the return type cannot be parameterized. At the call site, sema correctly resolves the return type to a concrete type (e.g. `*User`) and the generated variable is `var node *User`, but `std.GoStore(_bg0, MakeNode.Call(sg), &node)` fails the Go type checker because the thunk is `*std.Thunk[any]` while the destination pointer is `*User`.
 
@@ -622,10 +621,9 @@ Options:
 
 Recommended: Option A (runtime helper) as the pragmatic fix; Option B as a follow-on if the generic method restriction is lifted.
 
-- [ ] Add `GoStoreAny[T any]` to `compiler/runtime/rt/rt.go` (or equivalent)
-- [ ] Codegen — when `GoStore` call has a `*Thunk[any]` source and a concrete `*T` dest, emit `GoStoreAny` instead
-- [ ] Update golden test 73 to reflect the corrected generated code
-- [ ] Verify `go test ./...` passes including end-to-end compilation of test 73
+- [x] Add `GoStoreAny[T any]` to `compiler/runtime/rt/core.go`
+- [x] Codegen — emit `GoStoreAny` when `GoStore` has a `*Thunk[any]` source and concrete `*T` dest
+- [x] Golden test 73 updated; end-to-end compilation verified
 
 ### [x] YZC-0069 — Call-site type variable unification (Phase C generics) ✓
 
