@@ -1,4 +1,4 @@
-.PHONY: build test test-race clean
+.PHONY: build test test-full test-race clean
 
 # Build the yzc compiler binary
 VERSION := $(shell git tag --sort=-version:refname 2>/dev/null | head -1 || echo "v0.0.0")-$(shell git rev-parse --short HEAD)
@@ -6,8 +6,12 @@ VERSION := $(shell git tag --sort=-version:refname 2>/dev/null | head -1 || echo
 build:
 	go build -ldflags "-X main.version=$(VERSION)" -o bin/yzc ./cmd/yzc
 
-# Run all tests
+# Run fast tests only — skips TestRuntime (use during development)
 test:
+	go test -short ./...
+
+# Run all tests including runtime output validation (~25s) — use at end of ticket or in CI
+test-full:
 	go test ./...
 
 # Run all tests with the race detector (use before committing concurrency changes)

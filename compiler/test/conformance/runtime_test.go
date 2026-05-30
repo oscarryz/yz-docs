@@ -13,7 +13,13 @@ import (
 // runs the generated binary in a temp directory, and asserts that stdout
 // matches the .output file. This catches runtime bugs (deadlocks, wrong
 // ordering, incorrect values) that the source-diff TestGolden cannot see.
+//
+// Skipped under `go test -short` — use that flag during development for a
+// faster feedback loop, and run without -short at the end of a ticket or in CI.
 func TestRuntime(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping runtime tests in short mode; run without -short for full validation")
+	}
 	const dir = "testdata/golden"
 	entries, err := os.ReadDir(dir)
 	if err != nil {
