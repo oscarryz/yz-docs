@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0074**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0075**.
 
 # Yz Compiler Implementation
 
@@ -29,6 +29,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
+YZC-0074 -- Constrained associated types: `Node #(method #(T))` / `Node Iface` -- M -- needs YZC-0030, YZC-0066  
 YZC-0017 -- Dict optional access -- S  
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
 YZC-0012 -- Multiple return values -- M  
@@ -515,6 +516,44 @@ generates `type _WrapperVConstraint interface { Hola() *std.Thunk[std.Unit] }` a
 - [x] Sema — registers synthesized interface in file scope; adds to `ExplicitConstraints`
 - [x] Lowerer — `emitSyntheticInterface` already handles `_`-prefixed names; no lowerer change needed
 - [x] Golden test 80 — synthesized constraint (no named interface in scope)
+
+### YZC-0074 — Constrained associated types
+
+Currently `Node #()` in an interface is unconstrained — it means "any type". Because the
+compiler knows nothing about what `Node` can do, function bodies cannot call methods on
+values of type `g.Node`, making path-dependent typed parameters almost useless inside
+function bodies.
+
+The fix: allow the associated type field to carry an interface bound. Two equivalent forms
+(consistent with Yz's rule that every named type implies its interface):
+
+```yz
+// Inline anonymous interface — same syntax as YZC-0072 for generic type params:
+Graph: { Node #(size #(Int)) }
+
+// Named type — Node must satisfy the interface of Sizer:
+Sizer: { size #(Int) }
+Graph: { Node Sizer }
+```
+
+Both forms say the same thing: whatever concrete type is bound to `Node` must implement
+`size #(Int)`. Once the constraint is known, the compiler can:
+
+1. **In function bodies** — allow `node.size()` when `node : g.Node`; the constraint
+   gives the interface, just as explicit type constraints do for generic type params.
+2. **At bind sites** — verify the concrete type satisfies the constraint:
+   `CityGraph: { Node: City }` is valid only if `City` has `size #(Int)`.
+
+The two forms are semantically identical: in Yz every named type implies its interface,
+so `Node Sizer` and `Node #(size #(Int))` are interchangeable (when Sizer has exactly
+that one method). The compiler should treat them uniformly.
+
+- [ ] Sema — parse and store the interface bound on `IsTypeField` entries (extend `StructField` or `MetaType`)
+- [ ] Sema — at bind site, verify concrete type satisfies the bound
+- [ ] Sema — when resolving `g.Node` in a body, return the bound interface as the usable type so method calls type-check
+- [ ] Lowerer/codegen — propagate the constraint to the Go type bound on the associated type parameter
+- [ ] Error test — bind site violation: concrete type missing required method
+- [ ] Golden test — function body calls `node.size()` via constrained `g.Node`
 
 ### [x] YZC-0027 — `:` as Type Alias ✓
 
