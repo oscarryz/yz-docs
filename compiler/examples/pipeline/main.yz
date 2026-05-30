@@ -1,0 +1,16 @@
+// Generic higher-order functions — filter, map, each.
+//
+// filter, map, and each accept boc literals as callbacks.
+// The element type (Int here) is inferred at each call site.
+//
+// Expected output:
+//   4
+//   8
+//   12
+
+main: {
+    nums:    [1, 2, 3, 4, 5, 6]
+    evens:   nums.filter({ n Int; n % 2 == 0 })
+    doubled: evens.map({ n Int; n * 2 })
+    doubled.each({ n Int; print(n) })
+}

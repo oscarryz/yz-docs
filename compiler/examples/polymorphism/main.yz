@@ -1,0 +1,40 @@
+// Polymorphism in Yz — structural typing: no "implements" keyword needed.
+//
+// Part 1 — Explicit interface:
+//   Speaker is declared as a structural interface.
+//   Any type with a speak() method satisfies it automatically.
+//
+// Part 2 — Implicit constraint synthesis:
+//   No interface is declared for greet().
+//   The compiler infers the constraint from value.greet() inside callOn()
+//   and synthesizes it internally.
+
+// --- Explicit structural interface ---
+
+Speaker: { speak #(String) }
+
+Dog: { name String; speak #(String) = { "Woof! I'm ${name}" } }
+Cat: { name String; speak #(String) = { "Meow, I'm ${name}" } }
+
+introduce #(s Speaker) { print(s.speak()) }
+
+// --- Implicit constraint synthesis ---
+
+Greeter: { greet #() = { print("Hello!") } }
+
+Wrapper: {
+    V
+    item V
+    callOn #(v V) { v.greet() }
+}
+
+main: {
+    // Explicit — Dog and Cat satisfy Speaker without any declaration.
+    introduce(Dog(name: "Rex"))
+    introduce(Cat(name: "Whiskers"))
+
+    // Implicit — compiler synthesizes the greet() constraint from usage.
+    g : Greeter()
+    w : Wrapper(item: g)
+    w.callOn(g)
+}

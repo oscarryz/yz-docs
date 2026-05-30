@@ -1,0 +1,19 @@
+// Type alias: Pet is another name for Animal.
+//
+// `Pet: Animal` copies Animal's full signature into Pet.
+// Both names refer to the same structural type — constructors are interchangeable.
+// In the generated Go this becomes `type Pet = Animal`.
+//
+// Expected output:
+//   Fluffy says meow
+//   Rex says woof
+
+Animal: { name String; sound String }
+Pet: Animal
+
+main: {
+    fluffy : Pet(name: "Fluffy", sound: "meow")
+    rex    : Animal(name: "Rex", sound: "woof")
+    print("${fluffy.name} says ${fluffy.sound}")
+    print("${rex.name} says ${rex.sound}")
+}

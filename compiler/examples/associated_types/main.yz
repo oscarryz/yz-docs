@@ -1,0 +1,39 @@
+// Associated types: each graph declares its own Node type.
+//
+// Graph is an interface with an abstract type field `Node #()`.
+// Concrete graphs bind Node to a specific type (City, Person, …).
+//
+// add() is polymorphic over any Graph: the second argument must be
+// the graph's own Node type — passing a Person to a CityGraph is a
+// compile-time type error.
+//
+// Expected output:
+//   added
+//   added
+//   London: 9000000
+//   Alice: 30
+
+Graph: { Node #() }
+
+City:   { name String; population Int }
+Person: { name String; age        Int }
+
+CityGraph:   { Node: City   }
+SocialGraph: { Node: Person }
+
+// node must match the concrete Node type of g at each call site.
+add #(g Graph, node g.Node, String) { "added" }
+
+main: {
+    cg: CityGraph()
+    sg: SocialGraph()
+
+    london: City(name: "London", population: 9000000)
+    alice:  Person(name: "Alice", age: 30)
+
+    print(add(cg, london))   // City   ✓ for CityGraph
+    print(add(sg, alice))    // Person ✓ for SocialGraph
+
+    print("${london.name}: ${london.population}")
+    print("${alice.name}: ${alice.age}")
+}
