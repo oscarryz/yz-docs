@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0076**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0077**.
 
 # Yz Compiler Implementation
 
@@ -29,7 +29,8 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0075 -- Existential types over associated types (`Array Graph` hides `Node`) -- L -- *design* -- needs YZC-0074  
+YZC-0075 -- Existential associated types: implicit erasure + constrained method calls + use-site errors -- M -- needs YZC-0074  
+YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
 YZC-0017 -- Dict optional access -- S  
 YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
 YZC-0012 -- Multiple return values -- M  
@@ -517,33 +518,59 @@ generates `type _WrapperVConstraint interface { Hola() *std.Thunk[std.Unit] }` a
 - [x] Lowerer — `emitSyntheticInterface` already handles `_`-prefixed names; no lowerer change needed
 - [x] Golden test 80 — synthesized constraint (no named interface in scope)
 
-### YZC-0075 — Existential types over associated types
+### YZC-0075 — Existential associated types: implicit erasure + constrained method calls + use-site errors
 
 See open question: `docs/Questions/Existential Types and Associated Types.md`
 
-When two concrete graph types are placed in the same array (`[cg, sg]`), the element type generalises
-to `Graph` and `Node` becomes existential — the compiler knows it exists but not which concrete type
-it is. This ticket covers the full design and implementation of existential handling.
+Phase 1: the tractable subset. When a concrete graph type is widened to `Graph` (e.g. placed in
+an array), `Node` becomes existential — present but unknown. This ticket handles the common cases
+without path-identity tracking.
 
-Key design questions (from the open question doc):
+Design decisions (settled):
+- **Implicit erasure**: `Array Graph` silently makes `Node` existential. No new syntax. The
+  limitation surfaces at use sites, not declaration sites.
+- **Constraint-based method calls**: if `Node #(name #(String))`, the bound (from YZC-0074) is
+  still known on an existential `g.Node`, so `g.firstNode().name()` is allowed via the bound
+  interface — no concrete type needed.
+- **Collections inference**: the array literal triggers generalisation when elements unify to
+  `Graph`; resolved at the literal site, not deferred to the binding.
 
-1. **Implicit vs explicit wildcard** — does `Array Graph` silently erase `Node`, or must the user
-   write `Array Graph{Node: #}` (or similar) to opt in?
-2. **Opaque-token rule** — a value produced by `g` (e.g. `g.firstNode()`) is known to have type
-   `g.Node`; passing it back to operations on the *same* `g` is safe, but not to a different graph.
-3. **Constraint interaction (YZC-0074)** — if `Node #(name #(String))`, the erased type still
-   satisfies the bound; `g.firstNode().name()` should be allowed on an existential `g.Node`.
-4. **Error message quality** — `visit(myGraphs[0], london)` should say something like
-   _"Node is existential here; cannot match against City"_.
+- [ ] Sema — detect when a path-dependent type's root is an abstract (interface) binding rather
+      than a concrete struct; mark as existential
+- [ ] Sema — allow method calls on existential `g.Node` when `Node` has a YZC-0074 bound;
+      resolve to the bound interface exactly as in the concrete case
+- [ ] Sema — error at the use site when an existential `g.Node` is used in a position that
+      requires a concrete type (e.g. passed to `visit(g, london)`)
+- [ ] Sema — error message: _"Node is existential here (g is Graph, not a specific graph type);
+      cannot match against City"_
+- [ ] Conformance tests — array of mixed concrete graphs; constrained method call on existential;
+      use-site error when concrete type required
 
-Scope (to be refined after design decision):
+### YZC-0076 — Existential associated types: opaque-token / path-identity tracking
 
-- [ ] *design* — decide implicit vs explicit wildcard syntax; pick wildcard token (`#`, `?`, `_`)
-- [ ] Sema — represent existential associated types in the type system; track path identity (`g.Node` vs `h.Node`)
-- [ ] Sema — allow method calls on existential `g.Node` when the associated type is constrained (YZC-0074 bound)
-- [ ] Sema — error when an existential `g.Node` value is used with a different path root
-- [ ] Sema — good error message at the point where the existential causes a type mismatch
-- [ ] Conformance tests — array of mixed concrete graphs, opaque-token round-trip, constrained existential method call
+Phase 2: the hard part. Deferred until YZC-0075 is done and there is real usage demand.
+
+A value *produced by* `g` (e.g. `token: g.firstNode()`) is statically known to have type
+`g.Node`. Passing `token` back to operations on the *same* `g` should be safe even when
+`g.Node` is existential — the compiler must track that `token` and `g` share the same
+existential witness.
+
+Key open questions (from the open question doc):
+1. **Scoping**: can an opaque token be stored in a field and used after `g` goes out of scope?
+   If not, the compiler needs something resembling lifetime analysis.
+2. **Path variables**: should existential witnesses be named in the type system (à la Scala
+   path-dependent types or Haskell `ST s`), or tracked implicitly?
+3. **Cross-root rejection**: `visit(otherGraph, token)` must be rejected when `token` was
+   produced by `g` — requires per-value path provenance.
+
+This ticket needs a design session before implementation begins.
+
+- [ ] *design* — decide path-variable representation in the type system
+- [ ] *design* — define scoping rules for opaque tokens (block-scoped vs field-storable)
+- [ ] Sema — tag values with their existential path root at the point of production
+- [ ] Sema — verify path roots match at call sites consuming opaque tokens
+- [ ] Sema — reject cross-root usage with a clear error
+- [ ] Conformance tests — opaque-token round-trip; cross-root rejection
 
 ### [x] YZC-0074 — Constrained associated types ✓
 
