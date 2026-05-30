@@ -1,6 +1,7 @@
 package rt
 
 import (
+	"strings"
 	"sync"
 	"testing"
 )
@@ -181,6 +182,72 @@ func TestDict(t *testing.T) {
 	}
 	if !d.Has(NewString("b")).GoBool() {
 		t.Error("Has")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Cycle detection in Stringify / StringifyRepr
+// ---------------------------------------------------------------------------
+
+type cycleNode struct {
+	val  Int
+	next *cycleNode
+}
+
+func (c *cycleNode) String() string {
+	return "cycleNode(val: " + StringifyRepr(c.val) + ", next: " + StringifyRepr(c.next) + ")"
+}
+
+func TestStringifyReprSelfCycle(t *testing.T) {
+	a := &cycleNode{val: NewInt(42)}
+	a.next = a
+	result := StringifyRepr(a)
+	if !strings.Contains(result, "cycleNode(...)") {
+		t.Errorf("expected cycle placeholder, got: %s", result)
+	}
+}
+
+func TestStringifyReprIndirectCycle(t *testing.T) {
+	a := &cycleNode{val: NewInt(1)}
+	b := &cycleNode{val: NewInt(2)}
+	a.next = b
+	b.next = a
+	result := StringifyRepr(a)
+	if !strings.Contains(result, "cycleNode(...)") {
+		t.Errorf("expected cycle placeholder, got: %s", result)
+	}
+}
+
+func TestStringifyNoCycleLinear(t *testing.T) {
+	a := &cycleNode{val: NewInt(1), next: &cycleNode{val: NewInt(2)}}
+	result := StringifyRepr(a)
+	if strings.Contains(result, "(...)") {
+		t.Errorf("unexpected cycle placeholder for linear chain: %s", result)
+	}
+	if !strings.Contains(result, "val: 1") || !strings.Contains(result, "val: 2") {
+		t.Errorf("missing values in output: %s", result)
+	}
+}
+
+func TestStringifyConcurrentSamePointer(t *testing.T) {
+	// Two goroutines printing the same non-cyclic node concurrently must not
+	// falsely detect a cycle in each other's traversal.
+	node := &cycleNode{val: NewInt(99)}
+	var wg sync.WaitGroup
+	results := make([]string, 4)
+	wg.Add(4)
+	for i := range 4 {
+		i := i
+		go func() {
+			results[i] = StringifyRepr(node)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	for i, r := range results {
+		if strings.Contains(r, "(...)") {
+			t.Errorf("goroutine %d: false cycle detection on non-cyclic node: %s", i, r)
+		}
 	}
 }
 

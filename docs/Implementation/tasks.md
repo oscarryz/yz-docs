@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0077**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0078**.
 
 # Yz Compiler Implementation
 
@@ -31,8 +31,9 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 
 YZC-0075 -- Existential associated types: implicit erasure + constrained method calls + use-site errors -- M -- needs YZC-0074  
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
+YZC-0077 -- Recursive struct types: cycle guard in IsCompatibleWith + sema support -- S  
 YZC-0017 -- Dict optional access -- S  
-YZC-0047 -- Cycle detection in homoiconic Stringify -- S  
+YZC-0047 -- Cycle detection in homoiconic Stringify -- S -- needs YZC-0077  
 YZC-0012 -- Multiple return values -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
@@ -255,9 +256,50 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
   sema checks for `to_str #(String)` on the interpolated type. Depends on: YZC-0020.
 
-- [ ] **[YZC-0047] Cycle detection in homoiconic `Stringify`**
+- [ ] **[YZC-0047] Cycle detection in homoiconic `Stringify`** — needs YZC-0077
 
-  thread a visited-pointer set through `Stringify`; emit `TypeName(...)` on re-entry.
+  - [x] Runtime — per-goroutine visited set in `Stringify`/`StringifyRepr` via `sync.Map`
+        keyed on `(goroutineID, ptr)`; cyclic references print as `TypeName(...)`
+  - [x] Runtime — nil pointer guard in both functions (interface-wrapped nil no longer panics)
+  - [x] Unit tests — self-cycle, indirect cycle, linear chain (no false positive), concurrent
+        same-pointer (four tests in `runtime/rt/rt_test.go`)
+  - [ ] Golden test — backtick-interpolate a cyclic `Node` value at the Yz source level;
+        requires YZC-0077 (recursive struct types) to land first
+
+- [ ] **[YZC-0077] Recursive struct types: cycle guard in `IsCompatibleWith` + sema support**
+
+  `Node: { value Int; next Node }` currently crashes the compiler with a stack overflow because
+  `IsCompatibleWith` recurses infinitely when comparing a struct type against itself.
+
+  The fix: thread a `map[*StructType]bool` visited set through `IsCompatibleWith`. When the same
+  `*StructType` pointer is encountered during its own field comparison, treat it as compatible
+  (a struct is always compatible with itself) and return early.
+
+  Once the crash is fixed, self-referential struct types are already valid at codegen level —
+  the lowerer emits struct fields of struct type as Go pointers (`next *Node`), which is valid
+  Go. No lowerer or codegen changes are needed.
+
+  Reproducer: `Node: { value Int; next Node }` with any constructor call — crashes the compiler.
+  Expected after fix: compiles cleanly; `Node(value: 1, next: Node(value: 2))` works; mutable
+  field assignment `b.next = a` creates a cycle that `Stringify` handles via YZC-0047.
+
+  - [ ] Sema — add `visited map[*StructType]bool` parameter to `IsCompatibleWith`; break on
+        self-reference (return `true` — a type is compatible with itself)
+  - [ ] (No lowerer/codegen change needed — pointer emission already correct)
+  - [ ] Golden test — two-element linked list printed via backtick interpolation to prove
+        YZC-0047's cycle detection works end-to-end at the Yz source level:
+
+    ```yz
+    Node: { value Int; next Node }
+    main: {
+        b: Node(value: 2)
+        a: Node(value: 1, next: b)
+        b.next = a
+        print("${a}")
+    }
+    ```
+
+    Expected output: `Node(value: 1, next: Node(value: 2, next: Node(...)))`
 
 - [x] **[YZC-0061] Structured singleton: TypedDecl-with-value field missing `self.`**
 

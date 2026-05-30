@@ -7,10 +7,60 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 )
+
+// ---------------------------------------------------------------------------
+// Cycle detection for Stringify
+// ---------------------------------------------------------------------------
+
+// stringifyInProgress tracks pointer addresses currently being stringified,
+// keyed by (goroutineID, pointer) to be safe under concurrent printing.
+var stringifyInProgress sync.Map // key: visitKey, value: struct{}
+
+type visitKey struct {
+	gid uint64
+	ptr uintptr
+}
+
+// goroutineID extracts the current goroutine's ID from the stack trace.
+// Used only for cycle detection in Stringify — not a hot path.
+func goroutineID() uint64 {
+	var buf [32]byte
+	n := runtime.Stack(buf[:], false)
+	s := string(buf[:n])
+	s = strings.TrimPrefix(s, "goroutine ")
+	if idx := strings.IndexByte(s, ' '); idx >= 0 {
+		id, _ := strconv.ParseUint(s[:idx], 10, 64)
+		return id
+	}
+	return 0
+}
+
+// markVisiting registers ptr as in-progress for the current goroutine.
+// Returns false if already visited (cycle detected), true if newly registered.
+// When true, the caller must call unmarkVisiting(ptr) when done.
+func markVisiting(v any) (uintptr, bool) {
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return 0, false
+	}
+	ptr := rv.Pointer()
+	key := visitKey{gid: goroutineID(), ptr: ptr}
+	_, loaded := stringifyInProgress.LoadOrStore(key, struct{}{})
+	if loaded {
+		return ptr, false // cycle
+	}
+	return ptr, true
+}
+
+func unmarkVisiting(ptr uintptr) {
+	stringifyInProgress.Delete(visitKey{gid: goroutineID(), ptr: ptr})
+}
 
 // ---------------------------------------------------------------------------
 // Int
@@ -230,8 +280,21 @@ func (u Unit) String() string { return "()" }
 // Stringify returns a human-readable string for any yzrt value.
 // It handles all boxed types plus raw Go values via fmt.Sprint.
 func Stringify(v any) string {
+	if v == nil {
+		return "_"
+	}
+	if rv := reflect.ValueOf(v); rv.Kind() == reflect.Ptr && rv.IsNil() {
+		return "_"
+	}
 	switch x := v.(type) {
 	case fmt.Stringer:
+		ptr, ok := markVisiting(v)
+		if !ok && ptr != 0 {
+			return YzTypeName(v) + "(...)"
+		}
+		if ok {
+			defer unmarkVisiting(ptr)
+		}
 		return x.String()
 	default:
 		return fmt.Sprint(v)
@@ -264,12 +327,27 @@ func YzTypeName(v any) string {
 // StringifyRepr returns a Yz-syntax representation of v.
 // Unlike Stringify, String values are quoted so they are distinguishable
 // from identifiers inside homoiconic output (backtick interpolation).
+// Cycles are detected per-goroutine; a cyclic reference prints as TypeName(...).
 func StringifyRepr(v any) string {
+	if v == nil {
+		return "_"
+	}
 	if s, ok := v.(String); ok {
 		return `"` + s.val + `"`
 	}
+	// Nil pointer wrapped in interface: don't call String() on it.
+	if rv := reflect.ValueOf(v); rv.Kind() == reflect.Ptr && rv.IsNil() {
+		return "_"
+	}
 	switch x := v.(type) {
 	case fmt.Stringer:
+		ptr, ok := markVisiting(v)
+		if !ok && ptr != 0 {
+			return YzTypeName(v) + "(...)"
+		}
+		if ok {
+			defer unmarkVisiting(ptr)
+		}
 		return x.String()
 	default:
 		return fmt.Sprint(v)
