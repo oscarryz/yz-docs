@@ -3,26 +3,38 @@
 // Graph is an interface with an abstract type field `Node #()`.
 // Concrete graphs bind Node to a specific type (City, Person, …).
 //
-// add() is polymorphic over any Graph: the second argument must be
-// the graph's own Node type — passing a Person to a CityGraph is a
-// compile-time type error.
+// The key benefit is in visit(): the same function works for any graph,
+// and the return type resolves to the graph's *concrete* Node type at each
+// call site — no `any`, no casting, no runtime type errors.
+//
+//   visit(cg, london) → caller gets back a City   → .population accessible
+//   visit(sg, alice)  → caller gets back a Person  → .age accessible
+//
+// Passing a Person to a CityGraph (or vice versa) is a compile-time type error.
 //
 // Expected output:
-//   added
-//   added
-//   London: 9000000
-//   Alice: 30
+//   London (pop. 9000000)
+//   Alice (age 30)
 
-Graph: { Node #() }
+Graph: {
+  Node #()
+}
 
-City:   { name String; population Int }
-Person: { name String; age        Int }
+City: {
+  name       String
+  population Int
+}
+Person: {
+  name String
+  age  Int
+}
 
 CityGraph:   { Node: City   }
 SocialGraph: { Node: Person }
 
-// node must match the concrete Node type of g at each call site.
-add #(g Graph, node g.Node, String) { "added" }
+// visit accepts any graph and a node of that graph's own type.
+// Returns the node typed as the graph's concrete Node type at each call site.
+visit #(g Graph, node g.Node, g.Node) { node }
 
 main: {
     cg: CityGraph()
@@ -31,9 +43,11 @@ main: {
     london: City(name: "London", population: 9000000)
     alice:  Person(name: "Alice", age: 30)
 
-    print(add(cg, london))   // City   ✓ for CityGraph
-    print(add(sg, alice))    // Person ✓ for SocialGraph
+    // city is typed as City here — .population is directly accessible.
+    city:   visit(cg, london)
+    print("${city.name} (pop. ${city.population})")
 
-    print("${london.name}: ${london.population}")
-    print("${alice.name}: ${alice.age}")
+    // person is typed as Person here — .age is directly accessible.
+    person: visit(sg, alice)
+    print("${person.name} (age ${person.age})")
 }
