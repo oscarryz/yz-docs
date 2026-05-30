@@ -43,7 +43,7 @@ YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
 YZC-0043 -- Captured variable reference semantics -- *design*  
 YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-0025  
-YZC-0008 -- Reentrant inline calls unsafe in HOF closures -- S -- dormant  
+YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
 YZC-0021 -- Directory and file bocs -- L  
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- needs YZC-0021  
 YZC-0022 -- Multiple source roots -- M  
@@ -98,9 +98,36 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
   test 51 had wrong ordering expectation; deleted `.output` sidecar. Golden source-diff test still passes.
 
-- [ ] **[YZC-0008] Reentrant inline calls unsafe in HOF closures**
+- [ ] **[YZC-0008] Same-cown reentrant scheduling deadlock**
 
-  closure inside `ScheduleMulti` body passed as argument contains sync-body calls that bypass cown acquisition; fix: sub-generator with `heldCowns = nil` when emitting closure args; dormant until HOF closures operate on cown-bearing types.
+  Any code path that calls `Schedule(&self.Cown, ...)` while already executing inside a closure
+  scheduled on `self.Cown` deadlocks — the outer task waits for its own completion.
+
+  **Known manifestations:**
+
+  1. **Local boc vars in main** (`37_local_boc_var` — confirmed deadlock with `TestRuntime`):
+     Local boc variables (`foo #(String) = { ... }`) are lowered as methods on the enclosing
+     singleton (`_mainBoc.Foo()`). When `Call()` — which holds `self.Cown` — calls
+     `self.Foo().Force()`, `Foo()` schedules on the same `self.Cown` → deadlock.
+
+  2. **HOF closures inside ScheduleMulti** (original case, still dormant):
+     A closure passed as a callback argument and generated inside a `ScheduleMulti` body
+     contains sync-body calls that assume the cown is held. If the closure escapes and is
+     invoked outside the multi-cown body, those calls fire without holding the cown — data race.
+
+  3. **Recursive local bocs** (was failing, now passing — see note):
+     A local boc `f` calling itself via `self.F(n-1).Force()` inside `f()` would re-acquire
+     `self.Cown` while held. This was the `39_local_boc_recursive` case; it currently passes,
+     likely because the recursive call is handled inline rather than scheduled.
+
+  **Root cause:** the lowerer emits all local boc vars as methods on the enclosing struct,
+  sharing its cown. There is no mechanism to detect or prevent a task re-scheduling on a cown
+  it already holds.
+
+  **Fix direction:** Phase E.1 (implicit BocGroup per scope) removes statement-position `.Force()`
+  calls, eliminating the blocking wait that causes the deadlock. Alternatively, local boc vars
+  could be lowered to plain Go closures (not cown-scheduled methods) when they don't capture
+  cown-bearing state — this would be a targeted fix without requiring the full Phase E rewrite.
 
 - [x] **[YZC-0035] Sema does not check boc body return type against declared output**
 
