@@ -44,10 +44,10 @@ main: {
     alice:  Person(name: "Alice", age: 30)
 
     // city is typed as City here — .population is directly accessible.
-    city:   visit(cg, london)
+    city City = visit(cg, london)
     print("${city.name} (pop. ${city.population})")
 
     // person is typed as Person here — .age is directly accessible.
-    person: visit(sg, alice)
+    person Person = visit(sg, alice)
     print("${person.name} (age ${person.age})")
 }

@@ -8,7 +8,10 @@
 //   Fluffy says meow
 //   Rex says woof
 
-Animal: { name String; sound String }
+Animal: {
+  name String
+  sound String
+}
 Pet: Animal
 
 main: {
