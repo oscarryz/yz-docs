@@ -51,9 +51,9 @@ func (self *_mainBoc) String() string {
 
 func (self *_mainBoc) call() any {
 	var s *Shape = NewShapeCircle(std.NewInt(5))
-	std.NewBool(s._variant == _ShapeCircle).Qm(func() std.Unit {
-		return std.Print(std.NewString("is a circle"))
-	})
+	if std.NewBool(s._variant == _ShapeCircle).GoBool() {
+		std.Print(std.NewString("is a circle"))
+	}
 	if std.NewBool(s._variant == _ShapeCircle).GoBool() {
 		std.Print(s.radius)
 	}
@@ -63,9 +63,10 @@ func (self *_mainBoc) call() any {
 		std.Print(std.NewString("not a rectangle"))
 	}
 	var is_circle std.Bool = std.NewBool(s._variant == _ShapeCircle)
-	return is_circle.Qm(func() std.Unit {
-		return std.Print(std.NewString("still a circle"))
-	})
+	if is_circle.GoBool() {
+		std.Print(std.NewString("still a circle"))
+	}
+	return std.TheUnit
 }
 
 func (self *_mainBoc) Call() *std.Thunk[any] {

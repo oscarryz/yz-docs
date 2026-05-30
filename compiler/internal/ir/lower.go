@@ -2531,6 +2531,15 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 				}
 			}
 		}
+		// Qualified variant constructor (Shape.Circle(5)) returns *Shape directly —
+		// not a thunk. Detect by looking up the base name at file scope.
+		if baseIdent, ok := mem.Object.(*ast.Ident); ok {
+			if baseSym := l.analyzer.LookupInFile(baseIdent.Name); baseSym != nil {
+				if st, ok := baseSym.Type.(*sema.StructType); ok && st.IsVariant {
+					return false
+				}
+			}
+		}
 		// Struct instance method call (n.hi() where n is *Named) → returns *Thunk.
 		objType := l.analyzer.ExprType(mem.Object)
 		if _, isStruct := objType.(*sema.StructType); isStruct {
@@ -2858,24 +2867,41 @@ func (l *lowerer) isSingletonBoc(expr Expr) bool {
 	return false
 }
 
-// tryLowerConditional detects a ConditionalExpr and lowers it to an IfStmt.
-// Returns (stmt, true) on match.
+// tryLowerConditional detects a ConditionalExpr or a one-armed `cond ? {body}`
+// BinaryExpr and lowers it to an IfStmt. Returns (stmt, true) on match.
 func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
-	cond, ok := e.(*ast.ConditionalExpr)
-	if !ok {
+	var condExpr Expr
+	var trueCase, falseCase ast.Expr
+
+	switch c := e.(type) {
+	case *ast.ConditionalExpr:
+		condExpr = l.lowerExpr(c.Cond)
+		trueCase = c.TrueCase
+		falseCase = c.FalseCase
+	case *ast.BinaryExpr:
+		if c.Op != "?" {
+			return nil, false
+		}
+		// `cond ? { body }` with no false branch — lower as one-armed if.
+		condExpr = l.lowerExpr(c.Left)
+		trueCase = c.Right
+		falseCase = nil
+	default:
 		return nil, false
 	}
-	condExpr := l.lowerExpr(cond.Cond)
+
 	var thenStmts, elseStmts []Stmt
-	if b, ok := cond.TrueCase.(*ast.BocLiteral); ok {
+	if b, ok := trueCase.(*ast.BocLiteral); ok {
 		thenStmts = l.lowerBocAsStmts(b)
 	} else {
-		thenStmts = []Stmt{&ExprStmt{Expr: l.lowerExpr(cond.TrueCase)}}
+		thenStmts = []Stmt{&ExprStmt{Expr: l.lowerExpr(trueCase)}}
 	}
-	if b, ok := cond.FalseCase.(*ast.BocLiteral); ok {
-		elseStmts = l.lowerBocAsStmts(b)
-	} else {
-		elseStmts = []Stmt{&ExprStmt{Expr: l.lowerExpr(cond.FalseCase)}}
+	if falseCase != nil {
+		if b, ok := falseCase.(*ast.BocLiteral); ok {
+			elseStmts = l.lowerBocAsStmts(b)
+		} else {
+			elseStmts = []Stmt{&ExprStmt{Expr: l.lowerExpr(falseCase)}}
+		}
 	}
 	return &IfStmt{Cond: condExpr, Then: thenStmts, Else: elseStmts}, true
 }

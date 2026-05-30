@@ -86,22 +86,19 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
+func (self *_mainBoc) call() std.Unit {
+	var s *Shape = NewShapeCircle(std.NewInt(5))
+	var c *Color = NewColorCircle(std.NewInt(180))
+	std.Print(s.radius)
+	std.Print(c.hue)
+	var s2 *Shape = NewShapeCircle(std.NewInt(10))
+	std.Print(s2.radius)
+	return std.TheUnit
+}
+
 func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
-		_bg0 := &std.BocGroup{}
-		var s *Shape
-		var c *Color
-		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bg0, NewShapeCircle(std.NewInt(5)), &s)
-			std.GoStore(_bg0, NewColorCircle(std.NewInt(180)), &c)
-			return std.TheUnit
-		}).Force()
-		_bg0.Wait()
-		std.Print(s.radius)
-		std.Print(c.hue)
-		var s2 *Shape = NewShapeCircle(std.NewInt(10))
-		std.Print(s2.radius)
-		return std.TheUnit
+	return std.Schedule(&self.Cown, func() std.Unit {
+		return self.call()
 	})
 }
 
