@@ -242,9 +242,11 @@ type MethodCall struct {
 }
 
 // FuncCall is func(args...) — for free functions and package-level calls.
+// TypeArgs, when non-empty, emits explicit Go generic type args: Func[T1,T2](args).
 type FuncCall struct {
-	Func Expr
-	Args []Expr
+	Func     Expr
+	Args     []Expr
+	TypeArgs []string
 }
 
 // FieldAccess is object.Field — used for receiver field access in methods.

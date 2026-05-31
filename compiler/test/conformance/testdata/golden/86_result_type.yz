@@ -1,0 +1,20 @@
+// YZC-0038: Result(T,E) variant type — user-level generic sum type with two type params.
+// TypedDecl annotation provides the expected type so the lowerer can emit explicit Go
+// type args for constructors whose own params don't constrain all type params.
+
+Result: {
+    T; E
+    Ok(value T)
+    Err(error E)
+}
+
+main: {
+    a Result(Int, String) = Ok(42)
+    b Result(Int, String) = Err("division by zero")
+    match a
+        { Ok  => print(a.value) },
+        { Err => print(a.error) }
+    match b
+        { Ok  => print(b.value) },
+        { Err => print(b.error) }
+}

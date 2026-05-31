@@ -1760,6 +1760,28 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 			}
 		}
 		retType := substituteType(bt.Returns[0], bindings)
+		// When the return type is a partially-instantiated generic (e.g. Result[Int, E])
+		// and the call site has an expectedType that fully instantiates it, fill in the
+		// remaining unbound type params so the lowerer can emit explicit Go type args.
+		if git, ok := retType.(*GenericInstType); ok && a.expectedType != nil {
+			if expGit, ok := a.expectedType.(*GenericInstType); ok && expGit.Name == git.Name && len(expGit.TypeArgs) == len(git.TypeArgs) {
+				filled := make([]Type, len(git.TypeArgs))
+				changed := false
+				for i, ta := range git.TypeArgs {
+					if _, isUnbound := ta.(*GenericType); isUnbound {
+						if _, expUnbound := expGit.TypeArgs[i].(*GenericType); !expUnbound {
+							filled[i] = expGit.TypeArgs[i]
+							changed = true
+							continue
+						}
+					}
+					filled[i] = ta
+				}
+				if changed {
+					retType = &GenericInstType{Name: git.Name, TypeArgs: filled}
+				}
+			}
+		}
 		if len(bt.Returns) == 1 {
 			return retType
 		}

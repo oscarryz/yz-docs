@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **86 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **87 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -34,7 +34,6 @@ YZC-0076 -- Existential associated types: opaque-token / path-identity tracking 
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
 YZC-0012 -- Multiple return values -- M  
-YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0070 -- Anonymous boc literal as structural interface value -- M  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
@@ -230,9 +229,13 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
   `std.Decimal` with arithmetic, comparisons, `to_str`. Golden test 58.
 
-- [ ] **[YZC-0038] `Result(T,E)` type**
+- [x] **[YZC-0038] `Result(T,E)` type**
 
-  implement as a variant type in yzrt; wire sema/lowerer recognition. Spec: `docs/Features/Error handling.md`.
+  Implemented as user-level Yz code (no compiler built-in needed). Fixed the general sum-type
+  issue: when a generic variant constructor doesn't constrain all parent type params (e.g.
+  `Err(error E)` in `Result[T,E]` — `T` is unconstrained), the lowerer now emits explicit Go
+  type args (`NewResultErr[std.Int, std.String](...)`). Sema fills in unbound type params from
+  the call site's `expectedType` (TypedDecl annotation). Golden test 86.
 
 - [ ] **[YZC-0039] Operators audit**
 

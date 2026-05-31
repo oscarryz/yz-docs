@@ -2423,7 +2423,13 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 					for _, arg := range c.Args {
 						qargs = append(qargs, l.lowerExpr(arg.Value))
 					}
-					return &FuncCall{Func: &Ident{Name: "New" + st.Name + mem.Member.Name}, Args: qargs}
+					// Look up the specific variant constructor's BocType to determine
+					// which type params it constrains (needed for explicit type arg emission).
+					var ctorBocType *sema.BocType
+					if ctorSym := l.analyzer.LookupInFile(mem.Member.Name); ctorSym != nil {
+						ctorBocType, _ = ctorSym.Type.(*sema.BocType)
+					}
+					return &FuncCall{Func: &Ident{Name: "New" + st.Name + mem.Member.Name}, Args: qargs, TypeArgs: l.variantTypeArgs(l.analyzer.ExprType(c), ctorBocType)}
 				}
 			}
 		}
@@ -2469,12 +2475,14 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		if sym != nil {
 			// Variant constructor call: Cat("Whiskers", 9) → NewPetCat(...)
 			if sym.ParentTypeName != "" {
-				return &FuncCall{Func: &Ident{Name: "New" + sym.ParentTypeName + id.Name}, Args: args}
+				ctorBocType, _ := sym.Type.(*sema.BocType)
+				return &FuncCall{Func: &Ident{Name: "New" + sym.ParentTypeName + id.Name}, Args: args, TypeArgs: l.variantTypeArgs(l.analyzer.ExprType(c), ctorBocType)}
 			}
 			// Ambiguous variant constructor resolved by type context (YZC-0065).
 			if len(sym.Alternatives) > 0 {
 				if callType, ok := l.analyzer.ExprType(c).(*sema.StructType); ok {
-					return &FuncCall{Func: &Ident{Name: "New" + callType.Name + id.Name}, Args: args}
+					ctorBocType, _ := sym.Type.(*sema.BocType)
+					return &FuncCall{Func: &Ident{Name: "New" + callType.Name + id.Name}, Args: args, TypeArgs: l.variantTypeArgs(l.analyzer.ExprType(c), ctorBocType)}
 				}
 			}
 			// Struct type constructor call: Named("Alice") → NewNamed(args).
@@ -3720,6 +3728,63 @@ func (l *lowerer) goType(t sema.Type) string {
 		return "any"
 	}
 	return "any"
+}
+
+// variantTypeArgs returns explicit Go type args for a generic variant constructor
+// call when Go cannot infer all type params from the constructor arguments alone.
+// This happens when a type param of the parent struct doesn't appear in the
+// specific variant's own fields (e.g. Err(error E) in Result[T,E] — T is not in Err's args).
+// Returns nil when Go can infer all params or when any param is still unbound.
+func (l *lowerer) variantTypeArgs(callType sema.Type, calleeBocType *sema.BocType) []string {
+	git, ok := callType.(*sema.GenericInstType)
+	if !ok || len(git.TypeArgs) == 0 {
+		return nil
+	}
+	// Collect which generic type param names appear in the constructor's own params.
+	inParams := make(map[string]bool)
+	var collectGenericNames func(t sema.Type)
+	collectGenericNames = func(t sema.Type) {
+		switch tt := t.(type) {
+		case *sema.GenericType:
+			inParams[tt.Name] = true
+		case *sema.ArrayType:
+			collectGenericNames(tt.Elem)
+		case *sema.BocType:
+			for _, p := range tt.Params {
+				collectGenericNames(p.Type)
+			}
+		}
+	}
+	if calleeBocType != nil {
+		for _, p := range calleeBocType.Params {
+			collectGenericNames(p.Type)
+		}
+	}
+	// Look up the parent struct to get its TypeParams list (the declaration order).
+	// We need at least one param to be unconstrained to justify emitting explicit args.
+	needExplicit := false
+	if st := l.analyzer.LookupInFile(git.Name); st != nil {
+		if parentSt, ok := st.Type.(*sema.StructType); ok {
+			for _, tp := range parentSt.TypeParams {
+				if !inParams[tp] {
+					needExplicit = true
+					break
+				}
+			}
+		}
+	}
+	if !needExplicit {
+		return nil
+	}
+	// All type args must be concrete (no remaining GenericType) to emit them.
+	args := make([]string, len(git.TypeArgs))
+	for i, ta := range git.TypeArgs {
+		if _, isUnbound := ta.(*sema.GenericType); isUnbound {
+			return nil
+		}
+		args[i] = l.goType(ta)
+	}
+	return args
 }
 
 // goTypeForVar returns the Go type string for a variable declaration.

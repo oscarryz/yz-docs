@@ -416,6 +416,9 @@ func (g *generator) expr(e ir.Expr) string {
 	case *ir.MethodCall:
 		return fmt.Sprintf("%s.%s(%s)", g.expr(ex.Recv), ex.Method, g.exprList(ex.Args))
 	case *ir.FuncCall:
+		if len(ex.TypeArgs) > 0 {
+			return fmt.Sprintf("%s[%s](%s)", g.expr(ex.Func), strings.Join(ex.TypeArgs, ", "), g.exprList(ex.Args))
+		}
 		return fmt.Sprintf("%s(%s)", g.expr(ex.Func), g.exprList(ex.Args))
 	case *ir.ThunkExpr:
 		return g.emitThunk(ex)
