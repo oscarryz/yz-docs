@@ -22,6 +22,7 @@ func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
 		analyzer:         a,
 		localBocVars:     make(map[string]bool),
 		localBodyBocVars: make(map[string]string),
+		anonBocCache:     make(map[*ast.BocLiteral]string),
 	}
 	return l.lowerFile(sf, pkgName)
 }
@@ -89,6 +90,15 @@ type lowerer struct {
 	// emit sync-body calls (lowercase method, no Force) for those cowns so the
 	// closure can be called safely while the cown is held.
 	closureHeldCowns map[string]bool
+
+	// anonDecls collects anonymous struct types generated for anonymous boc
+	// literals with inner methods (YZC-0070). Prepended to f.Decls after lowering.
+	anonDecls    []*StructDecl
+	anonBocCount int
+	// anonBocCache maps a BocLiteral AST node to the already-generated type name,
+	// so repeated lowering of the same literal (e.g. eager args + lowerStructArgs)
+	// returns the same anonymous struct rather than creating a duplicate.
+	anonBocCache map[*ast.BocLiteral]string
 }
 
 // ---------------------------------------------------------------------------
@@ -126,6 +136,14 @@ func (l *lowerer) lowerFile(sf *ast.SourceFile, pkgName string) *File {
 				},
 			},
 		})
+	}
+	// Prepend anonymous struct decls generated for anonymous boc literals.
+	if len(l.anonDecls) > 0 {
+		prepend := make([]Decl, len(l.anonDecls))
+		for i, sd := range l.anonDecls {
+			prepend[i] = sd
+		}
+		f.Decls = append(prepend, f.Decls...)
 	}
 	return f
 }
@@ -3325,6 +3343,10 @@ func (l *lowerer) lowerBuiltinCall(goName string, c *ast.CallExpr) Expr {
 }
 
 func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
+	semType := l.analyzer.ExprType(b)
+	if _, ok := semType.(*sema.StructType); ok {
+		return l.lowerAnonBocLit(b)
+	}
 	// Extract TypedDecl params (nil-value TypedDecls in the body).
 	var params []*ParamSpec
 	for _, elem := range b.Elements {
@@ -3335,13 +3357,48 @@ func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
 			})
 		}
 	}
-	semType := l.analyzer.ExprType(b)
 	resultType := "std.Unit"
 	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
 		resultType = l.goType(bt.Returns[0])
 	}
 	body := l.lowerClosureBody(b.Elements, resultType)
 	return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
+}
+
+// lowerAnonBocLit lowers an anonymous boc literal with inner methods
+// (e.g. `{ describe: { "a boc" } }`) into an anonymous Go struct type.
+// A unique `_anonBocN` struct is emitted; the call site receives `&_anonBocN{}`.
+func (l *lowerer) lowerAnonBocLit(b *ast.BocLiteral) Expr {
+	if cached, ok := l.anonBocCache[b]; ok {
+		return &NewStructExpr{TypeName: cached}
+	}
+	name := fmt.Sprintf("_anonBoc%d", l.anonBocCount)
+	l.anonBocCount++
+	l.anonBocCache[b] = name
+
+	sd := &StructDecl{Name: name, NoConstructor: true}
+
+	for _, elem := range b.Elements {
+		switch e := elem.(type) {
+		case *ast.ShortDecl:
+			if len(e.Names) == 1 && len(e.Values) == 1 {
+				inner, isInnerBoc := e.Values[0].(*ast.BocLiteral)
+				if isInnerBoc {
+					bocSemType := l.analyzer.ExprType(e)
+					m := l.lowerMethod(e.Names[0].Name, "*"+name, inner, map[string]bool{}, bocSemType)
+					sd.Methods = append(sd.Methods, m)
+				}
+			}
+		case *ast.BocDecl:
+			if e.Body != nil {
+				m := l.lowerBocDeclAsMethod(e, "*"+name, map[string]bool{})
+				sd.Methods = append(sd.Methods, m)
+			}
+		}
+	}
+
+	l.anonDecls = append(l.anonDecls, sd)
+	return &NewStructExpr{TypeName: name}
 }
 
 // lowerClosureBody lowers boc elements as a synchronous closure body.
@@ -3697,6 +3754,9 @@ func (l *lowerer) goType(t sema.Type) string {
 	case *sema.StructType:
 		if tt.Name != "" {
 			if tt.IsSingleton {
+				if tt.Name == "_anonBoc" {
+					return "any" // anonymous boc type — concrete name not known at this point
+				}
 				return "*_" + tt.Name + "Boc" // singleton boc instance type
 			}
 			if tt.IsInterface {
@@ -3804,10 +3864,14 @@ func (l *lowerer) goTypeForVar(t sema.Type) string {
 		return "" // unresolved type var — let Go infer via :=
 	}
 	if git, ok := t.(*sema.GenericInstType); ok {
-		// If any type arg is still generic (unresolved), let Go infer.
+		// If any type arg is still generic (unresolved) or is an anonymous boc type,
+		// let Go infer the concrete type via :=.
 		for _, arg := range git.TypeArgs {
 			if _, isGen := arg.(*sema.GenericType); isGen {
 				return ""
+			}
+			if st, isSt := arg.(*sema.StructType); isSt && st.IsSingleton && st.Name == "_anonBoc" {
+				return "" // anonymous boc — concrete _anonBocN type only known in lowerer
 			}
 		}
 		return l.goType(t)

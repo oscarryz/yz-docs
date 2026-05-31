@@ -1,0 +1,14 @@
+// YZC-0070: Anonymous boc literal with inner methods satisfies a structural interface.
+// { describe: { "a boc" } } is typed as an anonymous StructType and satisfies Describable.
+
+Describable: { describe #(String) }
+
+Box: {
+    V Describable
+    value V
+}
+
+main: {
+    c : Box(value: { describe: { "a boc" } })
+    print(c.value.describe())
+}

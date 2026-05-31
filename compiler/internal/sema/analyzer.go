@@ -1457,21 +1457,34 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 	case *ast.GroupExpr:
 		t = a.analyzeExpr(expr.Expr)
 	case *ast.BocLiteral:
-		prev := a.pushScope()
-		// Closures get an isolated copy of the field-init state so that
-		// assignments inside the closure don't affect the outer scope.
 		outerFI := a.fieldInit
-		if outerFI != nil {
-			a.fieldInit = outerFI.clone()
+		if hasInnerBocsOrMethods(expr) {
+			// Anonymous boc literal with inner methods: type as anonymous StructType.
+			prev := a.pushScope()
+			if outerFI != nil {
+				a.fieldInit = outerFI.clone()
+			}
+			st, _ := a.analyzeStructBoc("_anonBoc", expr)
+			a.popScope(prev)
+			a.fieldInit = outerFI
+			st.IsSingleton = true
+			t = st
+		} else {
+			prev := a.pushScope()
+			// Closures get an isolated copy of the field-init state so that
+			// assignments inside the closure don't affect the outer scope.
+			if outerFI != nil {
+				a.fieldInit = outerFI.clone()
+			}
+			bodyReturns := a.analyzeBocBody(expr.Elements)
+			params := a.collectParams(expr.Elements)
+			a.popScope(prev)
+			a.fieldInit = outerFI // restore outer state
+			if len(bodyReturns) == 0 {
+				bodyReturns = []Type{TypUnit}
+			}
+			t = &BocType{Params: params, Returns: bodyReturns}
 		}
-		bodyReturns := a.analyzeBocBody(expr.Elements)
-		params := a.collectParams(expr.Elements)
-		a.popScope(prev)
-		a.fieldInit = outerFI // restore outer state
-		if len(bodyReturns) == 0 {
-			bodyReturns = []Type{TypUnit}
-		}
-		t = &BocType{Params: params, Returns: bodyReturns}
 	case *ast.ArrayLiteral:
 		t = a.analyzeArrayLiteral(expr)
 	case *ast.DictLiteral:

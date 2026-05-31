@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **88 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **89 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -33,7 +33,7 @@ YZC-0076 -- Existential associated types: opaque-token / path-identity tracking 
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
 YZC-0012 -- Multiple return values -- M  
-YZC-0070 -- Anonymous boc literal as structural interface value -- M  
+[x] YZC-0070 -- Anonymous boc literal as structural interface value -- M ✓  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -400,7 +400,7 @@ Multiple constraints supported: `T Talker Serializable`.
 - [x] Golden test 76 — `Box[V Describable]` + `Animal` satisfying `Describable`
 - [ ] Spec 04 — update
 
-### YZC-0070 — Anonymous boc literal as structural interface value
+### [x] YZC-0070 — Anonymous boc literal as structural interface value ✓
 
 A boc literal with inner boc-valued fields (`{ describe: { "a boc" } }`) should satisfy
 a structural interface constraint at the call site:
@@ -458,9 +458,9 @@ emits the struct type + methods without a constructor function.
 - All existing tests continue to pass.
 - New golden test (e.g. test 77) covers the pattern.
 
-- [ ] Sema — type boc literals with inner boc fields as anonymous `StructType`
-- [ ] Lowerer — emit anonymous Go struct type + methods; collect as `anonDecls`
-- [ ] Golden test 77 — anonymous boc literal satisfying interface constraint
+- [x] Sema — type boc literals with inner boc fields as anonymous `StructType`
+- [x] Lowerer — emit anonymous Go struct type + methods; collect as `anonDecls`
+- [x] Golden test 88 — anonymous boc literal satisfying interface constraint
 
 ### [x] YZC-0072 — Inline anonymous interface constraint in type params: `V #(method #(T))` ✓
 
