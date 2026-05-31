@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0078**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0079**.
 
 # Yz Compiler Implementation
 
@@ -31,6 +31,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 
 YZC-0075 -- Existential associated types: implicit erasure + constrained method calls + use-site errors -- M -- needs YZC-0074  
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
+YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
 YZC-0012 -- Multiple return values -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
@@ -259,6 +260,28 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 - [x] **[YZC-0046] `${}` interpolation requires `to_str`**
 
   sema checks for `to_str #(String)` on the interpolated type. Depends on: YZC-0020.
+
+- [ ] **[YZC-0078] `print` should require `String`; use `` "`x`" `` for debug output**
+
+  Currently `print(a)` accepts any value and calls `Stringify` (homoiconic `String()` method).
+  This conflates two distinct intents:
+
+  - **Display**: `print("${a}")` — user-facing output; requires `to_str #(String)` on the type
+  - **Debug**: `print("`a`")` — homoiconic structural dump; uses `String()`, no `to_str` needed
+
+  `print(a)` silently falls through to the debug path, making it easy to accidentally ship
+  debug output. The fix: restrict `print` to `String` only; `print(a)` where `a` is not a
+  `String` becomes a sema error with message _"print requires String; use \"`a`\" for debug
+  output or \"${a}\" for display output"_.
+
+  Design question: should `print` be a special built-in with a type check, or should it be
+  a regular Yz boc `#(String)` that enforces the constraint naturally?
+
+  Current behaviour to preserve:
+  - `print("hello")` — valid ✓
+  - `print("${a}")` — valid when `a` has `to_str` ✓
+  - `` print("`a`") `` — valid; always works ✓
+  - `print(a)` — currently valid; should become a sema error after this ticket
 
 - [x] **[YZC-0047] Cycle detection in homoiconic `Stringify`** ✓
 
