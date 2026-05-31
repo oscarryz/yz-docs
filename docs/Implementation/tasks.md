@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0080**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0081**.
 
 # Yz Compiler Implementation
 
@@ -58,6 +58,7 @@ YZC-0025 -- Infostrings: content is a boc body -- L
 YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0059   
 YZC-0029 -- Remove `mix`: runtime + spec -- M -- needs YZC-0028  
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028 
+YZC-0080 -- Uniform boc literal typing: one structural type derived from elements -- XL -- *design* -- needs YZC-0025
 
 ---
 
@@ -860,3 +861,88 @@ The substitution application (`applySubst(t Type, subst map[string]Type) Type`) 
 - [ ] Implement higher-level methods in Yz
 - [ ] Remove all primitive-type special-casing from the compiler
 - [ ] `Bool.&&`/`||` — rewrite as lazy closure-taking boc methods
+
+---
+
+### YZC-0080 — Uniform boc literal typing: one structural type derived from elements
+
+#### Invariant
+
+> Every boc literal, regardless of where it appears, receives one structural type derived mechanically from its elements. No code path branches on "is this a closure or a struct?" — that distinction is resolved at the use site by structural compatibility, not by classification during analysis.
+
+#### Motivation
+
+The current implementation assigns different sema types to boc literals depending on where they appear and what their elements look like. This produces a growing set of special cases that each need individual fixes when a new context is introduced:
+
+- `main: { print("hello") }` — singleton body-only → `BocType`
+- `counter: { count Int; inc: { count++ } }` — singleton structured → `StructType{IsSingleton:true}`
+- `Point: { x Int; y Int }` — constructor type → plain `StructType`
+- `Shape #(area #(Decimal))` — interface → `StructType{IsInterface:true}`
+- `Pet: { Cat(...); Dog(...) }` — sum type → `StructType{IsVariant:true}`
+- `{ item Int; item > 10 }` — expression-position closure → `BocType`
+- `{ describe: { "a boc" } }` — expression-position anonymous object → `StructType{IsSingleton:true, Name:"_anonBoc"}`
+
+Any new context (HOF with inner helpers, closure passed to generic interface, multi-dispatch) requires a new branch. The real cause: sema classifies the literal before knowing the use site, so it must guess.
+
+#### Current classification machinery (as-is)
+
+**Sema type flags on `StructType`:**
+
+| Flag | Set when | IR result |
+|------|----------|-----------|
+| `IsSingleton` | lowercase name + `hasInnerBocsOrMethods` | `SingletonDecl` with persistent var |
+| `IsInterface` | uppercase + all fields BocType/MetaType + no bodies (YZC-0067) | `InterfaceDecl` (Go interface) |
+| `IsVariant` | any `VariantDef` element present | `StructDecl{IsVariant:true}` with discriminant enum |
+| *(plain)* | uppercase, concrete fields | `StructDecl` with constructor |
+
+**Expression-position branches in `analyzeExpr` for `*ast.BocLiteral`:**
+- `hasInnerBocsOrMethods && !bocLitHasParams` → anonymous `StructType{IsSingleton:true, Name:"_anonBoc"}`
+- else → `BocType`
+
+**Lowerer dispatch on sema type:**
+- `BocType` → `lowerBodyOnlySingleton` / `ClosureExpr`
+- `StructType{IsSingleton:true}` → `lowerStructuredSingleton` / `lowerAnonBocLit`
+- `StructType{IsInterface:true}` → `InterfaceDecl`
+- `StructType{IsVariant:true}` → variant codegen
+- plain `StructType` → `StructDecl` + constructor
+
+#### Target design
+
+Every boc literal gets one rich structural type:
+
+```
+BocLiteralType {
+    Params    []BocParam      // TypedDecl nil-value entries → input signature
+    Methods   []MethodField   // ShortDecl+BocLiteral or BocDecl-with-body entries
+    Fields    []ValueField    // TypedDecl with value or ShortDecl with non-boc value
+    Returns   []Type          // last-expression type(s)
+}
+```
+
+Use-site compatibility is checked structurally:
+- Expected `#(item Int, Bool)` → match against `Params + Returns`
+- Expected `Describable` (interface) → match against `Methods`
+- Expected `Point` (struct) → match against `Fields`
+
+No up-front classification. The lowerer decides the Go representation from context:
+- If called with args (BocDecl call, HOF arg) → emit as closure or method
+- If stored in a typed field → emit as anonymous struct satisfying the declared interface
+
+#### Acceptance criteria
+
+- The invariant above holds: no `IsSingleton`/`IsInterface`/`IsVariant` branching in `analyzeExpr` for boc literals
+- All existing 89+ golden tests pass unchanged
+- The existing `hasInnerBocsOrMethods` / `bocLitHasParams` guards are deleted
+- Expression-position boc literals with params AND inner methods work correctly as closures without special-casing
+- `{ describe: { "a boc" } }` still satisfies `Describable` at any use site
+
+#### Dependencies
+
+Likely needs YZC-0025 (infostrings / compile-time metadata) to be in place before the lowerer can dispatch purely on use-site context. May also simplify YZC-0031 (scalar type uppering) since that ticket also removes primitive special-casing.
+
+- [ ] Design: define `BocLiteralType` in `sema/types.go`
+- [ ] Sema: assign `BocLiteralType` to every `*ast.BocLiteral` in `analyzeExpr`; delete classification branches
+- [ ] Sema: structural compatibility between `BocLiteralType` and `BocType` / `StructType` / interfaces
+- [ ] Lowerer: dispatch on use-site expected type instead of sema classification flags
+- [ ] Delete `hasInnerBocsOrMethods`, `bocLitHasParams`, `anonBocCache`, `anonDecls` from lowerer
+- [ ] All existing tests pass
