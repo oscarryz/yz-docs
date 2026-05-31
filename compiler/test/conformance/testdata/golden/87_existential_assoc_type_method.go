@@ -90,6 +90,10 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
+		var g Graph = cg
+		_bg1 := &std.BocGroup{}
+		_bg1.GoWait(Describe.Call(g, london))
+		_bg1.Wait()
 		return std.TheUnit
 	})
 }

@@ -1,1 +1,1 @@
-YZC-0075: g.Node is existential here (g has abstract type Graph); cannot pass City
+YZC-0079: argument type City does not satisfy g.Node bound

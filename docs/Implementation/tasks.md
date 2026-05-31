@@ -29,7 +29,6 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0079 -- Associated type call-site check: bound-check instead of existential rejection -- S -- replaces YZC-0075  
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
@@ -606,9 +605,9 @@ Replace it with: when `g`'s type is abstract and `Node` has a non-nil bound, che
 `argTypes[i].IsCompatibleWith(bound)` and error if it fails. Update/remove error test 22 and
 golden test 87 accordingly.
 
-- [ ] Revert YZC-0075 existential rejection in `analyzeCall` (the `else if argTypes[i] != Unknown` block)
-- [ ] Add bound-compatibility check: when `g` is abstract and `Node` has a bound, verify arg satisfies the bound
-- [ ] Update conformance tests: remove error 22; update golden 87 if needed; add error test for bound mismatch
+- [x] Revert YZC-0075 existential rejection in `analyzeCall`
+- [x] Add bound-compatibility check: when `g` is abstract and `Node` has a bound, verify arg satisfies the bound
+- [x] Updated conformance tests: error 22 now tests bound mismatch; golden 87 shows both concrete and abstract `g` working
 
 ### YZC-0076 — Existential associated types: opaque-token / path-identity tracking
 

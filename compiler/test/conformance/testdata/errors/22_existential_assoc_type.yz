@@ -1,13 +1,14 @@
-// YZC-0075: passing a concrete type where an existential g.Node is expected.
-// g has abstract type Graph, so g.Node is existential — City cannot be passed.
+// YZC-0079: passing a value that does not satisfy the Node bound.
+// g has abstract type Graph with Node #(label #(String)).
+// City has no label() method, so it fails the bound check.
 
-Graph: { Node #() }
+Graph: { Node #(label #(String)) }
 
 City: { name String }
 
 CityGraph: { Node: City }
 
-describe #(g Graph, n g.Node) { print("ok") }
+describe #(g Graph, n g.Node) { print(n.label()) }
 
 main: {
     g Graph = CityGraph()

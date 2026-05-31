@@ -1,6 +1,6 @@
-// YZC-0075: constrained method call on existential associated type.
-// When g has abstract type Graph (interface), g.Node is existential.
-// Calling n.label() is allowed because Node is bounded by #(label #(String)).
+// YZC-0079: g.Node with abstract g is structurally equivalent to its bound.
+// Any value satisfying Node #(label #(String)) is a valid g.Node,
+// whether g is concrete (CityGraph) or abstract (Graph).
 
 Graph: { Node #(label #(String)) }
 
@@ -17,4 +17,7 @@ main: {
     cg: CityGraph()
     london: City(name: "London")
     describe(cg, london)
+
+    g Graph = cg
+    describe(g, london)
 }

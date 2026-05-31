@@ -1655,19 +1655,23 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 									argTypes[i].typeName(), pdt.Param, pdt.Member, f.Type.typeName())
 							}
 						} else {
-							// Abstract type field (MetaType): g is an abstract type, so g.Node
-							// is existential. Only the same path-dependent type is acceptable.
+							// Abstract type field (MetaType): g has an abstract type, so g.Node
+							// is structurally equivalent to its bound. Check same-path PDTs for
+							// cross-root mismatches; for concrete values, check against the bound.
 							if argPdt, ok := argTypes[i].(*PathDependentType); ok {
 								if argPdt.Param != pdt.Param || argPdt.Member != pdt.Member {
 									a.errorf(c.Args[i].Value.Position(),
 										"YZC-0030: argument type %s is not compatible with %s.%s",
 										argPdt.typeName(), pdt.Param, pdt.Member)
 								}
-							} else if argTypes[i] != Unknown {
-								// YZC-0075: concrete type passed where existential g.Node expected.
-								a.errorf(c.Args[i].Value.Position(),
-									"YZC-0075: %s is existential here (%s has abstract type %s); cannot pass %s",
-									pdt.typeName(), pdt.Param, st.Name, displayType(argTypes[i]))
+							} else if argTypes[i] != Unknown && f.Bound != nil {
+								// YZC-0079: g.Node ≡ its bound in a structural type system.
+								// Any value satisfying the bound is a valid g.Node.
+								if !argTypes[i].IsCompatibleWith(f.Bound) {
+									a.errorf(c.Args[i].Value.Position(),
+										"YZC-0079: argument type %s does not satisfy %s.%s bound %s",
+										displayType(argTypes[i]), pdt.Param, pdt.Member, displayType(f.Bound))
+								}
 							}
 						}
 					}
