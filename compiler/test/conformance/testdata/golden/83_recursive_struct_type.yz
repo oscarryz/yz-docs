@@ -1,0 +1,12 @@
+// YZC-0077: recursive struct type — Node references itself via the next field.
+// IsCompatibleWith previously stack-overflowed on self-referential types.
+// Proves the compiler handles recursive type declarations and function signatures over them.
+
+Node: { value Int; next Node }
+
+first_value #(n Node, Int) {
+    n Node
+    n.value
+}
+
+main: { print("ok") }

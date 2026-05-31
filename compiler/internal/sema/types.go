@@ -238,6 +238,9 @@ func (t *StructType) fieldMap() map[string]Type {
 func (t *StructType) IsCompatibleWith(target Type) bool {
 	switch u := target.(type) {
 	case *StructType:
+		if t == u {
+			return true // same type is always compatible with itself; also breaks recursive cycles
+		}
 		srcFields := t.fieldMap()
 		for _, tf := range u.Fields {
 			srcType, ok := srcFields[tf.Name]

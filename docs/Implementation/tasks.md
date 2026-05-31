@@ -266,40 +266,17 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
   - [ ] Golden test — backtick-interpolate a cyclic `Node` value at the Yz source level;
         requires YZC-0077 (recursive struct types) to land first
 
-- [ ] **[YZC-0077] Recursive struct types: cycle guard in `IsCompatibleWith` + sema support**
+- [x] **[YZC-0077] Recursive struct types: cycle guard in `IsCompatibleWith` + sema support**
 
-  `Node: { value Int; next Node }` currently crashes the compiler with a stack overflow because
-  `IsCompatibleWith` recurses infinitely when comparing a struct type against itself.
+  - [x] Sema — pointer equality check at top of `*StructType` case in `IsCompatibleWith`;
+        `if t == u { return true }` breaks infinite recursion without adding a parameter
+  - [x] (No lowerer/codegen change needed — struct fields of struct type already emit as `*Node`)
+  - [x] Golden test 83 — `Node: { value Int; next Node }` + `first_value #(n Node, Int)` compiles
+        and runs; proves the type declaration and function signatures over recursive types work
 
-  The fix: thread a `map[*StructType]bool` visited set through `IsCompatibleWith`. When the same
-  `*StructType` pointer is encountered during its own field comparison, treat it as compatible
-  (a struct is always compatible with itself) and return early.
-
-  Once the crash is fixed, self-referential struct types are already valid at codegen level —
-  the lowerer emits struct fields of struct type as Go pointers (`next *Node`), which is valid
-  Go. No lowerer or codegen changes are needed.
-
-  Reproducer: `Node: { value Int; next Node }` with any constructor call — crashes the compiler.
-  Expected after fix: compiles cleanly; `Node(value: 1, next: Node(value: 2))` works; mutable
-  field assignment `b.next = a` creates a cycle that `Stringify` handles via YZC-0047.
-
-  - [ ] Sema — add `visited map[*StructType]bool` parameter to `IsCompatibleWith`; break on
-        self-reference (return `true` — a type is compatible with itself)
-  - [ ] (No lowerer/codegen change needed — pointer emission already correct)
-  - [ ] Golden test — two-element linked list printed via backtick interpolation to prove
-        YZC-0047's cycle detection works end-to-end at the Yz source level:
-
-    ```yz
-    Node: { value Int; next Node }
-    main: {
-        b: Node(value: 2)
-        a: Node(value: 1, next: b)
-        b.next = a
-        print("${a}")
-    }
-    ```
-
-    Expected output: `Node(value: 1, next: Node(value: 2, next: Node(...)))`
+  Note: constructing a cyclic instance at the Yz source level (for the YZC-0047 end-to-end
+  test) requires optional types (`Option(Node)` for the terminal node). See the discussion
+  in the YZC-0047 entry — that golden test is still blocked until optional types land.
 
 - [x] **[YZC-0061] Structured singleton: TypedDecl-with-value field missing `self.`**
 
