@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0079**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0080**.
 
 # Yz Compiler Implementation
 
@@ -29,6 +29,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
+YZC-0079 -- Associated type call-site check: bound-check instead of existential rejection -- S -- replaces YZC-0075  
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
@@ -582,6 +583,32 @@ Design decisions (settled):
       requires a concrete type (e.g. passed to `describe(g, london)` when `g: Graph`)
 - [x] Sema — error message: `YZC-0075: g.Node is existential here (g has abstract type Graph); cannot pass City`
 - [x] Conformance tests — golden 87 (constrained method call allowed), error 22 (existential violation)
+
+### YZC-0079 — Associated type call-site check: bound-check instead of existential rejection
+
+**Replaces YZC-0075.** Revert YZC-0075's existential rejection and replace it with a check
+that is consistent with Yz's structural type system.
+
+**Problem with YZC-0075**: it rejected `describe(g, london)` when `g: Graph` (abstract) even
+if `london` perfectly satisfies the `Node` bound (e.g. `Node #(label #(String))`). That is a
+nominal-typing assumption — it treats `g.Node` as an opaque identity token tied to `g`, not as
+a structural type. Yz uses full structural typing, so this is wrong.
+
+**Correct behaviour**: when `g` has an abstract type, `g.Node` is equivalent to its bound. Any
+value that structurally satisfies the bound is a valid `g.Node`.
+
+- `Node #(label #(String))` + `london: City` with `label()` → **valid**
+- `Node #(label #(String))` + `london: City` without `label()` → **error** (doesn't satisfy bound)
+- `Node #()` (no bound) → any value is valid (fully structural, unconstrained)
+
+**Implementation**: revert the `else if argTypes[i] != Unknown` block added in YZC-0075.
+Replace it with: when `g`'s type is abstract and `Node` has a non-nil bound, check
+`argTypes[i].IsCompatibleWith(bound)` and error if it fails. Update/remove error test 22 and
+golden test 87 accordingly.
+
+- [ ] Revert YZC-0075 existential rejection in `analyzeCall` (the `else if argTypes[i] != Unknown` block)
+- [ ] Add bound-compatibility check: when `g` is abstract and `Node` has a bound, verify arg satisfies the bound
+- [ ] Update conformance tests: remove error 22; update golden 87 if needed; add error test for bound mismatch
 
 ### YZC-0076 — Existential associated types: opaque-token / path-identity tracking
 
