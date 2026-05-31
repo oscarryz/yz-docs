@@ -485,9 +485,8 @@ func (l *lowerer) lowerNamedArgs(callArgs []*ast.Argument, sigParams []*ast.BocP
 }
 
 // lowerStructArgs lowers call arguments for a struct constructor in canonical
-// field order, supporting named (label:) arguments.  Struct fields have no
-// defaults; omitted fields produce nil entries (a type error at the call site).
-// Only non-BocType fields are constructor params.
+// field order, supporting named (label:) arguments and field default values.
+// Only non-BocType, non-type fields are constructor params.
 func (l *lowerer) lowerStructArgs(callArgs []*ast.Argument, st *sema.StructType) []Expr {
 	if !hasNamedArgs(callArgs) {
 		var result []Expr
@@ -497,18 +496,32 @@ func (l *lowerer) lowerStructArgs(callArgs []*ast.Argument, st *sema.StructType)
 		return result
 	}
 
-	// Collect data-field param names (constructor params, in declaration order).
-	var names []string
+	// Build label→value map for named args.
+	byLabel := map[string]ast.Expr{}
+	for _, a := range callArgs {
+		if a.Label != "" {
+			byLabel[a.Label] = a.Value
+		}
+	}
+
+	// Emit args in field order; use DefaultExpr for omitted optional fields.
+	var result []Expr
 	for _, f := range st.Fields {
 		if _, isBoc := f.Type.(*sema.BocType); isBoc {
 			continue
 		}
 		if f.IsTypeField {
-			continue // compile-time only; not a runtime constructor parameter
+			continue
 		}
-		names = append(names, f.Name)
+		if val, ok := byLabel[f.Name]; ok {
+			result = append(result, l.lowerExpr(val))
+		} else if f.DefaultExpr != nil {
+			result = append(result, l.lowerExpr(f.DefaultExpr))
+		} else {
+			result = append(result, nil) // missing required field — sema already reported an error
+		}
 	}
-	return l.lowerArgsByLabel(callArgs, names, nil)
+	return result
 }
 
 // ---------------------------------------------------------------------------

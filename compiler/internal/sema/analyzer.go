@@ -1183,7 +1183,11 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 						}
 					}
 				}
-				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: sym.Type, HasDefault: true, IsTypeField: isTypeAlias})
+				var defaultExpr ast.Expr
+				if len(e.Values) == 1 && !isTypeAlias {
+					defaultExpr = e.Values[0]
+				}
+				st.Fields = append(st.Fields, StructField{Name: n.Name, Type: sym.Type, HasDefault: true, DefaultExpr: defaultExpr, IsTypeField: isTypeAlias})
 			}
 			lastExprTypes = nil
 

@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **85 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **86 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -35,7 +35,6 @@ YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" 
 YZC-0017 -- Dict optional access -- S  
 YZC-0012 -- Multiple return values -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
-YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
 YZC-0070 -- Anonymous boc literal as structural interface value -- M  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
@@ -247,15 +246,11 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
   design: value vs. reference capture in boc literals. See `docs/Questions/Memory Management.md`.
 
-- [ ] **[YZC-0045] Default values in type-only boc declarations (interfaces)**
+- [x] **[YZC-0045] Default values in type-only boc declarations (interfaces)**
 
-  `Greeter #(name String = "Alice")` — defaults are call-site sugar. Depends on: YZC-0011.
-
-  Also covers struct field defaults: `next: Option.None()` in a struct body is already parsed
-  and stored as `HasDefault=true` (sema correct), but the lowerer emits `std.TheUnit` instead
-  of the actual default expression when the field is omitted from a constructor call. The
-  default expression needs to be lowered and emitted in the generated `NewFoo(...)` when the
-  caller doesn't provide that argument.
+  Struct field defaults (`next: Option.None()`) implemented: `DefaultExpr ast.Expr` stored in
+  `StructField`; lowerer emits the default expression when field is omitted from a constructor
+  call. Interface-level defaults (`Greeter #(name String = "Alice")`) deferred; depends on YZC-0011.
 
 - [x] **[YZC-0046] `${}` interpolation requires `to_str`**
 

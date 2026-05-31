@@ -1,0 +1,1 @@
+Node(value: 1, next: Option.Some(v: Node(value: 2, next: Option.None())))

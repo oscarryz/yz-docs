@@ -5,6 +5,8 @@ package sema
 import (
 	"fmt"
 	"strings"
+
+	"yz/internal/ast"
 )
 
 // ---------------------------------------------------------------------------
@@ -176,9 +178,10 @@ func (t *BocType) String() string { return t.typeName() }
 type StructField struct {
 	Name        string
 	Type        Type
-	HasDefault  bool // true when declared via ShortDecl (has an initializer); false = required param
-	IsTypeField bool // field holds a type value (bare GENERIC_IDENT); compile-time only, no runtime slot
-	Bound       Type // non-nil when IsTypeField=true: interface constraint on the associated type
+	HasDefault  bool     // true when declared via ShortDecl (has an initializer); false = required param
+	DefaultExpr ast.Expr // the default initializer expression; non-nil when HasDefault=true
+	IsTypeField bool     // field holds a type value (bare GENERIC_IDENT); compile-time only, no runtime slot
+	Bound       Type     // non-nil when IsTypeField=true: interface constraint on the associated type
 }
 
 // VariantCase is one constructor in a sum type (variant type).

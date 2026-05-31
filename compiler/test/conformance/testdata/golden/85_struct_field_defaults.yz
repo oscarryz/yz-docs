@@ -1,0 +1,19 @@
+// YZC-0045: struct field default values.
+// next: Option.None() declares a field with a default; Node(value: 1) omits it.
+
+Option: {
+    Some(v Node)
+    None()
+}
+
+Node: {
+    value Int
+    next: Option.None()
+}
+
+main: {
+    a: Node(value: 1)
+    b: Node(value: 2)
+    a.next = Option.Some(b)
+    print(a)
+}
