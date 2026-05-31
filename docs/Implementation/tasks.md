@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **83 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **85 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -31,9 +31,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 
 YZC-0075 -- Existential associated types: implicit erasure + constrained method calls + use-site errors -- M -- needs YZC-0074  
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
-YZC-0077 -- Recursive struct types: cycle guard in IsCompatibleWith + sema support -- S  
 YZC-0017 -- Dict optional access -- S  
-YZC-0047 -- Cycle detection in homoiconic Stringify -- S -- needs YZC-0077  
 YZC-0012 -- Multiple return values -- M  
 YZC-0038 -- `Result(T,E)` type -- M  
 YZC-0045 -- Default values in type-only boc declarations -- M -- needs YZC-0011  
@@ -252,31 +250,32 @@ YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-00
 
   `Greeter #(name String = "Alice")` — defaults are call-site sugar. Depends on: YZC-0011.
 
+  Also covers struct field defaults: `next: Option.None()` in a struct body is already parsed
+  and stored as `HasDefault=true` (sema correct), but the lowerer emits `std.TheUnit` instead
+  of the actual default expression when the field is omitted from a constructor call. The
+  default expression needs to be lowered and emitted in the generated `NewFoo(...)` when the
+  caller doesn't provide that argument.
+
 - [x] **[YZC-0046] `${}` interpolation requires `to_str`**
 
   sema checks for `to_str #(String)` on the interpolated type. Depends on: YZC-0020.
 
-- [ ] **[YZC-0047] Cycle detection in homoiconic `Stringify`** — needs YZC-0077
+- [x] **[YZC-0047] Cycle detection in homoiconic `Stringify`** ✓
 
   - [x] Runtime — per-goroutine visited set in `Stringify`/`StringifyRepr` via `sync.Map`
         keyed on `(goroutineID, ptr)`; cyclic references print as `TypeName(...)`
   - [x] Runtime — nil pointer guard in both functions (interface-wrapped nil no longer panics)
   - [x] Unit tests — self-cycle, indirect cycle, linear chain (no false positive), concurrent
         same-pointer (four tests in `runtime/rt/rt_test.go`)
-  - [ ] Golden test — backtick-interpolate a cyclic `Node` value at the Yz source level;
-        requires YZC-0077 (recursive struct types) to land first
+  - [x] Golden test 84 — cyclic linked list via locally-declared `Option` variant; `b.next =
+        Option.Some(a)` creates a cycle; `print(a)` emits `Node(..., Node(..., Node(...)))` ✓
 
-- [x] **[YZC-0077] Recursive struct types: cycle guard in `IsCompatibleWith` + sema support**
+- [x] **[YZC-0077] Recursive struct types: cycle guard in `IsCompatibleWith` + sema support** ✓
 
-  - [x] Sema — pointer equality check at top of `*StructType` case in `IsCompatibleWith`;
-        `if t == u { return true }` breaks infinite recursion without adding a parameter
+  - [x] Sema — pointer equality check `if t == u { return true }` at top of `*StructType`
+        case in `IsCompatibleWith`; breaks infinite recursion without changing the interface
   - [x] (No lowerer/codegen change needed — struct fields of struct type already emit as `*Node`)
-  - [x] Golden test 83 — `Node: { value Int; next Node }` + `first_value #(n Node, Int)` compiles
-        and runs; proves the type declaration and function signatures over recursive types work
-
-  Note: constructing a cyclic instance at the Yz source level (for the YZC-0047 end-to-end
-  test) requires optional types (`Option(Node)` for the terminal node). See the discussion
-  in the YZC-0047 entry — that golden test is still blocked until optional types land.
+  - [x] Golden test 83 — `Node: { value Int; next Node }` + function over it compiles and runs
 
 - [x] **[YZC-0061] Structured singleton: TypedDecl-with-value field missing `self.`**
 

@@ -1,0 +1,20 @@
+// YZC-0047 end-to-end: cycle detection in Stringify via a cyclic linked list.
+// Option is declared locally (not yet in stdlib) to provide the terminal case.
+// b.next = Option.Some(a) creates a cycle; print must not loop infinitely.
+
+Option: {
+    Some(v Node)
+    None()
+}
+
+Node: {
+    value Int
+    next Option
+}
+
+main: {
+    b: Node(value: 2, next: Option.None())
+    a: Node(value: 1, next: Option.Some(b))
+    b.next = Option.Some(a)
+    print(a)
+}
