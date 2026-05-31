@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0081**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0085**.
 
 # Yz Compiler Implementation
 
@@ -29,11 +29,10 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
+YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0079 -- *may not be needed: see detail*  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
 YZC-0012 -- Multiple return values -- M  
-[x] YZC-0070 -- Anonymous boc literal as structural interface value -- M ✓  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -43,7 +42,11 @@ YZC-0039 -- Operators audit -- L -- needs YZC-0031
 YZC-0043 -- Captured variable reference semantics -- *design*  
 YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
-YZC-0021 -- Directory and file bocs -- L  
+YZC-0081 -- Singleton-outer nested type factory: `room: { Window: {...} }` → `room.Window(...)` -- M  
+YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074  
+YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M  
+YZC-0084 -- Generic instantiation alias: `StringList : List(String)` -- M -- needs YZC-0027  
+YZC-0021 -- Directory and file bocs -- L -- needs YZC-0081  
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- needs YZC-0021  
 YZC-0022 -- Multiple source roots -- M  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
@@ -55,9 +58,9 @@ YZC-0041 -- Dependency management -- L
 YZC-0042 -- Package management (`yz` tool) -- L -- needs YZC-0041  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
 YZC-0025 -- Infostrings: content is a boc body -- L  
-YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0059   
+YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059   
 YZC-0029 -- Remove `mix`: runtime + spec -- M -- needs YZC-0028  
-YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028 
+YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028, YZC-0002 
 YZC-0080 -- Uniform boc literal typing: one structural type derived from elements -- XL -- *design* -- needs YZC-0025
 
 ---
@@ -312,7 +315,7 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
 
 - [ ] **[YZC-0021] Directory and file bocs**
 
-  defer until in-file nesting works; extend FQN tree to directories and files as bocs.
+  defer until in-file nesting works (YZC-0081); extend FQN tree to directories and files as bocs.
 
 - [x] **[YZC-0032] Rename `BocWithSig` → `BocDecl`**
 
@@ -612,7 +615,9 @@ golden test 87 accordingly.
 
 ### YZC-0076 — Existential associated types: opaque-token / path-identity tracking
 
-Phase 2: the hard part. Deferred until YZC-0075 is done and there is real usage demand.
+**Status note:** YZC-0075 was superseded by YZC-0079, which established that Yz uses structural typing rather than nominal path-identity for associated types. It is unclear whether this ticket is still needed — the opaque-token / cross-root rejection problem it describes may be moot in a fully structural system. Revisit after YZC-0079 has been used in real code; close if no concrete use case emerges.
+
+Phase 2: the hard part. Deferred until YZC-0079 is settled and there is real usage demand.
 
 A value *produced by* `g` (e.g. `token: g.firstNode()`) is statically known to have type
 `g.Node`. Passing `token` back to operations on the *same* `g` should be safe even when
@@ -853,7 +858,7 @@ The substitution application (`applySubst(t Type, subst map[string]Type) Type`) 
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 
-`Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: YZC-0025, YZC-0028.
+`Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: YZC-0025, YZC-0028, YZC-0002.
 
 - [ ] Define `compile-time:[Native]` infostring semantics
 - [ ] Move scalar types to `stdlib/`
@@ -946,3 +951,125 @@ Likely needs YZC-0025 (infostrings / compile-time metadata) to be in place befor
 - [ ] Lowerer: dispatch on use-site expected type instead of sema classification flags
 - [ ] Delete `hasInnerBocsOrMethods`, `bocLitHasParams`, `anonBocCache`, `anonDecls` from lowerer
 - [ ] All existing tests pass
+
+---
+
+### YZC-0081 — Singleton-outer nested type factory
+
+`room: { Window: { size Int } }` — `Window` is a type factory accessible as `room.Window(size: 3)`.
+
+The struct-outer case (`Foo: { Bar: {} }` → `f.Bar()`) is a different problem (concrete associated type); see YZC-0082.
+
+#### Current behaviour (broken)
+
+```yz
+room: {
+    Window: { size Int }
+}
+main: {
+    w : room.Window(size: 3)  // compile error: Window is `any` field, not a type
+    print(w.size)
+}
+```
+
+Generated Go: `Window any` field on `_roomBoc` initialised to a lambda; `*Window` is undefined.
+
+#### Root cause
+
+A struct-literal boc inside a singleton is lowered as a field initialiser (type `any`), not as a package-level type declaration. There is no concept of a "nested type owned by a singleton."
+
+#### Target design
+
+- Inner uppercase struct literal → package-level Go type `_roomWindow` (or similar namespaced name)
+- Singleton's `Window` field holds the constructor, or `room.Window(...)` is sugar for `NewRoomWindow(...)`
+- FQN: `room.Window` in Yz → `_roomWindow` in Go
+
+#### Dependencies
+
+Single-file case implementable independently of YZC-0002.
+
+- [ ] Sema: recognize uppercase struct-literal inside singleton as nested type definition
+- [ ] Sema: give it a scoped name (`singleton.Type`), register as a `StructType` in scope
+- [ ] Lowerer: emit nested type as package-level `StructDecl`; singleton field becomes the constructor
+- [ ] Field access `room.Window(...)` → constructor call on the nested Go struct
+- [ ] Golden test: `room: { Window: { size Int } }` + `room.Window(size: 3)` compiles and runs
+
+---
+
+### YZC-0082 — Struct-outer nested type (concrete associated type)
+
+`Foo: { Bar: {} }` — `Bar` is a type definition scoped to `Foo`; instances of `Foo` expose it as `f.Bar()`.
+
+This is the struct-outer counterpart of YZC-0081. Unlike the singleton case, `Foo.Bar()` is ambiguous (which `Foo`?), so the only valid access is `f.Bar()` — making `Bar` behave exactly like a concrete associated type. This extends YZC-0074 from constraints-only to concrete definitions.
+
+#### Examples
+
+```yz
+house: { 
+    Window: { 
+        open: { 
+            Handle: {} 
+        }
+        close: { 
+            h : open.Handle()
+        }
+    }
+}
+hw : house.Window()
+handle : hw.open.Handle()
+```
+
+```yz
+Foo: {
+    Bar: {}
+    baz: {}
+}
+f : Foo()
+bar : f.Bar()
+```
+
+#### Relationship to YZC-0074
+
+YZC-0074 (`Node #(label #(String))`) declares an associated type with a *constraint* but no implementation. This ticket adds *concrete* associated type definitions — the body of `Bar: {}` is the implementation, accessible per-instance. The two forms are complementary:
+
+- `Node #(label #(String))` — abstract bound; implementors supply the type
+- `Bar: {}` — concrete definition; the struct itself supplies the type inline
+
+#### Key question
+
+Can `Bar`'s methods access the enclosing `Foo` instance's fields? If yes, this requires path-dependent semantics at the lowerer level. If no (Bar is self-contained), it is simpler — just a namespaced type.
+
+#### Dependencies
+
+Depends on: YZC-0074 (associated type machinery).
+
+- [ ] *design* — decide whether inner type bodies can reference outer instance fields (path-dependent vs. self-contained)
+- [ ] Sema: recognize uppercase struct-literal inside struct boc as concrete associated type definition
+- [ ] Sema: `f.Bar()` resolves to the inner type; enforce no `Foo.Bar()` static access
+- [ ] Lowerer: emit inner type as package-level Go struct; `f.Bar()` → constructor call
+- [ ] Golden test: `Foo: { Bar: {} }` + `f.Bar()` compiles and runs
+
+---
+
+### YZC-0083 — Spec consolidation
+
+Update spec files left stale by completed implementation tickets.
+
+- [ ] Spec 04 — generics: document explicit constraints (YZC-0026), type params, generic instantiation
+- [ ] Spec 04 — inline anonymous constraint syntax `V #(method #(T))` (YZC-0072)
+- [ ] Spec 04/05 — associated types: `#()` metatype, type aliases, call-site unification (YZC-0066)
+- [ ] Spec 04 — type alias `Name : SomeType` (YZC-0027)
+
+---
+
+### YZC-0084 — Generic instantiation alias: `StringList : List(String)`
+
+`StringList : List(String)` should declare a type alias for a concrete generic instantiation, so `StringList` can be used as a constructor and type annotation.
+
+Currently `YZC-0027` emits `type Bar = Foo` for simple aliases, but does not handle the parameterized form. Depends on: YZC-0027.
+
+- [ ] *design* — decide emission: `type StringList = List[std.String]` (Go alias) or `type StringList struct { ... }` (copy)
+- [ ] Sema: recognize `Name : GenericType(Args)` as instantiation alias
+- [ ] Lowerer: emit appropriate Go type declaration
+- [ ] `StringList(...)` constructor call works
+- [ ] Golden test
