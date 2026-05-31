@@ -501,6 +501,17 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 	return TypUnit
 }
 
+// bocLitHasParams reports whether a boc literal has any TypedDecl params
+// (nil-value TypedDecls that define the closure's input signature).
+func bocLitHasParams(bocLit *ast.BocLiteral) bool {
+	for _, elem := range bocLit.Elements {
+		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+			return true
+		}
+	}
+	return false
+}
+
 // hasInnerBocsOrMethods reports whether a boc literal contains any inner
 // body-form bocs (ShortDecl with BocLiteral value) or BocDecl methods.
 // These require StructType recording for correct field-access type-checking.
@@ -1458,8 +1469,9 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		t = a.analyzeExpr(expr.Expr)
 	case *ast.BocLiteral:
 		outerFI := a.fieldInit
-		if hasInnerBocsOrMethods(expr) {
-			// Anonymous boc literal with inner methods: type as anonymous StructType.
+		if hasInnerBocsOrMethods(expr) && !bocLitHasParams(expr) {
+			// Anonymous boc literal with inner methods and no params: type as anonymous StructType.
+			// If the literal has TypedDecl params it is a closure regardless of inner named bocs.
 			prev := a.pushScope()
 			if outerFI != nil {
 				a.fieldInit = outerFI.clone()
