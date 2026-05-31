@@ -78,6 +78,65 @@ process(sg, 42)  // error: Int does not satisfy SocialGraph.Node (User)
 
 ---
 
+## Constrained associated types
+
+A type field can carry a constraint — an interface the bound type must satisfy:
+
+```yz
+Graph : {
+    Node #( label #(String) )   // Node must have a label() method
+    first_node #( Node )
+}
+```
+
+The constraint gives the compiler enough information to type-check method calls on `g.Node` values, even when `g`'s concrete type is not known:
+
+```yz
+describe #( g Graph, n g.Node ) {
+    print(n.label())   // valid — Node is bounded by #(label #(String))
+}
+```
+
+A concrete implementation must bind `Node` to a type that satisfies the constraint:
+
+```yz
+City : {
+    name String
+    label #(String) = { name }
+}
+
+CityGraph : { Node : City }   // City has label() — satisfies the bound
+```
+
+If the bound type does not satisfy the constraint, the compiler errors at the binding site.
+
+---
+
+## Abstract g: the bound is the type
+
+Because Yz uses structural typing, `g.Node` when `g` has an abstract type (e.g. a local variable of type `Graph`) is structurally equivalent to its bound. Any value that satisfies the bound is a valid `g.Node`.
+
+```yz
+g Graph = CityGraph()
+london : City(name: "London")   // City has label() — satisfies Node #(label #(String))
+describe(g, london)             // VALID
+```
+
+There is no hidden nominal identity check. The concrete type of `g` at runtime does not matter — only whether the argument satisfies the declared bound.
+
+If the argument does not satisfy the bound, the compiler errors:
+
+```yz
+Dot : { x Int }   // no label() method
+
+dot : Dot(x: 3)
+describe(g, dot)  // YZC-0079: Dot does not satisfy g.Node bound #(label #(String))
+```
+
+If `Node` has no bound (`Node #()`), any value is accepted — the type is fully unconstrained.
+
+---
+
 ## Accessing the associated type as a value
 
 Because `Node` is a stored field, it is readable:
@@ -126,4 +185,4 @@ IntStack : {
 | Swift | `associatedtype Node` | same |
 | Haskell | `type family Node g` | same |
 
-Yz uses the same field-access syntax for associated types as for value fields. There is no special keyword.
+Yz uses the same field-access syntax for associated types as for value fields. There is no special keyword. Unlike Rust or Scala, there is no notion of existential or opaque type identity — `g.Node` when `g` is abstract is simply its bound, consistent with structural typing throughout.

@@ -123,6 +123,38 @@ process(sg, u)   // g.Node = SocialGraph.Node = User — compiler verifies u is 
 
 The compiler resolves `g.Node` statically from the known type of `sg`; no runtime lookup is needed.
 
+#### Constrained associated types
+
+A type field can be constrained by an interface, giving the compiler enough information to type-check method calls even when the concrete graph is not known:
+
+```yz
+Graph : {
+    Node #( label #(String) )
+}
+
+describe #( g Graph, n g.Node ) {
+    print(n.label())   // valid — the bound guarantees label() exists
+}
+```
+
+#### When g has an abstract type
+
+Because Yz uses structural typing, `g.Node` when `g`'s static type is the interface (not a concrete implementation) is structurally equivalent to its bound. There is no nominal existential identity — the bound is the whole story:
+
+```yz
+g Graph = SocialGraph()
+u : User("Alice")        // User satisfies Node #(label #(String))
+describe(g, u)           // valid — u satisfies the bound
+```
+
+The compiler errors only if the argument does not satisfy the bound:
+
+```yz
+describe(g, 42)   // error: Int does not satisfy g.Node bound
+```
+
+If `Node` has no bound (`Node #()`), any value is accepted.
+
 ---
 
 ## Type variables in signatures
@@ -157,9 +189,14 @@ serialize_all #( collection List(A Serializable), String )
 
 ## Compile-time resolution
 
-`g.Node` in a signature is resolved at compile time from the static type of `g`. The compiler tracks which concrete type filled each type field through the scope and substitutes it wherever a path-dependent type appears. The generated Go output is fully specialized — no `interface{}`, no boxing, no runtime type descriptors.
+`g.Node` in a signature is resolved at compile time from the static type of `g`:
 
-This is the same strategy as Scala's path-dependent types: the surface syntax is value-path, but the resolution is compile-time.
+- **Concrete `g`** (`g : SocialGraph`): `g.Node` resolves to the concrete bound type (`User`). The compiler verifies the argument is exactly `User`.
+- **Abstract `g`** (`g : Graph`): `g.Node` resolves to its bound interface (e.g. `#(label #(String))`). The compiler verifies the argument satisfies that bound structurally.
+
+In both cases the check is purely static. The generated Go output is fully specialized — no `interface{}`, no boxing, no runtime type descriptors.
+
+Unlike Scala's path-dependent types, Yz does not track nominal path identity. Two values from different abstract graphs are considered compatible as long as they satisfy the same bound, consistent with Yz's structural type system throughout.
 
 ---
 
@@ -171,4 +208,5 @@ This is the same strategy as Scala's path-dependent types: the surface syntax is
 | Type alias | `type Bar = Foo` | `Bar : Foo` |
 | Generic instantiation | `List<String>`, `List[String]` | `StringList : List(String)` |
 | Associated types | Rust `trait Graph { type Node; }`, Scala `g.Node` | `Graph : { Node #(); ... }` + `g.Node` |
+| Existential associated types | Rust `dyn Trait`, Scala existential types | not needed — bound is the type (structural) |
 | Metatype | Rust `PhantomData<T>`, Scala `Type`, Kotlin `KClass<T>` | `#()` — implicit, never written |
