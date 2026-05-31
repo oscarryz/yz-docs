@@ -1655,14 +1655,19 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 									argTypes[i].typeName(), pdt.Param, pdt.Member, f.Type.typeName())
 							}
 						} else {
-							// Abstract type field (MetaType): enforce distinctness —
-							// g1.Node and g2.Node are different abstract types.
+							// Abstract type field (MetaType): g is an abstract type, so g.Node
+							// is existential. Only the same path-dependent type is acceptable.
 							if argPdt, ok := argTypes[i].(*PathDependentType); ok {
 								if argPdt.Param != pdt.Param || argPdt.Member != pdt.Member {
 									a.errorf(c.Args[i].Value.Position(),
 										"YZC-0030: argument type %s is not compatible with %s.%s",
 										argPdt.typeName(), pdt.Param, pdt.Member)
 								}
+							} else if argTypes[i] != Unknown {
+								// YZC-0075: concrete type passed where existential g.Node expected.
+								a.errorf(c.Args[i].Value.Position(),
+									"YZC-0075: %s is existential here (%s has abstract type %s); cannot pass %s",
+									pdt.typeName(), pdt.Param, st.Name, displayType(argTypes[i]))
 							}
 						}
 					}

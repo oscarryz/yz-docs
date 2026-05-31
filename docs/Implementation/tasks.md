@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **87 golden + 23 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **88 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -29,7 +29,6 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0075 -- Existential associated types: implicit erasure + constrained method calls + use-site errors -- M -- needs YZC-0074  
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0075  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
@@ -574,16 +573,15 @@ Design decisions (settled):
 - **Collections inference**: the array literal triggers generalisation when elements unify to
   `Graph`; resolved at the literal site, not deferred to the binding.
 
-- [ ] Sema — detect when a path-dependent type's root is an abstract (interface) binding rather
+- [x] Sema — detect when a path-dependent type's root is an abstract (interface) binding rather
       than a concrete struct; mark as existential
-- [ ] Sema — allow method calls on existential `g.Node` when `Node` has a YZC-0074 bound;
-      resolve to the bound interface exactly as in the concrete case
-- [ ] Sema — error at the use site when an existential `g.Node` is used in a position that
-      requires a concrete type (e.g. passed to `visit(g, london)`)
-- [ ] Sema — error message: _"Node is existential here (g is Graph, not a specific graph type);
-      cannot match against City"_
-- [ ] Conformance tests — array of mixed concrete graphs; constrained method call on existential;
-      use-site error when concrete type required
+- [x] Sema — allow method calls on existential `g.Node` when `Node` has a YZC-0074 bound;
+      resolve to the bound interface exactly as in the concrete case (was already working via
+      `fieldType` PathDependentType → bound lookup)
+- [x] Sema — error at the use site when an existential `g.Node` is used in a position that
+      requires a concrete type (e.g. passed to `describe(g, london)` when `g: Graph`)
+- [x] Sema — error message: `YZC-0075: g.Node is existential here (g has abstract type Graph); cannot pass City`
+- [x] Conformance tests — golden 87 (constrained method call allowed), error 22 (existential violation)
 
 ### YZC-0076 — Existential associated types: opaque-token / path-identity tracking
 

@@ -1,0 +1,20 @@
+// YZC-0075: constrained method call on existential associated type.
+// When g has abstract type Graph (interface), g.Node is existential.
+// Calling n.label() is allowed because Node is bounded by #(label #(String)).
+
+Graph: { Node #(label #(String)) }
+
+City: {
+    name String
+    label #(String) = { name }
+}
+
+CityGraph: { Node: City }
+
+describe #(g Graph, n g.Node) { print(n.label()) }
+
+main: {
+    cg: CityGraph()
+    london: City(name: "London")
+    describe(cg, london)
+}

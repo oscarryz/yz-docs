@@ -1,0 +1,16 @@
+// YZC-0075: passing a concrete type where an existential g.Node is expected.
+// g has abstract type Graph, so g.Node is existential — City cannot be passed.
+
+Graph: { Node #() }
+
+City: { name String }
+
+CityGraph: { Node: City }
+
+describe #(g Graph, n g.Node) { print("ok") }
+
+main: {
+    g Graph = CityGraph()
+    london: City(name: "London")
+    describe(g, london)
+}
