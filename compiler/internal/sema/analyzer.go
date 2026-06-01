@@ -1205,6 +1205,12 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 		case *ast.ShortDecl:
 			// Use analyzeShortDecl so inner body-form bocs get proper setType()
 			// registration (needed by lowerMethod to query ExprType on ShortDecl).
+			// A lowercase ShortDecl with a BocLiteral value is a method body (YZC-0082).
+			if len(e.Names) == 1 && len(e.Values) == 1 {
+				if _, isBocLit := e.Values[0].(*ast.BocLiteral); isBocLit && !isUppercaseName(e.Names[0].Name) {
+					hasBocBody = true
+				}
+			}
 			a.analyzeShortDecl(e)
 			// Collect the resulting field(s) into the struct.
 			for _, n := range e.Names {

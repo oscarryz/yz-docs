@@ -109,6 +109,11 @@ type lowerer struct {
 	// tupleResultGoType maps a BocType to the Go result struct name generated
 	// for its multi-return values (e.g. "_swapBocResult"). (YZC-0012)
 	tupleResultGoType map[*sema.BocType]string
+
+	// outerFields holds the field names of the enclosing struct when lowering
+	// methods of a struct-outer nested type (YZC-0082). References to these names
+	// inside the inner type's methods are emitted as self._outer.fieldName.
+	outerFields map[string]bool
 }
 
 // ---------------------------------------------------------------------------
@@ -981,6 +986,56 @@ func (l *lowerer) lowerNestedStructType(goName string, st *sema.StructType) *Str
 	return sd
 }
 
+// lowerStructOuterNestedType lowers an uppercase BocLiteral defined inside a struct
+// boc into a package-level Go struct that captures the outer instance by reference.
+// e.g. `Bar: { describe: { name } }` inside `Foo` → `_fooBar` with `_outer *Foo`.
+// Inner methods access outer fields via self._outer.fieldName. (YZC-0082)
+func (l *lowerer) lowerStructOuterNestedType(goName, outerGoType string, st *sema.StructType, b *ast.BocLiteral, outerFieldNames map[string]bool) *StructDecl {
+	sd := &StructDecl{Name: goName}
+	// First field: back-pointer to the outer instance.
+	sd.Fields = append(sd.Fields, &FieldSpec{Name: "_outer", Type: "*" + outerGoType})
+	// Own fields of the inner type.
+	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue
+		}
+		if _, isBoc := f.Type.(*sema.BocType); isBoc {
+			continue
+		}
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+	}
+
+	recvType := "*" + goName
+	innerFieldNames := l.collectFieldNames(b)
+	innerMethodNames := l.collectMethodNames(b)
+	prevRecvMethods := l.recvMethods
+	prevOuterFields := l.outerFields
+	l.outerFields = outerFieldNames
+	l.recvMethods = innerMethodNames
+
+	for _, elem := range b.Elements {
+		switch e := elem.(type) {
+		case *ast.ShortDecl:
+			if len(e.Names) == 1 && len(e.Values) == 1 {
+				if inner, ok := e.Values[0].(*ast.BocLiteral); ok && !isUppercase(e.Names[0].Name) {
+					bocSemType := l.analyzer.ExprType(e)
+					m := l.lowerMethod(e.Names[0].Name, recvType, inner, innerFieldNames, bocSemType)
+					sd.Methods = append(sd.Methods, m)
+				}
+			}
+		case *ast.BocDecl:
+			if e.Body != nil {
+				m := l.lowerBocDeclAsMethod(e, recvType, innerFieldNames)
+				sd.Methods = append(sd.Methods, m)
+			}
+		}
+	}
+
+	l.outerFields = prevOuterFields
+	l.recvMethods = prevRecvMethods
+	return sd
+}
+
 // collectMethodNames returns the set of method names (ShortDecl+BocLiteral and BocDecl
 // with body) in the boc literal. Used to resolve unqualified method calls inside
 // method bodies as self.Method().
@@ -1584,6 +1639,18 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 					l.recvMethods = prevRecvMethods
 					applyExtraCowns(m, extraCowns)
 					sd.Methods = append(sd.Methods, m)
+					continue
+				}
+				// Struct-outer nested type: uppercase BocLiteral inside a struct boc (YZC-0082).
+				// e.g. `Bar: { describe: { name } }` inside `Foo` → _fooBar struct capturing *Foo.
+				if isInnerBoc && isUppercase(e.Names[0].Name) {
+					fieldName := e.Names[0].Name
+					goTypeName := "_" + strings.ToLower(name[:1]) + name[1:] + fieldName
+					if st, ok := l.analyzer.ExprType(e).(*sema.StructType); ok {
+						nested := l.lowerStructOuterNestedType(goTypeName, name, st, inner, fieldNames)
+						l.anonDecls = append(l.anonDecls, nested)
+						l.nestedTypeGoName[st] = goTypeName
+					}
 					continue
 				}
 			}
@@ -2292,6 +2359,13 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 // Singleton boc vars are capitalized so they are exported for cross-package access.
 // BocDecl functions remain lowercase (they become Go functions, not vars).
 func (l *lowerer) lowerName(name string) Expr {
+	// Outer struct field access inside an inner type's method (YZC-0082).
+	if l.recvName != "" && l.outerFields[name] {
+		return &FieldAccess{
+			Object: &FieldAccess{Object: &Ident{Name: l.recvName}, Field: "_outer"},
+			Field:  name,
+		}
+	}
 	if l.recvName != "" && l.recvFields[name] {
 		return &FieldAccess{Object: &Ident{Name: l.recvName}, Field: name}
 	}
@@ -2583,26 +2657,47 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 	}
 
 	// Nested type constructor: room.Window(size: 3) → New_roomWindow(args). (YZC-0081)
+	// Struct-outer: f.Bar() → New_fooBar(f). (YZC-0082)
 	// Must be checked before callee is lowered to FieldAccess (which would emit a method call).
 	if mem, ok := c.Callee.(*ast.MemberExpr); ok {
-		if baseIdent, ok2 := mem.Object.(*ast.Ident); ok2 {
-			if baseSym := l.analyzer.LookupInFile(baseIdent.Name); baseSym != nil {
-				if baseSt, ok3 := baseSym.Type.(*sema.StructType); ok3 && baseSt.IsSingleton {
-					for _, f := range baseSt.Fields {
-						if f.Name == mem.Member.Name && f.IsTypeField {
-							if nestedSt, ok4 := f.Type.(*sema.StructType); ok4 {
-								if goName, ok5 := l.nestedTypeGoName[nestedSt]; ok5 {
-									var ctorArgs []Expr
-									if hasNamedArgs(c.Args) {
-										ctorArgs = l.lowerStructArgs(c.Args, nestedSt)
-									} else {
-										for _, arg := range c.Args {
-											ctorArgs = append(ctorArgs, l.lowerExpr(arg.Value))
-										}
+		outerExpr := mem.Object
+		var baseSt *sema.StructType
+		// Resolve the base type — works for both Ident and arbitrary expressions.
+		if baseIdent, ok2 := outerExpr.(*ast.Ident); ok2 {
+			if sym := l.analyzer.LookupInFile(baseIdent.Name); sym != nil {
+				baseSt, _ = sym.Type.(*sema.StructType)
+			}
+		}
+		if baseSt == nil {
+			baseSt, _ = l.analyzer.ExprType(outerExpr).(*sema.StructType)
+		}
+		if baseSt != nil {
+			for _, f := range baseSt.Fields {
+				if f.Name == mem.Member.Name && f.IsTypeField {
+					if nestedSt, ok4 := f.Type.(*sema.StructType); ok4 {
+						if goName, ok5 := l.nestedTypeGoName[nestedSt]; ok5 {
+							var ctorArgs []Expr
+							if baseSt.IsSingleton {
+								// Singleton-outer: no outer ref, just pass inner args.
+								if hasNamedArgs(c.Args) {
+									ctorArgs = l.lowerStructArgs(c.Args, nestedSt)
+								} else {
+									for _, arg := range c.Args {
+										ctorArgs = append(ctorArgs, l.lowerExpr(arg.Value))
 									}
-									return &FuncCall{Func: &Ident{Name: "New" + goName}, Args: ctorArgs}
+								}
+							} else {
+								// Struct-outer: pass outer instance as first arg (YZC-0082).
+								ctorArgs = append(ctorArgs, l.lowerExpr(outerExpr))
+								if hasNamedArgs(c.Args) {
+									ctorArgs = append(ctorArgs, l.lowerStructArgs(c.Args, nestedSt)...)
+								} else {
+									for _, arg := range c.Args {
+										ctorArgs = append(ctorArgs, l.lowerExpr(arg.Value))
+									}
 								}
 							}
+							return &FuncCall{Func: &Ident{Name: "New" + goName}, Args: ctorArgs}
 						}
 					}
 				}
@@ -2821,7 +2916,18 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		}
 		// Struct instance method call (n.hi() where n is *Named) → returns *Thunk.
 		objType := l.analyzer.ExprType(mem.Object)
-		if _, isStruct := objType.(*sema.StructType); isStruct {
+		if baseSt, isStruct := objType.(*sema.StructType); isStruct {
+			// Struct-outer nested type constructor (f.Bar()): returns plain struct,
+			// not a thunk — same logic as singleton-outer check above. (YZC-0082)
+			if !baseSt.IsSingleton {
+				for _, f := range baseSt.Fields {
+					if f.Name == mem.Member.Name && f.IsTypeField {
+						if _, ok := f.Type.(*sema.StructType); ok {
+							return false
+						}
+					}
+				}
+			}
 			return true
 		}
 		if _, isGenInst := objType.(*sema.GenericInstType); isGenInst {

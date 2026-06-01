@@ -1,0 +1,18 @@
+// YZC-0082: Struct-outer nested type (concrete associated type)
+// Bar is defined inside Foo; f.Bar() creates a Bar bound to f.
+// Bar's methods can access Foo's fields via the captured outer reference.
+Foo: {
+    name String
+    Bar: {
+        describe: { name }
+    }
+}
+
+main: {
+    alice : Foo(name: "alice")
+    bob   : Foo(name: "bob")
+    ab : alice.Bar()
+    bb : bob.Bar()
+    print(ab.describe())
+    print(bb.describe())
+}
