@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **89 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **90 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -45,7 +45,7 @@ YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant
 YZC-0081 -- Singleton-outer nested type factory: `room: { Window: {...} }` → `room.Window(...)` -- M  
 YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074  
 YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M  
-YZC-0084 -- Generic instantiation alias: `StringList : List(String)` -- M -- needs YZC-0027  
+[x] YZC-0084 -- Generic instantiation alias: `StringList : List(String)` -- M ✓  
 YZC-0021 -- Directory and file bocs -- L -- needs YZC-0081  
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- needs YZC-0021  
 YZC-0022 -- Multiple source roots -- M  

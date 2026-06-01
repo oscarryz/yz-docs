@@ -1,0 +1,12 @@
+// YZC-0084: Generic instantiation alias — `StringBox : Box(String)` declares
+// a type alias for Box[std.String]; the alias can be used as a constructor.
+Box: {
+    T
+    value T
+}
+StringBox : Box(String)
+
+main: {
+    b : StringBox(value: "hello")
+    print(b.value)
+}

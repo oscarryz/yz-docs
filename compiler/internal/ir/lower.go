@@ -561,6 +561,14 @@ func (l *lowerer) lowerTopShortDecl(d *ast.ShortDecl) Decl {
 					return &TypeAliasDecl{Name: name.Name, Target: ident.Name}
 				}
 			}
+			// Generic instantiation alias: uppercase + CallExpr RHS with GenericInstType result.
+			// e.g. `StringBox : Box(String)` → `type StringBox = Box[std.String]`
+			if _, ok := d.Values[0].(*ast.CallExpr); ok {
+				if git, ok := l.analyzer.ExprType(d.Values[0]).(*sema.GenericInstType); ok {
+					target := strings.TrimPrefix(l.goType(git), "*")
+					return &TypeAliasDecl{Name: name.Name, Target: target}
+				}
+			}
 		}
 		// A simple `x: expr` at top level — treat as a singleton with one field.
 		return l.lowerSimpleTopDecl(name.Name, d.Values[0])
@@ -2519,6 +2527,19 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 					args = l.lowerStructArgs(c.Args, st)
 				}
 				return &FuncCall{Func: &Ident{Name: "New" + st.Name}, Args: args}
+			}
+			// Generic instantiation alias constructor: StringBox(value:"hello") → NewBox[std.String](args).
+			if git, isGI := sym.Type.(*sema.GenericInstType); isGI {
+				typeArgs := make([]string, len(git.TypeArgs))
+				for i, ta := range git.TypeArgs {
+					typeArgs[i] = l.goType(ta)
+				}
+				if baseSym := l.analyzer.LookupInFile(git.Name); baseSym != nil {
+					if baseSt, ok := baseSym.Type.(*sema.StructType); ok && hasNamedArgs(c.Args) {
+						args = l.lowerStructArgs(c.Args, baseSt)
+					}
+				}
+				return &FuncCall{Func: &Ident{Name: "New" + git.Name}, Args: args, TypeArgs: typeArgs}
 			}
 			// BocDecl singletons: all calls (external and recursive) go through
 			// the package-level singleton so that foo.param persists and is

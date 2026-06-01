@@ -1877,6 +1877,10 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 		return bt // constructor call (non-generic struct)
 	case *BuiltinType:
 		return bt // direct type value used as function
+	case *GenericInstType:
+		// Generic instantiation alias used as constructor: StringBox(value:"hello")
+		// where StringBox : Box(String). The return type is the same instantiation.
+		return bt
 	}
 	return Unknown
 }
