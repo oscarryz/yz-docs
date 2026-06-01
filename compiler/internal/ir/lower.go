@@ -19,11 +19,12 @@ import (
 // pkgName is the Go package name to emit (usually "main" for the entry file).
 func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
 	l := &lowerer{
-		analyzer:         a,
-		localBocVars:     make(map[string]bool),
-		localBodyBocVars: make(map[string]string),
-		anonBocCache:     make(map[*ast.BocLiteral]string),
-		nestedTypeGoName: make(map[*sema.StructType]string),
+		analyzer:          a,
+		localBocVars:      make(map[string]bool),
+		localBodyBocVars:  make(map[string]string),
+		anonBocCache:      make(map[*ast.BocLiteral]string),
+		nestedTypeGoName:  make(map[*sema.StructType]string),
+		tupleResultGoType: make(map[*sema.BocType]string),
 	}
 	return l.lowerFile(sf, pkgName)
 }
@@ -104,6 +105,10 @@ type lowerer struct {
 	// singleton, e.g. Window: { size Int } inside room) to its namespaced Go type
 	// name (e.g. "_roomWindow"). Populated during lowerStructuredSingleton. (YZC-0081)
 	nestedTypeGoName map[*sema.StructType]string
+
+	// tupleResultGoType maps a BocType to the Go result struct name generated
+	// for its multi-return values (e.g. "_swapBocResult"). (YZC-0012)
+	tupleResultGoType map[*sema.BocType]string
 }
 
 // ---------------------------------------------------------------------------
@@ -626,12 +631,33 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 
 	// Determine the actual return type from sema (YZC-0004).
 	resultType := "std.Unit"
+	nReturns := 0
+	var bocTypeRef *sema.BocType
 	if sym := l.analyzer.LookupInFile(name); sym != nil {
-		if bt, ok := sym.Type.(*sema.BocType); ok && len(bt.Returns) > 0 {
-			if rt := l.goType(bt.Returns[0]); rt != "std.Unit" {
-				resultType = rt
-			}
+		if bt, ok := sym.Type.(*sema.BocType); ok {
+			bocTypeRef = bt
+			nReturns = len(bt.Returns)
 		}
+	}
+
+	if nReturns == 1 {
+		if rt := l.goType(bocTypeRef.Returns[0]); rt != "std.Unit" {
+			resultType = rt
+		}
+	} else if nReturns > 1 {
+		// Generate a plain result struct for multi-return (YZC-0012).
+		resultStructName := "_" + name + "BocResult"
+		var fields []*FieldSpec
+		for i, ret := range bocTypeRef.Returns {
+			fields = append(fields, &FieldSpec{Name: fmt.Sprintf("_r%d", i), Type: l.goType(ret)})
+		}
+		l.anonDecls = append(l.anonDecls, &StructDecl{
+			Name:         resultStructName,
+			Fields:       fields,
+			IsResultType: true,
+		})
+		l.tupleResultGoType[bocTypeRef] = resultStructName
+		resultType = resultStructName
 	}
 
 	// Collect leading TypedDecl-no-value entries as Call() params (YZC-0049).
@@ -654,10 +680,40 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 
 	innerStmts := l.lowerSingletonBodyStmts(b.Elements)
 
-	// For non-Unit returns: lowerSingletonBodyStmts appends ReturnStmt(unit) after
-	// the last value expression. Convert [..., ExprStmt(val), ReturnStmt(unit)]
-	// to [..., ReturnStmt(val)] so the value is actually returned.
-	if resultType != "std.Unit" {
+	if nReturns > 1 {
+		// Multi-return: pop N trailing ExprStmts and combine into StructLitExpr return.
+		// lowerSingletonBodyStmts appends ReturnStmt(UnitLit) — strip it first.
+		if n := len(innerStmts); n > 0 {
+			if rs, ok := innerStmts[n-1].(*ReturnStmt); ok {
+				if _, isUnit := rs.Value.(*UnitLit); isUnit {
+					innerStmts = innerStmts[:n-1]
+				}
+			}
+		}
+		var retExprs []Expr
+		for len(retExprs) < nReturns && len(innerStmts) > 0 {
+			last := innerStmts[len(innerStmts)-1]
+			if es, ok := last.(*ExprStmt); ok {
+				retExprs = append([]Expr{es.Expr}, retExprs...) // prepend to preserve order
+				innerStmts = innerStmts[:len(innerStmts)-1]
+			} else {
+				break
+			}
+		}
+		if len(retExprs) == nReturns {
+			structName := l.tupleResultGoType[bocTypeRef]
+			var fieldInits []*FieldInit
+			for i, e := range retExprs {
+				fieldInits = append(fieldInits, &FieldInit{Name: fmt.Sprintf("_r%d", i), Value: e})
+			}
+			innerStmts = append(innerStmts, &ReturnStmt{Value: &StructLitExpr{TypeName: structName, Fields: fieldInits}})
+		} else {
+			innerStmts = append(innerStmts, &ReturnStmt{Value: &UnitLit{}})
+		}
+	} else if resultType != "std.Unit" {
+		// For non-Unit returns: lowerSingletonBodyStmts appends ReturnStmt(unit) after
+		// the last value expression. Convert [..., ExprStmt(val), ReturnStmt(unit)]
+		// to [..., ReturnStmt(val)] so the value is actually returned.
 		n := len(innerStmts)
 		if n >= 2 {
 			if ru, ok := innerStmts[n-1].(*ReturnStmt); ok {
@@ -1679,6 +1735,20 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 				return l.lowerLocalBodyBoc(e.Names[0].Name, bocLit, e)
 			}
 		}
+		// Multi-name with single multi-return call: `x, y : swap(...)` (YZC-0012).
+		if len(e.Names) > 1 && len(e.Values) == 1 {
+			if tt, ok := l.analyzer.ExprType(e.Values[0]).(*sema.TupleType); ok && len(tt.Types) > 1 {
+				callExpr := l.lowerExpr(e.Values[0])
+				mrtVar := "_mrt_" + e.Names[0].Name
+				var stmts []Stmt
+				stmts = append(stmts, &DeclStmt{Name: mrtVar, Init: &ForceExpr{Thunk: callExpr}})
+				for i, n := range e.Names {
+					fieldName := fmt.Sprintf("_r%d", i)
+					stmts = append(stmts, &DeclStmt{Name: n.Name, Init: &FieldAccess{Object: &Ident{Name: mrtVar}, Field: fieldName}})
+				}
+				return stmts
+			}
+		}
 		var stmts []Stmt
 		for i, n := range e.Names {
 			var initExpr Expr
@@ -1706,6 +1776,23 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		}
 		return stmts
 	case *ast.Assignment:
+		// Multi-name with single multi-return call: `x, y = swap(...)` (YZC-0012).
+		if asgn := e; asgn.Target == nil && len(asgn.Names) > 1 && len(asgn.Values) == 1 {
+			if tt, ok := l.analyzer.ExprType(asgn.Values[0]).(*sema.TupleType); ok && len(tt.Types) > 1 {
+				callExpr := l.lowerExpr(asgn.Values[0])
+				mrtVar := "_mrt_" + asgn.Names[0].Name
+				var stmts []Stmt
+				stmts = append(stmts, &DeclStmt{Name: mrtVar, Init: &ForceExpr{Thunk: callExpr}})
+				for i, n := range asgn.Names {
+					fieldName := fmt.Sprintf("_r%d", i)
+					stmts = append(stmts, &AssignStmt{
+						Target: l.lowerName(n.Name),
+						Value:  &FieldAccess{Object: &Ident{Name: mrtVar}, Field: fieldName},
+					})
+				}
+				return stmts
+			}
+		}
 		return []Stmt{l.lowerAssignment(e)}
 	case *ast.ReturnStmt:
 		var val Expr

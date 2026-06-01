@@ -437,6 +437,26 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 		}
 	}
 
+	// Multi-name with single RHS: multi-return call expansion (YZC-0012).
+	if len(d.Names) > 1 && len(d.Values) == 1 {
+		valType := a.analyzeExpr(d.Values[0])
+		var returnTypes []Type
+		if tt, ok := valType.(*TupleType); ok {
+			returnTypes = tt.Types
+		} else {
+			returnTypes = []Type{valType}
+		}
+		for i, name := range d.Names {
+			var typ Type = Unknown
+			if i < len(returnTypes) {
+				typ = returnTypes[i]
+			}
+			fqn := a.currentFQN(name.Name)
+			a.define(&Symbol{Name: name.Name, Type: typ, FQN: fqn, Node: d})
+		}
+		return TypUnit
+	}
+
 	// General case: analyze RHS then bind each name.
 	var valTypes []Type
 	for _, v := range d.Values {
@@ -767,16 +787,23 @@ func (a *Analyzer) analyzeAssignment(asgn *ast.Assignment) Type {
 			}
 		}
 	} else {
+		// Expand TupleType for multi-name assignment (YZC-0012).
+		effectiveValTypes := valTypes
+		if len(asgn.Names) > 1 && len(valTypes) == 1 {
+			if tt, ok := valTypes[0].(*TupleType); ok {
+				effectiveValTypes = tt.Types
+			}
+		}
 		for i, name := range asgn.Names {
 			sym := a.currentScope.Lookup(name.Name)
 			if sym == nil {
 				a.errorf(name.Pos, "undefined: %s", name.Name)
 				continue
 			}
-			if i < len(valTypes) && sym.Type != Unknown {
-				if !valTypes[i].IsCompatibleWith(sym.Type) {
+			if i < len(effectiveValTypes) && sym.Type != Unknown {
+				if !effectiveValTypes[i].IsCompatibleWith(sym.Type) {
 					a.errorf(name.Pos, "assignment to %s: %s not compatible with %s",
-						name.Name, displayType(valTypes[i]), displayType(sym.Type))
+						name.Name, displayType(effectiveValTypes[i]), displayType(sym.Type))
 				}
 			}
 		}
@@ -1086,7 +1113,14 @@ func (a *Analyzer) analyzeBocBody(elements []ast.Node) []Type {
 		t := a.analyzeNode(elem)
 		switch elem.(type) {
 		case ast.Expr:
-			lastExprTypes = []Type{t}
+			// Accumulate consecutive non-Unit trailing expressions — each is a
+			// return value. A Unit expression (side effect) resets the sequence.
+			// Multiple trailing non-Unit exprs → multi-return boc (YZC-0012).
+			if t == TypUnit {
+				lastExprTypes = nil
+			} else {
+				lastExprTypes = append(lastExprTypes, t)
+			}
 		case *ast.ReturnStmt:
 			lastExprTypes = []Type{t}
 		default:
@@ -1826,7 +1860,12 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 		if len(bt.Returns) == 1 {
 			return retType
 		}
-		return Unknown // multi-return
+		// Multi-return: return TupleType of all substituted return types (YZC-0012).
+		allRets := make([]Type, len(bt.Returns))
+		for i, r := range bt.Returns {
+			allRets[i] = substituteType(r, bindings)
+		}
+		return &TupleType{Types: allRets}
 	case *StructType:
 		if bt.IsSingleton {
 			// Calling a singleton boc runs the body; return type is the body's last expr.

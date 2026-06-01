@@ -32,7 +32,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0079 -- *may not be needed: see detail*  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access -- S  
-YZC-0012 -- Multiple return values -- M  
+YZC-0012 -- Multiple return values -- M -- **done**  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -192,9 +192,9 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
 
   `lowerStructArgs` reorders by field declaration order; `lowerNamedArgs` for BocDecl calls. Golden test 59.
 
-- [ ] **[YZC-0012] Multiple return values**
+- [x] **[YZC-0012] Multiple return values**
 
-  `x, y = swap(x, y)` — multi-assign LHS not yet implemented.
+  `x, y = swap(x, y)` — multi-assign LHS. Multiple trailing non-Unit expressions from a boc body produce a `_<name>BocResult` plain struct; call sites Force() the thunk and destructure into individual variables. Golden 91.
 
 - [ ] **[YZC-0013] Array append via `<<`**
 

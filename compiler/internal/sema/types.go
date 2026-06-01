@@ -94,6 +94,43 @@ func typeHasToStr(t Type) bool {
 }
 
 // ---------------------------------------------------------------------------
+// Tuple type (multi-return)
+// ---------------------------------------------------------------------------
+
+// TupleType is the transient type of a multi-return boc call.
+// It can only appear on the RHS of a multi-name declaration or assignment;
+// it is never stored as a variable's type. (YZC-0012)
+type TupleType struct {
+	Types []Type
+}
+
+func (t *TupleType) typeName() string {
+	parts := make([]string, len(t.Types))
+	for i, ty := range t.Types {
+		parts[i] = ty.typeName()
+	}
+	return "(" + strings.Join(parts, ", ") + ")"
+}
+
+func (t *TupleType) IsCompatibleWith(other Type) bool {
+	if _, ok := other.(*UnknownType); ok {
+		return true
+	}
+	tt, ok := other.(*TupleType)
+	if !ok || len(t.Types) != len(tt.Types) {
+		return false
+	}
+	for i := range t.Types {
+		if !t.Types[i].IsCompatibleWith(tt.Types[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (t *TupleType) String() string { return t.typeName() }
+
+// ---------------------------------------------------------------------------
 // Boc type
 // ---------------------------------------------------------------------------
 

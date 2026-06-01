@@ -1,0 +1,13 @@
+// YZC-0012: Multiple return values
+swap: {
+    a String
+    b String
+    b
+    a
+}
+
+main: {
+    x, y : swap("hello", "world")
+    print(x)
+    print(y)
+}

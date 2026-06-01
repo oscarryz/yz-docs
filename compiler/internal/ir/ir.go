@@ -47,6 +47,7 @@ type StructDecl struct {
 	Methods         []*MethodDecl
 	NoConstructor   bool
 	IsVariant       bool
+	IsResultType    bool                // plain struct for multi-return results (YZC-0012); no Cown/constructor/String
 	Variants        []*IRVariantCase
 	TypeParams          []string            // formal type params for generic variants (e.g., ["V"])
 	TypeConstraints     map[string][]string // typeParam → Go interface method signature strings (inferred)
@@ -221,6 +222,7 @@ func (*NewStructExpr) irExpr(){}
 func (*MatchExpr) irExpr()         {}
 func (*SwitchExpr) irExpr()        {}
 func (*VariantTestExpr) irExpr()   {}
+func (*StructLitExpr) irExpr()     {}
 
 // Literal nodes — codegen boxes these into std.NewXxx(...) calls.
 type IntLit struct{ Val int64 }
@@ -337,4 +339,17 @@ type SwitchExpr struct {
 type VariantTestExpr struct {
 	Subject   Expr
 	ConstName string // e.g. "_PetDog"
+}
+
+// StructLitExpr creates a plain struct literal: TypeName{Field: val, ...}.
+// Used for multi-return result structs (YZC-0012).
+type StructLitExpr struct {
+	TypeName string
+	Fields   []*FieldInit
+}
+
+// FieldInit is a named field initializer within a StructLitExpr.
+type FieldInit struct {
+	Name  string
+	Value Expr
 }

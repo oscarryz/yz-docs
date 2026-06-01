@@ -102,6 +102,19 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 		return
 	}
 
+	// Plain result struct for multi-return bocs (YZC-0012): no Cown, no constructor, no String().
+	if sd.IsResultType {
+		g.linef("type %s struct {", sd.Name)
+		g.level++
+		for _, f := range sd.Fields {
+			g.linef("%s %s", f.Name, f.Type)
+		}
+		g.level--
+		g.line("}")
+		g.nl()
+		return
+	}
+
 	// Build type parameter strings for generic structs.
 	// typeConstraints: "[T any]", "[T Talker]", or "[T interface{A;B}]" for declarations;
 	// typeArgs: "[T]" for references.
@@ -438,6 +451,12 @@ func (g *generator) expr(e ir.Expr) string {
 		return g.emitSwitchIIFE(ex)
 	case *ir.VariantTestExpr:
 		return fmt.Sprintf("std.NewBool(%s._variant == %s)", g.expr(ex.Subject), ex.ConstName)
+	case *ir.StructLitExpr:
+		var parts []string
+		for _, f := range ex.Fields {
+			parts = append(parts, f.Name+": "+g.expr(f.Value))
+		}
+		return ex.TypeName + "{" + strings.Join(parts, ", ") + "}"
 	default:
 		return "/* ? */"
 	}
