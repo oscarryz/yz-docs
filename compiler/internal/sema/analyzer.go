@@ -1186,9 +1186,16 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 				// Step 6 (YZC-0066): detect type-alias bindings.
 				// `Node: User` — uppercase LHS + bare ident RHS resolving to a
 				// non-singleton, non-interface StructType → compile-time type alias.
+				// Also marks nested type definitions: `Window: { size Int }` inside a
+				// singleton/struct (YZC-0081).
 				isTypeAlias := false
 				if isUppercaseName(n.Name) && len(e.Values) == 1 {
 					if _, ok := e.Values[0].(*ast.Ident); ok {
+						if st2, ok2 := sym.Type.(*StructType); ok2 && !st2.IsSingleton && !st2.IsInterface && !st2.IsVariant {
+							isTypeAlias = true
+						}
+					}
+					if _, ok := e.Values[0].(*ast.BocLiteral); ok {
 						if st2, ok2 := sym.Type.(*StructType); ok2 && !st2.IsSingleton && !st2.IsInterface && !st2.IsVariant {
 							isTypeAlias = true
 						}

@@ -1,0 +1,11 @@
+// YZC-0081: Singleton-outer nested type factory
+// `Window: { size Int }` inside `room` declares a type factory;
+// `room.Window(size: 3)` constructs an instance.
+room: {
+    Window: { size Int }
+}
+
+main: {
+    w : room.Window(size: 3)
+    print(w.size)
+}

@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **90 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **91 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -42,7 +42,7 @@ YZC-0039 -- Operators audit -- L -- needs YZC-0031
 YZC-0043 -- Captured variable reference semantics -- *design*  
 YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
-YZC-0081 -- Singleton-outer nested type factory: `room: { Window: {...} }` → `room.Window(...)` -- M  
+[x] YZC-0081 -- Singleton-outer nested type factory: `room: { Window: {...} }` → `room.Window(...)` -- M ✓  
 YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074  
 YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M  
 [x] YZC-0084 -- Generic instantiation alias: `StringList : List(String)` -- M ✓  
@@ -988,11 +988,11 @@ A struct-literal boc inside a singleton is lowered as a field initialiser (type 
 
 Single-file case implementable independently of YZC-0002.
 
-- [ ] Sema: recognize uppercase struct-literal inside singleton as nested type definition
-- [ ] Sema: give it a scoped name (`singleton.Type`), register as a `StructType` in scope
-- [ ] Lowerer: emit nested type as package-level `StructDecl`; singleton field becomes the constructor
-- [ ] Field access `room.Window(...)` → constructor call on the nested Go struct
-- [ ] Golden test: `room: { Window: { size Int } }` + `room.Window(size: 3)` compiles and runs
+- [x] Sema: recognize uppercase struct-literal inside singleton as nested type definition
+- [x] Sema: give it a scoped name (`singleton.Type`), register as a `StructType` in scope
+- [x] Lowerer: emit nested type as package-level `StructDecl`; singleton field becomes the constructor
+- [x] Field access `room.Window(...)` → constructor call on the nested Go struct
+- [x] Golden test 90: `room: { Window: { size Int } }` + `room.Window(size: 3)` compiles and runs
 
 ---
 

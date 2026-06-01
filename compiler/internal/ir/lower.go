@@ -23,6 +23,7 @@ func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
 		localBocVars:     make(map[string]bool),
 		localBodyBocVars: make(map[string]string),
 		anonBocCache:     make(map[*ast.BocLiteral]string),
+		nestedTypeGoName: make(map[*sema.StructType]string),
 	}
 	return l.lowerFile(sf, pkgName)
 }
@@ -99,6 +100,10 @@ type lowerer struct {
 	// so repeated lowering of the same literal (e.g. eager args + lowerStructArgs)
 	// returns the same anonymous struct rather than creating a duplicate.
 	anonBocCache map[*ast.BocLiteral]string
+	// nestedTypeGoName maps a sema StructType (for a nested type defined inside a
+	// singleton, e.g. Window: { size Int } inside room) to its namespaced Go type
+	// name (e.g. "_roomWindow"). Populated during lowerStructuredSingleton. (YZC-0081)
+	nestedTypeGoName map[*sema.StructType]string
 }
 
 // ---------------------------------------------------------------------------
@@ -825,6 +830,18 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 					sd.Methods = append(sd.Methods, m)
 					continue
 				}
+				// Nested type definition: uppercase BocLiteral → package-level namespaced struct.
+				// e.g. `Window: { size Int }` inside `room` → type _roomWindow struct {...} (YZC-0081)
+				if isInnerBoc && isUppercase(e.Names[0].Name) {
+					fieldName := e.Names[0].Name
+					goTypeName := "_" + name + strings.ToLower(fieldName[:1]) + fieldName[1:]
+					if st, ok := l.analyzer.ExprType(e).(*sema.StructType); ok {
+						nested := l.lowerNestedStructType(goTypeName, st)
+						l.anonDecls = append(l.anonDecls, nested)
+						l.nestedTypeGoName[st] = goTypeName
+					}
+					continue
+				}
 			}
 			// Otherwise it's a field.
 			for i, n := range e.Names {
@@ -888,6 +905,23 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 		sd.Methods = append(sd.Methods, callMethod)
 	}
 
+	return sd
+}
+
+// lowerNestedStructType lowers a StructType (defined as an uppercase BocLiteral
+// inside a singleton) into a package-level StructDecl with a namespaced Go name.
+// e.g. Window: { size Int } inside room → type _roomWindow struct { std.Cown; size std.Int }
+func (l *lowerer) lowerNestedStructType(goName string, st *sema.StructType) *StructDecl {
+	sd := &StructDecl{Name: goName}
+	for _, f := range st.Fields {
+		if f.IsTypeField {
+			continue
+		}
+		if _, isBoc := f.Type.(*sema.BocType); isBoc {
+			continue
+		}
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+	}
 	return sd
 }
 
@@ -2461,6 +2495,34 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		}
 	}
 
+	// Nested type constructor: room.Window(size: 3) → New_roomWindow(args). (YZC-0081)
+	// Must be checked before callee is lowered to FieldAccess (which would emit a method call).
+	if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+		if baseIdent, ok2 := mem.Object.(*ast.Ident); ok2 {
+			if baseSym := l.analyzer.LookupInFile(baseIdent.Name); baseSym != nil {
+				if baseSt, ok3 := baseSym.Type.(*sema.StructType); ok3 && baseSt.IsSingleton {
+					for _, f := range baseSt.Fields {
+						if f.Name == mem.Member.Name && f.IsTypeField {
+							if nestedSt, ok4 := f.Type.(*sema.StructType); ok4 {
+								if goName, ok5 := l.nestedTypeGoName[nestedSt]; ok5 {
+									var ctorArgs []Expr
+									if hasNamedArgs(c.Args) {
+										ctorArgs = l.lowerStructArgs(c.Args, nestedSt)
+									} else {
+										for _, arg := range c.Args {
+											ctorArgs = append(ctorArgs, l.lowerExpr(arg.Value))
+										}
+									}
+									return &FuncCall{Func: &Ident{Name: "New" + goName}, Args: ctorArgs}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	callee := l.lowerExpr(c.Callee)
 	var args []Expr
 	for _, arg := range c.Args {
@@ -2656,6 +2718,17 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 			if baseSym := l.analyzer.LookupInFile(baseIdent.Name); baseSym != nil {
 				if st, ok := baseSym.Type.(*sema.StructType); ok && st.IsVariant {
 					return false
+				}
+				// Nested type constructor (room.Window(size:3)): returns plain struct,
+				// not a thunk. (YZC-0081)
+				if baseSt, ok := baseSym.Type.(*sema.StructType); ok && baseSt.IsSingleton {
+					for _, f := range baseSt.Fields {
+						if f.Name == mem.Member.Name && f.IsTypeField {
+							if _, ok := f.Type.(*sema.StructType); ok {
+								return false
+							}
+						}
+					}
 				}
 			}
 		}
@@ -3773,6 +3846,10 @@ func (l *lowerer) goType(t sema.Type) string {
 		}
 		return "*std.Thunk[any]"
 	case *sema.StructType:
+		// Nested singleton type (YZC-0081): use the registered namespaced Go name.
+		if goName, ok := l.nestedTypeGoName[tt]; ok {
+			return "*" + goName
+		}
 		if tt.Name != "" {
 			if tt.IsSingleton {
 				if tt.Name == "_anonBoc" {
