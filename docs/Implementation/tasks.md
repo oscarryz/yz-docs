@@ -44,7 +44,7 @@ YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-002
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
 YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074 -- **done**  
 YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M -- **done**  
-YZC-0085 -- Module system design: file/dir invariants, _name.yz companion, supersede smart nesting -- M -- *design*  
+YZC-0085 -- Module system design: file/dir invariants, _name.yz companion, supersede smart nesting -- M -- **done**  
 YZC-0021 -- Directory and file bocs -- L -- needs YZC-0085  
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- superseded by YZC-0085  
 YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  

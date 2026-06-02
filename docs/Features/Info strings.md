@@ -26,7 +26,26 @@ See also: [Compile-Time Bocs](Compile%20Time%20Bocs.md) · [Structural Reflectio
 
 ## Syntax
 
-An infostring is placed on the line(s) immediately before the definition it annotates. Yz strings are multiline by default, so a single string spans as many lines as needed.
+There are two Declaration Forms:
+
+**Form 1 — Inline backtick literal** (placed immediately before the definition it annotates):
+
+```yz
+`port: 8080`
+Server : { ... }
+```
+
+**Form 2 — Companion file** (`_name.yz` in the same directory as the boc named `name`):
+
+```
+net/
+  _http.yz   ← infostring body for net.http
+  http.yz    ← defines net.http
+```
+
+The content of `_http.yz` is the same infostring body syntax — a boc body without `{ }`. A `_name.yz` file is never a boc; the compiler attaches its content to the named boc's infostring slot and triggers compile-time bocs from there.
+
+Use Form 1 for inline annotations on individual declarations. Use Form 2 when the infostring annotates the boc defined by the file itself (which has no "line before it"), or when you want to keep metadata separate from code — for example, project dependency declarations.
 
 A minimal infostring with a single scalar:
 

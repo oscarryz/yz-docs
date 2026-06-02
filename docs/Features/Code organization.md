@@ -1,9 +1,21 @@
 #feature
 # Code organization
 
+## Module system invariants
+
+The Yz module system is governed by five invariants (see `spec/09`):
+
+1. **File = boc body** — the content of `foo/bar.yz` is the boc body of `foo.bar`
+2. **Directory = namespace** — files in a directory compose sub-bocs; no conflicts possible
+3. **Source root excluded from FQN** — `src/foo/bar.yz` defines `foo.bar`, not `src.foo.bar`
+4. **`_name.yz` = infostring companion** — never a boc; content attached to the named boc's infostring slot
+5. **File and directory coexist** — `http.yz` (own body) + `http/` (sub-bocs) both contribute to `http`
+
+---
+
 ## Simple projects
 
-For simple projects the `yz` build tool will compile each individual file and will create an executable if either they are named `main.yz` or have a `main` method or they have free floating code. You can also pass the filename to process a single file. If no entry point is found they are considered libraries and no executable would be created. This simple configuration applies for subdirectories too. 
+For simple projects the `yz` build tool will compile each individual file and will create an executable if either they are named `main.yz` or have a `main` boc or free-floating code. You can also pass the filename to process a single file. If no entry point is found they are considered libraries and no executable would be created. This applies for subdirectories too.
 
 
 Example: 
@@ -201,76 +213,50 @@ But is common to create aliases that work as "import" to avoid typing the whole 
 ```
 
 
-### Filesystem Block name resolution
+### FQN resolution
 
-The compiler resolves block names to filesystem files using the `src_path` variable ( `src`, `lib`, `vendor` in this example ) using the following strategy:
+The compiler resolves boc names using the `src_path` source roots. Each source root is a namespace anchor — its own name is NOT part of the FQN.
 
- 1. File name including subdirectories will create a block, even if is empty excluding directories defined in the project's `src_path` variable
-    `./src/house/front/Host.yz` will create the `house.front.Host` block
-    ```
-      // src/house/front/Host.yz
-      // creates the empty type Host #()
+`src/house/front/Host.yz` → FQN `house.front.Host`
+`vendor/printer.yz` → FQN `printer`
 
-    ```
+The boc's content is the file body:
 
-    `./vendor/printer.yz`  creates `printer`
-
-   ```
-   //vendor/printer.yz
-   print:{} // creates the `printer.print #()` block
-   ```
+```yz
+// src/house/front/Host.yz — defines house.front.Host
+menu String
+open_doors: { ... }
+```
 
 ### Summary
 
-Files and subdirectories can be used to create blocks and nested blocks for better code organization. 
+The boc structure:
 
-For instance consider the following block structure:
-
-```javascript
+```yz
 house: {
     front: {
-        Host {
-           name String
-        }
+        Host: { name String }
     }
 }
 ```
 
-Could be defined in several ways in the file system: 
-
-- Matching file name
-```javascript
-//house.yz
-// Top level block is not `house` thus it gets defined inside `house`
-front: {
-    Host { // fqn house.front.House
-        name String
-    }
-}
+Is expressed in the filesystem as:
 
 ```
+house/front/Host.yz
+```
 
-- Using directories as block names 
-```javascript
+```yz
 // house/front/Host.yz
 name String
-
 ```
 
-- A combination of both
-```
-// house/front/Host.yz
-Host {
-    name String
-}
-// and house/Front.yz
-Front {
-    House {
-        name String
-    }
-}
-```
-In this case, when a block is defined in different files or different source directories, they'll be merged in a single object.
-In case of repeating attributes, a compilation error will be shown (_it might be changed with a compilation variable where the first found in will take precedence_)
+Or with an own body at each level:
 
-Note, this feature might be fully implemented by [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md)
+```
+house.yz          ← house body (facade, take_orders, ...)
+house/
+  front.yz        ← house.front body
+  front/
+    Host.yz       ← house.front.Host body
+```

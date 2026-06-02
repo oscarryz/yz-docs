@@ -398,33 +398,21 @@ Derive : {
 
 ---
 
-## Standard Library Compile Implementations
+## Compile-Time Boc Catalogue
 
-The following `Compile` implementations are provided by the Yz standard library.
+All known and planned `Compile` implementations. Status: **std** = in standard library, **planned** = designed but not yet implemented. Individual design notes for planned ones: [`Compile Time Bocs/`](Compile%20Time%20Bocs/)
 
-| Implementation | `name` | `Schema` | Generates | Declared constraints on `S` |
-| --- | --- | --- | --- | --- |
-| `Derive` | `"derive"` | `#(interfaces [String])` | Interface implementations | Varies per interface |
-| `JSON` | `"json"` | `#(field_name String, ignore Bool)` | Serialization / deserialization | None |
-| `Debug` | derived | `#(debug Bool)` | `debug #(String)` method | None |
-| `Validate` | `"validate"` | `#(rule String, strict Bool)` | Validation methods | None |
-
----
-
-## Comparison With Other Languages
-
-| Feature | Yz | Lisp | Rust | Zig | Haskell (`deriving`) |
-| --- | --- | --- | --- | --- | --- |
-| Same language at compile time | ✅ | ✅ | ❌ separate crate | ✅ | ❌ |
-| Full type information available | ✅ | ❌ pre-type-check | ❌ pre-type-check | ✅ | ✅ |
-| Attached to target | ✅ infostring | ❌ separate | ❌ separate | ❌ separate | ✅ via `deriving` |
-| Passive metadata | Infostrings | N/A | Attributes | N/A | N/A |
-| Open / extensible | ✅ any boc | ✅ | ✅ proc-macros | ❌ | ❌ built-in only |
-| Constraint declarations | Convention | N/A | Generated bounds | N/A | Implicit per class |
-| Constraints visible in tooling | ✅ attributed | N/A | ✅ in generated code | ✅ | ✅ |
-| Typed metadata schema | ✅ associated type | ❌ | ❌ | ❌ | ❌ |
-
-The key distinction from Haskell's `deriving` and Rust's `derive` is openness. Both are closed systems where the derivable set is fixed, making constraint side-effects predictable by definition. Yz `Compile` is open — any boc satisfying the interface qualifies — which is why constraint declarations by convention, typed `Schema` declarations, and clear tooling attribution are load-bearing parts of the design.
+| Implementation | Status  | `name`          | `Schema`                                         | Generates / Purpose                                           | Constraints on `S` |
+| -------------- | ------- | --------------- | ------------------------------------------------ | ------------------------------------------------------------- | ------------------ |
+| `Derive`       | std     | `"derive"`      | `#(interfaces [String])`                         | Interface implementations                                     | Varies per iface   |
+| `JSON`         | std     | `"json"`        | `#(field_name String, ignore Bool)`              | Serialization / deserialization methods                       | None               |
+| `Debug`        | std     | derived         | `#(debug Bool)`                                  | `debug #(String)` method                                      | None               |
+| `Validate`     | std     | `"validate"`    | `#(rule String, strict Bool)`                    | Validation methods                                            | None               |
+| `Build`        | planned | `"build"`       | `#(boc String, platform String)`                 | Conditional file inclusion — picks variant body per target    | None               |
+| `Mix`          | planned | `"mix"`         | `#(mix String)`                                  | Copies methods from named boc into annotated boc at compile time | None            |
+| `Test`         | planned | `"test"`        | `#(boc String, test_engine String)`              | Marks file as test fragment; grants access to target internals | None              |
+| `Deps`         | planned | `"deps"`        | `#(dependencies [#(name String, version String, uri String)])` | Fetches dependencies; wires into source root    | None               |
+| `Doc`          | planned | `"documentation"` | `#(documentation String)`                      | Generates API docs / IDE hover text from infostring field     | None               |
 
 ---
 

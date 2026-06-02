@@ -1,5 +1,7 @@
-#feature 
-# Smart Nesting and Namespace Flattening
+#replaced
+> **Superseded by YZC-0085.** The flattening rule is unnecessary under the module system invariants: the content of `foo/bar.yz` is always the body of the `foo.bar` boc, so `bar/bar.yz` is simply `foo.bar.bar` — no special case needed. See `docs/Features/Code organization.md` and `spec/09-modules-and-organization.md`.
+
+# Smart Nesting and Namespace Flattening (Replaced)
 
 ## Overview
 
