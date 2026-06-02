@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0085**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0086**.
 
 # Yz Compiler Implementation
 
@@ -44,20 +44,20 @@ YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-002
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
 YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074 -- **done**  
 YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M -- **done**  
-YZC-0021 -- Directory and file bocs -- L -- needs YZC-0081  
-YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- needs YZC-0021  
-YZC-0022 -- Multiple source roots -- M  
+YZC-0085 -- Module system design: file/dir invariants, _name.yz companion, supersede smart nesting -- M -- *design*  
+YZC-0021 -- Directory and file bocs -- L -- needs YZC-0085  
+YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- superseded by YZC-0085  
+YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0002 -- Cross-package support -- L -- needs YZC-0040, YZC-0022  
 YZC-0023 -- Cancellation / non-local return -- L  
 YZC-0058 -- Native type annotation -- L -- needs YZC-0025, YZC-0059  
 YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, YZC-0059  
 YZC-0041 -- Dependency management -- L  
-YZC-0042 -- Package management (`yz` tool) -- L -- needs YZC-0041  
+YZC-0042 -- Package management (`yz` tool ) -- L -- needs YZC-0041  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
 YZC-0025 -- Infostrings: content is a boc body -- L  
 YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059   
-YZC-0029 -- Remove `mix`: runtime + spec -- M -- needs YZC-0028  
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028, YZC-0002 
 YZC-0080 -- Uniform boc literal typing: one structural type derived from elements -- XL -- *design* -- needs YZC-0025
 
@@ -703,13 +703,13 @@ Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Compile`. Depends on:
 - [ ] Caching — keyed on source hash
 - [ ] Spec 12 — new spec file
 
-### YZC-0029 — Remove `mix`: runtime + spec — PARTIALLY COMPLETE
+###  [x] YZC-0029 — Remove `mix`: runtime + spec — PARTIALLY COMPLETE
+
 
 Compiler removal done.
 
 - [x] Lexer, Parser, Sema, Lowering/Codegen, Golden tests — done
-- [ ] Runtime — implement `Mix` as a `Compile` boc
-- [ ] Spec 09 — remove `mix`; document `Mix` compile implementation
+- [x] Spec 09 — remove `mix`; document `Mix` compile implementation
 
 ### [x] YZC-0030 — Path-Dependent Types: abstract `g.Node` resolution ✓
 
@@ -1063,6 +1063,32 @@ Update spec files left stale by completed implementation tickets.
 - [x] Spec 04 — nested type declarations (singleton-outer, struct-outer) (YZC-0081/0082)
 - [x] Spec 04 — struct field defaults (YZC-0045), recursive struct types (YZC-0077)
 - [x] Spec 04/05 — constrained associated types + abstract g.Node resolution (YZC-0074/0079)
+
+---
+
+### YZC-0085 — Module system design: file/dir invariants, `_name.yz` companion
+
+Settle and document the Yz module system based on the following invariants established in design discussion (2026-06-02):
+
+**Compiler-level invariants:**
+
+1. The content of a `.yz` file is the boc body of the boc named after the file. `foo/person.yz` defines `foo.person`.
+2. Files in a directory **compose** the boc body of the directory's boc — each file contributes a named sub-boc. `foo/a.yz` + `foo/b.yz` → `foo: { a: {}; b: {} }`. No conflicts possible (filesystem enforces name uniqueness).
+3. A directory with no matching `.yz` file is a valid namespace-only boc (empty body, only sub-bocs).
+4. Source root is not part of the FQN. `src/foo/bar.yz` → `foo.bar`.
+5. A file whose name starts with `_` is never a boc. Its content is an infostring body for the boc sharing its base name. What the compiler does: parse it, attach it to the named boc's infostring slot, trigger compile-time bocs. What the content means is up to those compile-time bocs.
+
+**Supersedes:** YZC-0040 (Smart Nesting — the flattening rule is unnecessary under invariant 1).
+
+**Informs:** YZC-0021 (directory bocs), YZC-0022 (source roots), YZC-0041 (deps).
+
+**Docs to update:**
+- [ ] `docs/Features/Smart Nesting and Namespace Flattening.md` → move to `Replaced features/`
+- [ ] `docs/Features/Info strings.md` → add `_name.yz` as second declaration form
+- [ ] `docs/Features/Code organization.md` → rewrite around these invariants
+- [ ] `spec/09-modules-and-organization.md` → rewrite; currently has old flattening rule (line 62)
+- [ ] `docs/Features/Compile Time Bocs.md` → add section listing known/planned compile-time boc candidates (Build, Mix, Test, Deps, JSON, Debug)
+- [ ] New: `docs/Features/Compile Time Bocs/` subdir with individual candidate docs
 
 ---
 
