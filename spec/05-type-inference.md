@@ -160,7 +160,11 @@ n: first(names)        // T = String, n : String
 
 ### Constraint Checking
 
-After inference, the compiler verifies that the resolved type satisfies all structural requirements at the use site:
+After inference, the compiler verifies that the resolved type satisfies all structural requirements at the use site. The check applies to all three constraint forms (see §4.7):
+
+- **Inferred** (`T` bare): checks usage-derived requirements against the concrete type
+- **Named** (`V Describable`): checks the concrete type structurally against Describable
+- **Inline** (`V #(method #(T))`): checks the concrete type against the inline interface shape
 
 ```yz
 max: {
@@ -212,7 +216,20 @@ map #( collection List(A), fn #(A, B), List(B) )
 
 Step 1: bind `A` from `collection`'s element type. Step 2: verify `fn`'s first parameter type matches `A`; bind `B` from `fn`'s return type. Step 3: the return type `List(B)` is now concrete.
 
-> **Implementation note:** path-dependent inference is tracked in YZC-0066.
+### Abstract associated type resolution
+
+When the leading variable has the abstract interface type (e.g. `Graph` rather than `CityGraph`), `g.Node` resolves to the **constraint bound** declared in the interface — the concrete type is not known, so anything satisfying the bound is accepted:
+
+```yz
+Graph: { Node #(label #(String)) }
+
+describe #(g Graph, n g.Node) { print(n.label()) }
+
+g Graph = CityGraph()
+london: City(name: "London")
+describe(g, london)    // OK — london satisfies Node #(label #(String))
+describe(g, 42)        // ERROR — Int does not satisfy Node #(label #(String))
+```
 
 ---
 

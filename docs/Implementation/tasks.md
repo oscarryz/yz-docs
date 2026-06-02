@@ -43,7 +43,7 @@ YZC-0043 -- Captured variable reference semantics -- *design*
 YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
 YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074 -- **done**  
-YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M  
+YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M -- **done**  
 YZC-0021 -- Directory and file bocs -- L -- needs YZC-0081  
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- needs YZC-0021  
 YZC-0022 -- Multiple source roots -- M  
@@ -273,14 +273,16 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
   `String` becomes a sema error with message _"print requires String; use \"`a`\" for debug
   output or \"${a}\" for display output"_.
 
-  Design question: should `print` be a special built-in with a type check, or should it be
-  a regular Yz boc `#(String)` that enforces the constraint naturally?
+  Design decision:  `print` should be a regular Yz boc with the signature:
+  `print #(String, nl:true)` // new line defaults to true
+   that enforces the constraint naturally. 
+  
 
   Current behaviour to preserve:
   - `print("hello")` — valid ✓
   - `print("${a}")` — valid when `a` has `to_str` ✓
   - `` print("`a`") `` — valid; always works ✓
-  - `print(a)` — currently valid; should become a sema error after this ticket
+  - `print(a)` — currently valid; should become a sema error after this ticket: a is not a string
 
 - [x] **[YZC-0047] Cycle detection in homoiconic `Stringify`** ✓
 
@@ -1053,10 +1055,14 @@ Depends on: YZC-0074 (associated type machinery).
 
 Update spec files left stale by completed implementation tickets.
 
-- [ ] Spec 04 — generics: document explicit constraints (YZC-0026), type params, generic instantiation
-- [ ] Spec 04 — inline anonymous constraint syntax `V #(method #(T))` (YZC-0072)
-- [ ] Spec 04/05 — associated types: `#()` metatype, type aliases, call-site unification (YZC-0066)
-- [ ] Spec 04 — type alias `Name : SomeType` (YZC-0027)
+- [x] Spec 04 — generics: document explicit constraints (YZC-0026), type params, generic instantiation
+- [x] Spec 04 — inline anonymous constraint syntax `V #(method #(T))` (YZC-0072)
+- [x] Spec 04/05 — associated types: `#()` metatype, type aliases, call-site unification (YZC-0066)
+- [x] Spec 04 — type alias `Name : SomeType` (YZC-0027)
+- [x] Spec 03 — multi-variable short declaration `x, y : swap(...)`
+- [x] Spec 04 — nested type declarations (singleton-outer, struct-outer) (YZC-0081/0082)
+- [x] Spec 04 — struct field defaults (YZC-0045), recursive struct types (YZC-0077)
+- [x] Spec 04/05 — constrained associated types + abstract g.Node resolution (YZC-0074/0079)
 
 ---
 

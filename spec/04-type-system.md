@@ -171,6 +171,66 @@ Each invocation creates a **new, independent instance**.
 
 A user-defined type defines a **structural shape**. The name `Person` is a label — any boc with the fields `name String` and `age Int` is structurally compatible with `Person` (see §4.6).
 
+### Field Default Values
+
+Fields may have default values using the short-declaration form inside the struct body:
+
+```yz
+Node: {
+    value Int
+    next: Option.None()    // default value — optional at construction
+}
+
+a: Node(value: 1)          // next omitted — uses Option.None() default
+b: Node(value: 2, next: Option.Some(a))  // explicit override
+```
+
+Fields with defaults are optional at every call site. Fields without defaults are required.
+
+### Nested Type Declarations
+
+A type can declare another type inside its body. There are two forms:
+
+**Singleton-outer factory** — declared inside a singleton boc; `outer.TypeName(...)` creates independent instances:
+
+```yz
+room: {
+    Window: { size Int }
+}
+
+w: room.Window(size: 3)    // independent Window instance; no reference to room
+```
+
+**Struct-outer factory** — declared inside a struct boc; `instance.TypeName()` creates an instance bound to `instance`:
+
+```yz
+Foo: {
+    name String
+    Bar: {
+        describe: { name }   // accesses Foo.name via captured outer reference
+    }
+}
+
+alice: Foo(name: "alice")
+ab: alice.Bar()             // Bar instance bound to alice
+print(ab.describe())        // prints "alice"
+```
+
+The inner type's methods can read (but not write) the outer instance's fields.
+
+### Recursive Struct Types
+
+A struct type may reference itself in its field declarations:
+
+```yz
+Node: {
+    value Int
+    next Node    // self-referential field — valid
+}
+```
+
+The compiler handles recursive types without stack overflow. A recursive field is always a pointer at runtime.
+
 ## 4.5 Type Variants
 
 A type can have multiple **variant constructors**, similar to algebraic data types / sum types. Each variant is an alternative way to construct a value of the type.
@@ -365,11 +425,44 @@ s Box(String) = Box(String, "hello")  // fully positional
 
 `Box(String)` in type-annotation position means "Box parameterized with String" — analogous to `Box<String>` in Java/Rust or `Box[String]` in Go/Scala. This is distinct from the constructor call in expression position.
 
-### Generic Constraints — Inferred Automatically
+### Generic Constraints
 
-Yz does **not** have explicit constraint syntax (e.g., `T: Comparable`). Instead, the compiler **infers constraints** by scanning how T-typed values are used inside the generic type's method bodies.
+There are three ways to constrain a type parameter. They can be combined — use whichever level of explicitness is clearest:
 
-When a method calls a method or applies an operator to a T-typed value, the compiler records that T must support that operation:
+**1. Named constraint** — write the interface name after the type parameter. The most explicit form:
+
+```yz
+Describable: {
+    describe #(String)
+}
+
+Box: {
+    V Describable    // V must implement Describable
+    value V
+    desc #(String) {
+        value.describe()
+    }
+}
+
+Animal: { name String; describe #(String) = { name } }
+b: Box(value: Animal(name: "Cat"))   // OK: Animal has describe
+```
+
+**2. Inline anonymous constraint** — write the required interface shape inline, without naming it:
+
+```yz
+Box: {
+    V #( describe #(String) )    // V must have describe #(String)
+    value V
+    desc #(String) {
+        value.describe()
+    }
+}
+```
+
+This is equivalent to the named form but does not require a separate interface declaration.
+
+**3. Unconstrained** — bare `T` with no constraint; the compiler **infers** the required constraint by scanning how T-typed values are used inside method bodies:
 
 ```yz
 Ordered: {
@@ -389,21 +482,13 @@ Item is missing methods required by T:
   lt [used in Ordered.is_less]
 ```
 
-A type that satisfies the constraint compiles without error:
-
 ```yz
 o: Ordered(42)           // OK: Int has lt
 o2: Ordered("hello")     // OK: String has lt (lexicographic)
-```
 
-A type that is missing the required method is rejected at the constructor call site:
-
-```yz
 Item: { name String }
 o: Ordered(Item("x"))    // compile error: Item missing lt
 ```
-
-No annotation is required on the type definition. Constraints emerge naturally from usage.
 
 ### Multiple Type Parameters
 
@@ -447,8 +532,6 @@ SocialGraph : {
     ...
 }
 ```
-
-> **Implementation note:** simple structural aliases (`Bar : Foo`) are tracked in YZC-0027. Generic instantiation and associated type binding depend on YZC-0066.
 
 ---
 
@@ -508,7 +591,43 @@ map #( collection List(A), fn #(A, B), List(B) )
 
 `A` and `B` are inferred at the call site from the concrete types of the arguments.
 
-> **Implementation note:** path-dependent types and associated types are tracked in YZC-0066 and YZC-0030.
+### Constrained associated types
+
+A type field can carry a structural constraint — the bound is written with `#(...)` syntax:
+
+```yz
+Graph: { Node #(label #(String)) }
+```
+
+This says: `Node` is an associated type, and any concrete `Node` must have a `label #(String)` method. Functions operating on `g.Node` may call `node.label()` without knowing the concrete type:
+
+```yz
+Point: {
+    x Int
+    y Int
+    label #(String) = { "${x},${y}" }
+}
+
+PointGraph: { Node: Point }
+
+describe #(g Graph, node g.Node) { print(node.label()) }
+
+main: {
+    pg: PointGraph()
+    p: Point(x: 1, y: 2)
+    describe(pg, p)   // OK: Point satisfies Node #(label #(String))
+}
+```
+
+### Using an abstract graph instance
+
+When `g` has the abstract type `Graph` (not a concrete `PointGraph`), `g.Node` resolves to the bound declared in the interface (`#(label #(String))`). Any value satisfying that bound is a valid `g.Node`:
+
+```yz
+cg: CityGraph()
+g Graph = cg              // widened to abstract Graph
+describe(g, london)       // OK: london satisfies Node #(label #(String))
+```
 
 ---
 
@@ -534,7 +653,13 @@ Types:
   Variant          : Constructor-based subtypes within a user-defined type
   Generic          : Single uppercase letter (T, E, K, V, etc.) — field of type #()
   Type alias       : Name : ExistingType
+  Generic alias    : Name : Generic(ConcreteType) — e.g. StringList : List(String)
   Metatype         : #() — the type of types; implicit, never written
+
+Constraints (type params):
+  Unconstrained    : V — bare; compiler infers from usage
+  Named            : V Describable — V must implement Describable
+  Inline           : V #(method #(RetType)) — V must have that method
 
 Compatibility:
   Structural — based on field names + types, not type names
@@ -544,4 +669,9 @@ Compatibility:
 Path-dependent:
   g.Node — type stored in field Node of instance g, resolved at compile time
   T in signatures — unbound type variable, inferred at call site
+  Node #(m #(T)) — constrained associated type; g.Node when g is abstract resolves to bound
+
+Nested types:
+  outer.Type(...) — singleton-outer factory; creates independent instances
+  instance.Type() — struct-outer; creates instance bound to outer via captured reference
 ```

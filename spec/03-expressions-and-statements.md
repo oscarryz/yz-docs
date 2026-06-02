@@ -48,6 +48,16 @@ name: "Alice"
 - The variable is initialized and available from this point forward
 - Equivalent to: `name String = "Alice"`
 
+### Multi-Variable Short Declaration
+
+When the right-hand side produces multiple return values, a comma-separated list of names receives them in order:
+
+```yz
+x, y : swap("hello", "world")   // x = "world", y = "hello"
+```
+
+The left-hand side must have exactly as many names as the right-hand side returns.
+
 ### Typed Declaration
 
 ```yz
