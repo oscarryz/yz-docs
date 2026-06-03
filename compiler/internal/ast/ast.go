@@ -225,12 +225,12 @@ func (e *GroupExpr) exprNode() {}
 
 // BocLiteral is a `{ BocBody }` literal.
 // Elements are the statements/expressions inside the body.
-// InfoString (if present) immediately precedes the enclosing declaration in
-// the source; it is attached here for AST consumers that need it.
+// Annotation (if present) immediately precedes the enclosing declaration in
+// the source. Attached here for AST consumers that need it; no runtime code is generated.
 type BocLiteral struct {
 	Pos
 	Elements   []Node // Stmt | Expr | *VariantDef
-	InfoString *StringLit // nil if no info string precedes this boc
+	Annotation *StringLit // nil if no info string precedes this boc
 }
 
 func (e *BocLiteral) exprNode() {}
@@ -350,15 +350,14 @@ type ConditionalBoc struct {
 	Body      []Node // Stmt | Expr
 }
 
-// InfoString is a string literal that immediately precedes a declaration and
-// attaches metadata. The compiler stores it in the AST but generates no runtime
-// code for it (tooling support deferred).
-type InfoString struct {
+// Annotation is a backtick-delimited boc body that immediately precedes a
+// declaration and carries compile-time metadata. No runtime code is generated.
+type Annotation struct {
 	Pos
 	Value string // raw text including delimiters
 }
 
-func (e *InfoString) exprNode() {}
+func (e *Annotation) exprNode() {}
 
 // VariantDef is a variant constructor declaration inside a type boc body:
 // `Ok(value T)` or `Err(error E)`.

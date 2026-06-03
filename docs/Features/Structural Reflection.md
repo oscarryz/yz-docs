@@ -6,7 +6,7 @@
 
 Every boc definition in Yz has a corresponding `Boc` instance created by the compiler.
 This instance describes the boc's structure — its fields, methods, type parameters,
-infostrings, and literal source — as a regular Yz value.
+annotations, and literal source — as a regular Yz value.
 
 `Boc` is not a meta-type that appears by magic. It is a regular boc whose instances the
 compiler populates. Once populated, a `Boc` instance behaves like any other value in the
@@ -15,7 +15,7 @@ language — it can be passed to functions, iterated, serialized, and sent acros
 This document describes the `Boc` type, how the compiler creates and exposes instances,
 and how generics, compile-time execution, and `mix` are all built on top of it.
 
-See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) · [Compile Time Bocs](Compile%20Time%20Bocs.md)
+See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) · [Macros](Compile%20Time%20Bocs.md)
 
 ---
 
@@ -28,7 +28,7 @@ Boc : {
     fields       [Boc]
     methods      [Boc]
     type_params  [Boc]
-    infostrings  [String]
+    annotations  [String]
     source       #()
 }
 ```
@@ -40,7 +40,7 @@ Every slot is a regular Yz value:
 - `fields` — the boc's data slots, each described as a `Boc` instance
 - `methods` — the boc's executable slots, each described as a `Boc` instance
 - `type_params` — placeholder `Boc` instances representing unresolved type parameters
-- `infostrings` — the raw infostring values attached to this boc or field
+- `annotations` — the raw annotation values attached to this boc or field
 - `source` — the literal boc body as an executable value — homoiconicity lives here
 
 Fields and methods are both `[Boc]` because in Yz everything is a boc. The distinction
@@ -61,11 +61,11 @@ compiler.read(Named)    // returns the Boc instance for Named
 compiler.insert(b)      // splices a Boc into the current compilation context
 ```
 
-`compiler` is available only during `Compile` slot execution. Outside of compile-time
+`compiler` is available only during `Macro` slot execution. Outside of compile-time
 context, `compiler` does not exist. This is the explicit and localized seam between the
 language and the compilation phase — there is no other.
 
-See also: [Compile-Time boc — Compilation Lifecycle](./yz-compile.md#compilation-lifecycle)
+See also: [Macro — Compilation Lifecycle](./yz-compile.md#compilation-lifecycle)
 
 ---
 
@@ -112,7 +112,7 @@ See also: [Generics — Constraint Inference](./yz-generics.md#constraint-infere
 
 ## Compile-Time Execution Through `Boc`
 
-A `Compile` slot receives its parent boc as a `Boc` instance. Previously this appeared
+A `Macro` slot receives its parent boc as a `Boc` instance. Previously this appeared
 as a magic `self` — through the `Boc` type it is simply the named argument passed to
 `run`:
 
@@ -145,7 +145,7 @@ Serialize : {
 regular values. The returned boc literal is merged into the parent by the compiler via
 `compiler.insert`.
 
-See also: [Compile-Time boc](./yz-compile.md)
+See also: [Macro](./yz-compile.md)
 
 ---
 
@@ -213,11 +213,11 @@ name String
 ```
 
 The compiler attaches `"json:user_name"` to the `Boc` instance for `name` via its
-`infostrings` slot. A `Compile` implementation reads it like any other slot:
+`annotations` slot. A `Compile` implementation reads it like any other slot:
 
 ```yz
 parent.fields.forEach({ f Boc
-    f.infostrings.forEach({ s String
+    f.annotations.forEach({ s String
         // parse and act on field-level metadata
     })
 })
@@ -260,5 +260,5 @@ The entirety of what is special about `Boc` and the compiler seam is:
 3. **`compiler.insert(b)`** splices a `Boc` into the current compilation context —
    available only during `Compile` execution
 
-Everything else — generics, constraint inference, `mix`, `Compile`, infostrings,
+Everything else — generics, constraint inference, `mix`, `Compile`, annotations,
 inter-process reflection — is regular Yz code operating on regular `Boc` values.

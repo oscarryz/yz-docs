@@ -743,22 +743,22 @@ print(name)`
 }
 
 // ---------------------------------------------------------------------------
-// 15 — Info strings
+// 15 — Annotations
 // ---------------------------------------------------------------------------
 
-func TestParseInfoString(t *testing.T) {
-	// Info string immediately before a declaration
+func TestParseAnnotation(t *testing.T) {
+	// Annotation immediately before a declaration
 	sf := parse(t, `"A counter"
 counter: 0`)
-	// The info string becomes part of the AST; the short decl follows it.
+	// The annotation becomes part of the AST; the short decl follows it.
 	if len(sf.Stmts) < 1 {
 		t.Fatal("expected at least 1 stmt")
 	}
-	// The short decl should have the info string attached.
+	// The short decl should have the annotation attached.
 	d := asShortDecl(t, sf.Stmts[0])
-	// Info string is accessible via the... actually info strings are separate
+	// Annotation is accessible via the... actually annotations are separate
 	// nodes OR attached to the next decl. We'll verify there are 2 nodes OR
-	// the decl has an InfoString attached — either design is fine.
+	// the decl has an Annotation attached — either design is fine.
 	// For now: verify the decl exists.
 	if d.Names[0].Name != "counter" {
 		t.Errorf("got %q, want counter", d.Names[0].Name)

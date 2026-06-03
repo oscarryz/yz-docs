@@ -102,10 +102,10 @@ func (p *Parser) parseStatement() (ast.Node, error) {
 
 	}
 
-	// Check for info string: a string literal that immediately precedes a declaration.
+	// Check for annotation: a string literal that immediately precedes a declaration.
 	// We parse it as a node and attach it to the following decl if possible.
-	if tok.Type == token.STRING_LIT && p.isInfoStringContext() {
-		return p.parseInfoStringAndDecl()
+	if tok.Type == token.STRING_LIT && p.isAnnotationContext() {
+		return p.parseAnnotationAndDecl()
 	}
 
 	// Check for multi-name decl/assignment: `a, b: ...` or `a, b = ...`
@@ -238,13 +238,12 @@ func (p *Parser) isTypedDeclStart() bool {
 	return isType
 }
 
-// isInfoStringContext returns true when a string literal is in info-string position:
+// isAnnotationContext returns true when a string literal is in annotation position:
 // immediately followed (after semicolons) by a declaration.
-func (p *Parser) isInfoStringContext() bool {
+func (p *Parser) isAnnotationContext() bool {
 	save := p.pos
 	p.advance() // skip the string literal
 	p.skipSemis()
-	// It's an info string if the next token starts a declaration
 	result := p.atAnyIdent() || p.at(token.MATCH)
 	p.pos = save
 	return result
@@ -394,10 +393,10 @@ func (p *Parser) parseBocDecl() (*ast.BocDecl, error) {
 	return &ast.BocDecl{Pos: pos, Name: name, Sig: sig, Body: body, BodyOnly: bodyOnly}, nil
 }
 
-// parseInfoStringAndDecl parses an info string and attaches it to the next decl.
-func (p *Parser) parseInfoStringAndDecl() (ast.Node, error) {
+// parseAnnotationAndDecl parses an annotation and attaches it to the next decl.
+func (p *Parser) parseAnnotationAndDecl() (ast.Node, error) {
 	tok := p.cur()
-	infoStr := &ast.InfoString{Pos: p.posOf(tok), Value: tok.Literal}
+	ann := &ast.Annotation{Pos: p.posOf(tok), Value: tok.Literal}
 	p.advance()
 	p.skipSemis()
 
@@ -407,21 +406,20 @@ func (p *Parser) parseInfoStringAndDecl() (ast.Node, error) {
 		return nil, err
 	}
 
-	// Attach info string to boc literals or short decls where applicable
+	// Attach annotation to boc literals or short decls where applicable
 	switch n := node.(type) {
 	case *ast.ShortDecl:
 		if len(n.Values) == 1 {
 			if b, ok := n.Values[0].(*ast.BocLiteral); ok {
-				b.InfoString = &ast.StringLit{Pos: infoStr.Pos, Value: infoStr.Value}
+				b.Annotation = &ast.StringLit{Pos: ann.Pos, Value: ann.Value}
 			}
 		}
 		return n, nil
 	}
-	// If we can't attach it, return the info string as a standalone node
+	// If we can't attach it, return the annotation as a standalone node
 	// followed by the declaration — but SourceFile only holds one node per call,
-	// so we just return the declaration and lose the info string attachment.
-	// The info string is still represented as InfoString node when standalone.
-	_ = infoStr
+	// so we just return the declaration and lose the annotation attachment.
+	_ = ann
 	return node, nil
 }
 

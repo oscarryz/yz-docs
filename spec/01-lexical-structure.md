@@ -129,7 +129,7 @@ non_word_char       = /* any character that is NOT:
                          - a delimiter: { } ( ) [ ] : , ; . #
                          - whitespace
                          - a quote: ' "
-                         - the backtick ` (infostring delimiter)
+                         - the backtick ` (annotation delimiter)
                          - the lone character =  (assignment)
                        */
 ```
@@ -211,7 +211,7 @@ print("User: ${p}")    // "User: Alice (age 30)"
 
 #### `` ` `` — compiler homoiconic interpolation
 
-Embeds an expression and produces a compiler-generated representation that mirrors the Yz source that would recreate the value. Always works — no method required. Uses backtick delimiters *inside* the string (distinct from info-string backticks at statement level, §1.14).
+Embeds an expression and produces a compiler-generated representation that mirrors the Yz source that would recreate the value. Always works — no method required. Uses backtick delimiters *inside* the string (distinct from annotation backticks at statement level, §1.14).
 
 ```yz
 p: Person("Alice", 30)
@@ -334,30 +334,31 @@ x == 0 ? { "zero" }, { "nonzero" }
 
 > **Note:** Parentheses are required to express mathematical precedence. `1 + 2 * 3` is `9`, not `7`.
 
-## 1.14 Info Strings
+## 1.14 Annotations
 
-An info string is a string literal that appears immediately before any element (variable, block, type). It attaches metadata that can be retrieved at runtime via `std.info()`.
-
-```yz
-`A greeting message`
-greeting: "Hello, World!"
-
-// Retrieve:
-info(greeting).text  // "A greeting message"
-```
-
-Info strings use backtick delimiters at the **statement level** (not to be confused with backtick interpolation *inside* string literals — see §1.10). Multi-line info strings use double-quote delimiters:
+An annotation is a backtick-delimited boc body that appears immediately before a boc or field definition. Its content is compile-time metadata — parsed and type-checked by the compiler, but never executed.
 
 ```yz
-"
-Description of this block
-version: 1.0
-author: 'Yz developers'
-"
-say_hello: { ... }
+`macros: [JSON, Debug]`
+Person : {
+    name String
+    age  Int
+}
 ```
 
-> **Note:** The content inside info string blocks does not need to be valid Yz code.
+Annotation backticks are at the **statement level** (not to be confused with backtick interpolation *inside* string literals — see §1.10). Multi-line annotations use the same backtick delimiters:
+
+```yz
+`
+macros: [JSON, GraphQL]
+graphql: { schema: "https://myapi.com/graphql" }
+`
+Movies : { ... }
+```
+
+The content is a boc body (the same syntax as the inside of `{ ... }`) without the braces. See §4 and the `Annotations` feature doc for the full annotation model.
+
+> **Note:** `name.info` companion files serve as annotations for file-level bocs — same content, companion file form. See §9.2.
 
 ## 1.15 Token Summary
 

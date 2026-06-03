@@ -46,14 +46,14 @@ src/net/http.yz    ↘
 lib/net/http.yz    → net.http  (merged)
 ```
 
-### Invariant 4 — `_name.yz` is an infostring companion, never a boc
+### Invariant 4 — `name.info` is an annotation companion, never a boc
 
-A file whose name starts with `_` is not a boc. Its content is an infostring body attached to the boc sharing its base name. The compiler parses it, attaches it to that boc's infostring slot, and triggers any declared compile-time bocs. What the infostring content means is up to those compile-time bocs.
+A `name.info` file is not a boc. Its content is an annotation body attached to the boc sharing its base name. The compiler parses it, attaches it to that boc's annotation slot, and triggers any declared macros. What the annotation content means is up to those macros.
 
 ```
 net/
-  _http.yz   ← infostring companion for net.http (never a boc itself)
-  http.yz    ← defines net.http
+  http.info   ← annotation companion for net.http (never a boc itself)
+  http.yz     ← defines net.http
 ```
 
 ### Invariant 5 — File and directory with same stem coexist
@@ -136,12 +136,12 @@ p.x              // OK — public
 
 ## 9.6 Dependencies
 
-External dependencies are fetched and placed in a vendor or cache source root. The `_project.yz` companion file (processed by the `Deps` compile-time boc — see YZC-0041) declares what is needed. The project code stays clean:
+External dependencies are fetched and placed in a vendor or cache source root. The `my-project.info` annotation companion (processed by the `Deps` macro — see YZC-0041) declares what is needed. The project code stays clean:
 
 ```
 my-project/
-  _my-project.yz   ← dependency declarations (processed by Deps compile-time boc)
-  my-project.yz    ← code
+  my-project.info   ← dependency declarations (processed by Deps macro)
+  my-project.yz     ← code
   src/
     ...
 ```
@@ -164,7 +164,7 @@ Invariants:
   File content    = boc body named after the file
   Directory       = boc namespace; files compose sub-bocs (no conflicts)
   Source root     = namespace anchor, not part of FQN
-  _name.yz        = infostring companion for the named boc; never a boc itself
+  name.info       = annotation companion for the named boc; never a boc itself
   File + dir      = can coexist: file = own body, dir/ = sub-bocs
 
 Access:

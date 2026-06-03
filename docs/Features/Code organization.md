@@ -8,7 +8,7 @@ The Yz module system is governed by five invariants (see `spec/09`):
 1. **File = boc body** — the content of `foo/bar.yz` is the boc body of `foo.bar`
 2. **Directory = namespace** — files in a directory compose sub-bocs; no conflicts possible
 3. **Source root excluded from FQN** — `src/foo/bar.yz` defines `foo.bar`, not `src.foo.bar`
-4. **`_name.yz` = infostring companion** — never a boc; content attached to the named boc's infostring slot
+4. **`name.info` = annotation companion** — never a boc; content attached to the named boc's annotation slot
 5. **File and directory coexist** — `http.yz` (own body) + `http/` (sub-bocs) both contribute to `http`
 
 ---
@@ -44,7 +44,7 @@ proj_name/
 
 ## Larger projects
 
-// TODO: The configuration structure is a `Compile` implementation 
+// TODO: The configuration structure is a `Macro` implementation 
 If a `yz` file contains a `configuration` structure, then it will be used to create the executable. 
 Also you can create this configuration structure by invoking the build tool `init` _`project_name`_  which can create additional folders 
 
@@ -83,7 +83,7 @@ File: `./restaurant.yz`
 
 ```js
  `
- compile-time: [Project]
+ macros: [Project]
  project: {
 	 version: '0.1.0'
 	 entry: 'main.yz'

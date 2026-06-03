@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0086**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0087**.
 
 # Yz Compiler Implementation
 
@@ -40,11 +40,12 @@ YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
 YZC-0043 -- Captured variable reference semantics -- *design*  
-YZC-0059 -- Compile-time bocs interface interaction -- *design* -- needs YZC-0025  
+YZC-0059 -- Macro interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
 YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074 -- **done**  
 YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M -- **done**  
-YZC-0085 -- Module system design: file/dir invariants, _name.yz companion, supersede smart nesting -- M -- **done**  
+YZC-0085 -- Module system design: file/dir invariants, name.info companion, supersede smart nesting -- M -- **done**  
+YZC-0086 -- Rename: infostring → annotation, compile-time boc → macro, _name.yz → name.info -- M -- **done**  
 YZC-0021 -- Directory and file bocs -- L -- needs YZC-0085  
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- superseded by YZC-0085  
 YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  
@@ -56,8 +57,8 @@ YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, YZC-0059
 YZC-0041 -- Dependency management -- L  
 YZC-0042 -- Package management (`yz` tool ) -- L -- needs YZC-0041  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
-YZC-0025 -- Infostrings: content is a boc body -- L  
-YZC-0028 -- Compile-Time Bocs (`Compile` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059   
+YZC-0025 -- Annotations: content is a boc body -- L  
+YZC-0028 -- Macros (`Macro` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059   
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028, YZC-0002 
 YZC-0080 -- Uniform boc literal typing: one structural type derived from elements -- XL -- *design* -- needs YZC-0025
 
@@ -343,13 +344,13 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
   Implemented: `AnalyzeFile` first pass pre-registers stubs; `analyzeStructBoc` reuses
   stub pointer so forward/mutual refs stay valid. Golden test: `66_forward_type_ref.yz`.
 
-- [ ] **[YZC-0058] Native type annotation — `compile_time:[Native]`**
+- [ ] **[YZC-0058] Native type annotation — `macros: [Native]`**
 
   compiler-internal annotation for types backed by Go primitives. Depends on: YZC-0025, YZC-0059.
 
-- [ ] **[YZC-0059] Design: compile-time bocs interface interaction**
+- [ ] **[YZC-0059] Design: macro interface interaction**
 
-  concrete interaction patterns for `Compile` interface. Depends on: YZC-0025.
+  concrete interaction patterns for `Macro` interface. Depends on: YZC-0025.
 
 - [ ] **[YZC-0060] Design and implement `self` in Yz**
 
@@ -385,11 +386,11 @@ Blocked on concurrency model (YZC-0019, YZC-0023).
 
 Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-checked, never executed. Intersection with Native annotations (YZC-0058).
 
-- [ ] AST — `InfoString` holds `*BocLiteral`
-- [ ] Lexer — re-lex infostring content as Yz source
+- [ ] AST — `Annotation` holds `*BocLiteral`
+- [ ] Lexer — re-lex annotation content as Yz source
 - [ ] Parser — re-parse as boc body
 - [ ] Sema — type-check content
-- [ ] Codegen — attach compiled infostring boc to declaration metadata
+- [ ] Codegen — attach compiled annotation boc to declaration metadata
 - [ ] Spec 01 — update
 
 ### [x] YZC-0026 — Generics: Explicit Constraint Declaration ✓
@@ -689,12 +690,12 @@ Note: was originally named "Path-Dependent Types" — name corrected; YZC-0030 c
 - [x] Golden tests: 68 (type alias), 69 (implicit TypeParams), 70 (path-dependent), 71 (type var unification)
 - [ ] Spec 04 — generics section; Spec 05 — associated types section
 
-### YZC-0028 — Compile-Time Bocs (`Compile` interface)
+### YZC-0028 — Macros (`Macro` interface)
 
-Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Compile`. Depends on: YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059.
+Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059.
 
-- [ ] Sema — recognize `Compile` structural interface
-- [ ] Sema — scan infostring for `compile_time: [...]`
+- [ ] Sema — recognize `Macro` structural interface
+- [ ] Sema — scan annotation for `macros: [...]`
 - [ ] Boc metatype — `Boc` value type for `run`
 - [ ] Two-phase build — compile `Compile` implementations first
 - [ ] Serialization — `Boc` wire format
@@ -860,7 +861,7 @@ The substitution application (`applySubst(t Type, subst map[string]Type) Type`) 
 
 `Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: YZC-0025, YZC-0028, YZC-0002.
 
-- [ ] Define `compile-time:[Native]` infostring semantics
+- [ ] Define `macros: [Native]` annotation semantics
 - [ ] Move scalar types to `stdlib/`
 - [ ] Annotate native ops per method
 - [ ] Implement higher-level methods in Yz
@@ -943,7 +944,7 @@ No up-front classification. The lowerer decides the Go representation from conte
 
 #### Dependencies
 
-Likely needs YZC-0025 (infostrings / compile-time metadata) to be in place before the lowerer can dispatch purely on use-site context. May also simplify YZC-0031 (scalar type uppering) since that ticket also removes primitive special-casing.
+Likely needs YZC-0025 (annotations / compile-time metadata) to be in place before the lowerer can dispatch purely on use-site context. May also simplify YZC-0031 (scalar type uppering) since that ticket also removes primitive special-casing.
 
 - [ ] Design: define `BocLiteralType` in `sema/types.go`
 - [ ] Sema: assign `BocLiteralType` to every `*ast.BocLiteral` in `analyzeExpr`; delete classification branches
@@ -1066,7 +1067,7 @@ Update spec files left stale by completed implementation tickets.
 
 ---
 
-### YZC-0085 — Module system design: file/dir invariants, `_name.yz` companion
+### YZC-0085 — Module system design: file/dir invariants, `name.info` companion
 
 Settle and document the Yz module system based on the following invariants established in design discussion (2026-06-02):
 
@@ -1076,19 +1077,41 @@ Settle and document the Yz module system based on the following invariants estab
 2. Files in a directory **compose** the boc body of the directory's boc — each file contributes a named sub-boc. `foo/a.yz` + `foo/b.yz` → `foo: { a: {}; b: {} }`. No conflicts possible (filesystem enforces name uniqueness).
 3. A directory with no matching `.yz` file is a valid namespace-only boc (empty body, only sub-bocs).
 4. Source root is not part of the FQN. `src/foo/bar.yz` → `foo.bar`.
-5. A file whose name starts with `_` is never a boc. Its content is an infostring body for the boc sharing its base name. What the compiler does: parse it, attach it to the named boc's infostring slot, trigger compile-time bocs. What the content means is up to those compile-time bocs.
+5. `name.info` is never a boc. Its content is an annotation body for the boc sharing its base name. What the compiler does: parse it, attach it to the named boc's annotation slot, trigger macros. What the content means is up to those macros.
 
 **Supersedes:** YZC-0040 (Smart Nesting — the flattening rule is unnecessary under invariant 1).
 
 **Informs:** YZC-0021 (directory bocs), YZC-0022 (source roots), YZC-0041 (deps).
 
-**Docs to update:**
-- [ ] `docs/Features/Smart Nesting and Namespace Flattening.md` → move to `Replaced features/`
-- [ ] `docs/Features/Info strings.md` → add `_name.yz` as second declaration form
-- [ ] `docs/Features/Code organization.md` → rewrite around these invariants
-- [ ] `spec/09-modules-and-organization.md` → rewrite; currently has old flattening rule (line 62)
-- [ ] `docs/Features/Compile Time Bocs.md` → add section listing known/planned compile-time boc candidates (Build, Mix, Test, Deps, JSON, Debug)
-- [ ] New: `docs/Features/Compile Time Bocs/` subdir with individual candidate docs
+- [x] `docs/Features/Smart Nesting and Namespace Flattening.md` → move to `Replaced features/`
+- [x] `docs/Features/Annotations.md` (was `Info strings.md`) — two declaration forms
+- [x] `docs/Features/Code organization.md` → rewrite around these invariants
+- [x] `spec/09-modules-and-organization.md` → rewrite
+- [x] `docs/Features/Macros.md` (was `Compile Time Bocs.md`) — macro catalogue
+- [x] New: `docs/Features/Macros/` subdir with individual macro docs
+
+---
+
+### YZC-0086 — Rename: infostring → annotation, compile-time boc → macro, `_name.yz` → `name.info`
+
+Settled naming (2026-06-03):
+- **annotation** — the backtick block or `.info` file before a definition (replaces "infostring")
+- **macro** — a boc satisfying the `Macro` interface, runs at compile time (replaces "compile-time boc")
+- `macros: [...]` — the trigger key (replaces `compile_time:`); `!` is an alias via `! : macros`
+- `Macro` — the interface (replaces `Compile`)
+- `name.info` — the companion file extension (replaces `_name.yz`)
+
+**Files changed:**
+- [x] `docs/Features/Info strings.md` → `docs/Features/Annotations.md`
+- [x] `docs/Features/Compile Time Bocs.md` → `docs/Features/Macros.md`
+- [x] `docs/Features/Compile Time Bocs/` → `docs/Features/Macros/`
+- [x] `spec/09-modules-and-organization.md` — invariant 5
+- [x] `spec/01-lexical-structure.md` — backtick comment
+- [x] `docs/Features/Code organization.md` — invariant table
+- [x] `docs/Questions/` — terminology updates
+- [x] `compiler/internal/ast/ast.go` — `InfoString` → `Annotation`
+- [x] `compiler/internal/parser/parser.go` — function/var renames
+- [x] `compiler/internal/sema/analyzer.go` — case arm renames
 
 ---
 

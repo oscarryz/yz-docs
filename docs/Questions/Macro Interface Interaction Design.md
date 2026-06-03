@@ -1,7 +1,7 @@
 #open-question 
 
 
-Define the exact way the `Compile` interface will work and how the many implementations would implement it aside from the definition in [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md)
+Define the exact way the `Macro` interface will work and how the many implementations would implement it aside from the definition in [Macros](docs/Features/Compile%20Time%20Bocs.md)
 
 
 ```js

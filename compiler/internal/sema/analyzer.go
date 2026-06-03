@@ -348,7 +348,7 @@ func (a *Analyzer) analyzeNode(n ast.Node) Type {
 		return t
 	case *ast.BreakStmt, *ast.ContinueStmt:
 		return TypUnit
-	case *ast.InfoString:
+	case *ast.Annotation:
 		return TypUnit
 	case ast.Expr:
 		return a.analyzeExpr(node)
@@ -1552,7 +1552,7 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		t = a.analyzeMatch(expr)
 	case *ast.InfixMatchExpr:
 		t = a.analyzeInfixMatch(expr)
-	case *ast.InfoString:
+	case *ast.Annotation:
 		t = TypUnit
 	default:
 		t = Unknown

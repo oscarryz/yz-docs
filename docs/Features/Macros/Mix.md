@@ -12,14 +12,16 @@ Animal: {
     talk #(String) { "hello" }
 }
 
-`compile_time: [Mix]
- mix: Animal`
+`
+macros: [Mix]
+mix: Animal
+`
 Cat: {
     // Cat now has talk #(String) as if it were written here
 }
 ```
 
-`Mix` reads the `mix:` field from the infostring, finds the named boc, and copies its methods into the annotated boc's body during compilation.
+`Mix` reads the `mix:` field from the annotation, finds the named boc, and copies its methods into the annotated boc's body during compilation.
 
 ## Properties
 

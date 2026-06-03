@@ -3,19 +3,19 @@
 
 ## Purpose
 
-`Deps` processes dependency declarations from a `_project.yz` companion file. It fetches and caches dependencies, wires them into the build as source roots, and keeps the project code free of manifest boilerplate.
+`Deps` processes dependency declarations from a `my-project.info` annotation companion. It fetches and caches dependencies, wires them into the build as source roots, and keeps the project code free of manifest boilerplate.
 
 ## Design
 
 ```
 my-project/
-  _my-project.yz   ← Deps reads this
-  my-project.yz    ← code stays clean
+  my-project.info   ← Deps reads this
+  my-project.yz     ← code stays clean
 ```
 
 ```yz
-// _my-project.yz
-!:[Deps]
+// my-project.info
+!: [Deps]
 dependencies: [
     { name: "FasterXML"; version: {5,1,0}; uri: "git@github.com/FasterXML/v5" }
     { name: "Other";     version_str: "v2026-1"; uri: "https://example.org/other" }
