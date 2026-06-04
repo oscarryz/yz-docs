@@ -13,8 +13,7 @@ The system is built on one rule:
 
 Everything else follows from existing Yz concepts.
 
-See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20-%20Type%20Parameters.md) · 
-[Structural Reflection](Structural%20Reflection.md) · [Annotations](Annotations.md)
+See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20-%20Type%20Parameters.md) ·  [Structural Reflection](Structural%20Reflection.md) · [Annotations](Annotations.md)
 
 ---
 

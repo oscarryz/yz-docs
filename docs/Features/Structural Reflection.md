@@ -15,7 +15,7 @@ language — it can be passed to functions, iterated, serialized, and sent acros
 This document describes the `Boc` type, how the compiler creates and exposes instances,
 and how generics, compile-time execution, and `mix` are all built on top of it.
 
-See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) · [Macros](Compile%20Time%20Bocs.md)
+See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) · [Macros](Macros.md)
 
 ---
 
