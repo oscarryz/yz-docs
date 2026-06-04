@@ -1,0 +1,5 @@
+main: {
+    d : ["a": 1]
+    r : d["a"]
+    r match Foo => { print(r.value) }
+}
