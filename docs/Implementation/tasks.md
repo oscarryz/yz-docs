@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **94 golden + 27 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **95 golden + 27 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -31,22 +31,14 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0079 -- *may not be needed: see detail*  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
-YZC-0017 -- Dict optional access: d[k] returns Option(V) -- S -- needs YZC-0087  
-YZC-0087 -- Dict assignment syntax: d["key"] = value -- S -- **done**  
-YZC-0012 -- Multiple return values -- M -- **done**  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
 YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
-YZC-0043 -- Captured variable reference semantics -- *design* -- **done**  
 YZC-0059 -- Macro interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
-YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074 -- **done**  
-YZC-0083 -- Spec consolidation: update spec files for YZC-0026/0027/0066/0072 -- M -- **done**  
-YZC-0085 -- Module system design: file/dir invariants, name.info companion, supersede smart nesting -- M -- **done**  
-YZC-0086 -- Rename: infostring → annotation, compile-time boc → macro, _name.yz → name.info -- M -- **done**  
 YZC-0021 -- Directory and file bocs -- L -- needs YZC-0085  
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- superseded by YZC-0085  
 YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  
