@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0087**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0088**.
 
 # Yz Compiler Implementation
 
@@ -31,7 +31,8 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0079 -- *may not be needed: see detail*  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
-YZC-0017 -- Dict optional access -- S  
+YZC-0017 -- Dict optional access: d[k] returns Option(V) -- S -- needs YZC-0087  
+YZC-0087 -- Dict assignment syntax: d["key"] = value -- S  
 YZC-0012 -- Multiple return values -- M -- **done**  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
@@ -39,7 +40,7 @@ YZC-0009 -- Range iteration -- S -- needs YZC-0031
 YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
-YZC-0043 -- Captured variable reference semantics -- *design*  
+YZC-0043 -- Captured variable reference semantics -- *design* -- **done**  
 YZC-0059 -- Macro interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
 YZC-0082 -- Struct-outer nested type (concrete associated type): `Foo: { Bar: {} }` → `f.Bar()` -- M -- needs YZC-0074 -- **done**  
@@ -213,7 +214,13 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
 
 - [ ] **[YZC-0017] Dict optional access**
 
-  `d[key]` should return `Option(V)`; currently panics on missing key.
+  **Invariant:** For `d [K:V]`, `d[k]` returns `Option(V)` and `d[k] = v` takes `V`. The `V` inside `Option(V)` is the same type parameter — all constraints on `V` in the declaration carry through unchanged.
+
+  Currently `d[key]` panics on missing key. Fix: return `Option(V)` (present/absent). Depends on: YZC-0087.
+
+- [ ] **[YZC-0087] Dict assignment syntax: `d["key"] = value`**
+
+  The compiler currently accepts `d["key":value]` (key:value pair notation). Replace with standard assignment syntax `d[key] = value` to match user expectations and free up the oddness budget. Feature doc updated.
 
 - [x] **[YZC-0018] Bool methods `&&` / `||`**
 
@@ -247,9 +254,9 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
 
   `house/house.yz` flattens to `house.method`. Depends on: YZC-0021.
 
-- [ ] **[YZC-0043] Captured variable reference semantics**
+- [x] **[YZC-0043] Captured variable reference semantics**
 
-  design: value vs. reference capture in boc literals. See `docs/Questions/Memory Management.md`.
+  Decision: always reference capture. Bocs are reference types; Go closures capture by reference. No copy semantics, no implementation work needed.
 
 - [x] **[YZC-0045] Default values in type-only boc declarations (interfaces)**
 

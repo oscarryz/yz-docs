@@ -24,7 +24,7 @@ g1 : [String:Int]()
 // generic + initialization
 g3 [K:V] = [String:Int]() 
 g4 [K:V]
-g4["hello":1]
+g4["hello"] = 1
 
 // conditions is a dictionary that takes blocks that return Bool  as keys
 // and blocks that return a generic A as values, in the case below
