@@ -1410,6 +1410,20 @@ func (l *lowerer) lowerBodyShortDecl(d *ast.ShortDecl, isLast bool, resultType s
 }
 
 func (l *lowerer) lowerAssignment(asgn *ast.Assignment) Stmt {
+	// Dict index assignment: d["key"] = value → d = d.Set("key", value)
+	if asgn.Target != nil {
+		if idx, ok := asgn.Target.(*ast.IndexExpr); ok {
+			if _, ok := l.analyzer.ExprType(idx.Object).(*sema.DictType); ok {
+				obj := l.lowerExpr(idx.Object)
+				key := l.lowerExpr(idx.Index)
+				val := l.lowerExpr(asgn.Values[0])
+				return &AssignStmt{
+					Target: l.lowerExpr(idx.Object),
+					Value:  &MethodCall{Recv: obj, Method: "Set", Args: []Expr{key, val}},
+				}
+			}
+		}
+	}
 	// Cross-cown write: target is a field on a top-level singleton other than self.
 	// Wrap in std.Schedule(&CapName.Cown, ...).Force() to serialize the write.
 	if asgn.Target != nil {
