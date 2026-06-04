@@ -87,6 +87,8 @@ func typeHasToStr(t Type) bool {
 			}
 		}
 		return false
+	case *OptionType:
+		return true // std.Option has String()
 	case *UnknownType:
 		return true // error already reported; avoid cascading errors
 	}
@@ -417,6 +419,31 @@ func (t *DictType) IsCompatibleWith(target Type) bool {
 }
 
 func (t *DictType) String() string { return t.typeName() }
+
+// ---------------------------------------------------------------------------
+// OptionType — built-in optional (returned by dict access d[k])
+// ---------------------------------------------------------------------------
+
+// OptionType is the type of `d[k]` for a dict d: Option(V).
+type OptionType struct {
+	Inner Type
+}
+
+func (t *OptionType) typeName() string { return "Option(" + t.Inner.typeName() + ")" }
+
+func (t *OptionType) IsCompatibleWith(target Type) bool {
+	switch u := target.(type) {
+	case *OptionType:
+		return t.Inner.IsCompatibleWith(u.Inner)
+	case *UnknownType:
+		return true
+	case *GenericType:
+		return true
+	}
+	return false
+}
+
+func (t *OptionType) String() string { return t.typeName() }
 
 // ---------------------------------------------------------------------------
 // Generic constraints

@@ -185,9 +185,10 @@ type WaitStmt struct {
 // SwitchStmt is a discriminant match lowered to a Go switch statement.
 // Subject is the variable being matched; TypeName is the Go discriminant enum type.
 type SwitchStmt struct {
-	Subject  Expr
-	TypeName string // e.g. "_PetVariant" (used in switch subject._variant)
-	Cases    []*SwitchCase
+	Subject   Expr
+	TypeName  string // e.g. "_PetVariant" (used in switch subject._variant)
+	Cases     []*SwitchCase
+	FieldName string // discriminant field; defaults to "_variant" if empty
 }
 
 // SwitchCase is one case arm of a SwitchStmt.
@@ -332,13 +333,15 @@ type SwitchExpr struct {
 	Subject    Expr
 	ResultType string
 	Cases      []*SwitchCase
+	FieldName  string // discriminant field; defaults to "_variant" if empty
 }
 
 // VariantTestExpr is `subject._variant == ConstName` — the boolean check emitted
 // for `p match Constructor` and as the Cond of an IfStmt for the body form.
 type VariantTestExpr struct {
 	Subject   Expr
-	ConstName string // e.g. "_PetDog"
+	ConstName string // e.g. "_PetDog" or "std.OptionSome"
+	FieldName string // discriminant field; defaults to "_variant" if empty
 }
 
 // StructLitExpr creates a plain struct literal: TypeName{Field: val, ...}.

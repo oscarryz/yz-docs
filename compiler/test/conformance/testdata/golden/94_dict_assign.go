@@ -13,7 +13,10 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var d std.Dict[std.String, std.Int] = std.NewDict[std.String, std.Int]().Set(std.NewString("a"), std.NewInt(1)).Set(std.NewString("b"), std.NewInt(2))
 	d = d.Set(std.NewString("c"), std.NewInt(3))
-	std.Print(d.At(std.NewString("c")))
+	var c *std.Option[std.Int] = d.AtOpt(std.NewString("c"))
+	if std.NewBool(c.Variant == std.OptionSome).GoBool() {
+		std.Print(c.Value)
+	}
 	return std.TheUnit
 }
 

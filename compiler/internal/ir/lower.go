@@ -2345,10 +2345,22 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		return l.lowerCall(expr)
 	case *ast.MemberExpr:
 		obj := l.lowerExpr(expr.Object)
-		return &FieldAccess{Object: obj, Field: expr.Member.Name}
+		field := expr.Member.Name
+		// Built-in std.Option has exported fields: value→Value, to_str→String()
+		if _, ok := l.analyzer.ExprType(expr.Object).(*sema.OptionType); ok {
+			switch field {
+			case "value":
+				field = "Value"
+			}
+		}
+		return &FieldAccess{Object: obj, Field: field}
 	case *ast.IndexExpr:
 		obj := l.lowerExpr(expr.Object)
 		idx := l.lowerExpr(expr.Index)
+		// Dict read: d[k] → d.AtOpt(k) returning *std.Option[V]
+		if _, ok := l.analyzer.ExprType(expr.Object).(*sema.DictType); ok {
+			return &MethodCall{Recv: obj, Method: "AtOpt", Args: []Expr{idx}}
+		}
 		return &IndexExpr{Object: obj, Index: idx}
 	case *ast.GroupExpr:
 		return l.lowerExpr(expr.Expr)
@@ -3428,14 +3440,23 @@ func (l *lowerer) tryLowerDiscriminantMatch(m *ast.MatchExpr) (Stmt, bool) {
 	if !ok {
 		return nil, false
 	}
+	isOpt := l.isOptionSubject(m.Subject)
 	subject := l.lowerExpr(m.Subject)
 	sw := &SwitchStmt{Subject: subject, TypeName: typeName}
+	if isOpt {
+		sw.FieldName = "Variant"
+	}
 	for _, arm := range m.Arms {
 		variantName, ok := l.armVariantName(arm)
 		if !ok {
 			return nil, false
 		}
-		constName := "_" + l.variantStructName(m.Subject) + variantName
+		var constName string
+		if isOpt {
+			constName = optionConstName(variantName)
+		} else {
+			constName = "_" + l.variantStructName(m.Subject) + variantName
+		}
 		body := l.lowerElementStmts(arm.Body)
 		sw.Cases = append(sw.Cases, &SwitchCase{ConstName: constName, Body: body})
 	}
@@ -3448,17 +3469,26 @@ func (l *lowerer) tryLowerDiscriminantMatchExpr(m *ast.MatchExpr) (Expr, bool) {
 	if !ok {
 		return nil, false
 	}
+	isOpt := l.isOptionSubject(m.Subject)
 	subject := l.lowerExpr(m.Subject)
 	semType := l.analyzer.ExprType(m)
 	resultType := l.goType(semType)
 	sw := &SwitchExpr{Subject: subject, ResultType: resultType}
 	_ = typeName
+	if isOpt {
+		sw.FieldName = "Variant"
+	}
 	for _, arm := range m.Arms {
 		variantName, ok := l.armVariantName(arm)
 		if !ok {
 			return nil, false
 		}
-		constName := "_" + l.variantStructName(m.Subject) + variantName
+		var constName string
+		if isOpt {
+			constName = optionConstName(variantName)
+		} else {
+			constName = "_" + l.variantStructName(m.Subject) + variantName
+		}
 		body := l.lowerMatchArmBody(arm.Body, resultType)
 		sw.Cases = append(sw.Cases, &SwitchCase{ConstName: constName, Body: body})
 	}
@@ -3468,11 +3498,25 @@ func (l *lowerer) tryLowerDiscriminantMatchExpr(m *ast.MatchExpr) (Expr, bool) {
 // variantDiscriminantType returns the Go discriminant type name for the subject
 // expression (e.g. "_PetVariant") if the subject is a variant struct, else "".
 func (l *lowerer) variantDiscriminantType(subject ast.Expr) (string, bool) {
+	if _, ok := l.analyzer.ExprType(subject).(*sema.OptionType); ok {
+		return "std.OptionVariant", true
+	}
 	st := l.resolveVariantStruct(subject)
 	if st == nil {
 		return "", false
 	}
 	return "_" + st.Name + "Variant", true
+}
+
+// isOptionSubject reports whether subject has the built-in OptionType.
+func (l *lowerer) isOptionSubject(subject ast.Expr) bool {
+	_, ok := l.analyzer.ExprType(subject).(*sema.OptionType)
+	return ok
+}
+
+// optionConstName maps a variant name (Some/None) to the std const name.
+func optionConstName(variantName string) string {
+	return "std.Option" + variantName
 }
 
 // variantStructName returns the struct name from a subject expression.
@@ -3523,6 +3567,13 @@ func (l *lowerer) armVariantName(arm *ast.ConditionalBoc) (string, bool) {
 
 // variantTestExpr builds a VariantTestExpr for `subject match Constructor`.
 func (l *lowerer) variantTestExpr(subject ast.Expr, constructorName string) *VariantTestExpr {
+	if l.isOptionSubject(subject) {
+		return &VariantTestExpr{
+			Subject:   l.lowerExpr(subject),
+			ConstName: optionConstName(constructorName),
+			FieldName: "Variant",
+		}
+	}
 	typeName := l.variantStructName(subject)
 	return &VariantTestExpr{
 		Subject:   l.lowerExpr(subject),
@@ -3810,9 +3861,12 @@ func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 			} else {
 				// Dollar-brace form: call to_str() — sema ensures it exists.
 				toStrCall := &MethodCall{Recv: inner, Method: "ToStr"}
-				// Builtin ToStr() returns std.String directly; user-defined boc
-				// methods return *Thunk[String] and must be forced.
-				if _, isBuiltin := l.analyzer.ExprType(part.Expr).(*sema.BuiltinType); isBuiltin {
+				// Builtin types and built-in Option return std.String directly;
+				// user-defined boc methods return *Thunk[String] and must be forced.
+				exprType := l.analyzer.ExprType(part.Expr)
+				_, isBuiltin := exprType.(*sema.BuiltinType)
+				_, isOption := exprType.(*sema.OptionType)
+				if isBuiltin || isOption {
 					node = toStrCall
 				} else {
 					node = &ForceExpr{Thunk: toStrCall}
@@ -4077,6 +4131,8 @@ func (l *lowerer) goType(t sema.Type) string {
 		return fmt.Sprintf("std.Array[%s]", l.goType(tt.Elem))
 	case *sema.DictType:
 		return fmt.Sprintf("std.Dict[%s, %s]", l.goType(tt.Key), l.goType(tt.Val))
+	case *sema.OptionType:
+		return fmt.Sprintf("*std.Option[%s]", l.goType(tt.Inner))
 	case *sema.ThunkType:
 		return fmt.Sprintf("*std.Thunk[%s]", l.goType(tt.Inner))
 	case *sema.GenericType:

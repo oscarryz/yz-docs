@@ -2133,6 +2133,15 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 		}
 		a.errorf(pos, "type %s has no field %q (associated type has no bound)", ot.typeName(), fieldName)
 		return Unknown
+	case *OptionType:
+		// .value → the inner type; .to_str → String
+		switch fieldName {
+		case "value":
+			return ot.Inner
+		case "to_str":
+			return &BocType{Returns: []Type{TypString}}
+		}
+		return Unknown
 	case *UnknownType:
 		return Unknown
 	default:
@@ -2147,7 +2156,7 @@ func (a *Analyzer) analyzeIndex(idx *ast.IndexExpr) Type {
 	case *ArrayType:
 		return ot.Elem
 	case *DictType:
-		return ot.Val
+		return &OptionType{Inner: ot.Val}
 	}
 	return Unknown
 }
@@ -2187,16 +2196,28 @@ func (a *Analyzer) analyzeDictLiteral(d *ast.DictLiteral) Type {
 	return &DictType{Key: keyType, Val: valType}
 }
 
+// isOptionVariantCondition reports whether id is a valid Option variant name.
+func isOptionVariantCondition(id *ast.Ident) bool {
+	return id.Name == "Some" || id.Name == "None"
+}
+
 func (a *Analyzer) analyzeMatch(m *ast.MatchExpr) Type {
+	var subjIsOption bool
 	if m.Subject != nil {
-		a.analyzeExpr(m.Subject)
+		subjType := a.analyzeExpr(m.Subject)
+		_, subjIsOption = subjType.(*OptionType)
 	}
 	var returnType Type = Unknown
 
 	if a.fieldInit == nil {
 		for _, arm := range m.Arms {
 			if arm.Condition != nil {
-				a.analyzeExpr(arm.Condition)
+				// Skip condition lookup for built-in Option variant names.
+				if id, ok := arm.Condition.(*ast.Ident); ok && subjIsOption && isOptionVariantCondition(id) {
+					// valid — no lookup needed
+				} else {
+					a.analyzeExpr(arm.Condition)
+				}
 			}
 			var armType Type = TypUnit
 			prev := a.pushScope()
@@ -2222,7 +2243,11 @@ func (a *Analyzer) analyzeMatch(m *ast.MatchExpr) Type {
 
 	for _, arm := range m.Arms {
 		if arm.Condition != nil {
-			a.analyzeExpr(arm.Condition)
+			if id, ok := arm.Condition.(*ast.Ident); ok && subjIsOption && isOptionVariantCondition(id) {
+				// built-in Option variant — no lookup needed
+			} else {
+				a.analyzeExpr(arm.Condition)
+			}
 		}
 		var armType Type = TypUnit
 		a.fieldInit = preState.clone()
@@ -2255,6 +2280,35 @@ func (a *Analyzer) analyzeMatch(m *ast.MatchExpr) Type {
 
 func (a *Analyzer) analyzeInfixMatch(m *ast.InfixMatchExpr) Type {
 	subjType := a.analyzeExpr(m.Subject)
+
+	// Built-in Option type: accept Some/None as constructors.
+	if _, ok := subjType.(*OptionType); ok {
+		if !isOptionVariantCondition(m.Constructor) {
+			a.errorfLen(m.Constructor.Pos, len(m.Constructor.Name), "%s is not a constructor of Option", m.Constructor.Name)
+			return Unknown
+		}
+		if m.Body == nil {
+			return TypBool
+		}
+		var bodyType Type = TypUnit
+		prev := a.pushScope()
+		for _, elem := range m.Body.Elements {
+			t := a.analyzeNode(elem)
+			if _, ok := elem.(ast.Expr); ok {
+				bodyType = t
+			}
+		}
+		a.popScope(prev)
+		if m.ElseBody != nil {
+			prev2 := a.pushScope()
+			for _, elem := range m.ElseBody.Elements {
+				a.analyzeNode(elem)
+			}
+			a.popScope(prev2)
+		}
+		return bodyType
+	}
+
 	st, ok := subjType.(*StructType)
 	if !ok || !st.IsVariant {
 		a.errorf(m.Pos, "left side of 'match' must be a variant type, got %s", displayType(subjType))
@@ -2512,6 +2566,10 @@ func unifyTypes(formal, actual Type, bindings map[string]Type) {
 			unifyTypes(f.Key, a.Key, bindings)
 			unifyTypes(f.Val, a.Val, bindings)
 		}
+	case *OptionType:
+		if a, ok := actual.(*OptionType); ok {
+			unifyTypes(f.Inner, a.Inner, bindings)
+		}
 	case *BocType:
 		if a, ok := actual.(*BocType); ok {
 			for i := range f.Params {
@@ -2553,6 +2611,8 @@ func substituteType(t Type, bindings map[string]Type) Type {
 			Key: substituteType(tt.Key, bindings),
 			Val: substituteType(tt.Val, bindings),
 		}
+	case *OptionType:
+		return &OptionType{Inner: substituteType(tt.Inner, bindings)}
 	case *BocType:
 		params := make([]BocParam, len(tt.Params))
 		for i, p := range tt.Params {
@@ -2739,6 +2799,8 @@ func collectGenericNames(t Type, names map[string]bool) {
 	case *DictType:
 		collectGenericNames(tt.Key, names)
 		collectGenericNames(tt.Val, names)
+	case *OptionType:
+		collectGenericNames(tt.Inner, names)
 	case *BocType:
 		for _, p := range tt.Params {
 			collectGenericNames(p.Type, names)

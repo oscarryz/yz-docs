@@ -1,0 +1,22 @@
+// Dict access d[k] returns Option(V): Some when present, None when absent.
+main: {
+    d : ["a": 1, "b": 2]
+
+    // block match form
+    r1 : d["a"]
+    match r1
+        { Some => print(r1.value) },
+        { None => print("not found") }
+
+    // infix match form
+    r2 : d["z"]
+    r2 match Some => { print(r2.value) }
+    r2 match None => { print("absent") }
+
+    // string interpolation (to_str)
+    print("${d['b']}")
+
+    // debug backtick form
+    r3 : d["a"]
+    print("`r3`")
+}

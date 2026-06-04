@@ -140,6 +140,15 @@ func (d Dict[K, V]) At(k K) V {
 	return v
 }
 
+// AtOpt returns Some(v) if k is present, None otherwise.
+func (d Dict[K, V]) AtOpt(k K) *Option[V] {
+	v, ok := d.m[k]
+	if !ok {
+		return NewOptionNone[V]()
+	}
+	return NewOptionSome(v)
+}
+
 // Set returns a new Dict with k mapped to v.
 func (d Dict[K, V]) Set(k K, v V) Dict[K, V] {
 	m := make(map[K]V, len(d.m)+1)

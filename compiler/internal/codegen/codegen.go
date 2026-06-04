@@ -450,7 +450,11 @@ func (g *generator) expr(e ir.Expr) string {
 	case *ir.SwitchExpr:
 		return g.emitSwitchIIFE(ex)
 	case *ir.VariantTestExpr:
-		return fmt.Sprintf("std.NewBool(%s._variant == %s)", g.expr(ex.Subject), ex.ConstName)
+		field := ex.FieldName
+		if field == "" {
+			field = "_variant"
+		}
+		return fmt.Sprintf("std.NewBool(%s.%s == %s)", g.expr(ex.Subject), field, ex.ConstName)
 	case *ir.StructLitExpr:
 		var parts []string
 		for _, f := range ex.Fields {
@@ -1157,7 +1161,11 @@ func (g *generator) emitVariantDecl(sd *ir.StructDecl) {
 
 // emitSwitchStmt emits a Go switch on the discriminant field.
 func (g *generator) emitSwitchStmt(sw *ir.SwitchStmt) {
-	g.linef("switch %s._variant {", g.expr(sw.Subject))
+	field := sw.FieldName
+	if field == "" {
+		field = "_variant"
+	}
+	g.linef("switch %s.%s {", g.expr(sw.Subject), field)
 	for _, c := range sw.Cases {
 		g.linef("case %s:", c.ConstName)
 		g.level++
@@ -1175,7 +1183,11 @@ func (g *generator) emitSwitchIIFE(sw *ir.SwitchExpr) string {
 	sb.WriteString(" {\n")
 
 	inner := g.sub(g.level + 1)
-	inner.linef("switch %s._variant {", inner.expr(sw.Subject))
+	swField := sw.FieldName
+	if swField == "" {
+		swField = "_variant"
+	}
+	inner.linef("switch %s.%s {", inner.expr(sw.Subject), swField)
 	for _, c := range sw.Cases {
 		inner.linef("case %s:", c.ConstName)
 		inner.level++
