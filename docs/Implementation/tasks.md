@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0088**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0089**.
 
 # Yz Compiler Implementation
 
@@ -49,7 +49,7 @@ YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, YZC-0059
 YZC-0041 -- Dependency management -- L  
 YZC-0042 -- Package management (`yz` tool ) -- L -- needs YZC-0041  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
-YZC-0025 -- Annotations: content is a boc body -- L  
+YZC-0088 -- Codegen: attach compiled annotation boc to declaration metadata -- M -- needs YZC-0028  
 YZC-0028 -- Macros (`Macro` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059   
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs YZC-0025, YZC-0028, YZC-0002 
 YZC-0080 -- Uniform boc literal typing: one structural type derived from elements -- XL -- *design* -- needs YZC-0025
@@ -380,7 +380,17 @@ Blocked on concurrency model (YZC-0019, YZC-0023).
 - [ ] Spec 07 — update
 - [ ] Golden tests — sema-level error tests
 
-### YZC-0025 — Annotations: content is a boc body
+### YZC-0088 — Codegen: attach compiled annotation boc to declaration metadata
+
+Deferred from YZC-0025. Once the macro system (YZC-0028) is defined, the compiler needs to store the parsed+type-checked annotation `*BocLiteral` alongside its target declaration so that macro passes can inspect and transform it.
+
+What "declaration metadata" means concretely depends on YZC-0028: the macro runner needs to see both the annotated boc's IR and its annotation body as a data structure it can query.
+
+- [ ] Define representation: how the annotation boc is stored on `ir.StructDecl` / `ir.SingletonDecl` / `ir.FuncDecl`
+- [ ] Codegen — emit annotation metadata in generated Go (or as a side channel for the macro runner)
+- [ ] Wire into macro invocation pipeline (YZC-0028)
+
+### [x] YZC-0025 — Annotations: content is a boc body ✓
 
 Annotation delimiter stays backtick; content is full Yz syntax, parsed and type-checked, never executed. Intersection with Native annotations (YZC-0058).
 
@@ -388,8 +398,8 @@ Annotation delimiter stays backtick; content is full Yz syntax, parsed and type-
 - [x] Lexer — `ANNOTATION` token type; `scanAnnotation()` scans backtick-delimited content
 - [x] Parser — sub-parser re-lexes and re-parses annotation content as boc body
 - [x] Sema — traverses annotation body elements for type checking
-- [ ] Codegen — attach compiled annotation boc to declaration metadata
-- [ ] Spec 01 — update
+- [~] Codegen — deferred to YZC-0088; depends on macro system (YZC-0028) to define what "declaration metadata" means
+- [x] Spec 01 — interpolation restrictions documented (§1.14)
 
 ### [x] YZC-0026 — Generics: Explicit Constraint Declaration ✓
 

@@ -358,6 +358,13 @@ Movies : { ... }
 
 The content is a boc body (the same syntax as the inside of `{ ... }`) without the braces. See §4 and the `Annotations` feature doc for the full annotation model.
 
+**Interpolation restrictions:** string interpolation forms are not allowed inside annotation bodies:
+
+- `${}` display interpolation (§1.10) — not valid inside an annotation
+- `` ` `` debug interpolation inside a string (§1.10) — not valid inside an annotation
+
+Nested annotation backticks (a backtick expression at statement level inside an annotation body) are also not valid.
+
 > **Note:** `name.info` companion files serve as annotations for file-level bocs — same content, companion file form. See §9.2.
 
 ## 1.15 Token Summary
