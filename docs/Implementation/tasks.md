@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **92 golden + 24 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **94 golden + 27 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -32,7 +32,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0079 -- *may not be needed: see detail*  
 YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0017 -- Dict optional access: d[k] returns Option(V) -- S -- needs YZC-0087  
-YZC-0087 -- Dict assignment syntax: d["key"] = value -- S  
+YZC-0087 -- Dict assignment syntax: d["key"] = value -- S -- **done**  
 YZC-0012 -- Multiple return values -- M -- **done**  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
