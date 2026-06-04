@@ -1,0 +1,8 @@
+name : "world"
+
+`greeting: "hello ${name}"`
+Server: {}
+
+main: {
+    print("ok")
+}

@@ -86,6 +86,10 @@ type Analyzer struct {
 	// earlier ones in path-dependent type expressions like `n g.Node` where `g`
 	// is a preceding parameter. nil when outside a sig resolution.
 	currentSigParams map[string]Type
+
+	// inAnnotation is true while analyzing an annotation body. Used to reject
+	// all string interpolation forms (${ } and backtick) inside annotations.
+	inAnnotation bool
 }
 
 // NewAnalyzer creates a fresh Analyzer with built-in symbols pre-loaded.
@@ -1469,6 +1473,10 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 		t = TypString
 	case *ast.InterpolatedStringExpr:
 		for _, part := range expr.Parts {
+			if part.IsExpr && a.inAnnotation {
+				a.errorf(part.Expr.Position(), "YZC-0025: string interpolation is not allowed inside annotations")
+				continue
+			}
 			if part.IsExpr {
 				partType := a.analyzeExpr(part.Expr)
 				// YZC-0046: ${} requires to_str; backtick form accepts any type.
@@ -2747,12 +2755,18 @@ func collectGenericNames(t Type, names map[string]bool) {
 
 // analyzeAnnotationBody type-checks the body of an annotation boc.
 // Runs in an isolated child scope so declarations don't leak to the enclosing boc.
+// String interpolation (${}) is rejected — annotations are compile-time only.
 func (a *Analyzer) analyzeAnnotationBody(ann *ast.Annotation) {
 	if ann.Body == nil {
 		return
 	}
 	prev := a.pushScope()
-	defer a.popScope(prev)
+	prevInAnn := a.inAnnotation
+	a.inAnnotation = true
+	defer func() {
+		a.inAnnotation = prevInAnn
+		a.popScope(prev)
+	}()
 	for _, elem := range ann.Body.Elements {
 		a.analyzeNode(elem)
 	}

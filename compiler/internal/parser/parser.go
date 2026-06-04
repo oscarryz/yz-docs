@@ -395,6 +395,14 @@ func (p *Parser) parseAnnotationAndDecl() (ast.Node, error) {
 	for !sub.at(token.EOF) {
 		elem, err := sub.parseBocElement()
 		if err != nil {
+			if pe, ok := err.(*ParseError); ok {
+				return nil, &ParseError{
+					Msg:  "in annotation body: " + pe.Msg,
+					Line: pe.Line,
+					Col:  pe.Col,
+					Len:  pe.Len,
+				}
+			}
 			return nil, err
 		}
 		bocLit.Elements = append(bocLit.Elements, elem)

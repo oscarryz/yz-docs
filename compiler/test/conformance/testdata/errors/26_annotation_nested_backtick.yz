@@ -1,0 +1,4 @@
+`name: `foo``
+s String
+
+main: { print("ok") }
