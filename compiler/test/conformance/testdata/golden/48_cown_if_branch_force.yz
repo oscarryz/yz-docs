@@ -20,5 +20,5 @@ cond_set #(a Box, flag Bool) {
 main: {
     b: Box(0)
     cond_set(b, true)
-    print(b.val)
+    print("`b.val`")
 }

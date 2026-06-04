@@ -57,7 +57,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		std.Print(c.Value().Force())
+		std.Print(std.NewString(std.StringifyRepr(c.Value().Force())))
 		return std.TheUnit
 	})
 }

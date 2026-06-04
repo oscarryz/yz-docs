@@ -37,7 +37,7 @@ func (self *_mainBoc) String() string {
 
 func (self *_mainBoc) call() std.Unit {
 	var w *_roomwindow = New_roomwindow(std.NewInt(3))
-	std.Print(w.size)
+	std.Print(std.NewString(std.StringifyRepr(w.size)))
 	return std.TheUnit
 }
 

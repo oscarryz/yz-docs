@@ -39,7 +39,7 @@ func (self *_mainBoc) call() std.Unit {
 		Bank.balance = std.NewInt(42)
 		return std.TheUnit
 	}).Force()
-	std.Print(Bank.balance)
+	std.Print(std.NewString(std.StringifyRepr(Bank.balance)))
 	return std.TheUnit
 }
 

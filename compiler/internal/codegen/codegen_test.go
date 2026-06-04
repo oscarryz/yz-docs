@@ -228,14 +228,14 @@ func TestGenerateBocGroupInMain(t *testing.T) {
 main: {
     counter.increment()
     counter.increment()
-    print(counter.value())
+    print("`+"`"+`counter.value()`+"`"+`")
 }`)
 	// E.3: boc calls return *Thunk[T]; print needs .Force() on the value.
 	contains(t, got,
 		"_bg0 := &std.BocGroup{}",
 		"_bg0.GoWait(Counter.Increment())",
 		"_bg0.Wait()",
-		"std.Print(Counter.Value().Force())",
+		"Counter.Value().Force()",
 	)
 }
 

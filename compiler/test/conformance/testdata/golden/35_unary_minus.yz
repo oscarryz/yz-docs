@@ -3,9 +3,9 @@
 main: {
     x: 5
     neg_x: -x
-    print(neg_x)
+    print("`neg_x`")
     a: 10
     b: 3
     result: a - -b
-    print(result)
+    print("`result`")
 }

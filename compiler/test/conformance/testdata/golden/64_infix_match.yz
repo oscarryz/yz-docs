@@ -14,12 +14,12 @@ main: {
 
     // body form — narrowed access
     s match Circle => {
-        print(s.radius)
+        print("`s.radius`")
     }
 
     // body form with else
     s match Rectangle => {
-        print(s.width)
+        print("`s.width`")
     }, {
         print("not a rectangle")
     }

@@ -16,6 +16,6 @@ sync #(b bank, l ledger) {
 
 main: {
     sync(bank, ledger)
-    print(bank.balance)
-    print(ledger.total)
+    print("`bank.balance`")
+    print("`ledger.total`")
 }

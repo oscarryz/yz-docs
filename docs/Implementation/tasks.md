@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **95 golden + 28 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **92 golden + 25 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -30,7 +30,6 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
 YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0079 -- *may not be needed: see detail*  
-YZC-0078 -- print should require String: restrict print(x) to String; use "`x`" for debug -- S -- *design*  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
@@ -260,7 +259,7 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
 
   sema checks for `to_str #(String)` on the interpolated type. Depends on: YZC-0020.
 
-- [ ] **[YZC-0078] `print` should require `String`; use `` "`x`" `` for debug output**
+- [x] **[YZC-0078] `print` should require `String`; use `` "`x`" `` for debug output**
 
   Currently `print(a)` accepts any value and calls `Stringify` (homoiconic `String()` method).
   This conflates two distinct intents:

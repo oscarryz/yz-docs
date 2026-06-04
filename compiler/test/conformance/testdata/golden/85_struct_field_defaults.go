@@ -66,7 +66,7 @@ func (self *_mainBoc) call() std.Unit {
 	var a *Node = NewNode(std.NewInt(1), NewOptionNone())
 	var b *Node = NewNode(std.NewInt(2), NewOptionNone())
 	a.next = NewOptionSome(b)
-	std.Print(a)
+	std.Print(std.NewString(std.StringifyRepr(a)))
 	return std.TheUnit
 }
 

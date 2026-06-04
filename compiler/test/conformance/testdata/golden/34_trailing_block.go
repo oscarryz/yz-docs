@@ -16,7 +16,7 @@ func (self *_mainBoc) call() std.Unit {
 		return item.Gt(std.NewInt(10))
 	})
 	filtered.Each(func(item std.Int) std.Unit {
-		return std.Print(item)
+		return std.Print(std.NewString(std.StringifyRepr(item)))
 	})
 	return std.TheUnit
 }

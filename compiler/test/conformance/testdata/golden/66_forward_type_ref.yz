@@ -11,5 +11,5 @@ Inner: {
 main: {
     i : Inner(42)
     w : Wrapper(i)
-    print(w.inner.value)
+    print("`w.inner.value`")
 }

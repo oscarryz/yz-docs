@@ -56,7 +56,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			p = NewPerson(std.NewString("Alice"), std.NewInt(30))
 			std.Print(p.name)
-			std.Print(p.age)
+			std.Print(std.NewString(std.StringifyRepr(p.age)))
 			_bg0.GoWait(Greet.Call(std.NewString("Bob"), std.NewString("Hello")))
 			_bg0.GoWait(Greet.Call(std.NewString("Carol"), std.NewString("Hi")))
 			_bg0.GoWait(Greet.Call(std.NewString("Dave"), std.NewString("Hello")))

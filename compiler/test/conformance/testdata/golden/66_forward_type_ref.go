@@ -43,7 +43,7 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var i *Inner = NewInner(std.NewInt(42))
 	var w *Wrapper = NewWrapper(i)
-	std.Print(w.inner.value)
+	std.Print(std.NewString(std.StringifyRepr(w.inner.value)))
 	return std.TheUnit
 }
 

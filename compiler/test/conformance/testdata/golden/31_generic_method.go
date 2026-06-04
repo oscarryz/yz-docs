@@ -38,8 +38,8 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var c *Container[std.Int] = NewContainer(std.NewInt(42))
 	var s *Container[std.String] = NewContainer(std.NewString("hello"))
-	std.Print(c.Get().Force())
-	std.Print(s.Get().Force())
+	std.Print(std.NewString(std.StringifyRepr(c.Get().Force())))
+	std.Print(std.NewString(std.StringifyRepr(s.Get().Force())))
 	return std.TheUnit
 }
 

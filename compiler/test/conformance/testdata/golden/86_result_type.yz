@@ -12,9 +12,9 @@ main: {
     a Result(Int, String) = Ok(42)
     b Result(Int, String) = Err("division by zero")
     match a
-        { Ok  => print(a.value) },
+        { Ok  => print("`a.value`") },
         { Err => print(a.error) }
     match b
-        { Ok  => print(b.value) },
+        { Ok  => print("`b.value`") },
         { Err => print(b.error) }
 }

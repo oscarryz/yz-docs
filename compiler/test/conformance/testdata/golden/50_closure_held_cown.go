@@ -69,7 +69,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		std.Print(box.val)
+		std.Print(std.NewString(std.StringifyRepr(box.val)))
 		return std.TheUnit
 	})
 }

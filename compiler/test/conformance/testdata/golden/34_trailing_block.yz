@@ -3,5 +3,5 @@
 main: {
     list: [1, 2, 3, 10, 20]
     filtered: list.filter { item Int; item > 10 }
-    filtered.each { item Int; print(item) }
+    filtered.each { item Int; print("`item`") }
 }

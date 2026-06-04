@@ -15,13 +15,13 @@ func (self *_mainBoc) call() std.Unit {
 	var r1 *std.Option[std.Int] = d.AtOpt(std.NewString("a"))
 	switch r1.Variant {
 	case std.OptionSome:
-		std.Print(r1.Value)
+		std.Print(std.NewString(std.StringifyRepr(r1.Value)))
 	case std.OptionNone:
 		std.Print(std.NewString("not found"))
 	}
 	var r2 *std.Option[std.Int] = d.AtOpt(std.NewString("z"))
 	if std.NewBool(r2.Variant == std.OptionSome).GoBool() {
-		std.Print(r2.Value)
+		std.Print(std.NewString(std.StringifyRepr(r2.Value)))
 	}
 	if std.NewBool(r2.Variant == std.OptionNone).GoBool() {
 		std.Print(std.NewString("absent"))

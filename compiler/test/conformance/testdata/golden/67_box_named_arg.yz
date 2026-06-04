@@ -7,5 +7,5 @@ Box: {
 
 main: {
     b: Box(value: 42)
-    print(b.value)
+    print("`b.value`")
 }

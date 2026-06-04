@@ -18,6 +18,6 @@ main: {
     n: transform(42, { x Int; x * 2 })
     b: Box(value: 99)
     v: unwrap(b)
-    print(n)
-    print(v)
+    print("`n`")
+    print("`v`")
 }

@@ -4,5 +4,5 @@ mapList #(list [A], fn #(input A, B), [B]) {
 
 main: {
     doubled: mapList([1, 2, 3], { x Int; x * 2 })
-    print(doubled)
+    print("`doubled`")
 }

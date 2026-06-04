@@ -52,13 +52,13 @@ func (self *_mainBoc) call() std.Unit {
 	var b *Result[std.Int, std.String] = NewResultErr[std.Int, std.String](std.NewString("division by zero"))
 	switch a._variant {
 	case _ResultOk:
-		std.Print(a.value)
+		std.Print(std.NewString(std.StringifyRepr(a.value)))
 	case _ResultErr:
 		std.Print(a.error)
 	}
 	switch b._variant {
 	case _ResultOk:
-		std.Print(b.value)
+		std.Print(std.NewString(std.StringifyRepr(b.value)))
 	case _ResultErr:
 		std.Print(b.error)
 	}

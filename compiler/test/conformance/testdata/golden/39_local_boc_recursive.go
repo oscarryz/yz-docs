@@ -17,7 +17,7 @@ func (self *_mainBoc) F(n std.Int) *std.Thunk[std.Unit] {
 			if n.Eqeq(std.NewInt(0)).GoBool() {
 				std.Print(std.NewString("fin"))
 			} else {
-				std.Print(n)
+				std.Print(std.NewString(std.StringifyRepr(n)))
 				_bg0.GoWait(self.F(n.Minus(std.NewInt(1))))
 			}
 			return std.TheUnit

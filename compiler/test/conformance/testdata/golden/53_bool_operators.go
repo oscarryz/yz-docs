@@ -13,9 +13,9 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var a std.Bool = std.NewBool(true)
 	var b std.Bool = std.NewBool(false)
-	std.Print(a.Ampamp(b))
-	std.Print(a.Pipepipe(b))
-	std.Print(a.Ampamp(a))
+	std.Print(std.NewString(std.StringifyRepr(a.Ampamp(b))))
+	std.Print(std.NewString(std.StringifyRepr(a.Pipepipe(b))))
+	std.Print(std.NewString(std.StringifyRepr(a.Ampamp(a))))
 	return std.TheUnit
 }
 

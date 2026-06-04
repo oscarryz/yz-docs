@@ -13,6 +13,6 @@ main: {
     alice: Account(100)
     bob:   Account(0)
     transfer(alice, bob, 30)
-    print(alice.balance)
-    print(bob.balance)
+    print("`alice.balance`")
+    print("`bob.balance`")
 }

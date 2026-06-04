@@ -53,8 +53,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var v std.Int
 		std.GoStore(_bg1, unwrap(b), &v)
 		_bg1.Wait()
-		std.Print(n)
-		std.Print(v)
+		std.Print(std.NewString(std.StringifyRepr(n)))
+		std.Print(std.NewString(std.StringifyRepr(v)))
 		return std.TheUnit
 	})
 }

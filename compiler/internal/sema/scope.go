@@ -200,10 +200,10 @@ func newBuiltinScope() *Scope {
 	s.Define(&Symbol{Name: "true", Type: TypBool})
 	s.Define(&Symbol{Name: "false", Type: TypBool})
 
-	// print — #(value String) — accepts any type via structural widening in codegen;
-	// for type-checking purposes we model it as accepting Unknown (anything).
+	// print — #(value String) — enforces String argument; use "${x}" for display
+	// or "`x`" for debug output.
 	s.Define(&Symbol{Name: "print", Type: &BocType{
-		Params:  []BocParam{{Label: "value", Type: Unknown}},
+		Params:  []BocParam{{Label: "value", Type: TypString}},
 		Returns: []Type{TypUnit},
 	}})
 

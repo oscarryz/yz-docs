@@ -1726,6 +1726,33 @@ func (a *Analyzer) analyzeCall(c *ast.CallExpr) Type {
 				labelToArgType[param.Label] = argTypes[i]
 			}
 		}
+		// General argument type checking against formal params.
+		for i, param := range bt.Params {
+			if param.IsReturn || i >= len(argTypes) {
+				continue
+			}
+			argT := argTypes[i]
+			paramT := param.Type
+			if paramT == Unknown || argT == Unknown {
+				continue
+			}
+			switch paramT.(type) {
+			case *GenericType, *MetaType, *PathDependentType:
+				continue
+			}
+			if !argT.IsCompatibleWith(paramT) {
+				pos := c.Callee.Position()
+				if i < len(c.Args) {
+					pos = c.Args[i].Value.Position()
+				}
+				label := param.Label
+				if label == "" {
+					label = fmt.Sprintf("%d", i)
+				}
+				a.errorf(pos, "argument %s: %s is not compatible with %s",
+					label, displayType(argT), displayType(paramT))
+			}
+		}
 		// YZC-0030: resolve PathDependentType params and type-check their args.
 		for i, param := range bt.Params {
 			pdt, ok := param.Type.(*PathDependentType)

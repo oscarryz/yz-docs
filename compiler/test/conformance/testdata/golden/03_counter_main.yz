@@ -6,5 +6,5 @@ counter: {
 main: {
     counter.increment()
     counter.increment()
-    print(counter.value())
+    print("`counter.value()`")
 }

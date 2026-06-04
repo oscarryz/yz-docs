@@ -4,7 +4,7 @@ countdown #(n Int) {
     n == 0 ? {
         print("done")
     }, {
-        print(n)
+        print("`n`")
         countdown(n - 1)
     }
 }

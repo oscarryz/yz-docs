@@ -2,7 +2,7 @@
 main: {
     nums: [1, 2, 3]
     scores: ["alice": 10, "bob": 20]
-    print(nums[0])
+    print("`nums[0]`")
     alice : scores["alice"]
-    alice match Some => { print(alice.value) }
+    alice match Some => { print("`alice.value`") }
 }

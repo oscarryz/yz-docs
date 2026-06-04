@@ -15,7 +15,7 @@ func (self *_mainBoc) call() std.Unit {
 	d = d.Set(std.NewString("c"), std.NewInt(3))
 	var c *std.Option[std.Int] = d.AtOpt(std.NewString("c"))
 	if std.NewBool(c.Variant == std.OptionSome).GoBool() {
-		std.Print(c.Value)
+		std.Print(std.NewString(std.StringifyRepr(c.Value)))
 	}
 	return std.TheUnit
 }

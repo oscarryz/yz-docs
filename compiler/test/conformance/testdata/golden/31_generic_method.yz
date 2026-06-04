@@ -11,6 +11,6 @@ Container: {
 main: {
     c: Container(42)
     s: Container("hello")
-    print(c.get())
-    print(s.get())
+    print("`c.get()`")
+    print("`s.get()`")
 }

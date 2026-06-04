@@ -89,10 +89,10 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var s *Shape = NewShapeCircle(std.NewInt(5))
 	var c *Color = NewColorCircle(std.NewInt(180))
-	std.Print(s.radius)
-	std.Print(c.hue)
+	std.Print(std.NewString(std.StringifyRepr(s.radius)))
+	std.Print(std.NewString(std.StringifyRepr(c.hue)))
 	var s2 *Shape = NewShapeCircle(std.NewInt(10))
-	std.Print(s2.radius)
+	std.Print(std.NewString(std.StringifyRepr(s2.radius)))
 	return std.TheUnit
 }
 

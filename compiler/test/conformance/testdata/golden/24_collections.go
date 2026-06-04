@@ -13,10 +13,10 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var nums std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
 	var scores std.Dict[std.String, std.Int] = std.NewDict[std.String, std.Int]().Set(std.NewString("alice"), std.NewInt(10)).Set(std.NewString("bob"), std.NewInt(20))
-	std.Print(nums.At(std.NewInt(0)))
+	std.Print(std.NewString(std.StringifyRepr(nums.At(std.NewInt(0)))))
 	var alice *std.Option[std.Int] = scores.AtOpt(std.NewString("alice"))
 	if std.NewBool(alice.Variant == std.OptionSome).GoBool() {
-		std.Print(alice.Value)
+		std.Print(std.NewString(std.StringifyRepr(alice.Value)))
 	}
 	return std.TheUnit
 }

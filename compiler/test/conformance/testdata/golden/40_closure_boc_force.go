@@ -38,7 +38,7 @@ func (self *_mainBoc) call() std.Unit {
 	var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
 	list.Each(func(item std.Int) std.Unit {
 		Counter.Increment().Force()
-		return std.Print(item)
+		return std.Print(std.NewString(std.StringifyRepr(item)))
 	})
 	return std.TheUnit
 }

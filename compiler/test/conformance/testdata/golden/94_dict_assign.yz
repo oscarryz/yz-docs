@@ -3,5 +3,5 @@ main: {
     d : ["a": 1, "b": 2]
     d["c"] = 3
     c : d["c"]
-    c match Some => { print(c.value) }
+    c match Some => { print("`c.value`") }
 }

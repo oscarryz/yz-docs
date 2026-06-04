@@ -57,7 +57,7 @@ func (self *_userBoc) Call(acc *Account) *std.Thunk[std.Unit] {
 		return std.NewThunk(func() std.Unit {
 			_sched.Force()
 			_bg0.Wait()
-			return std.Print(loaded.balance)
+			return std.Print(std.NewString(std.StringifyRepr(loaded.balance)))
 		})
 	}()
 }

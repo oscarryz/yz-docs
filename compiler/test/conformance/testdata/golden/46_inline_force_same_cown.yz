@@ -10,7 +10,7 @@ loader #(acc Account) { acc }
 
 user #(acc Account) {
     loaded: loader(acc)
-    print(loaded.balance)
+    print("`loaded.balance`")
 }
 
 main: {

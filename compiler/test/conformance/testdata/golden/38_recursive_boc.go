@@ -19,7 +19,7 @@ func (self *_countdownBoc) Call(n std.Int) *std.Thunk[std.Unit] {
 			if self.n.Eqeq(std.NewInt(0)).GoBool() {
 				std.Print(std.NewString("done"))
 			} else {
-				std.Print(self.n)
+				std.Print(std.NewString(std.StringifyRepr(self.n)))
 				_bg0.GoWait(self.Call(self.n.Minus(std.NewInt(1))))
 			}
 			return std.TheUnit

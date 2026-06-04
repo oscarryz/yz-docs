@@ -179,7 +179,7 @@ func (t *BocType) IsCompatibleWith(target Type) bool {
 	switch u := target.(type) {
 	case *BocType:
 		// Structural boc compatibility: same number of required params and
-		// return types, with compatible individual types.
+		// compatible return types.
 		if len(t.Params) != len(u.Params) {
 			return false
 		}
@@ -187,6 +187,10 @@ func (t *BocType) IsCompatibleWith(target Type) bool {
 			if !t.Params[i].Type.IsCompatibleWith(u.Params[i].Type) {
 				return false
 			}
+		}
+		// If the target declares no returns, any return type (including Unit) is OK.
+		if len(u.Returns) == 0 {
+			return true
 		}
 		if len(t.Returns) != len(u.Returns) {
 			return false

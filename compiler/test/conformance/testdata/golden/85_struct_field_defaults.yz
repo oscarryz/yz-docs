@@ -15,5 +15,5 @@ main: {
     a: Node(value: 1)
     b: Node(value: 2)
     a.next = Option.Some(b)
-    print(a)
+    print("`a`")
 }

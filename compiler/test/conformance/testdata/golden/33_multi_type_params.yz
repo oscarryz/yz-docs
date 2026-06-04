@@ -14,6 +14,6 @@ makePair #(a K, b V, Pair) {
 
 main: {
     p: makePair(42, "hello")
-    print(p.first)
-    print(p.second)
+    print("`p.first`")
+    print("`p.second`")
 }

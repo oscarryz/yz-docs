@@ -29,7 +29,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		std.Print(doubled)
+		std.Print(std.NewString(std.StringifyRepr(doubled)))
 		return std.TheUnit
 	})
 }

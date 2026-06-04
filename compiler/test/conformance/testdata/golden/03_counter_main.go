@@ -53,7 +53,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		std.Print(Counter.Value().Force())
+		std.Print(std.NewString(std.StringifyRepr(Counter.Value().Force())))
 		return std.TheUnit
 	})
 }

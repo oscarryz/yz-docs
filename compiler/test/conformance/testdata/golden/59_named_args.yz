@@ -12,7 +12,7 @@ main: {
     // struct constructor: named args in reversed order
     p: Person(age: 30, name: "Alice")
     print(p.name)
-    print(p.age)
+    print("`p.age`")
 
     // BocDecl: named arg
     greet(name: "Bob")

@@ -10,5 +10,5 @@ main: {
     c: Counter(0)
     c.increment()
     c.increment()
-    print(c.value())
+    print("`c.value()`")
 }

@@ -55,10 +55,10 @@ func (self *_mainBoc) call() any {
 		std.Print(std.NewString("is a circle"))
 	}
 	if std.NewBool(s._variant == _ShapeCircle).GoBool() {
-		std.Print(s.radius)
+		std.Print(std.NewString(std.StringifyRepr(s.radius)))
 	}
 	if std.NewBool(s._variant == _ShapeRectangle).GoBool() {
-		std.Print(s.width)
+		std.Print(std.NewString(std.StringifyRepr(s.width)))
 	} else {
 		std.Print(std.NewString("not a rectangle"))
 	}

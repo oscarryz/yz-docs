@@ -9,5 +9,5 @@ main: {
     apply(box, {
         box.set(42)
     })
-    print(box.val)
+    print("`box.val`")
 }

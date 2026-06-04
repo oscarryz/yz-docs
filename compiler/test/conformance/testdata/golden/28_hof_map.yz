@@ -2,5 +2,5 @@
 main: {
     list: [1, 2, 3]
     doubled: list.map({ item Int; item * 2 })
-    doubled.each({ item Int; print(item) })
+    doubled.each({ item Int; print("`item`") })
 }

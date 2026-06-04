@@ -7,5 +7,5 @@ room: {
 
 main: {
     w : room.Window(size: 3)
-    print(w.size)
+    print("`w.size`")
 }

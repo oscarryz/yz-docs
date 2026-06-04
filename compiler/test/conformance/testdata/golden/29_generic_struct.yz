@@ -5,5 +5,5 @@ Box: {
 }
 main: {
     b: Box(42)
-    print(b.value)
+    print("`b.value`")
 }

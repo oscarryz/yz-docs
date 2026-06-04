@@ -89,8 +89,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		std.Print(Bank.balance)
-		std.Print(Ledger.total)
+		std.Print(std.NewString(std.StringifyRepr(Bank.balance)))
+		std.Print(std.NewString(std.StringifyRepr(Ledger.total)))
 		return std.TheUnit
 	})
 }

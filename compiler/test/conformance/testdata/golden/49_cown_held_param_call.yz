@@ -20,5 +20,5 @@ assign #(b Box, v Int) {
 main: {
     box: Box(0)
     assign(box, 42)
-    print(box.val)
+    print("`box.val`")
 }

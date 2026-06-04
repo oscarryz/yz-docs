@@ -13,11 +13,11 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var x std.Int = std.NewInt(5)
 	var neg_x std.Int = x.Neg()
-	std.Print(neg_x)
+	std.Print(std.NewString(std.StringifyRepr(neg_x)))
 	var a std.Int = std.NewInt(10)
 	var b std.Int = std.NewInt(3)
 	var result std.Int = a.Minus(b.Neg())
-	std.Print(result)
+	std.Print(std.NewString(std.StringifyRepr(result)))
 	return std.TheUnit
 }
 
