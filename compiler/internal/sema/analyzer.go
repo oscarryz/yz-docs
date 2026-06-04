@@ -349,6 +349,7 @@ func (a *Analyzer) analyzeNode(n ast.Node) Type {
 	case *ast.BreakStmt, *ast.ContinueStmt:
 		return TypUnit
 	case *ast.Annotation:
+		a.analyzeAnnotationBody(node)
 		return TypUnit
 	case ast.Expr:
 		return a.analyzeExpr(node)
@@ -429,12 +430,16 @@ func (a *Analyzer) propagateConstructorArgInits(varName string, st *StructType, 
 // ---------------------------------------------------------------------------
 
 func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
-	// Special case: single name + BocLiteral value.
+	// Special case: single name + BocLiteral value — annotation handled in analyzeBocDecl.
 	if len(d.Names) == 1 && len(d.Values) == 1 {
 		name := d.Names[0]
 		if bocLit, ok := d.Values[0].(*ast.BocLiteral); ok {
 			return a.analyzeBocDecl(name, bocLit, d)
 		}
+	}
+	// For non-boc short decls, analyze the annotation if present.
+	if d.Annotation != nil {
+		a.analyzeAnnotationBody(d.Annotation)
 	}
 
 	// Multi-name with single RHS: multi-return call expansion (YZC-0012).
@@ -556,6 +561,9 @@ func hasInnerBocsOrMethods(bocLit *ast.BocLiteral) bool {
 // analyzeBocDecl handles `name: { ... }` for both lowercase (boc) and
 // uppercase (struct type) names.
 func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl ast.Node) Type {
+	if bocLit.Annotation != nil {
+		a.analyzeAnnotationBody(bocLit.Annotation)
+	}
 	fqn := a.currentFQN(name.Name)
 	prevFQN := a.pushFQN(name.Name)
 
@@ -678,6 +686,9 @@ func (a *Analyzer) collectParams(elements []ast.Node) []BocParam {
 // ---------------------------------------------------------------------------
 
 func (a *Analyzer) analyzeTypedDecl(d *ast.TypedDecl) Type {
+	if d.Annotation != nil {
+		a.analyzeAnnotationBody(d.Annotation)
+	}
 	typ := a.resolveTypeExpr(d.Type)
 	if d.Value != nil {
 		prev := a.expectedType
@@ -1553,6 +1564,7 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 	case *ast.InfixMatchExpr:
 		t = a.analyzeInfixMatch(expr)
 	case *ast.Annotation:
+		a.analyzeAnnotationBody(expr)
 		t = TypUnit
 	default:
 		t = Unknown
@@ -2730,5 +2742,18 @@ func collectGenericNames(t Type, names map[string]bool) {
 		for _, arg := range tt.TypeArgs {
 			collectGenericNames(arg, names)
 		}
+	}
+}
+
+// analyzeAnnotationBody type-checks the body of an annotation boc.
+// Runs in an isolated child scope so declarations don't leak to the enclosing boc.
+func (a *Analyzer) analyzeAnnotationBody(ann *ast.Annotation) {
+	if ann.Body == nil {
+		return
+	}
+	prev := a.pushScope()
+	defer a.popScope(prev)
+	for _, elem := range ann.Body.Elements {
+		a.analyzeNode(elem)
 	}
 }

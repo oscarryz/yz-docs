@@ -69,8 +69,9 @@ type SourceFile struct {
 // multi-return call: `a, b: swap(x, y)`.
 type ShortDecl struct {
 	Pos
-	Names  []*Ident // at least one
-	Values []Expr   // at least one (len == 1 for single decl, may be multi-return call)
+	Names      []*Ident    // at least one
+	Values     []Expr      // at least one (len == 1 for single decl, may be multi-return call)
+	Annotation *Annotation // nil if no annotation precedes this decl
 }
 
 func (s *ShortDecl) stmtNode() {}
@@ -79,9 +80,10 @@ func (s *ShortDecl) stmtNode() {}
 // When Value is nil the declaration is uninitialized (acts as a required parameter).
 type TypedDecl struct {
 	Pos
-	Name  *Ident
-	Type  TypeExpr
-	Value Expr // nil if no initializer
+	Name       *Ident
+	Type       TypeExpr
+	Value      Expr        // nil if no initializer
+	Annotation *Annotation // nil if no annotation precedes this decl
 }
 
 func (s *TypedDecl) stmtNode() {}
@@ -230,7 +232,7 @@ func (e *GroupExpr) exprNode() {}
 type BocLiteral struct {
 	Pos
 	Elements   []Node // Stmt | Expr | *VariantDef
-	Annotation *StringLit // nil if no info string precedes this boc
+	Annotation *Annotation // nil if no annotation precedes this boc
 }
 
 func (e *BocLiteral) exprNode() {}
@@ -354,7 +356,7 @@ type ConditionalBoc struct {
 // declaration and carries compile-time metadata. No runtime code is generated.
 type Annotation struct {
 	Pos
-	Value string // raw text including delimiters
+	Body *BocLiteral // parsed boc body (content between backticks)
 }
 
 func (e *Annotation) exprNode() {}

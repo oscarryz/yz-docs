@@ -389,14 +389,14 @@ Blocked on concurrency model (YZC-0019, YZC-0023).
 - [ ] Spec 07 — update
 - [ ] Golden tests — sema-level error tests
 
-### YZC-0025 — Infostrings: content is a boc body
+### YZC-0025 — Annotations: content is a boc body
 
-Infostring delimiter stays backtick; content is full Yz syntax, parsed and type-checked, never executed. Intersection with Native annotations (YZC-0058).
+Annotation delimiter stays backtick; content is full Yz syntax, parsed and type-checked, never executed. Intersection with Native annotations (YZC-0058).
 
-- [ ] AST — `Annotation` holds `*BocLiteral`
-- [ ] Lexer — re-lex annotation content as Yz source
-- [ ] Parser — re-parse as boc body
-- [ ] Sema — type-check content
+- [x] AST — `Annotation` holds `*BocLiteral`; `BocLiteral.Annotation *Annotation`
+- [x] Lexer — `ANNOTATION` token type; `scanAnnotation()` scans backtick-delimited content
+- [x] Parser — sub-parser re-lexes and re-parses annotation content as boc body
+- [x] Sema — traverses annotation body elements for type checking
 - [ ] Codegen — attach compiled annotation boc to declaration metadata
 - [ ] Spec 01 — update
 

@@ -1,0 +1,7 @@
+// YZC-0025: annotation content is a boc body — valid scalar values
+`port: 8080`
+Server: {}
+
+main: {
+    print("ok")
+}

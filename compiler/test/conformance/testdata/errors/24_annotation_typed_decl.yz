@@ -1,0 +1,6 @@
+`cue: bar`
+a Int = 2
+
+main: {
+    print("ok")
+}

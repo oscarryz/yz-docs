@@ -102,9 +102,8 @@ func (p *Parser) parseStatement() (ast.Node, error) {
 
 	}
 
-	// Check for annotation: a string literal that immediately precedes a declaration.
-	// We parse it as a node and attach it to the following decl if possible.
-	if tok.Type == token.STRING_LIT && p.isAnnotationContext() {
+	// Check for annotation: a backtick-delimited body that immediately precedes a declaration.
+	if tok.Type == token.ANNOTATION {
 		return p.parseAnnotationAndDecl()
 	}
 
@@ -238,16 +237,6 @@ func (p *Parser) isTypedDeclStart() bool {
 	return isType
 }
 
-// isAnnotationContext returns true when a string literal is in annotation position:
-// immediately followed (after semicolons) by a declaration.
-func (p *Parser) isAnnotationContext() bool {
-	save := p.pos
-	p.advance() // skip the string literal
-	p.skipSemis()
-	result := p.atAnyIdent() || p.at(token.MATCH)
-	p.pos = save
-	return result
-}
 
 // parseMultiNameStmt parses `a, b, c : exprs` or `a, b, c = exprs`.
 func (p *Parser) parseMultiNameStmt() (ast.Node, error) {
@@ -394,10 +383,25 @@ func (p *Parser) parseBocDecl() (*ast.BocDecl, error) {
 }
 
 // parseAnnotationAndDecl parses an annotation and attaches it to the next decl.
+// The annotation token's literal is the raw content between backticks.
+// It is re-lexed and parsed as a boc body (no surrounding braces).
 func (p *Parser) parseAnnotationAndDecl() (ast.Node, error) {
 	tok := p.cur()
-	ann := &ast.Annotation{Pos: p.posOf(tok), Value: tok.Literal}
-	p.advance()
+	annPos := p.posOf(tok)
+	// The annotation content starts one column after the opening backtick.
+	sub := NewWithOffset([]byte(tok.Literal), annPos.Line, annPos.Col+1)
+	bocLit := &ast.BocLiteral{Pos: annPos}
+	sub.skipSeps()
+	for !sub.at(token.EOF) {
+		elem, err := sub.parseBocElement()
+		if err != nil {
+			return nil, err
+		}
+		bocLit.Elements = append(bocLit.Elements, elem)
+		sub.skipSeps()
+	}
+	ann := &ast.Annotation{Pos: annPos, Body: bocLit}
+	p.advance() // consume the ANNOTATION token
 	p.skipSemis()
 
 	// Parse the following declaration
@@ -406,20 +410,28 @@ func (p *Parser) parseAnnotationAndDecl() (ast.Node, error) {
 		return nil, err
 	}
 
-	// Attach annotation to boc literals or short decls where applicable
+	// Attach annotation to the declaration node.
+	// When the value is a BocLiteral, the annotation also propagates to the
+	// BocLiteral so that macro processing (which operates on the boc) can
+	// access it via bocLit.Annotation.
 	switch n := node.(type) {
 	case *ast.ShortDecl:
+		n.Annotation = ann
 		if len(n.Values) == 1 {
 			if b, ok := n.Values[0].(*ast.BocLiteral); ok {
-				b.Annotation = &ast.StringLit{Pos: ann.Pos, Value: ann.Value}
+				b.Annotation = ann
 			}
 		}
 		return n, nil
+	case *ast.TypedDecl:
+		n.Annotation = ann
+		return n, nil
+	case *ast.BocDecl:
+		if n.Body != nil {
+			n.Body.Annotation = ann
+		}
+		return n, nil
 	}
-	// If we can't attach it, return the annotation as a standalone node
-	// followed by the declaration — but SourceFile only holds one node per call,
-	// so we just return the declaration and lose the annotation attachment.
-	_ = ann
 	return node, nil
 }
 

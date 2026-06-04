@@ -19,6 +19,7 @@ const (
 	INT_LIT       // 42
 	DECIMAL_LIT   // 3.14
 	STRING_LIT    // "hello" or 'hello'
+	ANNOTATION    // `boc body` — backtick-delimited annotation content
 	NON_WORD      // +, -, ==, !=, &&, ||, ?, <<, etc.
 
 	// Keywords
@@ -52,6 +53,7 @@ var typeNames = [...]string{
 	INT_LIT:       "INT_LIT",
 	DECIMAL_LIT:   "DECIMAL_LIT",
 	STRING_LIT:    "STRING_LIT",
+	ANNOTATION:    "ANNOTATION",
 	NON_WORD:      "NON_WORD",
 	BREAK:         "BREAK",
 	CONTINUE:      "CONTINUE",

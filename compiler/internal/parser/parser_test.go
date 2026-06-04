@@ -747,21 +747,26 @@ print(name)`
 // ---------------------------------------------------------------------------
 
 func TestParseAnnotation(t *testing.T) {
-	// Annotation immediately before a declaration
-	sf := parse(t, `"A counter"
-counter: 0`)
-	// The annotation becomes part of the AST; the short decl follows it.
+	// Backtick-delimited annotation with a simple key:value body.
+	// The Go interpreted string `"..."` can contain backticks directly.
+	src := "`port: 8080`\nServer: {}"
+	sf := parse(t, src)
 	if len(sf.Stmts) < 1 {
 		t.Fatal("expected at least 1 stmt")
 	}
-	// The short decl should have the annotation attached.
 	d := asShortDecl(t, sf.Stmts[0])
-	// Annotation is accessible via the... actually annotations are separate
-	// nodes OR attached to the next decl. We'll verify there are 2 nodes OR
-	// the decl has an Annotation attached — either design is fine.
-	// For now: verify the decl exists.
-	if d.Names[0].Name != "counter" {
-		t.Errorf("got %q, want counter", d.Names[0].Name)
+	if d.Names[0].Name != "Server" {
+		t.Errorf("got %q, want Server", d.Names[0].Name)
+	}
+	boc := asBocLiteral(t, d.Values[0])
+	if boc.Annotation == nil {
+		t.Fatal("expected annotation attached to boc literal")
+	}
+	if boc.Annotation.Body == nil {
+		t.Fatal("expected annotation body to be parsed")
+	}
+	if len(boc.Annotation.Body.Elements) != 1 {
+		t.Errorf("expected 1 annotation body element, got %d", len(boc.Annotation.Body.Elements))
 	}
 }
 

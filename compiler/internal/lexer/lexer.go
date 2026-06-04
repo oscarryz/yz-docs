@@ -96,6 +96,8 @@ func (l *Lexer) Next() token.Token {
 			tok = l.scanNumber(startLine, startCol)
 		case ch == '\'' || ch == '"':
 			tok = l.scanString(startLine, startCol)
+		case ch == '`':
+			tok = l.scanAnnotation(startLine, startCol)
 		default:
 			tok = l.scanPunctOrNonWord(startLine, startCol)
 		}
@@ -311,6 +313,33 @@ func (l *Lexer) scanString(startLine, startCol int) token.Token {
 	}
 
 	// Unterminated string — return what we have
+	return token.Token{Type: token.ILLEGAL, Literal: string(lit), Line: startLine, Col: startCol}
+}
+
+// ---------------------------------------------------------------------------
+// Annotation literals (backtick-delimited)
+// ---------------------------------------------------------------------------
+
+// scanAnnotation scans a backtick-delimited annotation body.
+// The token literal is the raw content between the backticks (no delimiters).
+func (l *Lexer) scanAnnotation(startLine, startCol int) token.Token {
+	l.advance() // consume opening backtick
+	var lit []byte
+	for !l.atEnd() {
+		ch := l.peekRune()
+		if ch == '`' {
+			l.advance() // consume closing backtick
+			return token.Token{Type: token.ANNOTATION, Literal: string(lit), Line: startLine, Col: startCol}
+		}
+		if ch == '\n' {
+			lit = append(lit, '\n')
+			l.advanceNewline()
+			continue
+		}
+		lit = appendRune(lit, ch)
+		l.advance()
+	}
+	// Unterminated annotation
 	return token.Token{Type: token.ILLEGAL, Literal: string(lit), Line: startLine, Col: startCol}
 }
 
