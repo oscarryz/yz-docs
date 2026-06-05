@@ -217,6 +217,18 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (stri
 			}
 			return "", nil, fmt.Errorf("parse %s: %w", fe.absPath, parseErr)
 		}
+		// Invariant 1+2: files in sub-directories are auto-wrapped in a boc
+		// named after the file. ledger/ledger.yz content → ledger: { ... }
+		// so the FQN from the parent becomes ledger.ledger.
+		// Root-level files (relDir == "") are not wrapped.
+		if relDir != "" {
+			sf.Stmts = []ast.Node{
+				&ast.ShortDecl{
+					Names:  []*ast.Ident{{Name: fe.name}},
+					Values: []ast.Expr{&ast.BocLiteral{Elements: sf.Stmts}},
+				},
+			}
+		}
 		pfiles = append(pfiles, parsedFile{sf: sf, path: fe.absPath, src: src})
 	}
 
