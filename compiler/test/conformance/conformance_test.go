@@ -56,6 +56,7 @@ func TestGolden(t *testing.T) {
 		}
 		name := strings.TrimSuffix(e.Name(), ".yz")
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			src, err := os.ReadFile(filepath.Join(dir, e.Name()))
 			if err != nil {
 				t.Fatalf("reading source: %v", err)

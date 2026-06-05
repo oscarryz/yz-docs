@@ -37,6 +37,7 @@ func TestRuntime(t *testing.T) {
 		}
 		name := strings.TrimSuffix(e.Name(), ".output")
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			wantBytes, err := os.ReadFile(filepath.Join(dir, e.Name()))
 			if err != nil {
 				t.Fatalf("reading .output: %v", err)

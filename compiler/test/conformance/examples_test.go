@@ -41,6 +41,7 @@ func TestExamples(t *testing.T) {
 		exampleDir := filepath.Join(examplesDir, name)
 
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// Build.
 			cmd := exec.Command(yzc, "build", exampleDir)
 			if out, err := cmd.CombinedOutput(); err != nil {
