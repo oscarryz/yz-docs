@@ -29,7 +29,7 @@ func (self *_mainBoc) call() std.Unit {
 	var b *Box[std.Int] = NewBox(std.NewInt(42))
 	var s *Box[std.String] = NewBox(std.NewString("hello"))
 	std.Print(std.NewString(std.StringifyRepr(b.value)))
-	std.Print(std.NewString(std.StringifyRepr(s.value)))
+	std.Print(s.value.ToStr())
 	return std.TheUnit
 }
 

@@ -29,8 +29,8 @@ main: {
     apply(b2, { b2.set(20) })   //  │
     apply(b3, { b3.set(30) })   // ─┘
     apply(b1, { b1.set(99) })   // waits for the first apply(b1,...) to finish
-    print(b1.val)
-    print(b2.val)
-    print(b3.val)
-    print(b1.val)
+    print("`b1.val`")
+    print("`b2.val`")
+    print("`b3.val`")
+    print("`b1.val`")
 }

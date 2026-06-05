@@ -7,5 +7,5 @@ main: {
     b: Box(42)              // short decl — T inferred from value
     s Box(String) = Box("hello")   // typed decl — T explicit in annotation
     print("`b.value`")
-    print("`s.value`")
+    print("${s.value}")
 }

@@ -43,7 +43,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		}).Force()
 		_bg0.Wait()
 		std.Print(std.NewString(std.StringifyRepr(p.first)))
-		std.Print(std.NewString(std.StringifyRepr(p.second)))
+		std.Print(p.second.ToStr())
 		return std.TheUnit
 	})
 }
