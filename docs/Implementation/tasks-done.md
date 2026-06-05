@@ -7,6 +7,13 @@ Completed tickets. Ticket numbers are permanent.
 
   `house/house.yz` flattens to `house.method`. Superseded by YZC-0085.
 
+- [x] **[YZC-0021] Directory and file bocs**
+
+  Files in sub-directories are auto-wrapped in a boc named after the file
+  before analysis (`build.go` `compilePackageDir`). `ledger/ledger.yz` content
+  becomes `ledger: { ... }`, making FQN `ledger.ledger` accessible from the
+  parent package. Implements spec §9 Invariants 1+2.
+
 ---
 
 ## Bugs

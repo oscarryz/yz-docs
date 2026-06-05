@@ -68,10 +68,6 @@ Open ticket details. See tasks.md for the index.
 
 ## Infrastructure
 
-- [ ] **[YZC-0021] Directory and file bocs**
-
-  defer until in-file nesting works (YZC-0081); extend FQN tree to directories and files as bocs. Depends on: YZC-0085.
-
 - [ ] **[YZC-0022] Multiple source roots**
 
   `src/` + `lib/` as independent FQN mount points. Depends on: YZC-0085.
