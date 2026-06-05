@@ -2586,9 +2586,22 @@ func (l *lowerer) resolveExprToNamespace(expr ast.Expr) *sema.NamespaceType {
 	return nil
 }
 
+// isSingletonExport reports whether t is a singleton boc type exported from a
+// package — either a BocType (body boc) or a StructType with IsSingleton (boc
+// with fields/methods). Both are lowered to a package-level var in the Go output.
+func isSingletonExport(t sema.Type) bool {
+	if _, ok := t.(*sema.BocType); ok {
+		return true
+	}
+	if st, ok := t.(*sema.StructType); ok && st.IsSingleton {
+		return true
+	}
+	return false
+}
+
 // tryLowerCrossPackageSingletonMethod detects and lowers calls of the form
 // pkg.singleton.method(args) → pkg.Singleton.Method(args).
-// The singleton must be exported from the package as a BocType symbol.
+// The singleton must be exported from the package as a BocType or singleton StructType.
 func (l *lowerer) tryLowerCrossPackageSingletonMethod(c *ast.CallExpr) (Expr, bool) {
 	outer, ok := c.Callee.(*ast.MemberExpr)
 	if !ok {
@@ -2607,7 +2620,7 @@ func (l *lowerer) tryLowerCrossPackageSingletonMethod(c *ast.CallExpr) (Expr, bo
 	if !ok {
 		return nil, false
 	}
-	if _, isBoc := exportedSym.Type.(*sema.BocType); !isBoc {
+	if !isSingletonExport(exportedSym.Type) {
 		return nil, false
 	}
 	var args []Expr
@@ -2914,7 +2927,7 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		if innerMem, ok := mem.Object.(*ast.MemberExpr); ok {
 			if pkg := l.resolveExprToPackage(innerMem.Object); pkg != nil {
 				if exportedSym, ok := pkg.Exports[innerMem.Member.Name]; ok {
-					if _, isBoc := exportedSym.Type.(*sema.BocType); isBoc {
+					if isSingletonExport(exportedSym.Type) {
 						return true
 					}
 				}

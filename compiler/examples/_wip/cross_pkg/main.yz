@@ -1,4 +1,3 @@
-// Currently doesn't work
 main: {
     ledger.ledger.deposit(100)
     ledger.ledger.deposit(50)
