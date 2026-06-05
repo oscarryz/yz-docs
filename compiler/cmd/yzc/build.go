@@ -36,7 +36,7 @@ func cmdBuild(dir string) error {
 		return err
 	}
 
-	fmt.Printf("yzc: built %s\n", binPath)
+	fmt.Printf("yzc(%s): built %s\n", version,  binPath)
 	return nil
 }
 
