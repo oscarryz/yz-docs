@@ -1,3 +1,4 @@
 main: {
     world.say()
+    greet()
 }
