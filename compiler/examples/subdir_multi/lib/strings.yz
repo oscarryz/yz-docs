@@ -1,0 +1,1 @@
+shout #(s String, String) { "${s}!" }

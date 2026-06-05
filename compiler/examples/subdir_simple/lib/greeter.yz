@@ -1,0 +1,1 @@
+greet #(String) { "hello from lib.greeter" }

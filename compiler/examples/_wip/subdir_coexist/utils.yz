@@ -1,0 +1,6 @@
+utils: {
+    version #(String) { "1.0" }
+    extra: {
+        help #(String) { "extra help" }
+    }
+}

@@ -68,6 +68,25 @@ Open ticket details. See tasks.md for the index.
 
 ## Infrastructure
 
+- [ ] **[YZC-0089] Invariant 5: `foo.yz` + `foo/` coexistence**
+
+  Spec §9 Invariant 5: a file and directory with the same stem can coexist —
+  `foo.yz` provides `foo`'s own body; `foo/` provides sub-bocs (`foo.bar`, etc.).
+
+  Two blockers, both must be fixed together:
+
+  1. **Loader merge** (`build.go` `compileProject`): when `foo.yz` + `foo/` coexist,
+     inject the sub-directory files' wrapped declarations into `foo.yz`'s boc
+     literal before analysis. Remove `foo/` from the separate-package compilation list.
+
+  2. **Nested singleton codegen** (`ir/lower.go`): `foo: { bar: { baz #() {} } }` —
+     `bar` inside a struct singleton must lower to a sub-singleton struct with its
+     own `Baz()` method, not a closure-returning `bar() Unit` method.
+     Currently `foo.bar.baz()` fails: `Utils.extra.Help undefined (type func() rt.Unit ...)`.
+
+  Test: `examples/_wip/subdir_coexist` — promote when both blockers are fixed.
+  Depends on: YZC-0021.
+
 - [ ] **[YZC-0022] Multiple source roots**
 
   `src/` + `lib/` as independent FQN mount points. Depends on: YZC-0085.
