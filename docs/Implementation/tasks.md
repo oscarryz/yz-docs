@@ -42,7 +42,6 @@ YZC-0021 -- Directory and file bocs -- L -- needs YZC-0085
 YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- superseded by YZC-0085  
 YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
-YZC-0002 -- Cross-package support -- L -- needs YZC-0040, YZC-0022  
 YZC-0023 -- Cancellation / non-local return -- L  
 YZC-0058 -- Native type annotation -- L -- needs YZC-0025, YZC-0059  
 YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, YZC-0059  
@@ -320,9 +319,10 @@ YZC-0080 -- Uniform boc literal typing: one structural type derived from element
 
   done throughout AST, sema, lowerer, and spec/02.
 
-- [ ] **[YZC-0002] Cross-package support**
+- [x] **[YZC-0002] Cross-package support**
 
-  broke during BOC migration. Depends on: YZC-0040, YZC-0022.
+  Fixed: `isSingletonExport` in lowerer now handles `StructType{IsSingleton:true}` exports,
+  resolving `pkg.singleton.method()` calls correctly. Example promoted to `examples/cross_pkg/`.
 
 - [ ] **[YZC-0022] Multiple source roots**
 
