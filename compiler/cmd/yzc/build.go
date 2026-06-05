@@ -130,7 +130,55 @@ func compileProject(srcRoot string) (map[string]string, error) {
 		byDir[e.relDir] = append(byDir[e.relDir], e)
 	}
 
+	// Invariant 5 (spec §9): foo.yz + foo/ can coexist. Detect pairs where a
+	// root file and a same-named directory share a stem, parse and wrap the
+	// directory's files, and inject them into the root boc literal at analysis
+	// time. The matched directory is removed from byDir so it is not compiled
+	// as a separate Go package.
+	// Only applies when foo/ has no sub-directories (deeper nesting deferred).
+	pendingInjections := map[string][]ast.Node{} // root file name → nodes to inject
+	for _, fe := range byDir[""] {
+		subDir := fe.name
+		if _, ok := byDir[subDir]; !ok {
+			continue
+		}
+		// Skip if sub-dir has its own sub-directories (not supported yet).
+		hasDeeper := false
+		for d := range byDir {
+			if strings.HasPrefix(d, subDir+"/") {
+				hasDeeper = true
+				break
+			}
+		}
+		if hasDeeper {
+			continue
+		}
+		for _, sf := range byDir[subDir] {
+			src, err := os.ReadFile(sf.absPath)
+			if err != nil {
+				return nil, fmt.Errorf("reading %s: %w", sf.absPath, err)
+			}
+			p := parser.New(src)
+			parsed, parseErr := p.ParseFile()
+			if parseErr != nil {
+				if pe, ok := parseErr.(*parser.ParseError); ok {
+					fmt.Fprint(os.Stderr, diagnostic.Format(src, sf.absPath, pe.Line, pe.Col, pe.Len, pe.Msg))
+					return nil, fmt.Errorf("parse error in %s", sf.absPath)
+				}
+				return nil, fmt.Errorf("parse %s: %w", sf.absPath, parseErr)
+			}
+			pendingInjections[fe.name] = append(pendingInjections[fe.name],
+				&ast.ShortDecl{
+					Names:  []*ast.Ident{{Name: sf.name}},
+					Values: []ast.Expr{&ast.BocLiteral{Elements: parsed.Stmts}},
+				},
+			)
+		}
+		delete(byDir, subDir)
+	}
+
 	// Sort dirs: deepest first so sub-packages are ready before root.
+	// Build after Invariant 5 deletion so merged dirs are excluded.
 	var dirs []string
 	for d := range byDir {
 		dirs = append(dirs, d)
@@ -151,7 +199,7 @@ func compileProject(srcRoot string) (map[string]string, error) {
 		if dir == "" {
 			continue // root compiled last
 		}
-		goSrc, exp, err := compilePackageDir(byDir[dir], dir, nil)
+		goSrc, exp, err := compilePackageDir(byDir[dir], dir, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -169,7 +217,7 @@ func compileProject(srcRoot string) (map[string]string, error) {
 
 	// Compile the root (main) package with the seeded analyzer.
 	if rootFiles, ok := byDir[""]; ok {
-		goSrc, _, err := compilePackageDir(rootFiles, "", rootAnalyzer)
+		goSrc, _, err := compilePackageDir(rootFiles, "", rootAnalyzer, pendingInjections)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +231,7 @@ func compileProject(srcRoot string) (map[string]string, error) {
 // source string and returns the exported symbols of the package.
 // If a is non-nil it is used as the analyzer (for the root package which has
 // pre-registered sub-package exports); otherwise a fresh analyzer is created.
-func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (string, *pkgExport, error) {
+func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendingInjections map[string][]ast.Node) (string, *pkgExport, error) {
 	pkgName := pkgNameFromDir(relDir)
 
 	// Sort: main.yz last within each dir.
@@ -229,6 +277,11 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (stri
 				},
 			}
 		}
+		// Invariant 5: inject sub-directory declarations into the matching
+		// root boc literal (foo.yz + foo/ merge).
+		if nodes, ok := pendingInjections[fe.name]; ok {
+			injectIntoBocLiteral(sf, fe.name, nodes)
+		}
 		pfiles = append(pfiles, parsedFile{sf: sf, path: fe.absPath, src: src})
 	}
 
@@ -268,6 +321,25 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer) (stri
 	}
 
 	return codegen.Generate(combined), exp, nil
+}
+
+// injectIntoBocLiteral finds the top-level ShortDecl named bocName in sf and
+// appends nodes to its BocLiteral body (spec §9 Invariant 5 loader merge).
+// No-ops if no matching ShortDecl is found.
+func injectIntoBocLiteral(sf *ast.SourceFile, bocName string, nodes []ast.Node) {
+	for _, stmt := range sf.Stmts {
+		sd, ok := stmt.(*ast.ShortDecl)
+		if !ok || len(sd.Names) == 0 || len(sd.Values) == 0 {
+			continue
+		}
+		if sd.Names[0].Name != bocName {
+			continue
+		}
+		if bl, ok := sd.Values[0].(*ast.BocLiteral); ok {
+			bl.Elements = append(bl.Elements, nodes...)
+			return
+		}
+	}
 }
 
 func containsStr(ss []string, s string) bool {
