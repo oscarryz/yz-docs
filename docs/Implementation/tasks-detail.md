@@ -64,10 +64,6 @@ Open ticket details. See tasks.md for the index.
 
   systematic comparison of spec vs. yzrt/lowerer: `%`, bitwise, string operators. Depends on: YZC-0031.
 
-- [ ] **[YZC-0040] Smart Nesting / Namespace Flattening**
-
-  `house/house.yz` flattens to `house.method`. Superseded by YZC-0085; may be closeable.
-
 ---
 
 ## Infrastructure

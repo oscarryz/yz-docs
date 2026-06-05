@@ -3,6 +3,12 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+- [~] **[YZC-0040] Smart Nesting / Namespace Flattening**
+
+  `house/house.yz` flattens to `house.method`. Superseded by YZC-0085.
+
+---
+
 ## Bugs
 
 - [x] **[YZC-0001] Variants broken**

@@ -39,7 +39,6 @@ YZC-0039 -- Operators audit -- L -- needs YZC-0031
 YZC-0059 -- Macro interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
 YZC-0021 -- Directory and file bocs -- L -- needs YZC-0085  
-YZC-0040 -- Smart Nesting / Namespace Flattening -- M -- superseded by YZC-0085  
 YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  
