@@ -4456,7 +4456,7 @@ func goIdentGoName(name string) string {
 
 // goMethodName returns the Go-safe exported method name for an Yz identifier.
 func goMethodName(ident *ast.Ident) string {
-	return goIdentGoName(ident.Name)
+	return lowerMethodName(ident.Name)
 }
 
 // goMethodNameStr is like goMethodName but takes a plain string.

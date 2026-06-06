@@ -1,3 +1,8 @@
 // Uppercase root file — content auto-wrapped as Pet: { name String; age Int }
 name String
 age  Int
+
+to_str #(String) {
+  "${name} is ${age}"
+}
+  
