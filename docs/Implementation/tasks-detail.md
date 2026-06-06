@@ -66,6 +66,44 @@ Open ticket details. See tasks.md for the index.
 
 ---
 
+## Thunk / Concurrency
+
+- [ ] **[YZC-0094] Thunk forcing mechanics: IO-boundary-only forcing, inline expressions, var semantics** *(design)*
+
+  The current lowerer forces thunks too eagerly and inconsistently:
+
+  - **Variable assignment auto-forces** — `g : greet()` makes `g` a thunkVar
+    that is `.Force()`-d at every use site. This is wrong: `g` should remain a
+    lazy handle; forcing should happen only when the value is actually needed.
+  - **Inline expressions don't force** — `greet() == "hi"` fails to compile
+    because `greet()` returns `*Thunk[String]` and `.Eqeq` is not defined on
+    a Thunk. Variables and inline calls should behave identically.
+  - **Correct model** — forcing should happen exactly at IO boundaries:
+    `print`, network calls, file writes, and any place a concrete value must
+    be observed. Intermediate expressions (comparisons, arithmetic, field
+    access) should propagate thunks transparently until a boundary is reached.
+
+  Example of correct behaviour:
+
+  ```yz
+  // greet() returns a lazy String — no force yet
+  // == propagates the thunk; still lazy
+  // print() is the IO boundary — forces here
+  print("${greet() == 'hi from greet'}")   // forces at print
+  ```
+
+  Work (design first):
+  - Decide: does `==` on two thunks return `Thunk[Bool]` (fully lazy) or
+    force both operands and return `Bool`? Specify the forcing rule.
+  - Update the lowerer to stop inserting `.Force()` at variable use sites;
+    instead insert it only at IO-boundary call sites.
+  - Make inline boc-call expressions in non-thunkVar positions force correctly
+    (or propagate the thunk) consistent with variable form.
+  - Add/update conformance tests for inline-call expressions in comparisons,
+    arithmetic, and string interpolation.
+
+---
+
 ## Infrastructure
 
 - [x] **[YZC-0093] Uppercase root file (`Foo.yz`) always-wrap: example + spec §9 clarification**
