@@ -2378,6 +2378,9 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		return &MethodCall{Recv: operand, Method: "Neg", Args: nil}
 	case *ast.BinaryExpr:
 		left := l.lowerExpr(expr.Left)
+		if l.isBocMethodCall(expr.Left) {
+			left = &ForceExpr{Thunk: left}
+		}
 		right := l.lowerExpr(expr.Right)
 		method := capitalize(sema.NonWordMethodName(expr.Op))
 		return &MethodCall{Recv: left, Method: method, Args: []Expr{right}}
@@ -3345,7 +3348,7 @@ func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
 
 	switch c := e.(type) {
 	case *ast.ConditionalExpr:
-		condExpr = l.lowerExpr(c.Cond)
+		condExpr = l.lowerExprForced(c.Cond)
 		trueCase = c.TrueCase
 		falseCase = c.FalseCase
 	case *ast.BinaryExpr:
@@ -3353,7 +3356,7 @@ func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
 			return nil, false
 		}
 		// `cond ? { body }` with no false branch — lower as one-armed if.
-		condExpr = l.lowerExpr(c.Left)
+		condExpr = l.lowerExprForced(c.Left)
 		trueCase = c.Right
 		falseCase = nil
 	default:
@@ -3386,7 +3389,7 @@ func (l *lowerer) lowerConditionalExpr(cond *ast.ConditionalExpr) Expr {
 		resultType = l.goType(bt.Returns[0])
 	}
 
-	condExpr := l.lowerExpr(cond.Cond)
+	condExpr := l.lowerExprForced(cond.Cond)
 
 	var trueBody []Stmt
 	if tc, ok := cond.TrueCase.(*ast.BocLiteral); ok {
