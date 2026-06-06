@@ -149,19 +149,74 @@ Open ticket details. See tasks.md for the index.
   - No `GoStore` (`g : greet()` holds `*Thunk[String]`, not a concrete value)
   - `Wait()` IS the forcing mechanism — waiting and forcing are the same act
 
-  ### Work
+  ### Note on "truly lazy"
 
-  - Remove `thunkVars`, `GoWait`, `GoStore`, `sync.WaitGroup` from
-    `BocGroup`; replace with `Add` + sequential `Wait`.
-  - Remove all use-site `.Force()` insertion from the lowerer.
-  - Every statement in a boc body registers its result thunk with BocGroup
-    via `Add`. Pure-value statements (non-thunk) execute inline as before.
-  - Generate forwarding methods on `Thunk[T]` in yzrt for each `T` (or use
-    Go generics / code generation to avoid hand-writing per type).
-  - Entry-point `main()` call remains the one explicit top-level
-    `BocGroup.Wait()`.
-  - Regenerate all golden files; add conformance tests for inline-call
-    expressions in comparisons, conditionals, and string interpolation.
+  `Thunk[T]` already supports both forms (see `thunk.go`):
+
+  - `Go[T](fn)` — hot thunk: goroutine launched immediately, result cached
+    when the goroutine completes.
+  - `NewThunk[T](fn)` — cold thunk: no goroutine, `fn` runs in the caller's
+    goroutine the first time `Force()` is called, result cached via `sync.Once`.
+
+  Forwarding methods on `Thunk[T]` are therefore trivial cold thunks:
+
+  ```go
+  func (th *Thunk[String]) Eqeq(other String) *Thunk[Bool] {
+      return NewThunk(func() Bool { return th.Force().Eqeq(other) })
+  }
+  ```
+
+  The goroutines are genuinely concurrent — `Force()` on a hot thunk blocks
+  until the goroutine completes. The current overhead is the meta-goroutines
+  spawned by `GoStore` to force hot thunks — those are eliminated here.
+
+  ### Implementation plan
+
+  **Phase 1 — Runtime (`runtime/rt/`)**
+
+  - [ ] `thunk.go`: no changes needed; `NewThunk` and `Go` are already correct.
+  - [ ] `core.go`:
+    - [ ] Replace `BocGroup.sync.WaitGroup` with `[]func()` (slice of force
+      closures) or a `Forceable` interface slice.
+    - [ ] `BocGroup.Add(th *Thunk[T])` — append a closure `func() { th.Force() }`.
+    - [ ] `BocGroup.Wait()` — iterate and call each closure. No WaitGroup.
+    - [ ] Remove `GoWait`, `GoStore`, `GoStoreAny`.
+  - [ ] `types.go` (per scalar: `String`, `Int`, `Bool`, `Decimal`, `Unit`):
+    - [ ] Add forwarding methods on `*Thunk[T]` for every method on `T`,
+      returning `*Thunk[ReturnType]` via `NewThunk`.
+    - [ ] Example: `Thunk[String].Eqeq`, `Thunk[Int].Plus`, `Thunk[Bool].Qm`.
+
+  **Phase 2 — IR (`internal/ir/`)**
+
+  - [ ] `ir.go`: update or remove `SpawnExpr` (currently encodes GoWait/GoStore).
+    New form: just `_bg.Add(thunk)`.
+  - [ ] `lower.go`:
+    - [ ] Remove `thunkVars` map and all `ForceExpr` injection at use sites.
+    - [ ] Named boc-call decl (`a : greet()`): emit `a := Greet.Call(); _bg.Add(a)`.
+    - [ ] Typed boc-call decl (`a String = greet()`): same — `a` holds `*Thunk[String]`.
+    - [ ] Statement boc call (`greet()`): emit `_bg.Add(Greet.Call())`.
+    - [ ] Remove `lowerExprForced`; `lowerExpr` always returns the thunk as-is.
+    - [ ] Entry-point `main()` shim stays as `Main.Call().Force()` (only explicit
+      force in the whole compiler).
+
+  **Phase 3 — Codegen (`internal/codegen/`)**
+
+  - [ ] Update `SpawnExpr` emission to `_bg.Add(thunk)`.
+  - [ ] Remove `ForceExpr` codegen except the entry-point path.
+  - [ ] `GoStore`/`GoWait`/`GoStoreAny` string literals disappear.
+
+  **Phase 4 — Golden files**
+
+  - [ ] Regenerate all 92+ golden `.go` files.
+  - [ ] Add new golden tests for: `greet() == "hi" ? { print("ok") }, {}`,
+    inline arithmetic on boc results, string interpolation of thunks.
+
+  **Out of scope for this ticket**
+
+  - Full propagation through ALL method calls (e.g. `Thunk[String].Length`
+    on user-defined types) — covered when scalar types move to Yz source
+    (YZC-0031), which can generate the forwardings from the method definitions.
+  - Changes to sema type inference for thunk-returning expressions.
 
 ---
 
