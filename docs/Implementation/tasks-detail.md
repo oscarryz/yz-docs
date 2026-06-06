@@ -68,6 +68,29 @@ Open ticket details. See tasks.md for the index.
 
 ## Infrastructure
 
+- [ ] **[YZC-0092] Always-wrap root files; `main()` as explicit entry invocation**
+
+  Remove the `hasTopLevelBocNamed` guard in `build.go` so all root files are
+  always wrapped in a boc named after the file — consistent with spec §9
+  Invariant 1 ("file content = boc body named after the file").
+
+  Consequences:
+  - `main.yz` with `main: {}` wraps to `main: { main: {} }`. The outer `main`
+    executes its body; to run the inner boc the file must call `main()` explicitly.
+  - `main.yz` with free-floating statements (no inner `main: {}`) works as-is —
+    the outer `main` body just executes them directly.
+  - `Foo.yz` with `Foo: {}` wraps to `Foo: { Foo: {} }` — `Foo` inner becomes
+    an associated type (YZC-0082). `Foo.yz` with `name String; age Int` wraps
+    to `Foo: { name String; age Int }` — struct type, constructor works.
+
+  Work:
+  - Remove `hasTopLevelBocNamed` guard and helper from `build.go`
+  - Update all existing examples: drop explicit same-name wrapper, or add
+    `main()` call at end of `main.yz`
+  - Update conformance tests accordingly
+  - Add clarifying example to spec §9 Invariant 1 covering `Foo.yz` and
+    `main.yz` with inner `main: {}`
+
 - [ ] **[YZC-0091] Nested singleton codegen: sub-singleton struct with own methods**
 
   `foo: { bar: { baz #() {} } }` — `bar` inside a singleton must lower to a
