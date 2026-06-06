@@ -68,24 +68,27 @@ Open ticket details. See tasks.md for the index.
 
 ## Infrastructure
 
-- [ ] **[YZC-0089] Invariant 5: `foo.yz` + `foo/` coexistence**
+- [ ] **[YZC-0091] Nested singleton codegen: sub-singleton struct with own methods**
 
-  Spec §9 Invariant 5: a file and directory with the same stem can coexist —
-  `foo.yz` provides `foo`'s own body; `foo/` provides sub-bocs (`foo.bar`, etc.).
+  `foo: { bar: { baz #() {} } }` — `bar` inside a singleton must lower to a
+  sub-singleton struct with its own `Baz()` method, not a closure-returning
+  `bar() Unit` method. Currently `foo.bar.baz()` fails:
+  `Utils.extra.Help undefined (type func() rt.Unit has no field or method Help)`.
 
-  Two blockers, both must be fixed together:
+  Test: `examples/_wip/subdir_coexist` — promote when fixed.
+  Depends on: YZC-0021. Will be superseded by YZC-0080 (uniform boc literal typing).
 
-  1. **Loader merge** (`build.go` `compileProject`): when `foo.yz` + `foo/` coexist,
-     inject the sub-directory files' wrapped declarations into `foo.yz`'s boc
-     literal before analysis. Remove `foo/` from the separate-package compilation list.
+- [ ] **[YZC-0090] Multi-return for nested bocs (methods on singleton)**
 
-  2. **Nested singleton codegen** (`ir/lower.go`): `foo: { bar: { baz #() {} } }` —
-     `bar` inside a struct singleton must lower to a sub-singleton struct with its
-     own `Baz()` method, not a closure-returning `bar() Unit` method.
-     Currently `foo.bar.baz()` fails: `Utils.extra.Help undefined (type func() rt.Unit ...)`.
+  Multi-return (`wins, total : summary(3, 5)`) works for top-level singleton bocs
+  but not for bocs that are methods on another singleton. `lowerMethod` only
+  takes `Returns[0]`; `lowerBocBody` doesn't handle multi-return at all.
 
-  Test: `examples/_wip/subdir_coexist` — promote when both blockers are fixed.
-  Depends on: YZC-0021.
+  Fix: detect `len(Returns) > 1` in `lowerMethod`, generate a result struct
+  (same pattern as `lowerBodyOnlySingleton`), thread return count into
+  `lowerBocBody` to collect and wrap the last N trailing expressions.
+
+  Tests added here act as a regression guard when YZC-0080 supersedes this.
 
 - [ ] **[YZC-0022] Multiple source roots**
 

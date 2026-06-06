@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0090**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0092**.
 
 # Yz Compiler Implementation
 
@@ -38,7 +38,8 @@ YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
 YZC-0059 -- Macro interface interaction -- *design* -- needs YZC-0025  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
-YZC-0089 -- Invariant 5: foo.yz + foo/ coexistence — loader merge + nested singleton codegen -- M -- needs YZC-0021  
+YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods -- M -- needs YZC-0021 -- superseded by YZC-0080
+YZC-0090 -- Multi-return for nested bocs (methods on singleton) -- S -- superseded by YZC-0080  
 YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  

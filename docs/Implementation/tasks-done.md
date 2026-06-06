@@ -12,7 +12,18 @@ Completed tickets. Ticket numbers are permanent.
   Files in sub-directories are auto-wrapped in a boc named after the file
   before analysis (`build.go` `compilePackageDir`). `ledger/ledger.yz` content
   becomes `ledger: { ... }`, making FQN `ledger.ledger` accessible from the
-  parent package. Implements spec §9 Invariants 1+2.
+  parent package. Root files without an explicit same-name top-level boc are
+  also auto-wrapped (`world.yz` with free-floating code → callable as `world()`).
+  Implements spec §9 Invariants 1+2.
+
+- [x] **[YZC-0089] Invariant 5: `foo.yz` + `foo/` coexistence — loader merge**
+
+  Loader merge implemented in `build.go` `compileProject`: detects root-level
+  `foo.yz` + `foo/` pairs, injects wrapped sub-directory declarations into the
+  root boc literal, removes `foo/` from separate-package compilation.
+  Sema now resolves `foo.bar` correctly after the merge.
+  Nested singleton codegen blocker extracted to YZC-0091.
+  Test: `examples/_wip/subdir_coexist` — promoted once YZC-0091 lands.
 
 ---
 
