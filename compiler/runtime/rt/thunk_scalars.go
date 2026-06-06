@@ -69,6 +69,29 @@ func (th ThunkString) ToStr() ThunkString {
 	return ThunkString{NewThunk(func() String { return th.t.Force().ToStr() })}
 }
 
+// T-variants: both receiver and argument are ThunkX — forces both lazily.
+func (th ThunkString) EqeqT(o ThunkString) ThunkBool {
+	return ThunkBool{NewThunk(func() Bool { return th.t.Force().Eqeq(o.Force()) })}
+}
+func (th ThunkString) NeqT(o ThunkString) ThunkBool {
+	return ThunkBool{NewThunk(func() Bool { return th.t.Force().Neq(o.Force()) })}
+}
+func (th ThunkString) LtT(o ThunkString) ThunkBool {
+	return ThunkBool{NewThunk(func() Bool { return th.t.Force().Lt(o.Force()) })}
+}
+func (th ThunkString) GtT(o ThunkString) ThunkBool {
+	return ThunkBool{NewThunk(func() Bool { return th.t.Force().Gt(o.Force()) })}
+}
+func (th ThunkString) LteqT(o ThunkString) ThunkBool {
+	return ThunkBool{NewThunk(func() Bool { return th.t.Force().Lteq(o.Force()) })}
+}
+func (th ThunkString) GteqT(o ThunkString) ThunkBool {
+	return ThunkBool{NewThunk(func() Bool { return th.t.Force().Gteq(o.Force()) })}
+}
+func (th ThunkString) PlusT(o ThunkString) ThunkString {
+	return ThunkString{NewThunk(func() String { return th.t.Force().Plus(o.Force()) })}
+}
+
 // ---------------------------------------------------------------------------
 // ThunkInt
 // ---------------------------------------------------------------------------
@@ -95,6 +118,18 @@ func (th ThunkInt) Neq(other Int) ThunkBool    { return ThunkBool{NewThunk(func(
 func (th ThunkInt) To(end Int) ThunkRange      { return ThunkRange{NewThunk(func() Range { return th.t.Force().To(end) })} }
 func (th ThunkInt) ToStr() ThunkString         { return ThunkString{NewThunk(func() String { return th.t.Force().ToStr() })} }
 
+func (th ThunkInt) PlusT(o ThunkInt) ThunkInt    { return ThunkInt{NewThunk(func() Int { return th.t.Force().Plus(o.Force()) })} }
+func (th ThunkInt) MinusT(o ThunkInt) ThunkInt   { return ThunkInt{NewThunk(func() Int { return th.t.Force().Minus(o.Force()) })} }
+func (th ThunkInt) StarT(o ThunkInt) ThunkInt    { return ThunkInt{NewThunk(func() Int { return th.t.Force().Star(o.Force()) })} }
+func (th ThunkInt) SlashT(o ThunkInt) ThunkInt   { return ThunkInt{NewThunk(func() Int { return th.t.Force().Slash(o.Force()) })} }
+func (th ThunkInt) PercentT(o ThunkInt) ThunkInt { return ThunkInt{NewThunk(func() Int { return th.t.Force().Percent(o.Force()) })} }
+func (th ThunkInt) LtT(o ThunkInt) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Lt(o.Force()) })} }
+func (th ThunkInt) GtT(o ThunkInt) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Gt(o.Force()) })} }
+func (th ThunkInt) LteqT(o ThunkInt) ThunkBool   { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Lteq(o.Force()) })} }
+func (th ThunkInt) GteqT(o ThunkInt) ThunkBool   { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Gteq(o.Force()) })} }
+func (th ThunkInt) EqeqT(o ThunkInt) ThunkBool   { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Eqeq(o.Force()) })} }
+func (th ThunkInt) NeqT(o ThunkInt) ThunkBool    { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Neq(o.Force()) })} }
+
 // ---------------------------------------------------------------------------
 // ThunkDecimal
 // ---------------------------------------------------------------------------
@@ -120,6 +155,18 @@ func (th ThunkDecimal) Eqeq(other Decimal) ThunkBool     { return ThunkBool{NewT
 func (th ThunkDecimal) Neq(other Decimal) ThunkBool      { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Neq(other) })} }
 func (th ThunkDecimal) ToStr() ThunkString               { return ThunkString{NewThunk(func() String { return th.t.Force().ToStr() })} }
 
+func (th ThunkDecimal) PlusT(o ThunkDecimal) ThunkDecimal  { return ThunkDecimal{NewThunk(func() Decimal { return th.t.Force().Plus(o.Force()) })} }
+func (th ThunkDecimal) MinusT(o ThunkDecimal) ThunkDecimal { return ThunkDecimal{NewThunk(func() Decimal { return th.t.Force().Minus(o.Force()) })} }
+func (th ThunkDecimal) StarT(o ThunkDecimal) ThunkDecimal  { return ThunkDecimal{NewThunk(func() Decimal { return th.t.Force().Star(o.Force()) })} }
+func (th ThunkDecimal) SlashT(o ThunkDecimal) ThunkDecimal { return ThunkDecimal{NewThunk(func() Decimal { return th.t.Force().Slash(o.Force()) })} }
+func (th ThunkDecimal) PowT(o ThunkDecimal) ThunkDecimal   { return ThunkDecimal{NewThunk(func() Decimal { return th.t.Force().Pow(o.Force()) })} }
+func (th ThunkDecimal) LtT(o ThunkDecimal) ThunkBool       { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Lt(o.Force()) })} }
+func (th ThunkDecimal) GtT(o ThunkDecimal) ThunkBool       { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Gt(o.Force()) })} }
+func (th ThunkDecimal) LteqT(o ThunkDecimal) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Lteq(o.Force()) })} }
+func (th ThunkDecimal) GteqT(o ThunkDecimal) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Gteq(o.Force()) })} }
+func (th ThunkDecimal) EqeqT(o ThunkDecimal) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Eqeq(o.Force()) })} }
+func (th ThunkDecimal) NeqT(o ThunkDecimal) ThunkBool      { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Neq(o.Force()) })} }
+
 // ---------------------------------------------------------------------------
 // ThunkBool
 // ---------------------------------------------------------------------------
@@ -136,6 +183,11 @@ func (th ThunkBool) Pipepipe(other Bool) ThunkBool { return ThunkBool{NewThunk(f
 func (th ThunkBool) Eqeq(other Bool) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Eqeq(other) })} }
 func (th ThunkBool) Neq(other Bool) ThunkBool      { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Neq(other) })} }
 func (th ThunkBool) ToStr() ThunkString            { return ThunkString{NewThunk(func() String { return th.t.Force().ToStr() })} }
+
+func (th ThunkBool) EqeqT(o ThunkBool) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Eqeq(o.Force()) })} }
+func (th ThunkBool) NeqT(o ThunkBool) ThunkBool      { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Neq(o.Force()) })} }
+func (th ThunkBool) AmpampT(o ThunkBool) ThunkBool   { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Ampamp(o.Force()) })} }
+func (th ThunkBool) PipepipeT(o ThunkBool) ThunkBool { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Pipepipe(o.Force()) })} }
 
 // Qm is the conditional: flag ? { trueCase }, { falseCase }
 // Both branches are closures so only the selected branch is evaluated.

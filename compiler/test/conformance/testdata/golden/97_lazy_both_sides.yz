@@ -1,0 +1,13 @@
+some: {
+    get: { "hello" }
+}
+more: {
+    get: { "hello" }
+}
+main: {
+    some.get() == more.get() ? {
+        print("equal")
+    }, {
+        print("not equal")
+    }
+}

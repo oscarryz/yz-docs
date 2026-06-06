@@ -2391,16 +2391,36 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		operand := l.lowerExpr(expr.Operand)
 		return &MethodCall{Recv: operand, Method: "Neg", Args: nil}
 	case *ast.BinaryExpr:
+		leftIsBoc := l.isBocMethodCall(expr.Left)
+		rightIsBoc := l.isBocMethodCall(expr.Right)
+
 		left := l.lowerExpr(expr.Left)
-		if l.isBocMethodCall(expr.Left) {
+		if leftIsBoc {
 			if wrapFn := l.thunkWrapFuncFor(expr.Left); wrapFn != "" {
 				left = &FuncCall{Func: &Ident{Name: wrapFn}, Args: []Expr{left}}
 			} else {
 				left = &ForceExpr{Thunk: left} // fallback for non-scalar types
 			}
 		}
+
 		right := l.lowerExpr(expr.Right)
 		method := capitalize(sema.NonWordMethodName(expr.Op))
+
+		if rightIsBoc {
+			if leftIsBoc {
+				// Both sides are ThunkX: use the T-variant method and wrap RHS.
+				if wrapFn := l.thunkWrapFuncFor(expr.Right); wrapFn != "" {
+					right = &FuncCall{Func: &Ident{Name: wrapFn}, Args: []Expr{right}}
+					method = method + "T"
+				} else {
+					right = &ForceExpr{Thunk: right}
+				}
+			} else {
+				// Only RHS is a boc call; LHS is concrete — force RHS eagerly.
+				right = &ForceExpr{Thunk: right}
+			}
+		}
+
 		return &MethodCall{Recv: left, Method: method, Args: []Expr{right}}
 	case *ast.CallExpr:
 		return l.lowerCall(expr)
@@ -3315,6 +3335,13 @@ func (l *lowerer) thunkWrapFuncFor(e ast.Expr) string {
 // When no BocGroup is active, falls back to forcing the thunk inline.
 func (l *lowerer) lowerThunkConditional(condAST, trueAST, falseAST ast.Expr) Stmt {
 	condExpr := l.lowerExpr(condAST)
+	// When condAST is a direct boc call (e.g. flag()) lowerExpr returns *Thunk[Bool],
+	// not ThunkBool. Wrap it so the Qm method is available.
+	if l.isBocMethodCall(condAST) {
+		if wrapFn := l.thunkWrapFuncFor(condAST); wrapFn != "" {
+			condExpr = &FuncCall{Func: &Ident{Name: wrapFn}, Args: []Expr{condExpr}}
+		}
+	}
 
 	// Build closures for each branch: `func() any { body; return std.TheUnit }`.
 	trueClosure := l.bocBranchAsClosure(trueAST)
@@ -3486,11 +3513,8 @@ func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
 		return l.lowerThunkConditional(condAST, trueCase, falseCase), true
 	}
 
-	// Concrete-bool path: condition is a plain Bool (or a forced boc call).
+	// Concrete-bool path: condition is a plain Bool expression (no boc calls).
 	condExpr = l.lowerExpr(condAST)
-	if l.isBocMethodCall(condAST) {
-		condExpr = &ForceExpr{Thunk: condExpr}
-	}
 
 	var thenStmts, elseStmts []Stmt
 	if b, ok := trueCase.(*ast.BocLiteral); ok {
