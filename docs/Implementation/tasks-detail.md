@@ -121,17 +121,45 @@ Open ticket details. See tasks.md for the index.
   Variables and inline calls are identical — `g == "hi"` and `greet() == "hi"`
   both produce `Thunk[Bool]` with no forcing difference.
 
+  ### Waiting IS forcing — BocGroup simplification
+
+  Today `GoWait` spawns a *meta-goroutine* that calls `.Force()` on a thunk
+  and signals `sync.WaitGroup`. This is a two-layer design: boc goroutine +
+  meta-goroutine just to do the force.
+
+  In the fully lazy model this collapses. The boc goroutines launched by
+  `Schedule` are already running concurrently. Forcing their thunks
+  *sequentially* loses nothing — by the time we force thunk 2, goroutine 2 is
+  already running (or done). Total wait time is still the slowest goroutine,
+  same as a WaitGroup.
+
+  Therefore `BocGroup` becomes:
+
+  ```go
+  type BocGroup struct{ thunks []Forceable }
+
+  func (g *BocGroup) Add(th Forceable)  { g.thunks = append(g.thunks, th) }
+  func (g *BocGroup) Wait() {
+      for _, th := range g.thunks { th.Force() }
+  }
+  ```
+
+  - No `sync.WaitGroup`
+  - No `GoWait` (meta-goroutine eliminated)
+  - No `GoStore` (`g : greet()` holds `*Thunk[String]`, not a concrete value)
+  - `Wait()` IS the forcing mechanism — waiting and forcing are the same act
+
   ### Work
 
-  - Remove `thunkVars`, `GoStore`, and all use-site `.Force()` insertion from
-    the lowerer.
-  - Every statement in a boc body that produces a `Thunk[Unit]` is registered
-    with the BocGroup via `GoWait`. Pure-value statements (non-thunk) are
-    executed inline as before.
-  - Generate forwarding methods on `Thunk[T]` in yzrt for each `T` (or use Go
-    generics / code generation to avoid hand-writing per type).
-  - Entry-point `main()` call remains the one explicit `.Force()` (or a
-    top-level `BocGroup.Wait()`).
+  - Remove `thunkVars`, `GoWait`, `GoStore`, `sync.WaitGroup` from
+    `BocGroup`; replace with `Add` + sequential `Wait`.
+  - Remove all use-site `.Force()` insertion from the lowerer.
+  - Every statement in a boc body registers its result thunk with BocGroup
+    via `Add`. Pure-value statements (non-thunk) execute inline as before.
+  - Generate forwarding methods on `Thunk[T]` in yzrt for each `T` (or use
+    Go generics / code generation to avoid hand-writing per type).
+  - Entry-point `main()` call remains the one explicit top-level
+    `BocGroup.Wait()`.
   - Regenerate all golden files; add conformance tests for inline-call
     expressions in comparisons, conditionals, and string interpolation.
 
