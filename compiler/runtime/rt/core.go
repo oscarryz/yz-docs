@@ -60,19 +60,20 @@ func (g *BocGroup) Add(fn func()) {
 }
 
 // GoWait registers th to be forced during Wait().
-// Backward-compatible wrapper over Add.
+// TODO(YZC-0094 Phase 3): remove once codegen stops emitting GoWait calls.
 func (g *BocGroup) GoWait(th *Thunk[Unit]) {
 	g.Add(func() { th.Force() })
 }
 
 // GoStore registers th to be forced and stored into *dest during Wait().
-// Backward-compatible wrapper over Add.
+// TODO(YZC-0094 Phase 3): remove once codegen stops emitting GoStore calls.
 func GoStore[T any](g *BocGroup, th *Thunk[T], dest *T) {
 	g.Add(func() { *dest = th.Force() })
 }
 
 // GoStoreAny is like GoStore but for *Thunk[any]; type-asserts the forced
-// value to T. Backward-compatible wrapper over Add.
+// value to T.
+// TODO(YZC-0094 Phase 3): remove once codegen stops emitting GoStoreAny calls.
 func GoStoreAny[T any](g *BocGroup, th *Thunk[any], dest *T) {
 	g.Add(func() { *dest = th.Force().(T) })
 }

@@ -179,8 +179,9 @@ Open ticket details. See tasks.md for the index.
     - [x] Replace `BocGroup.sync.WaitGroup` with `[]func()` (slice of force closures).
     - [x] `BocGroup.Add(fn func())` — append closure to pending list.
     - [x] `BocGroup.Wait()` — iterate and call each closure. No WaitGroup.
-    - [x] `GoWait`, `GoStore`, `GoStoreAny` kept as backward-compat wrappers
-      over `Add`; will be removed in Phase 3 once codegen stops emitting them.
+    - [x] `GoWait`, `GoStore`, `GoStoreAny` kept temporarily (marked with
+      TODO comments); **must be deleted as the final step of Phase 3** once
+      codegen no longer emits them.
   - [x] `thunk_scalars.go` (new file — per scalar: `String`, `Int`, `Bool`, `Decimal`, `Unit`):
     - [x] Go generics do not allow type-specific methods on `*Thunk[T]`, so
       each scalar gets a concrete wrapper: `ThunkString`, `ThunkInt`,
