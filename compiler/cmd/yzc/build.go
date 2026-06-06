@@ -15,6 +15,7 @@ import (
 	"yz/internal/ir"
 	"yz/internal/parser"
 	"yz/internal/sema"
+	"yz/internal/token"
 )
 
 // cmdBuild compiles the Yz project in dir to a binary at target/bin/app.
@@ -270,7 +271,7 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendi
 		// already declare a same-named top-level boc.
 		sf.Stmts = []ast.Node{
 			&ast.ShortDecl{
-				Names:         []*ast.Ident{{Name: fe.name}},
+				Names:         []*ast.Ident{{Name: fe.name, TokType: token.LookupIdent(fe.name)}},
 				Values:        []ast.Expr{&ast.BocLiteral{Elements: sf.Stmts}},
 				IsFileWrapper: true,
 			},

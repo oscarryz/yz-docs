@@ -68,7 +68,7 @@ Open ticket details. See tasks.md for the index.
 
 ## Infrastructure
 
-- [ ] **[YZC-0093] Uppercase root file (`Foo.yz`) always-wrap: example + spec §9 clarification**
+- [x] **[YZC-0093] Uppercase root file (`Foo.yz`) always-wrap: example + spec §9 clarification**
 
   YZC-0092 implemented always-wrap for lowercase root files only. Uppercase root
   files (e.g. `Foo.yz`) follow the same invariant but have no conformance test.

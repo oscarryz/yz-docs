@@ -7,6 +7,14 @@ Completed tickets. Ticket numbers are permanent.
 
   `house/house.yz` flattens to `house.method`. Superseded by YZC-0085.
 
+- [x] **[YZC-0093] Uppercase root file (`Foo.yz`) always-wrap: example + spec §9 clarification**
+
+  Fixed `build.go` to set the correct `TokType` (`token.LookupIdent`) on the
+  synthesized wrapper ident, so uppercase file names (e.g. `Pet.yz`) produce a
+  `StructType` in sema rather than a `BocType`. Added `examples/root_type/`
+  with `Pet.yz` + `main.yz` as a conformance test. Updated spec §9 Invariant 1
+  with notes on uppercase files and explicit same-named inner boc files.
+
 - [x] **[YZC-0092] Always-wrap root files; `main()` as explicit entry invocation**
 
   Every `.yz` file's content is wrapped in a `ShortDecl` named after the file

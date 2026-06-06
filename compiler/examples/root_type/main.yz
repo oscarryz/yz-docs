@@ -1,0 +1,5 @@
+main: {
+    p: Pet(name: "Rex", age: 3)
+    print("${p.name} is ${p.age}")
+}
+main()

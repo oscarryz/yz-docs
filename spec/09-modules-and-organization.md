@@ -21,6 +21,31 @@ get: { uri String; ... }
 
 This is equivalent to writing `http: { Server: { port Int }; get: { ... } }` inside a `net` boc.
 
+**Uppercase file names** define a struct type. The file name becomes the type name; the content becomes the struct's fields and methods.
+
+```
+// Pet.yz — defines the struct type Pet
+name String
+age  Int
+```
+
+Equivalent to `Pet: { name String; age Int }`. Constructable anywhere in the package as `Pet(name: "Rex", age: 3)`.
+
+**Explicit same-named inner boc** — if a root file's content includes a boc with the same name as the file, that inner boc is treated as the active boc body. Other declarations in the same file are package-level peers, not members of the wrapper.
+
+```
+// main.yz
+counter: { count: 0; increment: { count = count + 1 } }
+
+main: {
+    counter.increment()
+    print("${counter.count}")
+}
+main()
+```
+
+Here `counter` and `main` are both package-level declarations; `main()` invokes the entry boc.
+
 ### Invariant 2 — Directory is boc namespace
 
 A directory defines the boc for its name. Files inside the directory **compose** its boc body — each file contributes a named sub-boc. No two files can conflict because the filesystem enforces name uniqueness.
