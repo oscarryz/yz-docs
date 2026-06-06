@@ -68,6 +68,24 @@ Open ticket details. See tasks.md for the index.
 
 ## Infrastructure
 
+- [ ] **[YZC-0093] Uppercase root file (`Foo.yz`) always-wrap: example + spec §9 clarification**
+
+  YZC-0092 implemented always-wrap for lowercase root files only. Uppercase root
+  files (e.g. `Foo.yz`) follow the same invariant but have no conformance test.
+
+  Two sub-cases:
+  - `Foo.yz` with free-floating fields (`name String; age Int`) → wraps to
+    `Foo: { name String; age Int }` — the wrapper IS the struct type.
+  - `Foo.yz` with an inner `Foo: {}` → wraps to `Foo: { Foo: {} }` — inner
+    becomes an associated type (struct-outer, YZC-0082); `fileWrapperHasInnerBoc`
+    should trigger unwrap so the inner `Foo` becomes top-level.
+
+  Work:
+  - Add a small root-level uppercase example (e.g. `examples/root_type/`) with
+    a `Foo.yz` struct file and a `main.yz` that constructs it
+  - Add spec §9 Invariant 1 clarifying note covering both sub-cases
+  - Add or promote conformance test
+
 - [x] **[YZC-0092] Always-wrap root files; `main()` as explicit entry invocation**
 
   Remove the `hasTopLevelBocNamed` guard in `build.go` so all root files are
