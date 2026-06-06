@@ -1,0 +1,12 @@
+main: {
+    board.add("carol", 91)
+
+    r : board.scores["alice"]
+    r match Some => { print("alice: ${r.value}") }
+
+    r2 : board.scores["dave"]
+    r2 match None => { print("dave: no score") }
+
+    w, t : summary(3, 5)
+    print("record: ${w} wins / ${t}")
+}

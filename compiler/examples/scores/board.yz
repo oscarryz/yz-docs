@@ -1,0 +1,7 @@
+// Score board — dict-backed; auto-wrapped as board: { ... }
+
+scores : ["alice": 95, "bob": 87]
+
+add #(name String, score Int) {
+    scores[name] = score
+}

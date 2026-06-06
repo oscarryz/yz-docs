@@ -1,0 +1,8 @@
+// Explicit top-level boc (same name as file — not auto-wrapped).
+// Multiple return values: wins and total.
+summary: {
+    wins  Int
+    total Int
+    wins
+    total
+}
