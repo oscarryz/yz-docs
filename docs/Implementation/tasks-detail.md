@@ -191,30 +191,33 @@ Open ticket details. See tasks.md for the index.
       `ThunkInt.Plus(Int) ThunkInt`.
     - [x] Constructors: `GoStringThunk(fn)` (hot), `NewStringThunk(fn)` (cold).
 
-  **Phase 2 — IR (`internal/ir/`)**
+  **Phase 2+3 — IR + Codegen** ✓ DONE
 
-  - [ ] `ir.go`: update or remove `SpawnExpr` (currently encodes GoWait/GoStore).
-    New form: just `_bg.Add(thunk)`.
-  - [ ] `lower.go`:
-    - [ ] Remove `thunkVars` map and all `ForceExpr` injection at use sites.
-    - [ ] Named boc-call decl (`a : greet()`): emit `a := Greet.Call(); _bg.Add(a)`.
-    - [ ] Typed boc-call decl (`a String = greet()`): same — `a` holds `*Thunk[String]`.
-    - [ ] Statement boc call (`greet()`): emit `_bg.Add(Greet.Call())`.
-    - [ ] Remove `lowerExprForced`; `lowerExpr` always returns the thunk as-is.
-    - [ ] Entry-point `main()` shim stays as `Main.Call().Force()` (only explicit
-      force in the whole compiler).
+  - [x] `ir.go`: SpawnExpr simplified — `Body []Stmt` removed, `Thunk Expr`
+    added. `StoreAnyType` retained for one path-dependent test case.
+  - [x] `lower.go`: all 12 SpawnExpr construction sites updated to use
+    `Thunk:` field. Variable type stays concrete (`var n T`) for now —
+    full type change to `*Thunk[T]` deferred (no existing tests trigger it).
+    Note: `thunkVars` and `lowerExprForced` removal deferred because
+    concrete-variable use sites (argument passing, string interpolation) still
+    need forcing; removing those requires the ThunkX codegen path (future work).
+  - [x] `codegen.go`:
+    - `spawnForceInner` removed.
+    - `emitSpawnStmt` added: always hoists thunk to `_thN` var (goroutine
+      starts at registration time, not deferred to Wait), then emits Add closure.
+    - `emitImmediateBody` updated to use `Thunk` field directly, preserving
+      `StoreVar` in closures.
+    - `thunkCount *int` added to generator (shared across sub-generators).
+    - `collectUsedExpr` updated for new SpawnExpr shape.
+  - [x] `GoStore`/`GoWait`/`GoStoreAny` removed from runtime (no longer emitted).
 
-  **Phase 3 — Codegen (`internal/codegen/`)**
+  **Phase 4 — Golden files** ✓ DONE
 
-  - [ ] Update `SpawnExpr` emission to `_bg.Add(thunk)`.
-  - [ ] Remove `ForceExpr` codegen except the entry-point path.
-  - [ ] `GoStore`/`GoWait`/`GoStoreAny` string literals disappear.
-
-  **Phase 4 — Golden files**
-
-  - [ ] Regenerate all 92+ golden `.go` files.
+  - [x] 43 golden `.go` files regenerated. All 92 golden + error + runtime
+    tests pass.
   - [ ] Add new golden tests for: `greet() == "hi" ? { print("ok") }, {}`,
     inline arithmetic on boc results, string interpolation of thunks.
+    (Blocked on ThunkX codegen integration — separate follow-up.)
 
   **Out of scope for this ticket**
 
