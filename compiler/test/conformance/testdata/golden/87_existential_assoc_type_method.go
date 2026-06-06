@@ -86,13 +86,15 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			cg = &CityGraph{}
 			london = NewCity(std.NewString("London"))
-			_bg0.GoWait(Describe.Call(cg, london))
+			_st0 := Describe.Call(cg, london)
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		var g Graph = cg
 		_bg1 := &std.BocGroup{}
-		_bg1.GoWait(Describe.Call(g, london))
+		_th0 := Describe.Call(g, london)
+		_bg1.Add(func() { _th0.Force() })
 		_bg1.Wait()
 		return std.TheUnit
 	})

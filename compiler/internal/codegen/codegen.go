@@ -10,7 +10,8 @@ import (
 
 // Generate converts an ir.File to a Go source string.
 func Generate(f *ir.File) string {
-	g := &generator{}
+	zero := 0
+	g := &generator{thunkCount: &zero}
 	g.emitFile(f)
 	return g.sb.String()
 }
@@ -20,9 +21,10 @@ func Generate(f *ir.File) string {
 // ---------------------------------------------------------------------------
 
 type generator struct {
-	sb        strings.Builder
-	level     int              // current indentation level (tabs)
-	heldCowns map[string]bool // non-nil when inside a ScheduleMulti body
+	sb         strings.Builder
+	level      int              // current indentation level (tabs)
+	heldCowns  map[string]bool // non-nil when inside a ScheduleMulti body
+	thunkCount *int            // shared counter for unique _thN intermediate thunk vars
 }
 
 func (g *generator) write(s string)                    { g.sb.WriteString(s) }
@@ -34,9 +36,18 @@ func (g *generator) linef(f string, a ...any)          { g.write(g.ind()); g.wri
 
 // sub returns a new generator pre-set to the given indentation level,
 // used for emitting multi-line closures embedded in expressions.
-// heldCowns is inherited so that closure bodies emitted via sub() see the
-// same held-cown context as the enclosing ScheduleMulti body.
-func (g *generator) sub(level int) *generator { return &generator{level: level, heldCowns: g.heldCowns} }
+// heldCowns and thunkCount are inherited so inner closures share the
+// same counter and held-cown context as the enclosing body.
+func (g *generator) sub(level int) *generator {
+	return &generator{level: level, heldCowns: g.heldCowns, thunkCount: g.thunkCount}
+}
+
+// freshThunkVar returns a unique _thN name for an intermediate thunk variable.
+func (g *generator) freshThunkVar() string {
+	n := fmt.Sprintf("_th%d", *g.thunkCount)
+	*g.thunkCount++
+	return n
+}
 
 // ---------------------------------------------------------------------------
 // File
@@ -385,7 +396,11 @@ func (g *generator) emitStmt(s ir.Stmt) {
 			g.linef("return %s", g.expr(st.Value))
 		}
 	case *ir.ExprStmt:
-		g.linef("%s", g.expr(st.Expr))
+		if sp, ok := st.Expr.(*ir.SpawnExpr); ok {
+			g.emitSpawnStmt(sp)
+		} else {
+			g.linef("%s", g.expr(st.Expr))
+		}
 	case *ir.IfStmt:
 		g.emitIfStmt(st)
 	case *ir.WaitStmt:
@@ -526,36 +541,45 @@ func (g *generator) emitImmediateBody(body []ir.Stmt, heldCowns map[string]bool)
 		switch st := s.(type) {
 		case *ir.ExprStmt:
 			if sp, ok := st.Expr.(*ir.SpawnExpr); ok {
-				if inner, ok := spawnForceInner(sp); ok {
-					if mc, ok := inner.(*ir.MethodCall); ok && len(heldCowns) > 0 {
-						recvStr := simpleExprStr(mc.Recv)
-						// Recursive calls (callee FQN == enclosing BocDecl FQN) go to the
-						// tail queue so external callers can interleave between iterations.
-						// Only non-recursive calls on held cowns use ScheduleAsSuccessor.
-						if recvStr != "" && heldCowns["&"+recvStr+".Cown"] && !mc.IsRecursive {
-							// Held cown — schedule as successor to preserve spawn-order
-							// happens-before without re-acquiring the cown (already held).
-							tv := fmt.Sprintf("_st%d", hoistIdx)
-							hoistIdx++
-							syncName := strings.ToLower(mc.Method[:1]) + mc.Method[1:]
-							g.linef("%s := std.ScheduleAsSuccessor(&%s.Cown, func() std.Unit {", tv, recvStr)
-							g.level++
-							g.linef("return %s.%s(%s)", recvStr, syncName, g.exprList(mc.Args))
-							g.level--
-							g.linef("})")
-							g.linef("%s.Go(func() any {", sp.GroupVar)
-							g.linef("\treturn %s.Force()", tv)
-							g.linef("})")
-							continue
+				thunk := sp.Thunk
+				if mc, ok := thunk.(*ir.MethodCall); ok && len(heldCowns) > 0 {
+					recvStr := simpleExprStr(mc.Recv)
+					// Recursive calls (callee FQN == enclosing BocDecl FQN) go to the
+					// tail queue so external callers can interleave between iterations.
+					// Only non-recursive calls on held cowns use ScheduleAsSuccessor.
+					if recvStr != "" && heldCowns["&"+recvStr+".Cown"] && !mc.IsRecursive {
+						// Held cown — schedule as successor to preserve spawn-order
+						// happens-before without re-acquiring the cown (already held).
+						tv := fmt.Sprintf("_st%d", hoistIdx)
+						hoistIdx++
+						syncName := strings.ToLower(mc.Method[:1]) + mc.Method[1:]
+						g.linef("%s := std.ScheduleAsSuccessor(&%s.Cown, func() std.Unit {", tv, recvStr)
+						g.level++
+						g.linef("return %s.%s(%s)", recvStr, syncName, g.exprList(mc.Args))
+						g.level--
+						g.linef("})")
+						if sp.StoreVar != "" {
+							g.linef("%s.Add(func() { %s = %s.Force() })", sp.GroupVar, sp.StoreVar, tv)
+						} else {
+							g.linef("%s.Add(func() { %s.Force() })", sp.GroupVar, tv)
 						}
+						continue
 					}
-					// Non-held cown — hoist and register goroutine.
+				}
+				// Non-held cown (or not a method call) — hoist and register.
+				if _, isIdent := thunk.(*ir.Ident); !isIdent {
 					tv := fmt.Sprintf("_st%d", hoistIdx)
 					hoistIdx++
-					g.linef("%s := %s", tv, g.expr(inner))
-					g.linef("%s.Go(func() any {", sp.GroupVar)
-					g.linef("\treturn %s.Force()", tv)
-					g.linef("})")
+					g.linef("%s := %s", tv, g.expr(thunk))
+					if sp.StoreVar != "" {
+						if sp.StoreAnyType != "" {
+							g.linef("%s.Add(func() { %s = %s.Force().(%s) })", sp.GroupVar, sp.StoreVar, tv, sp.StoreAnyType)
+						} else {
+							g.linef("%s.Add(func() { %s = %s.Force() })", sp.GroupVar, sp.StoreVar, tv)
+						}
+					} else {
+						g.linef("%s.Add(func() { %s.Force() })", sp.GroupVar, tv)
+					}
 					continue
 				}
 			}
@@ -732,27 +756,6 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	return sb.String()
 }
 
-// spawnForceInner returns the inner thunk expression from a SpawnExpr whose
-// body is exactly [ReturnStmt{ForceExpr{expr}}] where expr is not a bare Ident
-// (i.e., not already a pre-computed thunk var). Returns (expr, true) on match.
-func spawnForceInner(sp *ir.SpawnExpr) (ir.Expr, bool) {
-	if len(sp.Body) != 1 {
-		return nil, false
-	}
-	rs, ok := sp.Body[0].(*ir.ReturnStmt)
-	if !ok || rs.Value == nil {
-		return nil, false
-	}
-	fe, ok := rs.Value.(*ir.ForceExpr)
-	if !ok {
-		return nil, false
-	}
-	if _, isIdent := fe.Thunk.(*ir.Ident); isIdent {
-		return nil, false // already a thunk var; no hoisting needed
-	}
-	return fe.Thunk, true
-}
-
 // thunkFindWaitIdx returns the index of the first WaitStmt in body, or -1.
 func thunkFindWaitIdx(body []ir.Stmt) int {
 	for i, s := range body {
@@ -908,35 +911,31 @@ func (g *generator) emitClosure(c *ir.ClosureExpr) string {
 	return sb.String()
 }
 
-// emitSpawn generates the appropriate BocGroup spawn call.
-// When StoreVar is set: std.GoStore(groupVar, thunk, &storeVar) — value-returning boc.
-// When StoreVar is empty and body is [ReturnStmt{expr}]: groupVar.GoWait(expr) — Unit boc.
-// Otherwise: groupVar.Go(func() any { body }) — general case.
-func (g *generator) emitSpawn(s *ir.SpawnExpr) string {
-	if len(s.Body) == 1 {
-		if rs, ok := s.Body[0].(*ir.ReturnStmt); ok && rs.Value != nil {
-			thunkExpr := g.expr(rs.Value)
-			if s.StoreVar != "" {
-				if s.StoreAnyType != "" {
-					return "std.GoStoreAny[" + s.StoreAnyType + "](" + s.GroupVar + ", " + thunkExpr + ", &" + s.StoreVar + ")"
-				}
-				return "std.GoStore(" + s.GroupVar + ", " + thunkExpr + ", &" + s.StoreVar + ")"
-			}
-			return s.GroupVar + ".GoWait(" + thunkExpr + ")"
+// emitSpawnStmt emits a SpawnExpr as one or two statements:
+//   _thN := Thunk
+//   GroupVar.Add(func() { StoreVar = _thN.Force() })   // StoreVar case
+//   GroupVar.Add(func() { _thN.Force() })               // no-StoreVar case
+// The intermediate _thN variable ensures the thunk (and its goroutine) is
+// created at registration time, so all goroutines run concurrently before Wait.
+func (g *generator) emitSpawnStmt(s *ir.SpawnExpr) {
+	tv := g.freshThunkVar()
+	g.linef("%s := %s", tv, g.expr(s.Thunk))
+	if s.StoreVar != "" {
+		if s.StoreAnyType != "" {
+			g.linef("%s.Add(func() { %s = %s.Force().(%s) })", s.GroupVar, s.StoreVar, tv, s.StoreAnyType)
+		} else {
+			g.linef("%s.Add(func() { %s = %s.Force() })", s.GroupVar, s.StoreVar, tv)
 		}
+	} else {
+		g.linef("%s.Add(func() { %s.Force() })", s.GroupVar, tv)
 	}
+}
 
-	var sb strings.Builder
-	sb.WriteString(s.GroupVar)
-	sb.WriteString(".Go(func() any {\n")
-
-	inner := g.sub(g.level + 1)
-	inner.emitBodyStmts(s.Body, true)
-	sb.WriteString(inner.sb.String())
-
-	sb.WriteString(g.ind())
-	sb.WriteString("})")
-	return sb.String()
+// emitSpawn is the expression-position fallback for SpawnExpr (used in
+// emitImmediateBody hoisting). Emits the thunk expression only; callers
+// must emit the Add line separately.
+func (g *generator) emitSpawn(s *ir.SpawnExpr) string {
+	return g.expr(s.Thunk)
 }
 
 // emitIfStmt emits an if/else-if/else chain. When the else body is a single
@@ -1295,9 +1294,7 @@ func collectUsedExpr(e ir.Expr, seen map[string]bool) {
 		if ex.StoreVar != "" {
 			seen[ex.StoreVar] = true
 		}
-		for _, s := range ex.Body {
-			collectUsedStmt(s, seen)
-		}
+		collectUsedExpr(ex.Thunk, seen)
 	case *ir.MatchExpr:
 		for _, arm := range ex.Arms {
 			collectUsedExpr(arm.Cond, seen)

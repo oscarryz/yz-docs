@@ -49,15 +49,19 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
-			_bg0.GoWait(Counter.Increment(std.NewInt(1)))
-			std.GoStore(_bg0, Counter.Value(), &n)
+			_st0 := Counter.Increment(std.NewInt(1))
+			_bg0.Add(func() { _st0.Force() })
+			_st1 := Counter.Value()
+			_bg0.Add(func() { n = _st1.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		_bg1 := &std.BocGroup{}
-		_bg1.GoWait(Counter.Increment(n))
+		_th0 := Counter.Increment(n)
+		_bg1.Add(func() { _th0.Force() })
 		var m std.Int
-		std.GoStore(_bg1, Counter.Value(), &m)
+		_th1 := Counter.Value()
+		_bg1.Add(func() { m = _th1.Force() })
 		_bg1.Wait()
 		std.Print(m.ToStr())
 		return std.TheUnit

@@ -44,9 +44,12 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var s std.String
 		var b *Box[std.Int]
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bg0, identity(std.NewInt(42)), &n)
-			std.GoStore(_bg0, identity(std.NewString("hello")), &s)
-			std.GoStore(_bg0, wrap(std.NewInt(99)), &b)
+			_st0 := identity(std.NewInt(42))
+			_bg0.Add(func() { n = _st0.Force() })
+			_st1 := identity(std.NewString("hello"))
+			_bg0.Add(func() { s = _st1.Force() })
+			_st2 := wrap(std.NewInt(99))
+			_bg0.Add(func() { b = _st2.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

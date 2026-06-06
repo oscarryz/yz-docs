@@ -23,9 +23,10 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		var doubled std.Array[std.Int]
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bg0, mapList(std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3)), func(x std.Int) std.Int {
+			_st0 := mapList(std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3)), func(x std.Int) std.Int {
 				return x.Star(std.NewInt(2))
-			}), &doubled)
+			})
+			_bg0.Add(func() { doubled = _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

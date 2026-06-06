@@ -72,7 +72,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			sg = &SocialGraph{}
 			u = NewUser(std.NewString("Alice"))
-			std.GoStore(_bg0, Accept.Call(sg, u), &s)
+			_st0 := Accept.Call(sg, u)
+			_bg0.Add(func() { s = _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

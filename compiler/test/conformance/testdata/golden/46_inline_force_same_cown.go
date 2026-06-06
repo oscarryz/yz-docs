@@ -51,7 +51,8 @@ func (self *_userBoc) Call(acc *Account) *std.Thunk[std.Unit] {
 		var loaded *Account
 		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &acc.Cown}, func() std.Unit {
 			self.acc = acc
-			std.GoStore(_bg0, Loader.Call(self.acc), &loaded)
+			_st0 := Loader.Call(self.acc)
+			_bg0.Add(func() { loaded = _st0.Force() })
 			return std.TheUnit
 		})
 		return std.NewThunk(func() std.Unit {
@@ -79,7 +80,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var a *Account
 		std.Schedule(&self.Cown, func() std.Unit {
 			a = NewAccount(std.NewInt(42))
-			_bg0.GoWait(User.Call(a))
+			_st0 := User.Call(a)
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

@@ -230,10 +230,11 @@ main: {
     counter.increment()
     print("`+"`"+`counter.value()`+"`"+`")
 }`)
-	// E.3: boc calls return *Thunk[T]; print needs .Force() on the value.
+	// YZC-0094: BocGroup.Add replaces GoWait; intermediate thunk var ensures
+	// goroutine starts at registration time (not deferred to Wait).
 	contains(t, got,
 		"_bg0 := &std.BocGroup{}",
-		"_bg0.GoWait(Counter.Increment())",
+		"_bg0.Add(func() {",
 		"_bg0.Wait()",
 		"Counter.Value().Force()",
 	)

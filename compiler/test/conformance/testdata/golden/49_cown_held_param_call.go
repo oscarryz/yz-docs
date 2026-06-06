@@ -44,7 +44,10 @@ func (self *_assignBoc) Call(b *Box, v std.Int) *std.Thunk[std.Unit] {
 		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &b.Cown}, func() std.Unit {
 			self.b = b
 			self.v = v
-			_bg0.GoWait(self.b.Set(self.v))
+			_st0 := std.ScheduleAsSuccessor(&self.b.Cown, func() std.Unit {
+				return self.b.set(self.v)
+			})
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		})
 		return std.NewThunk(func() std.Unit {
@@ -72,7 +75,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var box *Box
 		std.Schedule(&self.Cown, func() std.Unit {
 			box = NewBox(std.NewInt(0))
-			_bg0.GoWait(Assign.Call(box, std.NewInt(42)))
+			_st0 := Assign.Call(box, std.NewInt(42))
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

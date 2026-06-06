@@ -71,7 +71,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			h = &HolerImpl{}
 			w = NewWrapper(h)
-			_bg0.GoWait(w.DoIt(h))
+			_st0 := w.DoIt(h)
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

@@ -76,7 +76,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var b *Box
 		std.Schedule(&self.Cown, func() std.Unit {
 			b = NewBox(std.NewInt(0))
-			_bg0.GoWait(Cond_set.Call(b, std.NewBool(true)))
+			_st0 := Cond_set.Call(b, std.NewBool(true))
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

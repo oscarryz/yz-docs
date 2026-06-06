@@ -88,7 +88,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			pg = &PointGraph{}
 			p = NewPoint(std.NewInt(1), std.NewInt(2))
-			_bg0.GoWait(Describe.Call(pg, p))
+			_st0 := Describe.Call(pg, p)
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

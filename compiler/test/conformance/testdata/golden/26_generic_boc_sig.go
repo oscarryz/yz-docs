@@ -21,7 +21,8 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		_bg0 := &std.BocGroup{}
 		var x std.String
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bg0, identity(std.NewString("hello")), &x)
+			_st0 := identity(std.NewString("hello"))
+			_bg0.Add(func() { x = _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

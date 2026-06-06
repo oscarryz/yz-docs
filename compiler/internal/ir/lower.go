@@ -815,10 +815,10 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 				storeAnyType := l.pathDepStoreType(pc.expr, pc.typ)
 				stmts = append(stmts,
 					&DeclStmt{Name: pc.name, Type: pc.typ},
-					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: pc.name, StoreAnyType: storeAnyType, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
+					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: pc.name, StoreAnyType: storeAnyType, Thunk: callExpr}},
 				)
 			} else {
-				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, Body: []Stmt{&ReturnStmt{Value: callExpr}}}})
+				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, Thunk: callExpr}})
 			}
 		}
 		stmts = append(stmts, &WaitStmt{GroupVar: bgVar})
@@ -1280,7 +1280,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					// before the first dependent statement.
 					inner = append(inner,
 						&DeclStmt{Name: e.Name.Name, Type: goType},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Thunk: expr}},
 					)
 					hasPendingSpawns = true
 				} else {
@@ -1290,7 +1290,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					inner = append(inner,
 						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
 						&DeclStmt{Name: e.Name.Name, Type: goType},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Name.Name, Thunk: expr}},
 						&WaitStmt{GroupVar: perBg},
 					)
 				}
@@ -1312,7 +1312,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 						GroupVar:     bgVar,
 						StoreVar:     e.Names[0].Name,
 						StoreAnyType: storeAnyType,
-						Body:         []Stmt{&ReturnStmt{Value: callExpr}},
+						Thunk:        callExpr,
 					}})
 					hasPendingSpawns = true
 				} else {
@@ -1323,7 +1323,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					inner = append(inner,
 						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
 						&DeclStmt{Name: e.Names[0].Name, Type: goType},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Names[0].Name, StoreAnyType: storeAnyType, Body: []Stmt{&ReturnStmt{Value: callExpr}}}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Names[0].Name, StoreAnyType: storeAnyType, Thunk: callExpr}},
 						&WaitStmt{GroupVar: perBg},
 					)
 				}
@@ -1360,7 +1360,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					callExpr := l.lowerExpr(e)
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
 						GroupVar: bgVar,
-						Body:     []Stmt{&ReturnStmt{Value: callExpr}},
+						Thunk:    callExpr,
 					}})
 					hasPendingSpawns = true
 				} else {
@@ -1375,7 +1375,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					callExpr := l.lowerExpr(e)
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
 						GroupVar: bgVar,
-						Body:     []Stmt{&ReturnStmt{Value: callExpr}},
+						Thunk:    callExpr,
 					}})
 					hasPendingSpawns = true
 				} else {
@@ -1843,7 +1843,7 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 			return []Stmt{
 				&DeclStmt{Name: e.Name.Name, Type: goType},
 				&DeclStmt{Name: bgVar, Init: &NewGroupExpr{}},
-				&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
+				&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Thunk: expr}},
 				&WaitStmt{GroupVar: bgVar},
 			}
 		}
@@ -1885,7 +1885,7 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 					stmts = append(stmts,
 						&DeclStmt{Name: n.Name, Type: goType},
 						&DeclStmt{Name: bgVar, Init: &NewGroupExpr{}},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: n.Name, Body: []Stmt{&ReturnStmt{Value: initExpr}}}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: n.Name, Thunk: initExpr}},
 						&WaitStmt{GroupVar: bgVar},
 					)
 					continue
@@ -3235,7 +3235,7 @@ func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 		return expr
 	}
 	if l.bocGroupCtx != "" {
-		return &SpawnExpr{GroupVar: l.bocGroupCtx, Body: []Stmt{&ReturnStmt{Value: expr}}}
+		return &SpawnExpr{GroupVar: l.bocGroupCtx, Thunk: expr}
 	}
 	return &ForceExpr{Thunk: expr}
 }
@@ -3830,7 +3830,7 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 				stmts = append(stmts,
 					&DeclStmt{Name: e.Name.Name, Type: goType},
 					&DeclStmt{Name: bgVar, Init: &NewGroupExpr{}},
-					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Body: []Stmt{&ReturnStmt{Value: expr}}}},
+					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Thunk: expr}},
 					&WaitStmt{GroupVar: bgVar},
 				)
 			} else {

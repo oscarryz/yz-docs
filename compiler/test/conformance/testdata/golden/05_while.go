@@ -20,7 +20,8 @@ func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) *std.Thu
 			self.body = body
 			if self.cond().GoBool() {
 				self.body()
-				_bg0.GoWait(self.Call(self.cond, self.body))
+				_st0 := self.Call(self.cond, self.body)
+				_bg0.Add(func() { _st0.Force() })
 			}
 			return std.TheUnit
 		}).Force()
@@ -46,12 +47,13 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
 			n = std.NewInt(0)
-			_bg0.GoWait(While.Call(func() std.Bool {
+			_st0 := While.Call(func() std.Bool {
 				return n.Lt(std.NewInt(3))
 			}, func() std.Unit {
 				n = n.Plus(std.NewInt(1))
 				return std.TheUnit
-			}))
+			})
+			_bg0.Add(func() { _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()

@@ -16,8 +16,10 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		var a std.String
 		var b std.String
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bg0, std.Http.Get(std.NewString("https://httpbin.org/get")), &a)
-			std.GoStore(_bg0, std.Http.Get(std.NewString("https://httpbin.org/uuid")), &b)
+			_st0 := std.Http.Get(std.NewString("https://httpbin.org/get"))
+			_bg0.Add(func() { a = _st0.Force() })
+			_st1 := std.Http.Get(std.NewString("https://httpbin.org/uuid"))
+			_bg0.Add(func() { b = _st1.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
