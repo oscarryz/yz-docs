@@ -68,39 +68,72 @@ Open ticket details. See tasks.md for the index.
 
 ## Thunk / Concurrency
 
-- [ ] **[YZC-0094] Thunk forcing mechanics: IO-boundary-only forcing, inline expressions, var semantics** *(design)*
+- [ ] **[YZC-0094] Fully lazy thunk model: propagate thunks through all expressions, force only at BocGroup boundary** *(design)*
 
-  The current lowerer forces thunks too eagerly and inconsistently:
+  ### History
 
-  - **Variable assignment auto-forces** — `g : greet()` makes `g` a thunkVar
-    that is `.Force()`-d at every use site. This is wrong: `g` should remain a
-    lazy handle; forcing should happen only when the value is actually needed.
-  - **Inline expressions don't force** — `greet() == "hi"` fails to compile
-    because `greet()` returns `*Thunk[String]` and `.Eqeq` is not defined on
-    a Thunk. Variables and inline calls should behave identically.
-  - **Correct model** — forcing should happen exactly at IO boundaries:
-    `print`, network calls, file writes, and any place a concrete value must
-    be observed. Intermediate expressions (comparisons, arithmetic, field
-    access) should propagate thunks transparently until a boundary is reached.
+  - **Phase E.2** (commit `64ea0ea`): tried putting laziness *inside* scalar
+    types — `Int`, `String`, etc. got optional lazy fields; boc calls returned
+    the scalar type directly. `GoWait` replaced `Go+Force`.
+  - **Phase E.3** (commit `fc0989a`): reverted. Scalars are plain again; all
+    boc methods return `*Thunk[T]`. Added `GoStore[T]` for typed-decl boc
+    calls. `thunkVars` / auto-forcing re-introduced.
 
-  Example of correct behaviour:
+  Neither phase reached the correct model because bigger tickets were in the
+  way. The backlog is now clear enough to revisit.
+
+  ### Target model
+
+  Every boc call returns a `*Thunk[T]`. **Thunks are never forced eagerly.**
+  Instead they propagate through all expressions and are forced only when the
+  boc body's BocGroup resolves them at the end:
 
   ```yz
-  // greet() returns a lazy String — no force yet
-  // == propagates the thunk; still lazy
-  // print() is the IO boundary — forces here
-  print("${greet() == 'hi from greet'}")   // forces at print
+  g : greet()           // Thunk[String]  — goroutine launched
+  w : world.say()       // Thunk[String]  — goroutine launched, both concurrent
+
+  g == "hi from greet"    // Thunk[Bool]  — no goroutine, cold chain
+  ? { print("ok") }, {}  // Thunk[Unit]  — still lazy
+
+  w == "hello from world"
+  ? { print("ok") }, {}  // Thunk[Unit]
   ```
 
-  Work (design first):
-  - Decide: does `==` on two thunks return `Thunk[Bool]` (fully lazy) or
-    force both operands and return `Bool`? Specify the forcing rule.
-  - Update the lowerer to stop inserting `.Force()` at variable use sites;
-    instead insert it only at IO-boundary call sites.
-  - Make inline boc-call expressions in non-thunkVar positions force correctly
-    (or propagate the thunk) consistent with variable form.
-  - Add/update conformance tests for inline-call expressions in comparisons,
-    arithmetic, and string interpolation.
+  Main's BocGroup forces every statement-level `Thunk[Unit]` at the bottom.
+  Forcing cascades inward (pull-based): `Thunk[Unit]` → forces `Thunk[Bool]`
+  → forces `Thunk[String]` → goroutine completes.
+
+  BocGroup is **necessary**: Go kills un-waited goroutines when `main()`
+  returns, so structured concurrency must always wait at the end of each boc.
+
+  ### Why `==`, `?`, etc. produce thunks
+
+  In Yz, `==` and `?` are ordinary method calls, not operators with special
+  compiler rules. Consistency requires they behave the same regardless of
+  whether their arguments are concrete values or thunks. Therefore:
+
+  - `Thunk[String].Eqeq(String)` → `Thunk[Bool]`
+  - `Thunk[Bool].Qm(Thunk[Unit], Thunk[Unit])` → `Thunk[Unit]`
+
+  This is implemented by making `Thunk[T]` forward all of `T`'s methods,
+  returning `Thunk[ReturnType]` rather than `ReturnType`.
+
+  Variables and inline calls are identical — `g == "hi"` and `greet() == "hi"`
+  both produce `Thunk[Bool]` with no forcing difference.
+
+  ### Work
+
+  - Remove `thunkVars`, `GoStore`, and all use-site `.Force()` insertion from
+    the lowerer.
+  - Every statement in a boc body that produces a `Thunk[Unit]` is registered
+    with the BocGroup via `GoWait`. Pure-value statements (non-thunk) are
+    executed inline as before.
+  - Generate forwarding methods on `Thunk[T]` in yzrt for each `T` (or use Go
+    generics / code generation to avoid hand-writing per type).
+  - Entry-point `main()` call remains the one explicit `.Force()` (or a
+    top-level `BocGroup.Wait()`).
+  - Regenerate all golden files; add conformance tests for inline-call
+    expressions in comparisons, conditionals, and string interpolation.
 
 ---
 
