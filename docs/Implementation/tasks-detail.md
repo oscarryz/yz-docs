@@ -172,19 +172,23 @@ Open ticket details. See tasks.md for the index.
 
   ### Implementation plan
 
-  **Phase 1 — Runtime (`runtime/rt/`)**
+  **Phase 1 — Runtime (`runtime/rt/`)** ✓ DONE
 
-  - [ ] `thunk.go`: no changes needed; `NewThunk` and `Go` are already correct.
-  - [ ] `core.go`:
-    - [ ] Replace `BocGroup.sync.WaitGroup` with `[]func()` (slice of force
-      closures) or a `Forceable` interface slice.
-    - [ ] `BocGroup.Add(th *Thunk[T])` — append a closure `func() { th.Force() }`.
-    - [ ] `BocGroup.Wait()` — iterate and call each closure. No WaitGroup.
-    - [ ] Remove `GoWait`, `GoStore`, `GoStoreAny`.
-  - [ ] `types.go` (per scalar: `String`, `Int`, `Bool`, `Decimal`, `Unit`):
-    - [ ] Add forwarding methods on `*Thunk[T]` for every method on `T`,
-      returning `*Thunk[ReturnType]` via `NewThunk`.
-    - [ ] Example: `Thunk[String].Eqeq`, `Thunk[Int].Plus`, `Thunk[Bool].Qm`.
+  - [x] `thunk.go`: no changes needed; `NewThunk` and `Go` are already correct.
+  - [x] `core.go`:
+    - [x] Replace `BocGroup.sync.WaitGroup` with `[]func()` (slice of force closures).
+    - [x] `BocGroup.Add(fn func())` — append closure to pending list.
+    - [x] `BocGroup.Wait()` — iterate and call each closure. No WaitGroup.
+    - [x] `GoWait`, `GoStore`, `GoStoreAny` kept as backward-compat wrappers
+      over `Add`; will be removed in Phase 3 once codegen stops emitting them.
+  - [x] `thunk_scalars.go` (new file — per scalar: `String`, `Int`, `Bool`, `Decimal`, `Unit`):
+    - [x] Go generics do not allow type-specific methods on `*Thunk[T]`, so
+      each scalar gets a concrete wrapper: `ThunkString`, `ThunkInt`,
+      `ThunkDecimal`, `ThunkBool`, `ThunkUnit`, `ThunkRange`.
+    - [x] Each wrapper exposes forwarding methods that return new cold thunks.
+    - [x] Example: `ThunkString.Eqeq(String) ThunkBool`, `ThunkBool.Qm(...)`,
+      `ThunkInt.Plus(Int) ThunkInt`.
+    - [x] Constructors: `GoStringThunk(fn)` (hot), `NewStringThunk(fn)` (cold).
 
   **Phase 2 — IR (`internal/ir/`)**
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 )
 
 // ---------------------------------------------------------------------------
@@ -44,62 +43,43 @@ func Info(v any) InfoResult {
 }
 
 // ---------------------------------------------------------------------------
-// WaitGroup helper for structured concurrency
+// BocGroup — structured concurrency for a single boc invocation
 // ---------------------------------------------------------------------------
 
-// BocGroup manages structured concurrency for a single boc invocation.
-// Each spawned child boc registers itself; the parent waits at the end.
+// BocGroup collects thunks that must be forced before the enclosing boc
+// returns. Underlying goroutines are already running (started by Schedule
+// inside the cown), so sequential forcing loses no parallelism — total
+// elapsed time equals the slowest goroutine.
 type BocGroup struct {
-	wg sync.WaitGroup
+	pending []func()
 }
 
-// Go spawns fn as a goroutine registered with this group.
-// Returns a Thunk that materializes once fn completes.
-func (g *BocGroup) Go(fn func() any) *Thunk[any] {
-	g.wg.Add(1)
-	th := &Thunk[any]{}
-	done := make(chan struct{})
-	go func() {
-		defer g.wg.Done()
-		th.val = fn()
-		close(done)
-	}()
-	th.fn = func() any {
-		<-done
-		return th.val
-	}
-	return th
+// Add registers fn to be called during Wait().
+func (g *BocGroup) Add(fn func()) {
+	g.pending = append(g.pending, fn)
 }
 
-// GoWait spawns a goroutine that forces th (a boc-call thunk), registering
-// it with this group so Wait() blocks until the computation completes.
+// GoWait registers th to be forced during Wait().
+// Backward-compatible wrapper over Add.
 func (g *BocGroup) GoWait(th *Thunk[Unit]) {
-	g.wg.Add(1)
-	go func() {
-		defer g.wg.Done()
-		th.Force()
-	}()
+	g.Add(func() { th.Force() })
 }
 
-// GoStore spawns a goroutine that forces th and assigns the result to *dest,
-// registering it with this group so Wait() blocks until the assignment completes.
+// GoStore registers th to be forced and stored into *dest during Wait().
+// Backward-compatible wrapper over Add.
 func GoStore[T any](g *BocGroup, th *Thunk[T], dest *T) {
-	g.wg.Add(1)
-	go func() {
-		defer g.wg.Done()
-		*dest = th.Force()
-	}()
+	g.Add(func() { *dest = th.Force() })
 }
 
-// Wait blocks until all goroutines registered with this group complete.
-func (g *BocGroup) Wait() { g.wg.Wait() }
-
-// GoStoreAny is like GoStore but for path-dependent return types that produce
-// *Thunk[any] at the Go level. It type-asserts the forced value to T.
+// GoStoreAny is like GoStore but for *Thunk[any]; type-asserts the forced
+// value to T. Backward-compatible wrapper over Add.
 func GoStoreAny[T any](g *BocGroup, th *Thunk[any], dest *T) {
-	g.wg.Add(1)
-	go func() {
-		defer g.wg.Done()
-		*dest = th.Force().(T)
-	}()
+	g.Add(func() { *dest = th.Force().(T) })
+}
+
+// Wait forces all registered thunks sequentially.
+func (g *BocGroup) Wait() {
+	for _, fn := range g.pending {
+		fn()
+	}
 }
