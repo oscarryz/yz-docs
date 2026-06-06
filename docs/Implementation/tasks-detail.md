@@ -226,6 +226,79 @@ Open ticket details. See tasks.md for the index.
     (YZC-0031), which can generate the forwardings from the method definitions.
   - Changes to sema type inference for thunk-returning expressions.
 
+- [ ] **[YZC-0095] Phase 7: dethunkification — scalar-intrinsic lazy types, eliminate ThunkX wrappers** *(M)*
+
+  ### Context
+
+  YZC-0094 Phases 1–6 introduced `ThunkX` wrapper types (`ThunkString`, `ThunkBool`, etc.)
+  and `WrapXThunk` constructors so boc call results could chain through method calls lazily.
+  Phase 6 added 33 T-variant methods (`EqeqT`, `PlusT`, …) for both-sides-lazy binary ops.
+
+  Commit `64ea0ea` (Phase E.2, pre-YZC-0094) tried an alternative — embedding lazy state
+  directly in scalar types — but was reverted due to an unrelated design confusion, not
+  because the approach was wrong.
+
+  ### Goal
+
+  Public boc methods return the scalar type directly (`std.String`, `std.Int`, etc.) with
+  lazy state carried internally. The `*Thunk[T]` is hidden inside the scalar; callers never
+  see or wrap it. `ThunkX` wrapper types, `WrapXThunk` constructors, and T-variant methods
+  are eliminated from the runtime and the lowerer.
+
+  ### Target generated code
+
+  ```go
+  // was: func (self *_greeterBoc) Greet() *std.Thunk[std.String]
+  func (self *_greeterBoc) Greet() std.String {
+      return std.LazyString(std.Schedule(&self.Cown, func() std.String {
+          return self.greet()
+      }))
+  }
+
+  // binary op: Greet().Eqeq(NewString("hello")) — no wrapping, no T-variant
+  // result is std.Bool (lazy), passed to Bool.Qm
+  ```
+
+  ### What is eliminated
+
+  - `ThunkString`, `ThunkInt`, `ThunkBool`, `ThunkDecimal`, `ThunkUnit`, `ThunkRange`
+  - `WrapStringThunk`, `WrapIntThunk`, `WrapBoolThunk`, `WrapDecimalThunk`, `WrapUnitThunk`, `WrapRangeThunk`
+  - All 33 T-variant methods (`EqeqT`, `PlusT`, `AmpampT`, …)
+  - `isBocMethodCall`, `isThunkXExpr`, `thunkWrapFuncFor`, `lowerThunkConditional`,
+    `bocBranchAsClosure` from `lower.go`
+  - Special-case WrapXThunk emission in `lowerExpr/BinaryExpr`
+
+  ### What stays / changes
+
+  - **`LazyX` constructors** added to each scalar type in `types.go` (as in `64ea0ea`).
+  - **`Bool.Qm(trueCase, falseCase func() any) any`** — the `?` operator as a method on
+    `Bool` directly (replaces `ThunkBool.Qm`). Forces `self`, picks branch, returns result.
+    Return type is `any`; the lowerer knows the concrete type statically and casts if needed.
+  - **BocGroup interaction**: unchanged — `_bg0.Add(func() { result.Force() })` where
+    `result` is the `*Thunk[Unit]` backing the lazy Unit returned by `Qm`. Or the BocGroup
+    switches to a `Waitable` interface and calls `Await()` on the scalar.
+  - **Conditional lowering**: `isThunkXConditional` check disappears — `Bool` is always
+    `Bool` (lazy or not), so the lowerer uses `if/else` for statement position and
+    `Bool.Qm(closures)` for expression position, unconditionally.
+  - **User-defined types**: not affected. Struct boc types (`*_personBoc`) still return
+    `*Thunk[Person]` from public methods; forcing is explicit. This ticket covers the 5
+    built-in scalar types only.
+
+  ### Implementation steps
+
+  1. `runtime/rt/types.go`: add `*lazyX` structs and `LazyX(th *Thunk[X]) X` constructors
+     for String, Int, Bool, Decimal, Unit. Add `Bool.Qm`.
+  2. `runtime/rt/thunk_scalars.go`: delete entire file (ThunkX types).
+  3. `internal/codegen/codegen.go`: `emitMethodDecl` wraps scalar return with `LazyX`.
+  4. `internal/ir/lower.go`: remove ThunkX detection paths; `lowerExpr/BinaryExpr` no
+     longer wraps or T-variants; `lowerConditional` unconditionally uses `if/else` or Qm.
+  5. Regenerate all golden files.
+
+  ### Scope note
+
+  This covers only the 5 built-in scalar types. Full propagation through user-defined type
+  methods remains deferred to YZC-0031 (scalar types in Yz source).
+
 ---
 
 ## Infrastructure
