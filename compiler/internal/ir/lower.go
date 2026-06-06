@@ -887,6 +887,20 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 		}
 		// Non-boc statement: flush pending group, then emit normally.
 		flushGroup()
+		// ThunkX conditional: needs its own BocGroup so the lazy chain is
+		// spawned and waited on. Temporarily set bocGroupCtx so lowerThunkConditional
+		// can emit SpawnExpr instead of falling back to ForceExpr.
+		if expr, ok := elem.(ast.Expr); ok && l.isThunkXConditional(expr) {
+			bgVar := fmt.Sprintf("_bg%d", bgIdx)
+			bgIdx++
+			stmts = append(stmts, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
+			prev := l.bocGroupCtx
+			l.bocGroupCtx = bgVar
+			is, _ := l.tryLowerConditional(expr)
+			l.bocGroupCtx = prev
+			stmts = append(stmts, is, &WaitStmt{GroupVar: bgVar})
+			continue
+		}
 		stmts = append(stmts, l.lowerMainStmt(elem)...)
 	}
 	flushGroup()
@@ -2379,7 +2393,11 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 	case *ast.BinaryExpr:
 		left := l.lowerExpr(expr.Left)
 		if l.isBocMethodCall(expr.Left) {
-			left = &ForceExpr{Thunk: left}
+			if wrapFn := l.thunkWrapFuncFor(expr.Left); wrapFn != "" {
+				left = &FuncCall{Func: &Ident{Name: wrapFn}, Args: []Expr{left}}
+			} else {
+				left = &ForceExpr{Thunk: left} // fallback for non-scalar types
+			}
 		}
 		right := l.lowerExpr(expr.Right)
 		method := capitalize(sema.NonWordMethodName(expr.Op))
@@ -3243,6 +3261,96 @@ func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 	return &ForceExpr{Thunk: expr}
 }
 
+// isThunkXExpr reports whether lowering e produces a concrete ThunkX value
+// (ThunkString, ThunkBool, etc.) rather than a plain *Thunk[T]. This is true
+// when e is a direct boc call or a method chain whose receiver resolves to a
+// boc call (e.g. `f() == b` where f is a boc).
+func (l *lowerer) isThunkXExpr(e ast.Expr) bool {
+	switch ex := e.(type) {
+	case *ast.BinaryExpr:
+		if ex.Op == "?" {
+			return false
+		}
+		return l.isThunkXExpr(ex.Left)
+	case *ast.GroupExpr:
+		return l.isThunkXExpr(ex.Expr)
+	}
+	return l.isBocMethodCall(e)
+}
+
+// isThunkXConditional reports whether e is a conditional whose condition is a
+// ThunkX expression (two-armed ConditionalExpr or one-armed BinaryExpr{Op:"?"}).
+func (l *lowerer) isThunkXConditional(e ast.Expr) bool {
+	switch c := e.(type) {
+	case *ast.ConditionalExpr:
+		return l.isThunkXExpr(c.Cond)
+	case *ast.BinaryExpr:
+		return c.Op == "?" && l.isThunkXExpr(c.Left)
+	}
+	return false
+}
+
+// thunkWrapFuncFor returns the std.WrapXThunk constructor name for the scalar
+// type returned by e. Returns "" for non-scalar or unknown types; callers
+// should fall back to ForceExpr in that case.
+func (l *lowerer) thunkWrapFuncFor(e ast.Expr) string {
+	switch l.analyzer.ExprType(e) {
+	case sema.TypString:
+		return "std.WrapStringThunk"
+	case sema.TypInt:
+		return "std.WrapIntThunk"
+	case sema.TypBool:
+		return "std.WrapBoolThunk"
+	case sema.TypDecimal:
+		return "std.WrapDecimalThunk"
+	case sema.TypUnit:
+		return "std.WrapUnitThunk"
+	}
+	return ""
+}
+
+// lowerThunkConditional emits `ThunkBool.Qm(trueCase, falseCase)` as a
+// SpawnExpr on the active BocGroup, keeping the conditional fully lazy.
+// condAST must satisfy isThunkXExpr (its lowered form is a ThunkBool).
+// When no BocGroup is active, falls back to forcing the thunk inline.
+func (l *lowerer) lowerThunkConditional(condAST, trueAST, falseAST ast.Expr) Stmt {
+	condExpr := l.lowerExpr(condAST)
+
+	// Build closures for each branch: `func() any { body; return std.TheUnit }`.
+	trueClosure := l.bocBranchAsClosure(trueAST)
+	falseClosure := l.bocBranchAsClosure(falseAST)
+
+	qmCall := &MethodCall{
+		Recv:   condExpr,
+		Method: "Qm",
+		Args:   []Expr{trueClosure, falseClosure},
+	}
+
+	if l.bocGroupCtx != "" {
+		return &ExprStmt{Expr: &SpawnExpr{GroupVar: l.bocGroupCtx, Thunk: qmCall}}
+	}
+	// No active BocGroup: force inline so the condition is evaluated immediately.
+	return &ExprStmt{Expr: &ForceExpr{Thunk: qmCall}}
+}
+
+// bocBranchAsClosure lowers a conditional branch (boc literal or expression)
+// as a ClosureExpr returning any. Returns an empty-body closure for nil.
+func (l *lowerer) bocBranchAsClosure(e ast.Expr) *ClosureExpr {
+	var body []Stmt
+	if e != nil {
+		if boc, ok := e.(*ast.BocLiteral); ok {
+			body = l.lowerBocAsStmts(boc)
+		} else {
+			body = []Stmt{&ExprStmt{Expr: l.lowerExpr(e)}}
+		}
+	}
+	// Ensure the closure ends with a return so it satisfies `func() any`.
+	if len(body) == 0 || !isReturnStmt(body[len(body)-1]) {
+		body = append(body, &ReturnStmt{Value: &UnitLit{}})
+	}
+	return &ClosureExpr{Params: nil, ResultType: "any", Body: body}
+}
+
 // bodyHasBocCallsInStmtPos reports whether any element in elems is a
 // statement-position boc call — either a direct boc call (non-last), a
 // conditional/match whose branches contain boc calls, or a last element that
@@ -3274,11 +3382,19 @@ func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
 			return true
 		}
 		if cond, ok := e.(*ast.ConditionalExpr); ok {
+			if l.isThunkXExpr(cond.Cond) {
+				return true // whole conditional becomes a SpawnExpr
+			}
 			if l.branchSliceHasBocCalls(branchElements(cond.TrueCase)) {
 				return true
 			}
 			if l.branchSliceHasBocCalls(branchElements(cond.FalseCase)) {
 				return true
+			}
+		}
+		if bin, ok := e.(*ast.BinaryExpr); ok && bin.Op == "?" {
+			if l.isThunkXExpr(bin.Left) {
+				return true // one-armed conditional becomes a SpawnExpr
 			}
 		}
 	}
@@ -3344,23 +3460,36 @@ func (l *lowerer) isSingletonBoc(expr Expr) bool {
 // BinaryExpr and lowers it to an IfStmt. Returns (stmt, true) on match.
 func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
 	var condExpr Expr
+	var condAST ast.Expr
 	var trueCase, falseCase ast.Expr
 
 	switch c := e.(type) {
 	case *ast.ConditionalExpr:
-		condExpr = l.lowerExprForced(c.Cond)
+		condAST = c.Cond
 		trueCase = c.TrueCase
 		falseCase = c.FalseCase
 	case *ast.BinaryExpr:
 		if c.Op != "?" {
 			return nil, false
 		}
-		// `cond ? { body }` with no false branch — lower as one-armed if.
-		condExpr = l.lowerExprForced(c.Left)
+		// `cond ? { body }` with no false branch.
+		condAST = c.Left
 		trueCase = c.Right
 		falseCase = nil
 	default:
 		return nil, false
+	}
+
+	// Lazy path: condition is a ThunkX expression — emit ThunkBool.Qm(closures)
+	// registered on the active BocGroup so forcing is deferred to Wait().
+	if l.isThunkXExpr(condAST) {
+		return l.lowerThunkConditional(condAST, trueCase, falseCase), true
+	}
+
+	// Concrete-bool path: condition is a plain Bool (or a forced boc call).
+	condExpr = l.lowerExpr(condAST)
+	if l.isBocMethodCall(condAST) {
+		condExpr = &ForceExpr{Thunk: condExpr}
 	}
 
 	var thenStmts, elseStmts []Stmt
@@ -3389,7 +3518,7 @@ func (l *lowerer) lowerConditionalExpr(cond *ast.ConditionalExpr) Expr {
 		resultType = l.goType(bt.Returns[0])
 	}
 
-	condExpr := l.lowerExprForced(cond.Cond)
+	condExpr := l.lowerExpr(cond.Cond)
 
 	var trueBody []Stmt
 	if tc, ok := cond.TrueCase.(*ast.BocLiteral); ok {

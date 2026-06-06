@@ -130,6 +130,7 @@ func GoBoolThunk(fn func() Bool) ThunkBool  { return ThunkBool{Go(fn)} }
 func NewBoolThunk(fn func() Bool) ThunkBool { return ThunkBool{NewThunk(fn)} }
 func (th ThunkBool) Force() Bool            { return th.t.Force() }
 
+func (th ThunkBool) GoBool() bool           { return th.t.Force().GoBool() }
 func (th ThunkBool) Ampamp(other Bool) ThunkBool   { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Ampamp(other) })} }
 func (th ThunkBool) Pipepipe(other Bool) ThunkBool { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Pipepipe(other) })} }
 func (th ThunkBool) Eqeq(other Bool) ThunkBool     { return ThunkBool{NewThunk(func() Bool { return th.t.Force().Eqeq(other) })} }
@@ -160,3 +161,16 @@ func (th ThunkUnit) Force() Unit            { return th.t.Force() }
 type ThunkRange struct{ t *Thunk[Range] }
 
 func (th ThunkRange) Force() Range { return th.t.Force() }
+
+// ---------------------------------------------------------------------------
+// WrapXThunk constructors — wrap an existing *Thunk[T] into the concrete ThunkX
+// type. Needed because ThunkX.t is unexported; callers outside this package
+// (i.e. generated code) must use these constructors.
+// ---------------------------------------------------------------------------
+
+func WrapStringThunk(th *Thunk[String]) ThunkString   { return ThunkString{th} }
+func WrapIntThunk(th *Thunk[Int]) ThunkInt             { return ThunkInt{th} }
+func WrapBoolThunk(th *Thunk[Bool]) ThunkBool          { return ThunkBool{th} }
+func WrapDecimalThunk(th *Thunk[Decimal]) ThunkDecimal { return ThunkDecimal{th} }
+func WrapUnitThunk(th *Thunk[Unit]) ThunkUnit          { return ThunkUnit{th} }
+func WrapRangeThunk(th *Thunk[Range]) ThunkRange       { return ThunkRange{th} }
