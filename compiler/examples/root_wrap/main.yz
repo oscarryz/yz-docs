@@ -1,2 +1,5 @@
-world.say()
-greet()
+g : greet()
+w : world.say()
+
+g == "hi from greet"    ? { print("ok") }, {}
+w == "hello from world" ? { print("ok") }, {}
