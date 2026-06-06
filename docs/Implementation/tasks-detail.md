@@ -68,7 +68,7 @@ Open ticket details. See tasks.md for the index.
 
 ## Infrastructure
 
-- [ ] **[YZC-0092] Always-wrap root files; `main()` as explicit entry invocation**
+- [x] **[YZC-0092] Always-wrap root files; `main()` as explicit entry invocation**
 
   Remove the `hasTopLevelBocNamed` guard in `build.go` so all root files are
   always wrapped in a boc named after the file — consistent with spec §9

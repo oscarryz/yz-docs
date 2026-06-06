@@ -10,3 +10,4 @@ main: {
     w, t : summary(3, 5)
     print("record: ${w} wins / ${t}")
 }
+main()

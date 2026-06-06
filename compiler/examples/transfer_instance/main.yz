@@ -44,3 +44,4 @@ main: {
     print("erin:  ${erin.balance}")
     print("frank: ${frank.balance}")
 }
+main()

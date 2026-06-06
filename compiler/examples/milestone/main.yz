@@ -21,3 +21,4 @@ main: {
     print(b)
     print("fetches: ${counter.value()}")
 }
+main()

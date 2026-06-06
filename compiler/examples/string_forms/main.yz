@@ -71,3 +71,4 @@ main : {
     print("Box type:            `Box`")
     print("Person type:         `Person`")
 }
+main()

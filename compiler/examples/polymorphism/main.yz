@@ -38,3 +38,4 @@ main: {
     w : Wrapper(item: g)
     w.callOn(g)
 }
+main()

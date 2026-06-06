@@ -265,17 +265,15 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendi
 			}
 			return "", nil, fmt.Errorf("parse %s: %w", fe.absPath, parseErr)
 		}
-		// Invariant 1+2: every file's content is the body of a boc named after
-		// the file. Sub-dir files are always wrapped; root files are wrapped only
-		// when they don't already have a top-level boc with the file's name
-		// (explicit `world: { ... }` in world.yz is left as-is).
-		if relDir != "" || !hasTopLevelBocNamed(sf, fe.name) {
-			sf.Stmts = []ast.Node{
-				&ast.ShortDecl{
-					Names:  []*ast.Ident{{Name: fe.name}},
-					Values: []ast.Expr{&ast.BocLiteral{Elements: sf.Stmts}},
-				},
-			}
+		// Invariant 1+2 (spec §9): every file's content is the body of a boc
+		// named after the file. Always wrap — no special-casing for files that
+		// already declare a same-named top-level boc.
+		sf.Stmts = []ast.Node{
+			&ast.ShortDecl{
+				Names:         []*ast.Ident{{Name: fe.name}},
+				Values:        []ast.Expr{&ast.BocLiteral{Elements: sf.Stmts}},
+				IsFileWrapper: true,
+			},
 		}
 		// Invariant 5: inject sub-directory declarations into the matching
 		// root boc literal (foo.yz + foo/ merge).
@@ -342,24 +340,6 @@ func injectIntoBocLiteral(sf *ast.SourceFile, bocName string, nodes []ast.Node) 
 	}
 }
 
-// hasTopLevelBocNamed reports whether sf has a top-level declaration whose
-// name matches name (ShortDecl or BocDecl). Used to avoid double-wrapping
-// root files that already define their own boc.
-func hasTopLevelBocNamed(sf *ast.SourceFile, name string) bool {
-	for _, stmt := range sf.Stmts {
-		switch n := stmt.(type) {
-		case *ast.ShortDecl:
-			if len(n.Names) == 1 && n.Names[0].Name == name {
-				return true
-			}
-		case *ast.BocDecl:
-			if n.Name.Name == name {
-				return true
-			}
-		}
-	}
-	return false
-}
 
 func containsStr(ss []string, s string) bool {
 	for _, v := range ss {

@@ -51,3 +51,4 @@ main: {
     person Person = visit(sg, alice)
     print("${person.name} (age ${person.age})")
 }
+main()

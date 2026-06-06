@@ -4,7 +4,8 @@ counter: {
     value:     { count }
 }
 
-greet #(name String) {
+greet: {
+    name String
     print("Hello, ${name}!")
 }
 
@@ -18,3 +19,4 @@ main: {
     greet("Yz")
     print("count: ${counter.value()}")
 }
+main()

@@ -7,6 +7,16 @@ Completed tickets. Ticket numbers are permanent.
 
   `house/house.yz` flattens to `house.method`. Superseded by YZC-0085.
 
+- [x] **[YZC-0092] Always-wrap root files; `main()` as explicit entry invocation**
+
+  Every `.yz` file's content is wrapped in a `ShortDecl` named after the file
+  (`IsFileWrapper=true` in `build.go`). When the wrapper contains an explicit
+  same-named inner boc (e.g. `main: {}` inside `main.yz`), the lowerer unwraps
+  it so inner declarations become package-level items. Files without an inner boc
+  (root_wrap pattern) keep the wrapper as the singleton body. Cross-file type
+  resolution re-registers the inner same-named symbol via sema's
+  `fileWrapperScopes` map. All examples consolidated into single files.
+
 - [x] **[YZC-0021] Directory and file bocs**
 
   Files in sub-directories are auto-wrapped in a boc named after the file

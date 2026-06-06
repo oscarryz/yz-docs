@@ -34,3 +34,4 @@ main: {
     print("`b3.val`")
     print("`b1.val`")
 }
+main()

@@ -48,6 +48,16 @@ type Analyzer struct {
 	// fileScope is the top-level scope for the analyzed file.
 	fileScope *Scope
 
+	// fileWrapperScope is the inner scope currently active for LookupInFile
+	// resolution. Set by UseFileWrapper before lowering each file so that
+	// symbols defined inside the always-wrap boc (not at fileScope level)
+	// can be found by LookupInFile.
+	fileWrapperScope *Scope
+
+	// fileWrapperScopes maps each IsFileWrapper ShortDecl node to the inner
+	// scope captured during its analysis. Populated in analyzeBocDecl.
+	fileWrapperScopes map[*ast.ShortDecl]*Scope
+
 	// currentScope is the active scope during traversal.
 	currentScope *Scope
 
@@ -161,7 +171,25 @@ func (a *Analyzer) ExprType(n ast.Node) Type {
 }
 
 func (a *Analyzer) LookupInFile(name string) *Symbol {
+	// Check the file wrapper's inner scope first: for always-wrap files where
+	// the real declarations live inside the wrapper boc (not directly in fileScope).
+	if a.fileWrapperScope != nil {
+		if sym := a.fileWrapperScope.LookupLocal(name); sym != nil {
+			return sym
+		}
+	}
 	return a.fileScope.Lookup(name)
+}
+
+// UseFileWrapper activates the inner scope of the given IsFileWrapper ShortDecl
+// so that LookupInFile can find symbols defined inside the file wrapper boc.
+// Call this at the start of lowering each file.
+func (a *Analyzer) UseFileWrapper(sd *ast.ShortDecl) {
+	if sd != nil && a.fileWrapperScopes != nil {
+		a.fileWrapperScope = a.fileWrapperScopes[sd]
+	} else {
+		a.fileWrapperScope = nil
+	}
 }
 
 // FindInterfaceWithMethod returns the name of an interface in the file scope
@@ -631,11 +659,35 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 		typ = &BocType{Params: params, Returns: returns}
 	}
 
+	// If this is the file wrapper boc, capture the inner scope for the lowerer.
+	// Done here, before popScope, while the inner scope is still current.
+	var wrapperSD *ast.ShortDecl
+	var innerSameName *Symbol
+	innerScope := a.currentScope // the body scope we're about to pop
+	if sd, ok := decl.(*ast.ShortDecl); ok && sd.IsFileWrapper {
+		wrapperSD = sd
+		innerSameName = innerScope.LookupLocal(name.Name)
+	}
+
 	a.popScope(prev)
 	a.popFQN(prevFQN)
 
 	sym := &Symbol{Name: name.Name, Type: typ, FQN: fqn, Node: decl}
 	a.define(sym)
+
+	// Save the file wrapper scope and, when the wrapper contains a same-named
+	// inner boc (e.g., summary.yz with `summary: {...}` inside), re-register
+	// the inner type in fileScope so cross-file LookupInFile returns the correct
+	// type instead of the outer wrapper's StructType.
+	if wrapperSD != nil {
+		if a.fileWrapperScopes == nil {
+			a.fileWrapperScopes = make(map[*ast.ShortDecl]*Scope)
+		}
+		a.fileWrapperScopes[wrapperSD] = innerScope
+		if innerSameName != nil {
+			a.fileScope.Define(innerSameName) // overwrite outer wrapper type with inner
+		}
+	}
 
 	// Register variant constructors in the outer scope so they can be called.
 	if st, ok := typ.(*StructType); ok && st.IsVariant {

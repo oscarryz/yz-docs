@@ -69,9 +69,10 @@ type SourceFile struct {
 // multi-return call: `a, b: swap(x, y)`.
 type ShortDecl struct {
 	Pos
-	Names      []*Ident    // at least one
-	Values     []Expr      // at least one (len == 1 for single decl, may be multi-return call)
-	Annotation *Annotation // nil if no annotation precedes this decl
+	Names         []*Ident    // at least one
+	Values        []Expr      // at least one (len == 1 for single decl, may be multi-return call)
+	Annotation    *Annotation // nil if no annotation precedes this decl
+	IsFileWrapper bool        // set by build.go: this ShortDecl is the always-wrap file-level boc
 }
 
 func (s *ShortDecl) stmtNode() {}

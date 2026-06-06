@@ -123,8 +123,30 @@ type lowerer struct {
 func (l *lowerer) lowerFile(sf *ast.SourceFile, pkgName string) *File {
 	f := &File{PkgName: pkgName}
 	l.irFile = f
+
+	// Activate the file wrapper's inner scope for LookupInFile (per-file, so
+	// multi-file packages each resolve their own inner symbols correctly).
+	stmts := sf.Stmts
+	if len(sf.Stmts) == 1 {
+		if sd, ok := sf.Stmts[0].(*ast.ShortDecl); ok && sd.IsFileWrapper && len(sd.Values) == 1 {
+			l.analyzer.UseFileWrapper(sd)
+			// Unwrap only when the inner content already contains a same-named boc
+			// (e.g., main.yz with `main: {}` inside). Body-only and purely-structured
+			// files use the wrapper itself as their singleton — don't unwrap those.
+			if bl, ok := sd.Values[0].(*ast.BocLiteral); ok {
+				if fileWrapperHasInnerBoc(bl, sd.Names[0].Name) {
+					stmts = bl.Elements
+				}
+			}
+		} else {
+			l.analyzer.UseFileWrapper(nil)
+		}
+	} else {
+		l.analyzer.UseFileWrapper(nil)
+	}
+
 	hasMain := false
-	for _, node := range sf.Stmts {
+	for _, node := range stmts {
 		if d := l.lowerTopLevel(node); d != nil {
 			f.Decls = append(f.Decls, d)
 		}
@@ -174,6 +196,24 @@ func (l *lowerer) addImport(importPath string) {
 		}
 	}
 	l.irFile.Imports = append(l.irFile.Imports, importPath)
+}
+
+// fileWrapperHasInnerBoc reports whether the BocLiteral (body of the file
+// wrapper) contains a ShortDecl with the given name — meaning the user wrote
+// an explicit same-named boc inside the file (e.g., main: {} inside main.yz).
+// When true, the outer wrapper is a no-op container and the inner items should
+// be processed as package-level declarations.
+func fileWrapperHasInnerBoc(bl *ast.BocLiteral, name string) bool {
+	for _, elem := range bl.Elements {
+		if sd, ok := elem.(*ast.ShortDecl); ok && len(sd.Names) == 1 && len(sd.Values) == 1 {
+			if sd.Names[0].Name == name {
+				if _, isBoc := sd.Values[0].(*ast.BocLiteral); isBoc {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (l *lowerer) lowerTopLevel(node ast.Node) Decl {

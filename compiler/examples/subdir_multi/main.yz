@@ -1,4 +1,2 @@
-main: {
-    print("`lib.math.add(3, 4)`")
-    print(lib.strings.shout("hello"))
-}
+print("`lib.math.add(3, 4)`")
+print(lib.strings.shout("hello"))

@@ -20,3 +20,4 @@ main: {
     print("${fluffy.name} says ${fluffy.sound}")
     print("${rex.name} says ${rex.sound}")
 }
+main()
