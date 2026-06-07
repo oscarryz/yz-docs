@@ -37,8 +37,8 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var n std.Int
 		var s std.String
@@ -57,7 +57,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Print(s)
 		std.Print(std.NewString(std.StringifyRepr(b.value)))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

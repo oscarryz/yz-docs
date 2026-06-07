@@ -33,8 +33,8 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var p *Pair[std.Int, std.String]
 		std.Schedule(&self.Cown, func() std.Unit {
@@ -46,7 +46,7 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Print(std.NewString(std.StringifyRepr(p.first)))
 		std.Print(p.second.ToStr())
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

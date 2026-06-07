@@ -16,10 +16,10 @@ func (self *_counterBoc) increment() std.Unit {
 	return std.TheUnit
 }
 
-func (self *_counterBoc) Increment() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_counterBoc) Increment() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.increment()
-	})
+	}))
 }
 
 var Counter = &_counterBoc{
@@ -37,16 +37,16 @@ func (self *_mainBoc) String() string {
 func (self *_mainBoc) call() std.Unit {
 	var list std.Array[std.Int] = std.NewArray(std.NewInt(1), std.NewInt(2), std.NewInt(3))
 	list.Each(func(item std.Int) std.Unit {
-		Counter.Increment().Force()
+		Counter.Increment().Await()
 		return std.Print(std.NewString(std.StringifyRepr(item)))
 	})
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

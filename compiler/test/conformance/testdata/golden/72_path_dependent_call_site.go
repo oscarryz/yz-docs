@@ -44,12 +44,12 @@ func (self *_acceptBoc) String() string {
 	return "{ " + "g: " + std.StringifyRepr(self.g) + "; " + "n: " + std.StringifyRepr(self.n) + "; " + "call: {}" + " }"
 }
 
-func (self *_acceptBoc) Call(g Graph, n any) *std.Thunk[std.String] {
-	return std.Schedule(&self.Cown, func() std.String {
+func (self *_acceptBoc) Call(g Graph, n any) std.String {
+	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		self.g = g
 		self.n = n
 		return std.NewString("ok")
-	})
+	}))
 }
 
 var Accept = &_acceptBoc{
@@ -63,8 +63,8 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var s std.String
 		var sg *SocialGraph
@@ -72,14 +72,14 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			sg = &SocialGraph{}
 			u = NewUser(std.NewString("Alice"))
-			_st0 := Accept.Call(sg, u)
-			_bg0.Add(func() { s = _st0.Force() })
+			s = Accept.Call(sg, u)
+			_bg0.Add(func() { s.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		std.Print(s)
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

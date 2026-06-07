@@ -45,8 +45,8 @@ func (self *_userBoc) String() string {
 	return "{ " + "acc: " + std.StringifyRepr(self.acc) + "; " + "call: {}" + " }"
 }
 
-func (self *_userBoc) Call(acc *Account) *std.Thunk[std.Unit] {
-	return func() *std.Thunk[std.Unit] {
+func (self *_userBoc) Call(acc *Account) std.Unit {
+	return func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var loaded *Account
 		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &acc.Cown}, func() std.Unit {
@@ -55,11 +55,11 @@ func (self *_userBoc) Call(acc *Account) *std.Thunk[std.Unit] {
 			_bg0.Add(func() { loaded = _st0.Force() })
 			return std.TheUnit
 		})
-		return std.NewThunk(func() std.Unit {
+		return std.LazyUnit(std.NewThunk(func() std.Unit {
 			_sched.Force()
 			_bg0.Wait()
 			return std.Print(std.NewString(std.StringifyRepr(loaded.balance)))
-		})
+		}))
 	}()
 }
 
@@ -74,19 +74,19 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var a *Account
 		std.Schedule(&self.Cown, func() std.Unit {
 			a = NewAccount(std.NewInt(42))
 			_st0 := User.Call(a)
-			_bg0.Add(func() { _st0.Force() })
+			_bg0.Add(func() { _st0.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

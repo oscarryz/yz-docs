@@ -11,8 +11,8 @@ func (self *_countdownBoc) String() string {
 	return "{ " + "n: " + std.StringifyRepr(self.n) + "; " + "call: {}" + " }"
 }
 
-func (self *_countdownBoc) Call(n std.Int) *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_countdownBoc) Call(n std.Int) std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			self.n = n
@@ -21,13 +21,13 @@ func (self *_countdownBoc) Call(n std.Int) *std.Thunk[std.Unit] {
 			} else {
 				std.Print(std.NewString(std.StringifyRepr(self.n)))
 				_st0 := self.Call(self.n.Minus(std.NewInt(1)))
-				_bg0.Add(func() { _st0.Force() })
+				_bg0.Add(func() { _st0.Await() })
 			}
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	})
+	}))
 }
 
 var Countdown = &_countdownBoc{
@@ -41,17 +41,17 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			_st0 := Countdown.Call(std.NewInt(3))
-			_bg0.Add(func() { _st0.Force() })
+			_bg0.Add(func() { _st0.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

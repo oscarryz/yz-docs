@@ -22,20 +22,20 @@ func (self *Counter) increment() std.Unit {
 	return std.TheUnit
 }
 
-func (self *Counter) Increment() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *Counter) Increment() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.increment()
-	})
+	}))
 }
 
 func (self *Counter) value() std.Int {
 	return self.count
 }
 
-func (self *Counter) Value() *std.Thunk[std.Int] {
-	return std.Schedule(&self.Cown, func() std.Int {
+func (self *Counter) Value() std.Int {
+	return std.LazyInt(std.Schedule(&self.Cown, func() std.Int {
 		return self.value()
-	})
+	}))
 }
 
 type _mainBoc struct {
@@ -46,22 +46,22 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var c *Counter
 		std.Schedule(&self.Cown, func() std.Unit {
 			c = NewCounter(std.NewInt(0))
 			_st0 := c.Increment()
-			_bg0.Add(func() { _st0.Force() })
+			_bg0.Add(func() { _st0.Await() })
 			_st1 := c.Increment()
-			_bg0.Add(func() { _st1.Force() })
+			_bg0.Add(func() { _st1.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
-		std.Print(std.NewString(std.StringifyRepr(c.Value().Force())))
+		std.Print(std.NewString(std.StringifyRepr(c.Value())))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

@@ -117,6 +117,31 @@ type lowerer struct {
 }
 
 // ---------------------------------------------------------------------------
+// Scalar type helpers
+// ---------------------------------------------------------------------------
+
+// isScalarGoType reports whether t is one of the five built-in scalar Go types
+// that support intrinsic lazy state (std.String, std.Int, std.Bool, std.Decimal,
+// std.Unit). These return their scalar type directly from public boc methods
+// (wrapped in LazyX) rather than *Thunk[T].
+func isScalarGoType(t string) bool {
+	switch t {
+	case "std.String", "std.Int", "std.Bool", "std.Decimal", "std.Unit":
+		return true
+	}
+	return false
+}
+
+// thunkOrScalar returns t for scalar types, or "*std.Thunk[t]" for non-scalar.
+// Used to determine the return type of a public boc method.
+func thunkOrScalar(t string) string {
+	if isScalarGoType(t) {
+		return t
+	}
+	return "*std.Thunk[" + t + "]"
+}
+
+// ---------------------------------------------------------------------------
 // File
 // ---------------------------------------------------------------------------
 
@@ -270,8 +295,6 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	} else if len(bt.Returns) > 0 {
 		resultType = l.goType(bt.Returns[0])
 	}
-	thunkResult := "*std.Thunk[" + resultType + "]"
-
 	// Collect params from the body's leading TypedDecls.
 	var params []*ParamSpec
 	for _, elem := range bocLit.Elements {
@@ -301,7 +324,7 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 			Name:       id.Name,
 			TypeParams: typeParams,
 			Params:     params,
-			Results:    []string{thunkResult},
+			Results:    []string{thunkOrScalar(resultType)},
 			Body:       funcBody,
 		}
 	}
@@ -447,7 +470,7 @@ func (l *lowerer) bocFieldMethod(typeName, fieldName string, bt *sema.BocType) *
 		RecvName: "self",
 		Name:     capitalize(fieldName),
 		Params:   params,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{thunkOrScalar(resultType)},
 		Body: []Stmt{
 			&ReturnStmt{Value: &FuncCall{
 				Func: &FieldAccess{Object: &Ident{Name: "self"}, Field: fieldName},
@@ -777,7 +800,7 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 		RecvName: "self",
 		Name:     "Call",
 		Params:   params,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{thunkOrScalar(resultType)},
 		Body:     []Stmt{&ExprStmt{Expr: thunk}},
 	}
 	sd.Methods = append(sd.Methods, callMethod)
@@ -811,14 +834,20 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 		stmts = append(stmts, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
 		for _, pc := range pending {
 			callExpr := l.lowerExpr(pc.expr)
+			isScalar := l.isScalarBocCallExpr(pc.expr)
 			if pc.name != "" {
 				storeAnyType := l.pathDepStoreType(pc.expr, pc.typ)
-				stmts = append(stmts,
-					&DeclStmt{Name: pc.name, Type: pc.typ},
-					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: pc.name, StoreAnyType: storeAnyType, Thunk: callExpr}},
-				)
+				// Always emit pre-declaration so the var is accessible after BocGroup.Wait().
+				stmts = append(stmts, &DeclStmt{Name: pc.name, Type: pc.typ})
+				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{
+					GroupVar:     bgVar,
+					StoreVar:     pc.name,
+					StoreAnyType: storeAnyType,
+					IsScalar:     isScalar,
+					Thunk:        callExpr,
+				}})
 			} else {
-				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, Thunk: callExpr}})
+				stmts = append(stmts, &ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, IsScalar: isScalar, Thunk: callExpr}})
 			}
 		}
 		stmts = append(stmts, &WaitStmt{GroupVar: bgVar})
@@ -887,20 +916,6 @@ func (l *lowerer) lowerSingletonBodyStmts(elems []ast.Node) []Stmt {
 		}
 		// Non-boc statement: flush pending group, then emit normally.
 		flushGroup()
-		// ThunkX conditional: needs its own BocGroup so the lazy chain is
-		// spawned and waited on. Temporarily set bocGroupCtx so lowerThunkConditional
-		// can emit SpawnExpr instead of falling back to ForceExpr.
-		if expr, ok := elem.(ast.Expr); ok && l.isThunkXConditional(expr) {
-			bgVar := fmt.Sprintf("_bg%d", bgIdx)
-			bgIdx++
-			stmts = append(stmts, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
-			prev := l.bocGroupCtx
-			l.bocGroupCtx = bgVar
-			is, _ := l.tryLowerConditional(expr)
-			l.bocGroupCtx = prev
-			stmts = append(stmts, is, &WaitStmt{GroupVar: bgVar})
-			continue
-		}
 		stmts = append(stmts, l.lowerMainStmt(elem)...)
 	}
 	flushGroup()
@@ -1014,7 +1029,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 			RecvName: "self",
 			Name:     "Call",
 			Params:   nil,
-			Results:  []string{"*std.Thunk[std.Unit]"},
+			Results:  []string{"std.Unit"},
 			Body:     []Stmt{&ExprStmt{Expr: thunk}},
 		}
 		sd.Methods = append(sd.Methods, callMethod)
@@ -1217,8 +1232,6 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 			resultType = l.goType(st.Returns[0])
 		}
 	}
-	thunkResult := "*std.Thunk[" + resultType + "]"
-
 	// Lower method body with receiver context.
 	prev := l.setReceiver("self", parentFields)
 	body := l.lowerBocBody(b, resultType, "&self.Cown")
@@ -1229,7 +1242,7 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 		RecvName: "self",
 		Name:     goMethodNameStr(name),
 		Params:   params,
-		Results:  []string{thunkResult},
+		Results:  []string{thunkOrScalar(resultType)},
 		Body:     body,
 	}
 }
@@ -1289,22 +1302,20 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 				inner = append(inner, &DeclStmt{Name: e.Name.Name, Init: synced})
 			} else if l.isBocMethodCall(e.Value) {
 				goType := l.goType(l.analyzer.ExprType(e.Value))
+				isScalar := l.isScalarBocCallExpr(e.Value)
 				if bgVar != "" {
-					// Shared BocGroup: register and let emitPendingWait insert the Wait
-					// before the first dependent statement.
-					inner = append(inner,
-						&DeclStmt{Name: e.Name.Name, Type: goType},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Thunk: expr}},
-					)
+					// Shared BocGroup: pre-declare var so it's accessible after Wait.
+					inner = append(inner, &DeclStmt{Name: e.Name.Name, Type: goType})
+					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, IsScalar: isScalar, Thunk: expr}})
 					hasPendingSpawns = true
 				} else {
 					// No shared BocGroup: per-variable group with immediate Wait so
 					// the value is ready before any subsequent statement references it.
 					perBg := "_bgs_" + e.Name.Name
 					inner = append(inner,
-						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
 						&DeclStmt{Name: e.Name.Name, Type: goType},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Name.Name, Thunk: expr}},
+						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Name.Name, IsScalar: isScalar, Thunk: expr}},
 						&WaitStmt{GroupVar: perBg},
 					)
 				}
@@ -1316,28 +1327,29 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			if len(e.Names) == 1 && len(e.Values) == 1 && l.isBocMethodCall(e.Values[0]) {
 				callExpr := l.lowerExpr(e.Values[0])
 				goType := l.goType(l.analyzer.ExprType(e.Values[0]))
+				isScalar := l.isScalarBocCallExpr(e.Values[0])
+				storeAnyType := l.pathDepStoreType(e.Values[0], goType)
 				if synced := l.trySyncExpr(e.Values[0]); synced != nil {
 					emitPendingWait()
 					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Init: synced})
 				} else if bgVar != "" {
-					storeAnyType := l.pathDepStoreType(e.Values[0], goType)
+					// Pre-declare var so it's accessible after Wait.
 					inner = append(inner, &DeclStmt{Name: e.Names[0].Name, Type: goType})
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
 						GroupVar:     bgVar,
 						StoreVar:     e.Names[0].Name,
 						StoreAnyType: storeAnyType,
+						IsScalar:     isScalar,
 						Thunk:        callExpr,
 					}})
 					hasPendingSpawns = true
 				} else {
-					// No shared BocGroup: per-variable group with immediate Wait so
-					// dependent statements land in postWait (after cown release).
-					storeAnyType := l.pathDepStoreType(e.Values[0], goType)
+					// No shared BocGroup: per-variable group with immediate Wait.
 					perBg := "_bgs_" + e.Names[0].Name
 					inner = append(inner,
-						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
 						&DeclStmt{Name: e.Names[0].Name, Type: goType},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Names[0].Name, StoreAnyType: storeAnyType, Thunk: callExpr}},
+						&DeclStmt{Name: perBg, Init: &NewGroupExpr{}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: perBg, StoreVar: e.Names[0].Name, StoreAnyType: storeAnyType, IsScalar: isScalar, Thunk: callExpr}},
 						&WaitStmt{GroupVar: perBg},
 					)
 				}
@@ -1375,6 +1387,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
 						GroupVar: bgVar,
 						Thunk:    callExpr,
+						IsScalar: l.isScalarBocCallExpr(e),
 					}})
 					hasPendingSpawns = true
 				} else {
@@ -1390,6 +1403,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
 						GroupVar: bgVar,
 						Thunk:    callExpr,
+						IsScalar: l.isScalarBocCallExpr(e),
 					}})
 					hasPendingSpawns = true
 				} else {
@@ -1854,10 +1868,11 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 		if l.isBocMethodCall(e.Value) {
 			goType := l.goType(l.analyzer.ExprType(e.Value))
 			bgVar := "_bgs_" + e.Name.Name
+			isScalar := l.isScalarBocCallExpr(e.Value)
 			return []Stmt{
 				&DeclStmt{Name: e.Name.Name, Type: goType},
 				&DeclStmt{Name: bgVar, Init: &NewGroupExpr{}},
-				&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Thunk: expr}},
+				&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, IsScalar: isScalar, Thunk: expr}},
 				&WaitStmt{GroupVar: bgVar},
 			}
 		}
@@ -1896,10 +1911,11 @@ func (l *lowerer) lowerMainStmt(node ast.Node) []Stmt {
 				if l.isBocMethodCall(val) {
 					goType := l.goType(l.analyzer.ExprType(val))
 					bgVar := "_bgs_" + n.Name
+					isScalar := l.isScalarBocCallExpr(val)
 					stmts = append(stmts,
 						&DeclStmt{Name: n.Name, Type: goType},
 						&DeclStmt{Name: bgVar, Init: &NewGroupExpr{}},
-						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: n.Name, Thunk: initExpr}},
+						&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: n.Name, IsScalar: isScalar, Thunk: initExpr}},
 						&WaitStmt{GroupVar: bgVar},
 					)
 					continue
@@ -2003,7 +2019,7 @@ func (l *lowerer) lowerBocDeclAsMethod(bws *ast.BocDecl, recvType string, parent
 		RecvName: "self",
 		Name:     goMethodName(bws.Name),
 		Params:   params,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{thunkOrScalar(resultType)},
 		Body:     body,
 	}
 }
@@ -2066,7 +2082,7 @@ func (l *lowerer) lowerBocDecl(bws *ast.BocDecl) Decl {
 			Name:       bws.Name.Name,
 			TypeParams: typeParams,
 			Params:     params,
-			Results:    []string{"*std.Thunk[" + resultType + "]"},
+			Results:    []string{thunkOrScalar(resultType)},
 			Body:       funcBody,
 		}
 	}
@@ -2180,7 +2196,7 @@ func (l *lowerer) lowerBocDeclAsSingleton(name string, sig *ast.BocTypeExpr, bod
 		RecvName: "self",
 		Name:     "Call",
 		Params:   params,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{thunkOrScalar(resultType)},
 		Body:     callBody,
 	}
 	return &SingletonDecl{
@@ -2202,8 +2218,6 @@ func (l *lowerer) lowerBocDeclAsLocal(bws *ast.BocDecl) []Stmt {
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
 	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
-	thunkResult := "*std.Thunk[" + resultType + "]"
-
 	// Collect input params from sig (shorthand) or body leading TypedDecls (body-only).
 	var params []*ParamSpec
 	if bws.BodyOnly && bws.Body != nil {
@@ -2238,7 +2252,7 @@ func (l *lowerer) lowerBocDeclAsLocal(bws *ast.BocDecl) []Stmt {
 	}
 
 	l.localBocVars[bws.Name.Name] = true
-	init := &ClosureExpr{Params: params, ResultType: thunkResult, Body: closureBody}
+	init := &ClosureExpr{Params: params, ResultType: thunkOrScalar(resultType), Body: closureBody}
 	return []Stmt{&DeclStmt{Name: bws.Name.Name, Type: "", Init: init}}
 }
 
@@ -2339,7 +2353,7 @@ func (l *lowerer) liftLocalBoc(name string, methodParams []*ParamSpec, resultTyp
 		RecvName: "self",
 		Name:     "Call",
 		Params:   methodParams,
-		Results:  []string{"*std.Thunk[" + resultType + "]"},
+		Results:  []string{thunkOrScalar(resultType)},
 		Body:     bodyStmts,
 	}
 
@@ -2391,36 +2405,16 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 		operand := l.lowerExpr(expr.Operand)
 		return &MethodCall{Recv: operand, Method: "Neg", Args: nil}
 	case *ast.BinaryExpr:
-		leftIsBoc := l.isBocMethodCall(expr.Left)
-		rightIsBoc := l.isBocMethodCall(expr.Right)
-
 		left := l.lowerExpr(expr.Left)
-		if leftIsBoc {
-			if wrapFn := l.thunkWrapFuncFor(expr.Left); wrapFn != "" {
-				left = &FuncCall{Func: &Ident{Name: wrapFn}, Args: []Expr{left}}
-			} else {
-				left = &ForceExpr{Thunk: left} // fallback for non-scalar types
-			}
-		}
-
 		right := l.lowerExpr(expr.Right)
 		method := capitalize(sema.NonWordMethodName(expr.Op))
-
-		if rightIsBoc {
-			if leftIsBoc {
-				// Both sides are ThunkX: use the T-variant method and wrap RHS.
-				if wrapFn := l.thunkWrapFuncFor(expr.Right); wrapFn != "" {
-					right = &FuncCall{Func: &Ident{Name: wrapFn}, Args: []Expr{right}}
-					method = method + "T"
-				} else {
-					right = &ForceExpr{Thunk: right}
-				}
-			} else {
-				// Only RHS is a boc call; LHS is concrete — force RHS eagerly.
-				right = &ForceExpr{Thunk: right}
-			}
+		// For non-scalar *Thunk[T] boc calls, force eagerly.
+		if l.isBocMethodCall(expr.Left) && !l.isScalarBocCallExpr(expr.Left) {
+			left = &ForceExpr{Thunk: left}
 		}
-
+		if l.isBocMethodCall(expr.Right) && !l.isScalarBocCallExpr(expr.Right) {
+			right = &ForceExpr{Thunk: right}
+		}
 		return &MethodCall{Recv: left, Method: method, Args: []Expr{right}}
 	case *ast.CallExpr:
 		return l.lowerCall(expr)
@@ -3113,6 +3107,233 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 	return false
 }
 
+// isScalarBocCallExpr reports whether e is a boc method call whose result type
+// is a built-in scalar (std.String, std.Int, etc.) and therefore returned as a
+// lazy scalar rather than *Thunk[T].
+// isScalarBocCallExpr reports whether e is a boc method call whose Go method
+// was dethunkified to return the scalar type directly (not *Thunk[T]).
+// Generic struct instance methods (GenericInstType receiver) still return
+// *Thunk[T] because we cannot specialize the Go generic method signature.
+func (l *lowerer) isScalarBocCallExpr(e ast.Expr) bool {
+	if !l.isBocMethodCall(e) {
+		return false
+	}
+	if l.callReceiverIsGeneric(e) {
+		return false
+	}
+	// For GenericType receivers, use constraint interface lookup (ExprType may be Unknown).
+	if c, ok := e.(*ast.CallExpr); ok {
+		if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+			if gt, ok := l.analyzer.ExprType(mem.Object).(*sema.GenericType); ok {
+				return isScalarGoType(l.genericTypeMethodReturnGoType(gt, mem.Member.Name))
+			}
+		}
+	}
+	semType := l.analyzer.ExprType(e)
+	return isScalarGoType(l.goType(semType))
+}
+
+func (l *lowerer) isUnitBocCallExpr(e ast.Expr) bool {
+	if !l.isBocMethodCall(e) {
+		return false
+	}
+	if l.callReceiverIsGeneric(e) {
+		return false
+	}
+	// For GenericType receivers, use constraint interface lookup (ExprType may be Unknown).
+	if c, ok := e.(*ast.CallExpr); ok {
+		if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+			if gt, ok := l.analyzer.ExprType(mem.Object).(*sema.GenericType); ok {
+				return l.genericTypeMethodReturnGoType(gt, mem.Member.Name) == "std.Unit"
+			}
+		}
+	}
+	semType := l.analyzer.ExprType(e)
+	return l.goType(semType) == "std.Unit"
+}
+
+// callReceiverIsGeneric reports whether e emits *Thunk[T] in Go and is therefore
+// NOT dethunkified. Returns true for:
+//   - BocDecl function calls and local-boc calls (emit std.Go → *Thunk[T])
+//   - Method calls on generic inst, path-dependent, or generic-type-param receivers
+//
+// Returns false for receiver-method calls (unqualified foo() → self.Foo()) and
+// qualified singleton method calls (counter.value()) which are dethunkified.
+func (l *lowerer) callReceiverIsGeneric(e ast.Expr) bool {
+	c, ok := e.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	if mem, ok := c.Callee.(*ast.MemberExpr); ok {
+		// Qualified method call: check receiver type.
+		switch objType := l.analyzer.ExprType(mem.Object).(type) {
+		case *sema.GenericInstType:
+			// Generic struct instance: dethunkified if the method's declared return type
+			// (before type-param substitution) is a concrete scalar.
+			if l.genericInstMethodReturnsScalar(objType, mem.Member.Name) {
+				return false
+			}
+			return true
+		case *sema.PathDependentType:
+			// Path-dependent type (g.Node): sema resolves the call return type through
+			// the bound interface, so ExprType(c) is already concrete.
+			retType := l.analyzer.ExprType(c)
+			if isScalarGoType(l.goType(retType)) {
+				return false
+			}
+			return true
+		case *sema.GenericType:
+			// Type param with explicit/synthesized constraint: the Go interface method
+			// mirrors the dethunkified signature. Check the constraint interface's method
+			// return type (more reliable than ExprType, which may be Unknown for
+			// synthesized constraints registered after the call was analyzed).
+			if isScalarGoType(l.genericTypeMethodReturnGoType(objType, mem.Member.Name)) {
+				return false
+			}
+			return true
+		}
+		return false
+	}
+	// Ident callee: receiver method, local boc, singleton, or standalone BocDecl.
+	if id, ok := c.Callee.(*ast.Ident); ok {
+		// Unqualified receiver method call (value() → self.Value()) — dethunkified.
+		if l.recvMethods[id.Name] {
+			return false
+		}
+		// Local lifted body-boc call: uses struct.Call() which is Schedule-based — dethunkified.
+		if _, isBodyBoc := l.localBodyBocVars[id.Name]; isBodyBoc {
+			return false
+		}
+		// Top-level singleton call (greeting() → Greeting.Call()) — dethunkified.
+		// BocDecl: non-generic lowers to singleton (dethunkified); generic uses std.Go → *Thunk[T].
+		if sym := l.analyzer.LookupInFile(id.Name); sym != nil {
+			if bws, isBocDecl := sym.Node.(*ast.BocDecl); isBocDecl {
+				// Generic BocDecl (identity[V](...)) → *Thunk[T], not dethunkified.
+				if len(collectSigTypeParams(bws.Sig)) > 0 {
+					return true
+				}
+				// Non-generic BocDecl singleton (accept(...)) → dethunkified.
+				return false
+			}
+			// Plain body singleton or structured singleton without BocDecl — dethunkified.
+			if _, isBoc := sym.Type.(*sema.BocType); isBoc && sym.Node != nil && sym.ParentTypeName == "" {
+				return false
+			}
+			if st, isStruct := sym.Type.(*sema.StructType); isStruct && st.IsSingleton {
+				return false
+			}
+		}
+		// Local boc var and standalone BocDecl: emit std.Go → *Thunk[T].
+	}
+	// All other direct calls (BocDecl, localBocVars, generic functions) emit *Thunk[T].
+	return true
+}
+
+// genericInstMethodReturnsScalar reports whether a method on a generic struct instance
+// has a concrete scalar return type (before type-param substitution), meaning the
+// emitted Go method returns the scalar directly (dethunkified) rather than *Thunk[T].
+func (l *lowerer) genericInstMethodReturnsScalar(git *sema.GenericInstType, methodName string) bool {
+	sym := l.analyzer.LookupInFile(git.Name)
+	if sym == nil {
+		return false
+	}
+	st, ok := sym.Type.(*sema.StructType)
+	if !ok {
+		return false
+	}
+	for _, f := range st.Fields {
+		if f.Name == methodName {
+			bt, ok := f.Type.(*sema.BocType)
+			if !ok || len(bt.Returns) == 0 {
+				return false
+			}
+			// Check the uninstantiated return type.
+			return isScalarGoType(l.goType(bt.Returns[0]))
+		}
+	}
+	return false
+}
+
+// pathDepMethodReturnGoType returns the Go type string for the return type of
+// methodName on a PathDependentType receiver (e.g. g.Node). It resolves the
+// bound interface of the type field and looks up the method there.
+func (l *lowerer) pathDepMethodReturnGoType(pdt *sema.PathDependentType, methodName string) string {
+	// Find the param's interface type. Check recvStructType fields first,
+	// then fall back to file-scope lookup (for singleton body context).
+	var paramInterfaceType *sema.StructType
+	if l.recvStructType != nil {
+		for _, f := range l.recvStructType.Fields {
+			if f.Name == pdt.Param {
+				if st, ok := f.Type.(*sema.StructType); ok {
+					paramInterfaceType = st
+				}
+				break
+			}
+		}
+	}
+	// For singleton bodies where recvStructType isn't available, find the param's
+	// type via the sema type of the Param identifier (e.g., ExprType of "g").
+	if paramInterfaceType == nil {
+		if sym := l.analyzer.LookupInFile(pdt.Param); sym != nil {
+			if st, ok := sym.Type.(*sema.StructType); ok && st.IsInterface {
+				paramInterfaceType = st
+			}
+		}
+	}
+	if paramInterfaceType == nil {
+		return "any"
+	}
+	// Find the type field (e.g., "Node") and its bound.
+	for _, f := range paramInterfaceType.Fields {
+		if f.Name == pdt.Member && f.IsTypeField && f.Bound != nil {
+			if bound, ok := f.Bound.(*sema.StructType); ok {
+				for _, bf := range bound.Fields {
+					if bf.Name == methodName {
+						if bt, ok := bf.Type.(*sema.BocType); ok && len(bt.Returns) > 0 {
+							return l.goType(bt.Returns[0])
+						}
+						return "std.Unit"
+					}
+				}
+			}
+		}
+	}
+	return "any"
+}
+
+// genericTypeMethodReturnGoType returns the Go type string for the return type of
+// methodName on a GenericType receiver (type param with explicit or synthesized constraint).
+// Returns "any" if the method or constraint cannot be found.
+func (l *lowerer) genericTypeMethodReturnGoType(gt *sema.GenericType, methodName string) string {
+	if l.recvStructType == nil {
+		return "any"
+	}
+	constrs, ok := l.recvStructType.ExplicitConstraints[gt.Name]
+	if !ok || len(constrs) == 0 {
+		return "any"
+	}
+	for _, ifaceName := range constrs {
+		sym := l.analyzer.LookupInFile(ifaceName)
+		if sym == nil {
+			continue
+		}
+		st, ok := sym.Type.(*sema.StructType)
+		if !ok || !st.IsInterface {
+			continue
+		}
+		for _, f := range st.Fields {
+			if f.Name == methodName {
+				bt, ok := f.Type.(*sema.BocType)
+				if !ok || len(bt.Returns) == 0 {
+					return "std.Unit"
+				}
+				return l.goType(bt.Returns[0])
+			}
+		}
+	}
+	return "any"
+}
+
 // exprRefsAny reports whether expr (recursively) references any identifier in names.
 // Used to detect data dependencies between pending concurrent boc calls.
 func exprRefsAny(expr ast.Expr, names map[string]bool) bool {
@@ -3258,21 +3479,41 @@ func (l *lowerer) trySyncExpr(e ast.Expr) Expr {
 }
 
 // lowerExprForced lowers e and wraps the result in ForceExpr when e is a boc
-// method call (which returns *Thunk[T] and must be materialized at the call site).
+// method call that must be materialized at the call site.
+// - Non-scalar boc calls return *Thunk[T] — always ForceExpr.
+// - Unit scalar boc calls: ForceExpr{IsScalar:true} so codegen emits .Await().
+// - Non-Unit scalar boc calls: returned directly (caller forces via GoX()).
 func (l *lowerer) lowerExprForced(e ast.Expr) Expr {
 	expr := l.lowerExpr(e)
-	if l.isBocMethodCall(e) {
+	if !l.isBocMethodCall(e) {
+		return expr
+	}
+	if !l.isScalarBocCallExpr(e) {
 		return &ForceExpr{Thunk: expr}
+	}
+	if l.isUnitBocCallExpr(e) {
+		return &ForceExpr{Thunk: expr, IsScalar: true}
 	}
 	return expr
 }
 
 // lowerExprOrSpawn lowers e for statement position. When bocGroupCtx is set and
-// e is a boc call, it registers the call as a SpawnExpr on the active BocGroup
-// instead of forcing it inline. Falls back to ForceExpr when no group is active.
+// e is a boc call, it registers the call as a SpawnExpr on the active BocGroup.
+// Unit scalar boc calls are awaited immediately when no BocGroup is active.
+// Non-Unit scalar boc calls are emitted directly (caller forces via GoX()).
 func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 	expr := l.lowerExpr(e)
 	if !l.isBocMethodCall(e) {
+		return expr
+	}
+	isScalar := l.isScalarBocCallExpr(e)
+	if isScalar {
+		if l.bocGroupCtx != "" {
+			return &SpawnExpr{GroupVar: l.bocGroupCtx, Thunk: expr, IsScalar: true}
+		}
+		if l.isUnitBocCallExpr(e) {
+			return &ForceExpr{Thunk: expr, IsScalar: true}
+		}
 		return expr
 	}
 	if l.bocGroupCtx != "" {
@@ -3281,102 +3522,6 @@ func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 	return &ForceExpr{Thunk: expr}
 }
 
-// isThunkXExpr reports whether lowering e produces a concrete ThunkX value
-// (ThunkString, ThunkBool, etc.) rather than a plain *Thunk[T]. This is true
-// when e is a direct boc call or a method chain whose receiver resolves to a
-// boc call (e.g. `f() == b` where f is a boc).
-func (l *lowerer) isThunkXExpr(e ast.Expr) bool {
-	switch ex := e.(type) {
-	case *ast.BinaryExpr:
-		if ex.Op == "?" {
-			return false
-		}
-		return l.isThunkXExpr(ex.Left)
-	case *ast.GroupExpr:
-		return l.isThunkXExpr(ex.Expr)
-	}
-	return l.isBocMethodCall(e)
-}
-
-// isThunkXConditional reports whether e is a conditional whose condition is a
-// ThunkX expression (two-armed ConditionalExpr or one-armed BinaryExpr{Op:"?"}).
-func (l *lowerer) isThunkXConditional(e ast.Expr) bool {
-	switch c := e.(type) {
-	case *ast.ConditionalExpr:
-		return l.isThunkXExpr(c.Cond)
-	case *ast.BinaryExpr:
-		return c.Op == "?" && l.isThunkXExpr(c.Left)
-	}
-	return false
-}
-
-// thunkWrapFuncFor returns the std.WrapXThunk constructor name for the scalar
-// type returned by e. Returns "" for non-scalar or unknown types; callers
-// should fall back to ForceExpr in that case.
-func (l *lowerer) thunkWrapFuncFor(e ast.Expr) string {
-	switch l.analyzer.ExprType(e) {
-	case sema.TypString:
-		return "std.WrapStringThunk"
-	case sema.TypInt:
-		return "std.WrapIntThunk"
-	case sema.TypBool:
-		return "std.WrapBoolThunk"
-	case sema.TypDecimal:
-		return "std.WrapDecimalThunk"
-	case sema.TypUnit:
-		return "std.WrapUnitThunk"
-	}
-	return ""
-}
-
-// lowerThunkConditional emits `ThunkBool.Qm(trueCase, falseCase)` as a
-// SpawnExpr on the active BocGroup, keeping the conditional fully lazy.
-// condAST must satisfy isThunkXExpr (its lowered form is a ThunkBool).
-// When no BocGroup is active, falls back to forcing the thunk inline.
-func (l *lowerer) lowerThunkConditional(condAST, trueAST, falseAST ast.Expr) Stmt {
-	condExpr := l.lowerExpr(condAST)
-	// When condAST is a direct boc call (e.g. flag()) lowerExpr returns *Thunk[Bool],
-	// not ThunkBool. Wrap it so the Qm method is available.
-	if l.isBocMethodCall(condAST) {
-		if wrapFn := l.thunkWrapFuncFor(condAST); wrapFn != "" {
-			condExpr = &FuncCall{Func: &Ident{Name: wrapFn}, Args: []Expr{condExpr}}
-		}
-	}
-
-	// Build closures for each branch: `func() any { body; return std.TheUnit }`.
-	trueClosure := l.bocBranchAsClosure(trueAST)
-	falseClosure := l.bocBranchAsClosure(falseAST)
-
-	qmCall := &MethodCall{
-		Recv:   condExpr,
-		Method: "Qm",
-		Args:   []Expr{trueClosure, falseClosure},
-	}
-
-	if l.bocGroupCtx != "" {
-		return &ExprStmt{Expr: &SpawnExpr{GroupVar: l.bocGroupCtx, Thunk: qmCall}}
-	}
-	// No active BocGroup: force inline so the condition is evaluated immediately.
-	return &ExprStmt{Expr: &ForceExpr{Thunk: qmCall}}
-}
-
-// bocBranchAsClosure lowers a conditional branch (boc literal or expression)
-// as a ClosureExpr returning any. Returns an empty-body closure for nil.
-func (l *lowerer) bocBranchAsClosure(e ast.Expr) *ClosureExpr {
-	var body []Stmt
-	if e != nil {
-		if boc, ok := e.(*ast.BocLiteral); ok {
-			body = l.lowerBocAsStmts(boc)
-		} else {
-			body = []Stmt{&ExprStmt{Expr: l.lowerExpr(e)}}
-		}
-	}
-	// Ensure the closure ends with a return so it satisfies `func() any`.
-	if len(body) == 0 || !isReturnStmt(body[len(body)-1]) {
-		body = append(body, &ReturnStmt{Value: &UnitLit{}})
-	}
-	return &ClosureExpr{Params: nil, ResultType: "any", Body: body}
-}
 
 // bodyHasBocCallsInStmtPos reports whether any element in elems is a
 // statement-position boc call — either a direct boc call (non-last), a
@@ -3409,19 +3554,11 @@ func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
 			return true
 		}
 		if cond, ok := e.(*ast.ConditionalExpr); ok {
-			if l.isThunkXExpr(cond.Cond) {
-				return true // whole conditional becomes a SpawnExpr
-			}
 			if l.branchSliceHasBocCalls(branchElements(cond.TrueCase)) {
 				return true
 			}
 			if l.branchSliceHasBocCalls(branchElements(cond.FalseCase)) {
 				return true
-			}
-		}
-		if bin, ok := e.(*ast.BinaryExpr); ok && bin.Op == "?" {
-			if l.isThunkXExpr(bin.Left) {
-				return true // one-armed conditional becomes a SpawnExpr
 			}
 		}
 	}
@@ -3507,13 +3644,6 @@ func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
 		return nil, false
 	}
 
-	// Lazy path: condition is a ThunkX expression — emit ThunkBool.Qm(closures)
-	// registered on the active BocGroup so forcing is deferred to Wait().
-	if l.isThunkXExpr(condAST) {
-		return l.lowerThunkConditional(condAST, trueCase, falseCase), true
-	}
-
-	// Concrete-bool path: condition is a plain Bool expression (no boc calls).
 	condExpr = l.lowerExpr(condAST)
 
 	var thenStmts, elseStmts []Stmt
@@ -3983,10 +4113,11 @@ func (l *lowerer) lowerClosureBody(elements []ast.Node, resultType string) []Stm
 			if l.isBocMethodCall(e.Value) {
 				goType := l.goType(l.analyzer.ExprType(e.Value))
 				bgVar := "_bgs_" + e.Name.Name
+				isScalar := l.isScalarBocCallExpr(e.Value)
 				stmts = append(stmts,
 					&DeclStmt{Name: e.Name.Name, Type: goType},
 					&DeclStmt{Name: bgVar, Init: &NewGroupExpr{}},
-					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, Thunk: expr}},
+					&ExprStmt{Expr: &SpawnExpr{GroupVar: bgVar, StoreVar: e.Name.Name, IsScalar: isScalar, Thunk: expr}},
 					&WaitStmt{GroupVar: bgVar},
 				)
 			} else {
@@ -4070,12 +4201,16 @@ func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 			} else {
 				// Dollar-brace form: call to_str() — sema ensures it exists.
 				toStrCall := &MethodCall{Recv: inner, Method: "ToStr"}
-				// Builtin types and built-in Option return std.String directly;
-				// user-defined boc methods return *Thunk[String] and must be forced.
+				// Builtin types and Option return std.String directly.
+				// Concrete struct/generic-inst/boc types: ToStr() is dethunkified (returns std.String).
+				// Generic type params and path-dependent types still return *Thunk[String].
 				exprType := l.analyzer.ExprType(part.Expr)
 				_, isBuiltin := exprType.(*sema.BuiltinType)
 				_, isOption := exprType.(*sema.OptionType)
-				if isBuiltin || isOption {
+				_, isStruct := exprType.(*sema.StructType)
+				_, isGenInst := exprType.(*sema.GenericInstType)
+				_, isBocT := exprType.(*sema.BocType)
+				if isBuiltin || isOption || isStruct || isGenInst || isBocT {
 					node = toStrCall
 				} else {
 					node = &ForceExpr{Thunk: toStrCall}

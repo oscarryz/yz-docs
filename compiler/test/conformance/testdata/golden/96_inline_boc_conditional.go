@@ -14,10 +14,10 @@ func (self *_greeterBoc) greet() std.String {
 	return std.NewString("hello")
 }
 
-func (self *_greeterBoc) Greet() *std.Thunk[std.String] {
-	return std.Schedule(&self.Cown, func() std.String {
+func (self *_greeterBoc) Greet() std.String {
+	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		return self.greet()
-	})
+	}))
 }
 
 var Greeter = &_greeterBoc{}
@@ -30,23 +30,19 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
-		_bg0 := &std.BocGroup{}
-		std.Schedule(&self.Cown, func() std.Unit {
-			_st0 := std.WrapStringThunk(Greeter.Greet()).Eqeq(std.NewString("hello")).Qm(func() any {
-				std.Print(std.NewString("matched"))
-				return std.TheUnit
-			}, func() any {
-				std.Print(std.NewString("no match"))
-				return std.TheUnit
-			})
-			_bg0.Add(func() { _st0.Force() })
-			return std.TheUnit
-		}).Force()
-		_bg0.Wait()
-		return std.TheUnit
-	})
+func (self *_mainBoc) call() std.Unit {
+	if Greeter.Greet().Eqeq(std.NewString("hello")).GoBool() {
+		std.Print(std.NewString("matched"))
+	} else {
+		std.Print(std.NewString("no match"))
+	}
+	return std.TheUnit
+}
+
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
+		return self.call()
+	}))
 }
 
 var Main = &_mainBoc{}

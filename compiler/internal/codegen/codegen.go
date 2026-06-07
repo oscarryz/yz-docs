@@ -49,6 +49,27 @@ func (g *generator) freshThunkVar() string {
 	return n
 }
 
+// lazyWrapFunc returns the std.LazyX constructor for scalar result types,
+// or "" for non-scalar types (which still use *Thunk[T] directly).
+func lazyWrapFunc(resultType string) string {
+	switch resultType {
+	case "std.Int":
+		return "std.LazyInt"
+	case "std.String":
+		return "std.LazyString"
+	case "std.Bool":
+		return "std.LazyBool"
+	case "std.Decimal":
+		return "std.LazyDecimal"
+	case "std.Unit":
+		return "std.LazyUnit"
+	}
+	return ""
+}
+
+// isScalarType reports whether t is one of the five scalar lazy types.
+func isScalarType(t string) bool { return lazyWrapFunc(t) != "" }
+
 // ---------------------------------------------------------------------------
 // File
 // ---------------------------------------------------------------------------
@@ -99,7 +120,11 @@ func (g *generator) emitInterfaceDecl(id *ir.InterfaceDecl) {
 		for _, p := range m.Params {
 			params = append(params, p.Name+" "+p.Type)
 		}
-		g.linef("%s(%s) *std.Thunk[%s]", m.Name, strings.Join(params, ", "), m.ResultType)
+		retType := m.ResultType
+		if !isScalarType(retType) {
+			retType = "*std.Thunk[" + retType + "]"
+		}
+		g.linef("%s(%s) %s", m.Name, strings.Join(params, ", "), retType)
 	}
 	g.level--
 	g.line("}")
@@ -315,11 +340,13 @@ func (g *generator) emitMethodDecl(md *ir.MethodDecl) {
 		}
 		g.linef("func (%s %s) %s(%s)%s {", md.RecvName, md.RecvType, md.Name, params, result)
 		g.level++
-		g.writef("%sreturn std.Schedule(%s, func() %s {\n", g.ind(), th.RecvCown, th.ResultType)
-		g.level++
-		g.linef("return %s.%s(%s)", md.RecvName, syncName, strings.Join(names, ", "))
-		g.level--
-		g.line("})")
+		schedCall := fmt.Sprintf("std.Schedule(%s, func() %s {\n%s\treturn %s.%s(%s)\n%s})",
+			th.RecvCown, th.ResultType, g.ind(), md.RecvName, syncName, strings.Join(names, ", "), g.ind())
+		if wrap := lazyWrapFunc(th.ResultType); wrap != "" {
+			g.linef("return %s(%s)", wrap, schedCall)
+		} else {
+			g.linef("return %s", schedCall)
+		}
 		g.level--
 		g.line("}")
 		return
@@ -392,6 +419,10 @@ func (g *generator) emitStmt(s ir.Stmt) {
 	case *ir.ReturnStmt:
 		if st.Value == nil {
 			g.line("return std.TheUnit")
+		} else if fe, ok := st.Value.(*ir.ForceExpr); ok && fe.IsScalar {
+			// Scalar Unit boc call in return position: await it then return TheUnit.
+			g.linef("%s.Await()", g.expr(fe.Thunk))
+			g.line("return std.TheUnit")
 		} else {
 			g.linef("return %s", g.expr(st.Value))
 		}
@@ -451,6 +482,9 @@ func (g *generator) expr(e ir.Expr) string {
 	case *ir.ThunkExpr:
 		return g.emitThunk(ex)
 	case *ir.ForceExpr:
+		if ex.IsScalar {
+			return g.expr(ex.Thunk) + ".Await()"
+		}
 		return g.expr(ex.Thunk) + ".Force()"
 	case *ir.ClosureExpr:
 		return g.emitClosure(ex)
@@ -568,17 +602,29 @@ func (g *generator) emitImmediateBody(body []ir.Stmt, heldCowns map[string]bool)
 				}
 				// Non-held cown (or not a method call) — hoist and register.
 				if _, isIdent := thunk.(*ir.Ident); !isIdent {
-					tv := fmt.Sprintf("_st%d", hoistIdx)
 					hoistIdx++
-					g.linef("%s := %s", tv, g.expr(thunk))
-					if sp.StoreVar != "" {
-						if sp.StoreAnyType != "" {
-							g.linef("%s.Add(func() { %s = %s.Force().(%s) })", sp.GroupVar, sp.StoreVar, tv, sp.StoreAnyType)
+					if sp.IsScalar {
+						if sp.StoreVar != "" {
+							// StoreVar is pre-declared in outer scope; assign (not declare).
+							g.linef("%s = %s", sp.StoreVar, g.expr(thunk))
+							g.linef("%s.Add(func() { %s.Await() })", sp.GroupVar, sp.StoreVar)
 						} else {
-							g.linef("%s.Add(func() { %s = %s.Force() })", sp.GroupVar, sp.StoreVar, tv)
+							tv := fmt.Sprintf("_st%d", hoistIdx-1)
+							g.linef("%s := %s", tv, g.expr(thunk))
+							g.linef("%s.Add(func() { %s.Await() })", sp.GroupVar, tv)
 						}
 					} else {
-						g.linef("%s.Add(func() { %s.Force() })", sp.GroupVar, tv)
+						tv := fmt.Sprintf("_st%d", hoistIdx-1)
+						g.linef("%s := %s", tv, g.expr(thunk))
+						if sp.StoreVar != "" {
+							if sp.StoreAnyType != "" {
+								g.linef("%s.Add(func() { %s = %s.Force().(%s) })", sp.GroupVar, sp.StoreVar, tv, sp.StoreAnyType)
+							} else {
+								g.linef("%s.Add(func() { %s = %s.Force() })", sp.GroupVar, sp.StoreVar, tv)
+							}
+						} else {
+							g.linef("%s.Add(func() { %s.Force() })", sp.GroupVar, tv)
+						}
 					}
 					continue
 				}
@@ -634,12 +680,17 @@ func (g *generator) emitImmediateElse(elseStmts []ir.Stmt, heldCowns map[string]
 // declarations are hoisted outside the Schedule closure, and BocGroup.Wait() plus
 // any subsequent statements run after the cown is released.
 func (g *generator) emitThunk(th *ir.ThunkExpr) string {
+	wrap := lazyWrapFunc(th.ResultType)
 	if th.RecvCown == "" {
 		fn := "std.Go"
 		if !th.Spawn {
 			fn = "std.NewThunk"
 		}
 		var sb strings.Builder
+		if wrap != "" && !th.Spawn {
+			sb.WriteString(wrap)
+			sb.WriteString("(")
+		}
 		sb.WriteString(fn)
 		sb.WriteString("(func() ")
 		sb.WriteString(th.ResultType)
@@ -657,7 +708,11 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		}
 		sb.WriteString(inner.sb.String())
 		sb.WriteString(g.ind())
-		sb.WriteString("})")
+		if wrap != "" && !th.Spawn {
+			sb.WriteString("}))") // close NewThunk(...) + LazyX(...)
+		} else {
+			sb.WriteString("})")
+		}
 		return sb.String()
 	}
 
@@ -672,6 +727,10 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		// Clean ScheduleMulti path: no sub-boc goroutines, body accesses fields directly.
 		cowns := append([]string{th.RecvCown}, th.ExtraCowns...)
 		var sb strings.Builder
+		if wrap != "" {
+			sb.WriteString(wrap)
+			sb.WriteString("(")
+		}
 		sb.WriteString("std.ScheduleMulti([]*std.Cown{")
 		sb.WriteString(strings.Join(cowns, ", "))
 		sb.WriteString("}, func() ")
@@ -681,7 +740,11 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		inner.emitBodyStmts(th.Body, true)
 		sb.WriteString(inner.sb.String())
 		sb.WriteString(g.ind())
-		sb.WriteString("})")
+		if wrap != "" {
+			sb.WriteString("}))") // close ScheduleMulti(...) + LazyX(...)
+		} else {
+			sb.WriteString("})")
+		}
 		return sb.String()
 	}
 
@@ -691,6 +754,10 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	if waitIdx == -1 {
 		// Simple method: no BocGroup — use Schedule directly.
 		var sb strings.Builder
+		if wrap != "" {
+			sb.WriteString(wrap)
+			sb.WriteString("(")
+		}
 		sb.WriteString("std.Schedule(")
 		sb.WriteString(th.RecvCown)
 		sb.WriteString(", func() ")
@@ -700,7 +767,11 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 		inner.emitBodyStmts(th.Body, true)
 		sb.WriteString(inner.sb.String())
 		sb.WriteString(g.ind())
-		sb.WriteString("})")
+		if wrap != "" {
+			sb.WriteString("}))") // close Schedule(...) + LazyX(...)
+		} else {
+			sb.WriteString("})")
+		}
 		return sb.String()
 	}
 
@@ -721,6 +792,10 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 	hoistedDecls, splitDecls, immediateBody := partitionWaitBody(preWait)
 
 	var sb strings.Builder
+	if wrap != "" {
+		sb.WriteString(wrap)
+		sb.WriteString("(")
+	}
 	sb.WriteString("std.NewThunk(func() ")
 	sb.WriteString(th.ResultType)
 	sb.WriteString(" {\n")
@@ -752,7 +827,11 @@ func (g *generator) emitThunk(th *ir.ThunkExpr) string {
 
 	sb.WriteString(outer.sb.String())
 	sb.WriteString(g.ind())
-	sb.WriteString("})")
+	if wrap != "" {
+		sb.WriteString("}))") // close NewThunk(...) + LazyX(...)
+	} else {
+		sb.WriteString("})")
+	}
 	return sb.String()
 }
 
@@ -828,7 +907,11 @@ func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, waitIdx int) string
 	hoistedDecls, splitDecls, immediateBody := partitionWaitBody(preWait)
 
 	cowns := append([]string{th.RecvCown}, th.ExtraCowns...)
+	wrap := lazyWrapFunc(th.ResultType)
 	thunkType := "*std.Thunk[" + th.ResultType + "]"
+	if wrap != "" {
+		thunkType = th.ResultType
+	}
 
 	// Build the held-cown set for reentrant inline detection.
 	heldCowns := map[string]bool{th.RecvCown: true}
@@ -874,7 +957,13 @@ func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, waitIdx int) string
 	outer.write("})\n")
 
 	outer.write(outer.ind())
-	outer.write("return std.NewThunk(func() ")
+	if wrap != "" {
+		outer.write("return ")
+		outer.write(wrap)
+		outer.write("(std.NewThunk(func() ")
+	} else {
+		outer.write("return std.NewThunk(func() ")
+	}
 	outer.write(th.ResultType)
 	outer.write(" {\n")
 	innerThunk := outer.sub(outer.level + 1)
@@ -882,7 +971,11 @@ func (g *generator) emitScheduleMultiSplit(th *ir.ThunkExpr, waitIdx int) string
 	innerThunk.emitBodyStmts(postWait, true)
 	outer.write(innerThunk.sb.String())
 	outer.write(outer.ind())
-	outer.write("})\n")
+	if wrap != "" {
+		outer.write("}))\n") // close NewThunk(...) + LazyX(...)
+	} else {
+		outer.write("})\n")
+	}
 
 	sb.WriteString(outer.sb.String())
 	sb.WriteString(g.ind())
@@ -911,13 +1004,26 @@ func (g *generator) emitClosure(c *ir.ClosureExpr) string {
 	return sb.String()
 }
 
-// emitSpawnStmt emits a SpawnExpr as one or two statements:
-//   _thN := Thunk
-//   GroupVar.Add(func() { StoreVar = _thN.Force() })   // StoreVar case
-//   GroupVar.Add(func() { _thN.Force() })               // no-StoreVar case
-// The intermediate _thN variable ensures the thunk (and its goroutine) is
-// created at registration time, so all goroutines run concurrently before Wait.
+// emitSpawnStmt emits a SpawnExpr as one or two statements.
+// For scalar lazy types (IsScalar=true):
+//   StoreVar = Thunk; GroupVar.Add(func() { StoreVar.Await() })
+//   _thN := Thunk; GroupVar.Add(func() { _thN.Await() })       // no StoreVar
+// For non-scalar (*Thunk[T]):
+//   _thN := Thunk; GroupVar.Add(func() { StoreVar = _thN.Force() })
+//   _thN := Thunk; GroupVar.Add(func() { _thN.Force() })
 func (g *generator) emitSpawnStmt(s *ir.SpawnExpr) {
+	if s.IsScalar {
+		if s.StoreVar != "" {
+			// StoreVar is pre-declared in outer scope; assign (not declare) inside closure.
+			g.linef("%s = %s", s.StoreVar, g.expr(s.Thunk))
+			g.linef("%s.Add(func() { %s.Await() })", s.GroupVar, s.StoreVar)
+		} else {
+			tv := g.freshThunkVar()
+			g.linef("%s := %s", tv, g.expr(s.Thunk))
+			g.linef("%s.Add(func() { %s.Await() })", s.GroupVar, tv)
+		}
+		return
+	}
 	tv := g.freshThunkVar()
 	g.linef("%s := %s", tv, g.expr(s.Thunk))
 	if s.StoreVar != "" {

@@ -21,10 +21,10 @@ func (self *Greeter) plusplus(other std.String) std.String {
 	return self.name.ToStr().Plus(std.NewString(" and ")).Plus(other.ToStr())
 }
 
-func (self *Greeter) Plusplus(other std.String) *std.Thunk[std.String] {
-	return std.Schedule(&self.Cown, func() std.String {
+func (self *Greeter) Plusplus(other std.String) std.String {
+	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		return self.plusplus(other)
-	})
+	}))
 }
 
 type _mainBoc struct {
@@ -35,21 +35,21 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var c std.String
 		var a *Greeter
 		std.Schedule(&self.Cown, func() std.Unit {
 			a = NewGreeter(std.NewString("Ann"))
-			_st0 := a.Plusplus(std.NewString("Taylor"))
-			_bg0.Add(func() { c = _st0.Force() })
+			c = a.Plusplus(std.NewString("Taylor"))
+			_bg0.Add(func() { c.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		std.Print(c)
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

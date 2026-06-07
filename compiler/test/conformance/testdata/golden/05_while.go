@@ -12,8 +12,8 @@ func (self *_whileBoc) String() string {
 	return "{ " + "cond: " + std.StringifyRepr(self.cond) + "; " + "body: " + std.StringifyRepr(self.body) + "; " + "call: {}" + " }"
 }
 
-func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
 			self.cond = cond
@@ -21,13 +21,13 @@ func (self *_whileBoc) Call(cond func() std.Bool, body func() std.Unit) *std.Thu
 			if self.cond().GoBool() {
 				self.body()
 				_st0 := self.Call(self.cond, self.body)
-				_bg0.Add(func() { _st0.Force() })
+				_bg0.Add(func() { _st0.Await() })
 			}
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	})
+	}))
 }
 
 var While = &_whileBoc{
@@ -41,8 +41,8 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
@@ -53,13 +53,13 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 				n = n.Plus(std.NewInt(1))
 				return std.TheUnit
 			})
-			_bg0.Add(func() { _st0.Force() })
+			_bg0.Add(func() { _st0.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		std.Print(std.NewString(std.StringifyRepr(n)))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}
