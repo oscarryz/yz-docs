@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0096**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0097**.
 
 # Yz Compiler Implementation
 
@@ -44,13 +44,13 @@ YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant
 ~~YZC-0095 -- Phase 7: dethunkification — scalar-intrinsic lazy types, eliminate ThunkX wrappers -- M -- needs YZC-0094~~ **DONE**
 YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods -- M -- needs YZC-0021 -- superseded by YZC-0080
 YZC-0090 -- Multi-return for nested bocs (methods on singleton) -- S -- superseded by YZC-0080  
-YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  
 YZC-0058 -- Native type annotation -- L -- needs YZC-0025, YZC-0059  
 YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, YZC-0059  
-YZC-0041 -- Dependency management -- L  
-YZC-0042 -- Package management (`yz` tool ) -- L -- needs YZC-0041  
+YZC-0041 -- `Deps` macro: compile-time dependency validation -- M -- needs YZC-0059, YZC-0028
+YZC-0096 -- `yz fetch`: dependency fetcher -- M -- needs YZC-0059, YZC-0022
+YZC-0042 -- `yz` tool: run, new, add, init (wraps yzc + yz fetch) -- L -- needs YZC-0041, YZC-0096  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
 YZC-0088 -- Codegen: attach compiled annotation boc to declaration metadata -- M -- needs YZC-0028  
 YZC-0028 -- Macros (`Macro` interface) -- XL -- needs YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059   

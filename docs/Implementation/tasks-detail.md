@@ -419,7 +419,68 @@ Open ticket details. See tasks.md for the index.
 
 - [ ] **[YZC-0059] Design: macro interface interaction**
 
-  concrete interaction patterns for `Macro` interface. Depends on: YZC-0025.
+  Settle the taxonomy and interaction model for macros before implementing
+  YZC-0028 or any macro-dependent feature (YZC-0041, YZC-0058, YZC-0060).
+  Depends on: YZC-0025.
+
+  **Questions to resolve:**
+
+  **1. Macro taxonomy — two distinct concepts, not one**
+
+  - *Code-generating macros*: receive an annotated Boc, return a transformed
+    Boc merged back into the AST. Closest to Rust proc-macros. Declare
+    `schema #()` so the compiler can validate the annotation body at
+    compile time. Run during compilation.
+  - *Build-hook programs*: `yz fetch`, `Native`, Go generator wrappers. Act
+    on the environment (network, filesystem), not on code. No schema, no AST
+    output. Run before or alongside compilation. `yz fetch` is the canonical
+    example — a standalone program that reads annotations and populates a cache.
+
+  The key differentiator: **schema**. Macros declare `schema #()`; the
+  compiler validates the annotation body against it at compile time. Programs
+  parse annotations ad hoc with no compile-time guarantees.
+
+  **2. Macro identification — three candidate models**
+
+  - *Explicit list only*: `!:[JSON]` / `macros: [JSON]` is the authority.
+    Unambiguous; slightly verbose when the field name already implies the macro.
+  - *Attribute name implies macro*: `json: {...}` in an annotation body
+    implicitly triggers the `JSON` macro. Concise; risks silent failure on typo
+    or when macro is not in scope.
+  - *Hybrid (recommended starting point)*: explicit list (`!:[...]`) is the
+    authority and always required. Macros find their config by convention —
+    a macro named `JSON` looks for a `json:` field in the annotation body.
+    No implicit triggering; no redundant naming. Explicit list = what runs;
+    field name = where config lives.
+
+  **3. Annotation format for tooling (gates YZC-0041)**
+
+  `yz fetch` needs to locate dependency declarations in annotations. The
+  agreed format (to be finalised here):
+
+  ```
+  `!:[Deps]
+  dependencies: [
+      my_lib: { version: "1.0.0", url: "https://..." }
+  ]
+  `
+  ```
+
+  - `!:[Deps]` (or `macros: [Deps]`) = explicit trigger
+  - `dependencies:` = config field, routed to `Deps` by convention
+  - Deps can appear inline in source or in a `name.info` companion file
+  - Multiple declarations across files are merged; one `yz.lock` per project root
+  - Lock file pins SHA (git commit SHA preferred — immutable by definition)
+  - `Deps` macro = thin schema-only macro for compile-time validation;
+    actual fetching is done by `yz fetch` (a standalone program, not a macro)
+
+  **4. Programs vs macros — clear boundary**
+
+  Programs (`yz fetch`) are not macros. They scan annotations for markers,
+  act on the environment, and pass results to the compiler (e.g. extra source
+  roots via `yzc build proj/ ~/.yz/cache/lib/`). They do not satisfy the
+  `Macro` interface and do not transform AST. The `Deps` macro and `yz fetch`
+  are complementary: the macro validates, the tool acts.
 
 - [ ] **[YZC-0060] Design and implement `self` in Yz**
 
@@ -429,13 +490,54 @@ Open ticket details. See tasks.md for the index.
 
 ## Tooling
 
-- [ ] **[YZC-0041] Dependency management**
+- [ ] **[YZC-0041] `Deps` macro — compile-time dependency validation**
 
-  HTTPS-based import resolution; fetch and cache source. See `docs/Questions/Dependency Management.md`.
+  A thin macro that satisfies the `Macro` interface and declares the schema
+  for `dependencies:` annotations. Runs at compile time to validate that
+  declared dependencies match the lock file. Does not fetch or resolve — that
+  is `yz fetch` (YZC-0096).
 
-- [ ] **[YZC-0042] Package management (`yz` tool)**
+  - Define `schema #()` for the `dependencies:` annotation body
+  - Compiler reads `yz.lock` and validates declared deps against pinned SHAs
+  - Emit a clear error if `yz.lock` is missing or stale: "run `yz fetch`"
+  - Inject cached source roots into the compilation (passes them as extra roots
+    to `yzc build`, consistent with YZC-0022)
 
-  `yz init`, `yz add <url>`, lock file. Depends on: YZC-0041.
+  Depends on: YZC-0059, YZC-0028.
+
+- [ ] **[YZC-0096] `yz fetch` — dependency fetcher**
+
+  Standalone program (not a macro) that resolves, downloads, and caches
+  Yz dependencies declared in annotations.
+
+  - Scan all annotations across source roots for `!:[Deps]` / `macros: [Deps]`
+    markers (in `.yz` files and `.info` companions)
+  - Resolve each dependency to an exact SHA (git commit SHA preferred;
+    URL + content SHA as fallback)
+  - Write / update `yz.lock` at the project root pinning exact SHAs
+  - Download and cache source to `~/.yz/cache/<dep>@<sha>/`
+  - On subsequent runs: read lock file, skip already-cached deps (offline-capable)
+  - If lock file exists and all deps cached: no-op (fast path)
+
+  Depends on: YZC-0059 (annotation format), YZC-0022 (multi-root, so cached
+  source can be passed as extra roots to `yzc build`).
+
+- [ ] **[YZC-0042] `yz` — user-facing tool**
+
+  The high-level CLI that wraps `yzc` and `yz fetch`. Similar relationship
+  to rustc/cargo or go/gopkg. Eventually `yzc new` and `yzc run` move here,
+  leaving `yzc` as a pure compiler.
+
+  - `yz new <name>` — scaffold a new Yz project (currently `yzc new`)
+  - `yz run [dir]` — fetch deps + build + run (currently `yzc run`)
+  - `yz fetch` — invoke `yz fetch` (YZC-0096)
+  - `yz add <url>` — add a dependency to the nearest `dependencies:` annotation
+    and run `yz fetch`
+  - `yz init` — initialise a `project.info` in an existing directory
+  - Reads `project.info` to derive source roots; calls `yzc build` with the
+    full root list (project + cached deps)
+
+  Depends on: YZC-0041, YZC-0096.
 
 ---
 
