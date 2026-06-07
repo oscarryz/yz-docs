@@ -780,14 +780,53 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 		}
 	} else if resultType != "std.Unit" {
 		// For non-Unit returns: lowerSingletonBodyStmts appends ReturnStmt(unit) after
-		// the last value expression. Convert [..., ExprStmt(val), ReturnStmt(unit)]
-		// to [..., ReturnStmt(val)] so the value is actually returned.
+		// the last value expression. Fix up the return in two cases:
+		//
+		// Case 1: [..., ExprStmt(val), ReturnStmt(unit)]
+		//   → [..., ReturnStmt(val)]   (plain expression return)
+		//
+		// Case 2: [..., DeclStmt(bgN), SpawnExpr(void), ..., WaitStmt, ReturnStmt(unit)]
+		//   The last void SpawnExpr is the return value — assign it a StoreVar and
+		//   pre-declare the variable so it is visible after the Schedule closure.
 		n := len(innerStmts)
 		if n >= 2 {
 			if ru, ok := innerStmts[n-1].(*ReturnStmt); ok {
 				if _, isUnit := ru.Value.(*UnitLit); isUnit {
 					if es, ok := innerStmts[n-2].(*ExprStmt); ok {
+						// Case 1.
 						innerStmts = append(innerStmts[:n-2], &ReturnStmt{Value: es.Expr})
+					} else if _, isWait := innerStmts[n-2].(*WaitStmt); isWait {
+						// Case 2: scan backwards for the last void SpawnExpr.
+						for i := n - 3; i >= 0; i-- {
+							es2, ok2 := innerStmts[i].(*ExprStmt)
+							if !ok2 {
+								continue
+							}
+							sp, ok3 := es2.Expr.(*SpawnExpr)
+							if !ok3 || sp.StoreVar != "" {
+								continue
+							}
+							retVar := "_bocret"
+							sp.StoreVar = retVar
+							// Find the BocGroup DeclStmt to insert the pre-declaration before it.
+							insertAt := i
+							for j := i - 1; j >= 0; j-- {
+								if ds, ok4 := innerStmts[j].(*DeclStmt); ok4 {
+									if _, isNew := ds.Init.(*NewGroupExpr); isNew {
+										insertAt = j
+										break
+									}
+								}
+							}
+							retDecl := &DeclStmt{Name: retVar, Type: resultType}
+							newStmts := make([]Stmt, 0, len(innerStmts)+1)
+							newStmts = append(newStmts, innerStmts[:insertAt]...)
+							newStmts = append(newStmts, retDecl)
+							newStmts = append(newStmts, innerStmts[insertAt:n-1]...)
+							newStmts = append(newStmts, &ReturnStmt{Value: &Ident{Name: retVar}})
+							innerStmts = newStmts
+							break
+						}
 					}
 				}
 			}
@@ -1397,15 +1436,38 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			} else {
 				// Last element: if a BocGroup is active and the call is on a cown-bearing
 				// struct instance, spawn it asynchronously so it goes through
-				// ScheduleAsSuccessor in codegen. The body returns std.TheUnit implicitly.
+				// ScheduleAsSuccessor in codegen.
+				//
+				// For non-Unit return types the spawned call IS the return value.
+				// In that case give it a StoreVar so the split-BocGroup pattern can
+				// pre-declare it in the outer scope and return it after Wait.
 				if bgVar != "" && l.isStructInstanceMethodCall(e) {
 					callExpr := l.lowerExpr(e)
-					inner = append(inner, &ExprStmt{Expr: &SpawnExpr{
+					isScalar := l.isScalarBocCallExpr(e)
+					sp := &SpawnExpr{
 						GroupVar: bgVar,
 						Thunk:    callExpr,
-						IsScalar: l.isScalarBocCallExpr(e),
-					}})
-					hasPendingSpawns = true
+						IsScalar: isScalar,
+					}
+					if resultType != "std.Unit" && isScalar {
+						// Capture the return value in a named variable so it can be
+						// returned after BocGroup.Wait().
+						retVar := "_bocret"
+						sp.StoreVar = retVar
+						// Pre-declare retVar in the outer (pre-Schedule) scope so the
+						// split-BocGroup pattern can assign inside Schedule and return after.
+						inner = append([]Stmt{&DeclStmt{Name: retVar, Type: resultType}}, inner...)
+						inner = append(inner, &ExprStmt{Expr: sp})
+						inner = append(inner, &WaitStmt{GroupVar: bgVar})
+						inner = append(inner, &ReturnStmt{Value: &Ident{Name: retVar}})
+						// Mark as done so emitPendingWait() and the trailing Wait/Return
+						// guards don't append duplicate statements.
+						hasPendingSpawns = false
+						didEmitWait = true
+					} else {
+						inner = append(inner, &ExprStmt{Expr: sp})
+						hasPendingSpawns = true
+					}
 				} else {
 					emitPendingWait()
 					inner = append(inner, &ReturnStmt{Value: l.lowerExprForced(e)})

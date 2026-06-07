@@ -1,0 +1,12 @@
+Animal: {
+    name String
+    speak #(String) = { name }
+}
+foo #(String) {
+    a : Animal(name: "cat")
+    a.speak()
+}
+main: {
+    print(foo())
+}
+main()
