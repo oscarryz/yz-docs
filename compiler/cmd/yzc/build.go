@@ -18,17 +18,19 @@ import (
 	"yz/internal/token"
 )
 
-// cmdBuild compiles the Yz project in dir to a binary at target/bin/app.
-func cmdBuild(dir string) error {
-	sources, err := compileProject(dir)
+// cmdBuild compiles the Yz project. projectDir owns target/; extraRoots are
+// additional source roots contributing FQNs to the same namespace.
+func cmdBuild(projectDir string, extraRoots []string) error {
+	srcRoots := append([]string{projectDir}, extraRoots...)
+	sources, err := compileProject(projectDir, srcRoots)
 	if err != nil {
 		return err
 	}
 
-	genDir := filepath.Join(dir, "target", "gen")
-	binDir := filepath.Join(dir, "target", "bin")
+	genDir := filepath.Join(projectDir, "target", "gen")
+	binDir := filepath.Join(projectDir, "target", "bin")
 
-	if err := writeGeneratedGo(genDir, sources, dir); err != nil {
+	if err := writeGeneratedGo(genDir, sources, projectDir); err != nil {
 		return err
 	}
 
@@ -37,16 +39,16 @@ func cmdBuild(dir string) error {
 		return err
 	}
 
-	fmt.Printf("yzc(%s): built %s\n", version,  binPath)
+	fmt.Printf("yzc(%s): built %s\n", version, binPath)
 	return nil
 }
 
-// cmdRun compiles and immediately runs the Yz project in dir.
-func cmdRun(dir string) error {
-	if err := cmdBuild(dir); err != nil {
+// cmdRun compiles and immediately runs the Yz project.
+func cmdRun(projectDir string, extraRoots []string) error {
+	if err := cmdBuild(projectDir, extraRoots); err != nil {
 		return err
 	}
-	binPath := filepath.Join(dir, "target", "bin", "app")
+	binPath := filepath.Join(projectDir, "target", "bin", "app")
 	absPath, err := filepath.Abs(binPath)
 	if err != nil {
 		return err
@@ -60,15 +62,20 @@ func cmdRun(dir string) error {
 // fileEntry is one .yz source file discovered during the project walk.
 type fileEntry struct {
 	absPath string // absolute path to the .yz file
-	relDir  string // slash-separated path relative to source root, "" for root
+	relDir  string // slash-separated path relative to its source root, "" for root
 	name    string // file name without .yz extension
+	srcRoot string // absolute path of the source root this file came from
 }
 
 // walkYzFiles recursively finds all .yz files under srcRoot, skipping
 // target/ and hidden directories.
 func walkYzFiles(srcRoot string) ([]fileEntry, error) {
+	absSrcRoot, err := filepath.Abs(srcRoot)
+	if err != nil {
+		return nil, err
+	}
 	var entries []fileEntry
-	err := filepath.WalkDir(srcRoot, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(absSrcRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -82,13 +89,13 @@ func walkYzFiles(srcRoot string) ([]fileEntry, error) {
 		if !strings.HasSuffix(d.Name(), ".yz") {
 			return nil
 		}
-		rel, _ := filepath.Rel(srcRoot, path)
+		rel, _ := filepath.Rel(absSrcRoot, path)
 		relDir := filepath.ToSlash(filepath.Dir(rel))
 		if relDir == "." {
 			relDir = ""
 		}
 		name := strings.TrimSuffix(d.Name(), ".yz")
-		entries = append(entries, fileEntry{absPath: path, relDir: relDir, name: name})
+		entries = append(entries, fileEntry{absPath: path, relDir: relDir, name: name, srcRoot: absSrcRoot})
 		return nil
 	})
 	return entries, err
@@ -112,17 +119,38 @@ type pkgExport struct {
 	exports    map[string]*sema.Symbol
 }
 
-// compileProject walks all .yz files, compiles each directory as a separate
-// Go package, and returns a map of relative output path → Go source.
+// compileProject walks all .yz files across all srcRoots, compiles each
+// directory as a separate Go package, and returns a map of relative output
+// path → Go source. projectDir owns target/; srcRoots includes projectDir
+// plus any extra roots (stdlib, third-party, etc.).
 // Sub-packages are compiled before the root; their exports are registered in
 // the root's analyzer so FQN references (house.front.Host()) resolve correctly.
-func compileProject(srcRoot string) (map[string]string, error) {
-	entries, err := walkYzFiles(srcRoot)
-	if err != nil {
-		return nil, err
+func compileProject(projectDir string, srcRoots []string) (map[string]string, error) {
+	var entries []fileEntry
+	for _, root := range srcRoots {
+		es, err := walkYzFiles(root)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, es...)
 	}
 	if len(entries) == 0 {
-		return nil, fmt.Errorf("no .yz files found in %s", srcRoot)
+		return nil, fmt.Errorf("no .yz files found in %s", strings.Join(srcRoots, ", "))
+	}
+
+	// Detect FQN collisions: same (relDir, name) pair from different roots.
+	type fqnKey struct{ relDir, name string }
+	seen := map[fqnKey]string{} // fqnKey → srcRoot of first occurrence
+	for _, e := range entries {
+		k := fqnKey{e.relDir, e.name}
+		if prev, conflict := seen[k]; conflict {
+			fqn := e.name
+			if e.relDir != "" {
+				fqn = strings.ReplaceAll(e.relDir, "/", ".") + "." + e.name
+			}
+			return nil, fmt.Errorf("FQN conflict: %q defined in both %s and %s", fqn, prev, e.srcRoot)
+		}
+		seen[k] = e.srcRoot
 	}
 
 	// Group by relative directory.

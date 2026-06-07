@@ -1,0 +1,2 @@
+hello #(String) { "Hello from lib!" }
+farewell #(String) { "Goodbye from lib!" }

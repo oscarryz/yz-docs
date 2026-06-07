@@ -17,32 +17,32 @@ import (
 var version = "dev"
 
 func main() {
-	// No arguments: run the current directory.
 	if len(os.Args) < 2 {
-		if err := cmdRun("."); err != nil {
-			fmt.Fprintf(os.Stderr, "yzc: %v\n", err)
-			os.Exit(1)
-		}
-		return
+		printUsage()
+		os.Exit(1)
 	}
 
 	switch os.Args[1] {
 	case "build":
-		dir := "."
-		if len(os.Args) > 2 {
-			dir = os.Args[2]
+		dirs := os.Args[2:]
+		if len(dirs) == 0 {
+			fmt.Fprintln(os.Stderr, "yzc build: no source roots specified")
+			fmt.Fprintln(os.Stderr, "usage: yzc build <project-dir> [extra-roots...]")
+			os.Exit(1)
 		}
-		if err := cmdBuild(dir); err != nil {
+		if err := cmdBuild(dirs[0], dirs[1:]); err != nil {
 			fmt.Fprintf(os.Stderr, "yzc build: %v\n", err)
 			os.Exit(1)
 		}
 
 	case "run":
-		dir := "."
-		if len(os.Args) > 2 {
-			dir = os.Args[2]
+		dirs := os.Args[2:]
+		if len(dirs) == 0 {
+			fmt.Fprintln(os.Stderr, "yzc run: no source roots specified")
+			fmt.Fprintln(os.Stderr, "usage: yzc run <project-dir> [extra-roots...]")
+			os.Exit(1)
 		}
-		if err := cmdRun(dir); err != nil {
+		if err := cmdRun(dirs[0], dirs[1:]); err != nil {
 			fmt.Fprintf(os.Stderr, "yzc run: %v\n", err)
 			os.Exit(1)
 		}
@@ -61,23 +61,18 @@ func main() {
 		fmt.Printf("yzc %s\n", version)
 
 	default:
-		// Treat an unrecognised first argument as a directory to run.
-		if err := cmdRun(os.Args[1]); err != nil {
-			fmt.Fprintf(os.Stderr, "yzc: %v\n", err)
-			os.Exit(1)
-		}
+		printUsage()
+		os.Exit(1)
 	}
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr, `Usage: yzc [dir]
-       yzc <command> [arguments]
+	fmt.Fprintln(os.Stderr, `Usage: yzc <command> [arguments]
 
 Commands:
-  [dir]          Build and run the project (default dir: ".")
-  build [dir]    Compile and build the project (default dir: ".")
-  run   [dir]    Build and run the project
-  new   <name>   Create a new Yz project
-  version        Print the compiler version`)
+  build <project-dir> [extra-roots...]   Compile and build the project
+  run   <project-dir> [extra-roots...]   Build and run the project
+  new   <name>                           Create a new Yz project
+  version                                Print the compiler version`)
 }
 

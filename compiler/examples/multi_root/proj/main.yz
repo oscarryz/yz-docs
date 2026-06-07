@@ -1,0 +1,5 @@
+main: {
+    print(greeting.hello())
+    print(greeting.farewell())
+}
+main()

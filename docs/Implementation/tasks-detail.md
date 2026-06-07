@@ -368,7 +368,42 @@ Open ticket details. See tasks.md for the index.
 
 - [ ] **[YZC-0022] Multiple source roots**
 
-  `src/` + `lib/` as independent FQN mount points. Depends on: YZC-0085.
+  Enable `yzc build` to accept multiple source root directories. Each root
+  contributes `.yz` files to the same FQN namespace; the first argument owns
+  `target/gen/` and `target/bin/`. Source roots themselves are never written to.
+
+  **Motivation:** required for stdlib and third-party libraries to live outside
+  the user project without copying source in. Foundation for YZC-0041 (dependency
+  management), which will derive the root list from `project.info` instead of CLI
+  args, and YZC-0031 (scalar types in Yz source), which needs a stdlib root.
+
+  **CLI:**
+  ```
+  yzc build myproject/ stdlib/ somelib/
+  ```
+  No implicit default — require at least one argument. `yzc build` with no args
+  is an error with a usage hint. (Smart defaults belong in YZC-0041.)
+
+  **Semantics (spec §9.2 Invariant 3):**
+  - FQN is computed relative to each root: `stdlib/net/http.yz` → `net.http`
+  - Same FQN path + different declaration names across roots → merged into one boc
+  - Same FQN path + same declaration name across roots → compilation error
+  - File/dir coexistence (Invariant 5) applies per root independently
+
+  **Implementation delta:**
+  1. `cmd/yzc/main.go` — parse positional args; first arg = project dir, rest =
+     extra source roots; error if none given
+  2. `compileProject(dir string)` → `compileProject(projectDir string, srcRoots []string)`
+  3. `walkYzFiles` called per root; `fileEntry` gets `srcRoot` field so FQN is
+     computed relative to the correct root
+  4. `byDir` grouping extended to group by `(relDir, name)` across all roots;
+     detect and report same-FQN same-name collisions
+  5. `target/` path hardcoded to `projectDir` (first arg) throughout
+
+  **Out of scope:** stdlib auto-injection, `project.info` resolution, dependency
+  fetching — those are YZC-0041/0042.
+
+  Depends on: YZC-0085 (done).
 
 - [ ] **[YZC-0023] Cancellation / non-local return**
 
