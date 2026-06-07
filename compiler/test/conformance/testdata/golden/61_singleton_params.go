@@ -15,10 +15,10 @@ func (self *_greetBoc) call(name std.String) std.Unit {
 	return std.TheUnit
 }
 
-func (self *_greetBoc) Call(name std.String) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_greetBoc) Call(name std.String) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call(name)
-	})
+	}))
 }
 
 var Greet = &_greetBoc{}
@@ -35,10 +35,10 @@ func (self *_addBoc) call(a std.Int, b std.Int) std.Int {
 	return a.Plus(b)
 }
 
-func (self *_addBoc) Call(a std.Int, b std.Int) *std.Thunk[std.Int] {
-	return std.Schedule(&self.Cown, func() std.Int {
+func (self *_addBoc) Call(a std.Int, b std.Int) std.Int {
+	return std.LazyInt(std.Schedule(&self.Cown, func() std.Int {
 		return self.call(a, b)
-	})
+	}))
 }
 
 var Add = &_addBoc{}
@@ -51,19 +51,21 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var result std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
-			_bg0.GoWait(Greet.Call(std.NewString("World")))
-			std.GoStore(_bg0, Add.Call(std.NewInt(3), std.NewInt(4)), &result)
+			_st0 := Greet.Call(std.NewString("World"))
+			_bg0.Add(func() { _st0.Await() })
+			result = Add.Call(std.NewInt(3), std.NewInt(4))
+			_bg0.Add(func() { result.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		std.Print(std.NewString(std.StringifyRepr(result)))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

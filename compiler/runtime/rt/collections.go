@@ -86,25 +86,25 @@ func (a Array[T]) Each(fn func(T) Unit) {
 // Any reports whether fn returns true for at least one element.
 func (a Array[T]) Any(fn func(T) Bool) Bool {
 	for _, v := range a.elems {
-		if fn(v).val {
-			return Bool{true}
+		if fn(v).GoBool() {
+			return Bool{val: true}
 		}
 	}
-	return Bool{false}
+	return Bool{val: false}
 }
 
 // All reports whether fn returns true for every element.
 func (a Array[T]) All(fn func(T) Bool) Bool {
 	for _, v := range a.elems {
-		if !fn(v).val {
-			return Bool{false}
+		if !fn(v).GoBool() {
+			return Bool{val: false}
 		}
 	}
-	return Bool{true}
+	return Bool{val: true}
 }
 
 // IsEmpty reports whether the array has no elements.
-func (a Array[T]) IsEmpty() Bool { return Bool{len(a.elems) == 0} }
+func (a Array[T]) IsEmpty() Bool { return Bool{val: len(a.elems) == 0} }
 
 // ArrayMap applies fn to each element of a and returns a new Array of results.
 // It is a package-level function because Go methods cannot introduce new type parameters.
@@ -162,7 +162,7 @@ func (d Dict[K, V]) Set(k K, v V) Dict[K, V] {
 // Has reports whether key k exists.
 func (d Dict[K, V]) Has(k K) Bool {
 	_, ok := d.m[k]
-	return Bool{ok}
+	return Bool{val: ok}
 }
 
 // Length returns the number of key-value pairs.

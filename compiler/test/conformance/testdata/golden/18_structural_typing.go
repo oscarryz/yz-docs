@@ -3,7 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Greeter interface {
-	Greet() *std.Thunk[std.Unit]
+	Greet() std.Unit
 }
 
 
@@ -28,10 +28,10 @@ func (self *Person) greet() std.Unit {
 	return std.Print(self.name)
 }
 
-func (self *Person) Greet() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *Person) Greet() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.greet()
-	})
+	}))
 }
 
 type _greet_allBoc struct {
@@ -43,11 +43,12 @@ func (self *_greet_allBoc) String() string {
 	return "{ " + "g: " + std.StringifyRepr(self.g) + "; " + "call: {}" + " }"
 }
 
-func (self *_greet_allBoc) Call(g Greeter) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_greet_allBoc) Call(g Greeter) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		self.g = g
-		return self.g.Greet().Force()
-	})
+		self.g.Greet().Await()
+		return std.TheUnit
+	}))
 }
 
 var Greet_all = &_greet_allBoc{
@@ -61,18 +62,19 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var p *Person
 		std.Schedule(&self.Cown, func() std.Unit {
 			p = NewPerson(std.NewString("Alice"), std.NewString("my secret"))
-			_bg0.GoWait(Greet_all.Call(p))
+			_st0 := Greet_all.Call(p)
+			_bg0.Add(func() { _st0.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

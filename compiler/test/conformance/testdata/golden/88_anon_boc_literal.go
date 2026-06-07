@@ -15,14 +15,14 @@ func (self *_anonBoc0) describe() std.String {
 	return std.NewString("a boc")
 }
 
-func (self *_anonBoc0) Describe() *std.Thunk[std.String] {
-	return std.Schedule(&self.Cown, func() std.String {
+func (self *_anonBoc0) Describe() std.String {
+	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		return self.describe()
-	})
+	}))
 }
 
 type Describable interface {
-	Describe() *std.Thunk[std.String]
+	Describe() std.String
 }
 
 
@@ -51,14 +51,14 @@ func (self *_mainBoc) String() string {
 
 func (self *_mainBoc) call() std.Unit {
 	c := NewBox(&_anonBoc0{})
-	std.Print(c.value.Describe().Force())
+	std.Print(c.value.Describe())
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

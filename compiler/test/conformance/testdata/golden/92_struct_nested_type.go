@@ -21,10 +21,10 @@ func (self *_fooBar) describe() std.String {
 	return self._outer.name
 }
 
-func (self *_fooBar) Describe() *std.Thunk[std.String] {
-	return std.Schedule(&self.Cown, func() std.String {
+func (self *_fooBar) Describe() std.String {
+	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		return self.describe()
-	})
+	}))
 }
 
 type Foo struct {
@@ -55,15 +55,15 @@ func (self *_mainBoc) call() std.Unit {
 	var bob *Foo = NewFoo(std.NewString("bob"))
 	var ab *_fooBar = New_fooBar(alice)
 	var bb *_fooBar = New_fooBar(bob)
-	std.Print(ab.Describe().Force())
-	std.Print(bb.Describe().Force())
+	std.Print(ab.Describe())
+	std.Print(bb.Describe())
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

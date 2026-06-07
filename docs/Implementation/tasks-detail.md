@@ -149,19 +149,155 @@ Open ticket details. See tasks.md for the index.
   - No `GoStore` (`g : greet()` holds `*Thunk[String]`, not a concrete value)
   - `Wait()` IS the forcing mechanism — waiting and forcing are the same act
 
-  ### Work
+  ### Note on "truly lazy"
 
-  - Remove `thunkVars`, `GoWait`, `GoStore`, `sync.WaitGroup` from
-    `BocGroup`; replace with `Add` + sequential `Wait`.
-  - Remove all use-site `.Force()` insertion from the lowerer.
-  - Every statement in a boc body registers its result thunk with BocGroup
-    via `Add`. Pure-value statements (non-thunk) execute inline as before.
-  - Generate forwarding methods on `Thunk[T]` in yzrt for each `T` (or use
-    Go generics / code generation to avoid hand-writing per type).
-  - Entry-point `main()` call remains the one explicit top-level
-    `BocGroup.Wait()`.
-  - Regenerate all golden files; add conformance tests for inline-call
-    expressions in comparisons, conditionals, and string interpolation.
+  `Thunk[T]` already supports both forms (see `thunk.go`):
+
+  - `Go[T](fn)` — hot thunk: goroutine launched immediately, result cached
+    when the goroutine completes.
+  - `NewThunk[T](fn)` — cold thunk: no goroutine, `fn` runs in the caller's
+    goroutine the first time `Force()` is called, result cached via `sync.Once`.
+
+  Forwarding methods on `Thunk[T]` are therefore trivial cold thunks:
+
+  ```go
+  func (th *Thunk[String]) Eqeq(other String) *Thunk[Bool] {
+      return NewThunk(func() Bool { return th.Force().Eqeq(other) })
+  }
+  ```
+
+  The goroutines are genuinely concurrent — `Force()` on a hot thunk blocks
+  until the goroutine completes. The current overhead is the meta-goroutines
+  spawned by `GoStore` to force hot thunks — those are eliminated here.
+
+  ### Implementation plan
+
+  **Phase 1 — Runtime (`runtime/rt/`)** ✓ DONE
+
+  - [x] `thunk.go`: no changes needed; `NewThunk` and `Go` are already correct.
+  - [x] `core.go`:
+    - [x] Replace `BocGroup.sync.WaitGroup` with `[]func()` (slice of force closures).
+    - [x] `BocGroup.Add(fn func())` — append closure to pending list.
+    - [x] `BocGroup.Wait()` — iterate and call each closure. No WaitGroup.
+    - [x] `GoWait`, `GoStore`, `GoStoreAny` kept temporarily (marked with
+      TODO comments); **must be deleted as the final step of Phase 3** once
+      codegen no longer emits them.
+  - [x] `thunk_scalars.go` (new file — per scalar: `String`, `Int`, `Bool`, `Decimal`, `Unit`):
+    - [x] Go generics do not allow type-specific methods on `*Thunk[T]`, so
+      each scalar gets a concrete wrapper: `ThunkString`, `ThunkInt`,
+      `ThunkDecimal`, `ThunkBool`, `ThunkUnit`, `ThunkRange`.
+    - [x] Each wrapper exposes forwarding methods that return new cold thunks.
+    - [x] Example: `ThunkString.Eqeq(String) ThunkBool`, `ThunkBool.Qm(...)`,
+      `ThunkInt.Plus(Int) ThunkInt`.
+    - [x] Constructors: `GoStringThunk(fn)` (hot), `NewStringThunk(fn)` (cold).
+
+  **Phase 2+3 — IR + Codegen** ✓ DONE
+
+  - [x] `ir.go`: SpawnExpr simplified — `Body []Stmt` removed, `Thunk Expr`
+    added. `StoreAnyType` retained for one path-dependent test case.
+  - [x] `lower.go`: all 12 SpawnExpr construction sites updated to use
+    `Thunk:` field. Variable type stays concrete (`var n T`) for now —
+    full type change to `*Thunk[T]` deferred (no existing tests trigger it).
+    Note: `thunkVars` and `lowerExprForced` removal deferred because
+    concrete-variable use sites (argument passing, string interpolation) still
+    need forcing; removing those requires the ThunkX codegen path (future work).
+  - [x] `codegen.go`:
+    - `spawnForceInner` removed.
+    - `emitSpawnStmt` added: always hoists thunk to `_thN` var (goroutine
+      starts at registration time, not deferred to Wait), then emits Add closure.
+    - `emitImmediateBody` updated to use `Thunk` field directly, preserving
+      `StoreVar` in closures.
+    - `thunkCount *int` added to generator (shared across sub-generators).
+    - `collectUsedExpr` updated for new SpawnExpr shape.
+  - [x] `GoStore`/`GoWait`/`GoStoreAny` removed from runtime (no longer emitted).
+
+  **Phase 4 — Golden files** ✓ DONE
+
+  - [x] 43 golden `.go` files regenerated. All 92 golden + error + runtime
+    tests pass.
+  - [ ] Add new golden tests for: `greet() == "hi" ? { print("ok") }, {}`,
+    inline arithmetic on boc results, string interpolation of thunks.
+    (Blocked on ThunkX codegen integration — separate follow-up.)
+
+  **Out of scope for this ticket**
+
+  - Full propagation through ALL method calls (e.g. `Thunk[String].Length`
+    on user-defined types) — covered when scalar types move to Yz source
+    (YZC-0031), which can generate the forwardings from the method definitions.
+  - Changes to sema type inference for thunk-returning expressions.
+
+- [ ] **[YZC-0095] Phase 7: dethunkification — scalar-intrinsic lazy types, eliminate ThunkX wrappers** *(M)*
+
+  ### Context
+
+  YZC-0094 Phases 1–6 introduced `ThunkX` wrapper types (`ThunkString`, `ThunkBool`, etc.)
+  and `WrapXThunk` constructors so boc call results could chain through method calls lazily.
+  Phase 6 added 33 T-variant methods (`EqeqT`, `PlusT`, …) for both-sides-lazy binary ops.
+
+  Commit `64ea0ea` (Phase E.2, pre-YZC-0094) tried an alternative — embedding lazy state
+  directly in scalar types — but was reverted due to an unrelated design confusion, not
+  because the approach was wrong.
+
+  ### Goal
+
+  Public boc methods return the scalar type directly (`std.String`, `std.Int`, etc.) with
+  lazy state carried internally. The `*Thunk[T]` is hidden inside the scalar; callers never
+  see or wrap it. `ThunkX` wrapper types, `WrapXThunk` constructors, and T-variant methods
+  are eliminated from the runtime and the lowerer.
+
+  ### Target generated code
+
+  ```go
+  // was: func (self *_greeterBoc) Greet() *std.Thunk[std.String]
+  func (self *_greeterBoc) Greet() std.String {
+      return std.LazyString(std.Schedule(&self.Cown, func() std.String {
+          return self.greet()
+      }))
+  }
+
+  // binary op: Greet().Eqeq(NewString("hello")) — no wrapping, no T-variant
+  // result is std.Bool (lazy), passed to Bool.Qm
+  ```
+
+  ### What is eliminated
+
+  - `ThunkString`, `ThunkInt`, `ThunkBool`, `ThunkDecimal`, `ThunkUnit`, `ThunkRange`
+  - `WrapStringThunk`, `WrapIntThunk`, `WrapBoolThunk`, `WrapDecimalThunk`, `WrapUnitThunk`, `WrapRangeThunk`
+  - All 33 T-variant methods (`EqeqT`, `PlusT`, `AmpampT`, …)
+  - `isBocMethodCall`, `isThunkXExpr`, `thunkWrapFuncFor`, `lowerThunkConditional`,
+    `bocBranchAsClosure` from `lower.go`
+  - Special-case WrapXThunk emission in `lowerExpr/BinaryExpr`
+
+  ### What stays / changes
+
+  - **`LazyX` constructors** added to each scalar type in `types.go` (as in `64ea0ea`).
+  - **`Bool.Qm(trueCase, falseCase func() any) any`** — the `?` operator as a method on
+    `Bool` directly (replaces `ThunkBool.Qm`). Forces `self`, picks branch, returns result.
+    Return type is `any`; the lowerer knows the concrete type statically and casts if needed.
+  - **BocGroup interaction**: unchanged — `_bg0.Add(func() { result.Force() })` where
+    `result` is the `*Thunk[Unit]` backing the lazy Unit returned by `Qm`. Or the BocGroup
+    switches to a `Waitable` interface and calls `Await()` on the scalar.
+  - **Conditional lowering**: `isThunkXConditional` check disappears — `Bool` is always
+    `Bool` (lazy or not), so the lowerer uses `if/else` for statement position and
+    `Bool.Qm(closures)` for expression position, unconditionally.
+  - **User-defined types**: not affected. Struct boc types (`*_personBoc`) still return
+    `*Thunk[Person]` from public methods; forcing is explicit. This ticket covers the 5
+    built-in scalar types only.
+
+  ### Implementation steps
+
+  1. `runtime/rt/types.go`: add `*lazyX` structs and `LazyX(th *Thunk[X]) X` constructors
+     for String, Int, Bool, Decimal, Unit. Add `Bool.Qm`.
+  2. `runtime/rt/thunk_scalars.go`: delete entire file (ThunkX types).
+  3. `internal/codegen/codegen.go`: `emitMethodDecl` wraps scalar return with `LazyX`.
+  4. `internal/ir/lower.go`: remove ThunkX detection paths; `lowerExpr/BinaryExpr` no
+     longer wraps or T-variants; `lowerConditional` unconditionally uses `if/else` or Qm.
+  5. Regenerate all golden files.
+
+  ### Scope note
+
+  This covers only the 5 built-in scalar types. Full propagation through user-defined type
+  methods remains deferred to YZC-0031 (scalar types in Yz source).
 
 ---
 

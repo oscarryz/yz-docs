@@ -63,159 +63,244 @@ func unmarkVisiting(ptr uintptr) {
 }
 
 // ---------------------------------------------------------------------------
+// Lazy state structs
+//
+// Each scalar type optionally carries a *lazyX pointer. nil means the value
+// is already resolved. Non-nil means the value is backed by a pending
+// goroutine; the first access forces it via sync.Once. Because the pointer
+// is shared across all copies of a scalar value, forcing through any copy
+// resolves all copies simultaneously.
+// ---------------------------------------------------------------------------
+
+type lazyInt struct {
+	once sync.Once
+	val  int64
+	fn   func() int64
+}
+
+type lazyStr struct {
+	once sync.Once
+	val  string
+	fn   func() string
+}
+
+type lazyBool struct {
+	once sync.Once
+	val  bool
+	fn   func() bool
+}
+
+type lazyDec struct {
+	once sync.Once
+	val  float64
+	fn   func() float64
+}
+
+type lazyUnit struct {
+	once sync.Once
+	fn   func()
+}
+
+// ---------------------------------------------------------------------------
 // Int
 // ---------------------------------------------------------------------------
 
-// Int is the boxed integer type.
+// Int is the boxed integer type. It may carry a lazy computation.
 type Int struct {
-	val int64
+	lazy *lazyInt
+	val  int64
 }
 
-// NewInt constructs an Int from a Go int64.
+// NewInt constructs a resolved Int from a Go int64.
 func NewInt(v int64) Int { return Int{val: v} }
 
-// GoInt returns the underlying Go int64.
-func (i Int) GoInt() int64 { return i.val }
+// LazyInt wraps a *Thunk[Int] into a lazy Int that forces on first access.
+func LazyInt(th *Thunk[Int]) Int {
+	return Int{lazy: &lazyInt{fn: func() int64 { return th.Force().GoInt() }}}
+}
 
-func (i Int) String() string { return strconv.FormatInt(i.val, 10) }
+// GoInt returns the underlying Go int64, forcing the lazy computation if needed.
+func (i Int) GoInt() int64 {
+	if i.lazy == nil {
+		return i.val
+	}
+	i.lazy.once.Do(func() { i.lazy.val = i.lazy.fn() })
+	return i.lazy.val
+}
+
+// Await blocks until the lazy computation completes.
+func (i Int) Await() { i.GoInt() }
+
+func (i Int) String() string { return strconv.FormatInt(i.GoInt(), 10) }
 
 // Arithmetic
-func (i Int) Plus(other Int) Int    { return Int{val: i.val + other.val} }
-func (i Int) Minus(other Int) Int   { return Int{val: i.val - other.val} }
-func (i Int) Star(other Int) Int    { return Int{val: i.val * other.val} }
-func (i Int) Slash(other Int) Int   { return Int{val: i.val / other.val} }
-func (i Int) Percent(other Int) Int { return Int{val: i.val % other.val} }
+func (i Int) Plus(other Int) Int    { return Int{val: i.GoInt() + other.GoInt()} }
+func (i Int) Minus(other Int) Int   { return Int{val: i.GoInt() - other.GoInt()} }
+func (i Int) Star(other Int) Int    { return Int{val: i.GoInt() * other.GoInt()} }
+func (i Int) Slash(other Int) Int   { return Int{val: i.GoInt() / other.GoInt()} }
+func (i Int) Percent(other Int) Int { return Int{val: i.GoInt() % other.GoInt()} }
 
 // Unary negation
-func (i Int) Neg() Int { return Int{val: -i.val} }
+func (i Int) Neg() Int { return Int{val: -i.GoInt()} }
 
 // Comparison
-func (i Int) Lt(other Int) Bool   { return Bool{val: i.val < other.val} }
-func (i Int) Gt(other Int) Bool   { return Bool{val: i.val > other.val} }
-func (i Int) Lteq(other Int) Bool { return Bool{val: i.val <= other.val} }
-func (i Int) Gteq(other Int) Bool { return Bool{val: i.val >= other.val} }
-func (i Int) Eqeq(other Int) Bool { return Bool{val: i.val == other.val} }
-func (i Int) Neq(other Int) Bool  { return Bool{val: i.val != other.val} }
+func (i Int) Lt(other Int) Bool   { return Bool{val: i.GoInt() < other.GoInt()} }
+func (i Int) Gt(other Int) Bool   { return Bool{val: i.GoInt() > other.GoInt()} }
+func (i Int) Lteq(other Int) Bool { return Bool{val: i.GoInt() <= other.GoInt()} }
+func (i Int) Gteq(other Int) Bool { return Bool{val: i.GoInt() >= other.GoInt()} }
+func (i Int) Eqeq(other Int) Bool { return Bool{val: i.GoInt() == other.GoInt()} }
+func (i Int) Neq(other Int) Bool  { return Bool{val: i.GoInt() != other.GoInt()} }
 
 // Abs returns the absolute value of i.
 func (i Int) Abs() Int {
-	if i.val < 0 {
-		return Int{val: -i.val}
+	v := i.GoInt()
+	if v < 0 {
+		return Int{val: -v}
 	}
-	return Int{val: i.val}
+	return Int{val: v}
 }
 
 // To produces a half-open range [i, end).
-func (i Int) To(end Int) Range { return Range{from: i.val, to: end.val} }
+func (i Int) To(end Int) Range { return Range{from: i.GoInt(), to: end.GoInt()} }
 
 // ToStr converts to String.
-func (i Int) ToStr() String { return String{val: strconv.FormatInt(i.val, 10)} }
+func (i Int) ToStr() String { return String{val: strconv.FormatInt(i.GoInt(), 10)} }
 
 // ---------------------------------------------------------------------------
 // Decimal
 // ---------------------------------------------------------------------------
 
-// Decimal is the boxed floating-point type.
+// Decimal is the boxed floating-point type. It may carry a lazy computation.
 type Decimal struct {
-	val float64
+	lazy *lazyDec
+	val  float64
 }
 
-// NewDecimal constructs a Decimal from a Go float64.
+// NewDecimal constructs a resolved Decimal from a Go float64.
 func NewDecimal(v float64) Decimal { return Decimal{val: v} }
 
-// GoFloat64 returns the underlying Go float64.
-func (d Decimal) GoFloat64() float64 { return d.val }
+// LazyDecimal wraps a *Thunk[Decimal] into a lazy Decimal that forces on first access.
+func LazyDecimal(th *Thunk[Decimal]) Decimal {
+	return Decimal{lazy: &lazyDec{fn: func() float64 { return th.Force().GoFloat64() }}}
+}
 
-func (d Decimal) String() string { return strconv.FormatFloat(d.val, 'g', -1, 64) }
+// GoFloat64 returns the underlying Go float64, forcing the lazy computation if needed.
+func (d Decimal) GoFloat64() float64 {
+	if d.lazy == nil {
+		return d.val
+	}
+	d.lazy.once.Do(func() { d.lazy.val = d.lazy.fn() })
+	return d.lazy.val
+}
+
+// Await blocks until the lazy computation completes.
+func (d Decimal) Await() { d.GoFloat64() }
+
+func (d Decimal) String() string { return strconv.FormatFloat(d.GoFloat64(), 'g', -1, 64) }
 
 // Arithmetic
-func (d Decimal) Plus(other Decimal) Decimal  { return Decimal{val: d.val + other.val} }
-func (d Decimal) Minus(other Decimal) Decimal { return Decimal{val: d.val - other.val} }
-func (d Decimal) Star(other Decimal) Decimal  { return Decimal{val: d.val * other.val} }
-func (d Decimal) Slash(other Decimal) Decimal { return Decimal{val: d.val / other.val} }
+func (d Decimal) Plus(other Decimal) Decimal  { return Decimal{val: d.GoFloat64() + other.GoFloat64()} }
+func (d Decimal) Minus(other Decimal) Decimal { return Decimal{val: d.GoFloat64() - other.GoFloat64()} }
+func (d Decimal) Star(other Decimal) Decimal  { return Decimal{val: d.GoFloat64() * other.GoFloat64()} }
+func (d Decimal) Slash(other Decimal) Decimal { return Decimal{val: d.GoFloat64() / other.GoFloat64()} }
 
 // Unary negation
-func (d Decimal) Neg() Decimal { return Decimal{val: -d.val} }
+func (d Decimal) Neg() Decimal { return Decimal{val: -d.GoFloat64()} }
 
 // Abs returns the absolute value of d.
-func (d Decimal) Abs() Decimal { return Decimal{val: math.Abs(d.val)} }
+func (d Decimal) Abs() Decimal { return Decimal{val: math.Abs(d.GoFloat64())} }
 
 // Pow raises d to the power of exp.
 func (d Decimal) Pow(exp Decimal) Decimal {
-	return Decimal{val: math.Pow(d.val, exp.val)}
+	return Decimal{val: math.Pow(d.GoFloat64(), exp.GoFloat64())}
 }
 
 // Comparison
-func (d Decimal) Lt(other Decimal) Bool   { return Bool{val: d.val < other.val} }
-func (d Decimal) Gt(other Decimal) Bool   { return Bool{val: d.val > other.val} }
-func (d Decimal) Lteq(other Decimal) Bool { return Bool{val: d.val <= other.val} }
-func (d Decimal) Gteq(other Decimal) Bool { return Bool{val: d.val >= other.val} }
-func (d Decimal) Eqeq(other Decimal) Bool { return Bool{val: d.val == other.val} }
-func (d Decimal) Neq(other Decimal) Bool  { return Bool{val: d.val != other.val} }
+func (d Decimal) Lt(other Decimal) Bool   { return Bool{val: d.GoFloat64() < other.GoFloat64()} }
+func (d Decimal) Gt(other Decimal) Bool   { return Bool{val: d.GoFloat64() > other.GoFloat64()} }
+func (d Decimal) Lteq(other Decimal) Bool { return Bool{val: d.GoFloat64() <= other.GoFloat64()} }
+func (d Decimal) Gteq(other Decimal) Bool { return Bool{val: d.GoFloat64() >= other.GoFloat64()} }
+func (d Decimal) Eqeq(other Decimal) Bool { return Bool{val: d.GoFloat64() == other.GoFloat64()} }
+func (d Decimal) Neq(other Decimal) Bool  { return Bool{val: d.GoFloat64() != other.GoFloat64()} }
 
 // ToStr converts to String.
 func (d Decimal) ToStr() String {
-	return String{val: strconv.FormatFloat(d.val, 'g', -1, 64)}
+	return String{val: strconv.FormatFloat(d.GoFloat64(), 'g', -1, 64)}
 }
 
 // ---------------------------------------------------------------------------
 // String
 // ---------------------------------------------------------------------------
 
-// String is the boxed string type.
+// String is the boxed string type. It may carry a lazy computation.
 type String struct {
-	val string
+	lazy *lazyStr
+	val  string
 }
 
-// NewString constructs a String from a Go string.
+// NewString constructs a resolved String from a Go string.
 func NewString(v string) String { return String{val: v} }
 
-// GoString returns the underlying Go string.
-func (s String) GoString() string { return s.val }
+// LazyString wraps a *Thunk[String] into a lazy String that forces on first access.
+func LazyString(th *Thunk[String]) String {
+	return String{lazy: &lazyStr{fn: func() string { return th.Force().GoString() }}}
+}
 
-func (s String) String() string { return s.val }
+// GoString returns the underlying Go string, forcing the lazy computation if needed.
+func (s String) GoString() string {
+	if s.lazy == nil {
+		return s.val
+	}
+	s.lazy.once.Do(func() { s.lazy.val = s.lazy.fn() })
+	return s.lazy.val
+}
+
+// Await blocks until the lazy computation completes.
+func (s String) Await() { s.GoString() }
+
+func (s String) String() string { return s.GoString() }
 
 // Plus concatenates two strings.
-func (s String) Plus(other String) String { return String{val: s.val + other.val} }
+func (s String) Plus(other String) String { return String{val: s.GoString() + other.GoString()} }
 
 // Comparison
-func (s String) Eqeq(other String) Bool { return Bool{val: s.val == other.val} }
-func (s String) Neq(other String) Bool  { return Bool{val: s.val != other.val} }
-func (s String) Lt(other String) Bool   { return Bool{val: s.val < other.val} }
-func (s String) Gt(other String) Bool   { return Bool{val: s.val > other.val} }
-func (s String) Lteq(other String) Bool { return Bool{val: s.val <= other.val} }
-func (s String) Gteq(other String) Bool { return Bool{val: s.val >= other.val} }
+func (s String) Eqeq(other String) Bool { return Bool{val: s.GoString() == other.GoString()} }
+func (s String) Neq(other String) Bool  { return Bool{val: s.GoString() != other.GoString()} }
+func (s String) Lt(other String) Bool   { return Bool{val: s.GoString() < other.GoString()} }
+func (s String) Gt(other String) Bool   { return Bool{val: s.GoString() > other.GoString()} }
+func (s String) Lteq(other String) Bool { return Bool{val: s.GoString() <= other.GoString()} }
+func (s String) Gteq(other String) Bool { return Bool{val: s.GoString() >= other.GoString()} }
 
 // Length returns the number of Unicode code points.
-func (s String) Length() Int { return Int{val: int64(len([]rune(s.val)))} }
+func (s String) Length() Int { return Int{val: int64(len([]rune(s.GoString())))} }
 
 // Contains reports whether sub is within s.
 func (s String) Contains(sub String) Bool {
-	return Bool{val: strings.Contains(s.val, sub.val)}
+	return Bool{val: strings.Contains(s.GoString(), sub.GoString())}
 }
 
 // HasPrefix reports whether s begins with prefix.
 func (s String) HasPrefix(prefix String) Bool {
-	return Bool{val: strings.HasPrefix(s.val, prefix.val)}
+	return Bool{val: strings.HasPrefix(s.GoString(), prefix.GoString())}
 }
 
 // HasSuffix reports whether s ends with suffix.
 func (s String) HasSuffix(suffix String) Bool {
-	return Bool{val: strings.HasSuffix(s.val, suffix.val)}
+	return Bool{val: strings.HasSuffix(s.GoString(), suffix.GoString())}
 }
 
 // ToUpper returns s with all letters mapped to upper case.
 func (s String) ToUpper() String {
-	return String{val: strings.Map(unicode.ToUpper, s.val)}
+	return String{val: strings.Map(unicode.ToUpper, s.GoString())}
 }
 
 // ToLower returns s with all letters mapped to lower case.
 func (s String) ToLower() String {
-	return String{val: strings.Map(unicode.ToLower, s.val)}
+	return String{val: strings.Map(unicode.ToLower, s.GoString())}
 }
 
 // Trim returns s with leading and trailing white space removed.
-func (s String) Trim() String { return String{val: strings.TrimSpace(s.val)} }
+func (s String) Trim() String { return String{val: strings.TrimSpace(s.GoString())} }
 
 // ToStr returns the string itself.
 func (s String) ToStr() String { return s }
@@ -224,35 +309,52 @@ func (s String) ToStr() String { return s }
 // Bool
 // ---------------------------------------------------------------------------
 
-// Bool is the boxed boolean type.
-type Bool struct{ val bool }
+// Bool is the boxed boolean type. It may carry a lazy computation.
+type Bool struct {
+	lazy *lazyBool
+	val  bool
+}
 
-// NewBool constructs a Bool from a Go bool.
+// NewBool constructs a resolved Bool from a Go bool.
 func NewBool(v bool) Bool { return Bool{val: v} }
 
-// GoBool returns the underlying Go bool.
-func (b Bool) GoBool() bool { return b.val }
+// LazyBool wraps a *Thunk[Bool] into a lazy Bool that forces on first access.
+func LazyBool(th *Thunk[Bool]) Bool {
+	return Bool{lazy: &lazyBool{fn: func() bool { return th.Force().GoBool() }}}
+}
+
+// GoBool returns the underlying Go bool, forcing the lazy computation if needed.
+func (b Bool) GoBool() bool {
+	if b.lazy == nil {
+		return b.val
+	}
+	b.lazy.once.Do(func() { b.lazy.val = b.lazy.fn() })
+	return b.lazy.val
+}
+
+// Await blocks until the lazy computation completes.
+func (b Bool) Await() { b.GoBool() }
 
 func (b Bool) String() string {
-	if b.val {
+	if b.GoBool() {
 		return "true"
 	}
 	return "false"
 }
 
 // Logical
-func (b Bool) Ampamp(other Bool) Bool   { return Bool{b.val && other.val} }
-func (b Bool) Pipepipe(other Bool) Bool { return Bool{b.val || other.val} }
+func (b Bool) Ampamp(other Bool) Bool   { return Bool{val: b.GoBool() && other.GoBool()} }
+func (b Bool) Pipepipe(other Bool) Bool { return Bool{val: b.GoBool() || other.GoBool()} }
 
 // Comparison
-func (b Bool) Eqeq(other Bool) Bool { return Bool{b.val == other.val} }
-func (b Bool) Neq(other Bool) Bool  { return Bool{b.val != other.val} }
+func (b Bool) Eqeq(other Bool) Bool { return Bool{val: b.GoBool() == other.GoBool()} }
+func (b Bool) Neq(other Bool) Bool  { return Bool{val: b.GoBool() != other.GoBool()} }
 
 // Qm is the conditional operator: flag ? { trueCase } , { falseCase }
 // Both branches are passed as zero-argument functions so only the selected
 // branch is evaluated.
 func (b Bool) Qm(trueCase, falseCase func() any) any {
-	if b.val {
+	if b.GoBool() {
 		return trueCase()
 	}
 	return falseCase()
@@ -266,10 +368,28 @@ func (b Bool) ToStr() String { return NewString(b.String()) }
 // ---------------------------------------------------------------------------
 
 // Unit is the empty/void type — the result of a boc that returns nothing.
-type Unit struct{}
+// It may carry a lazy computation (from a boc call that returns unit).
+type Unit struct {
+	lazy *lazyUnit
+}
 
-// TheUnit is the singleton Unit value.
+// TheUnit is the singleton resolved Unit value.
 var TheUnit = Unit{}
+
+// LazyUnit wraps a *Thunk[Unit] into a lazy Unit that forces on Await.
+func LazyUnit(th *Thunk[Unit]) Unit {
+	return Unit{lazy: &lazyUnit{fn: func() { th.Force() }}}
+}
+
+// Await blocks until the lazy computation completes.
+func (u Unit) Await() {
+	if u.lazy != nil {
+		u.lazy.once.Do(u.lazy.fn)
+	}
+}
+
+// Force is an alias for Await, kept for the entry-point call Main.Call().Force().
+func (u Unit) Force() { u.Await() }
 
 func (u Unit) String() string { return "()" }
 
@@ -333,7 +453,7 @@ func StringifyRepr(v any) string {
 		return "_"
 	}
 	if s, ok := v.(String); ok {
-		return `"` + s.val + `"`
+		return `"` + s.GoString() + `"`
 	}
 	// Nil pointer wrapped in interface: don't call String() on it.
 	if rv := reflect.ValueOf(v); rv.Kind() == reflect.Ptr && rv.IsNil() {

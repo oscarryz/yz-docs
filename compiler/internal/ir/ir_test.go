@@ -227,12 +227,12 @@ func TestLowerMethodReturnsThunk(t *testing.T) {
 	if valueMethod == nil {
 		t.Fatal("method 'value' not found")
 	}
-	// E.3: all return types use *Thunk[T] uniformly.
+	// Phase 7: scalar methods return the scalar type directly (not *Thunk[T]).
 	if len(valueMethod.Results) != 1 {
 		t.Fatalf("results: want 1, got %d", len(valueMethod.Results))
 	}
-	if valueMethod.Results[0] != "*std.Thunk[std.Int]" {
-		t.Errorf("result type: got %q, want *std.Thunk[std.Int]", valueMethod.Results[0])
+	if valueMethod.Results[0] != "std.Int" {
+		t.Errorf("result type: got %q, want std.Int", valueMethod.Results[0])
 	}
 }
 
@@ -316,8 +316,8 @@ func TestLowerBocDeclFuncDecl(t *testing.T) {
 	if len(m.Params) != 1 || m.Params[0].Name != "name" || m.Params[0].Type != "std.String" {
 		t.Errorf("Call params: got %v", m.Params)
 	}
-	// E.3: all return types use *Thunk[T] uniformly.
-	if len(m.Results) != 1 || m.Results[0] != "*std.Thunk[std.Unit]" {
+	// Phase 7: Unit return is now std.Unit (scalar lazy type, not *Thunk[std.Unit]).
+	if len(m.Results) != 1 || m.Results[0] != "std.Unit" {
 		t.Errorf("Call results: got %v", m.Results)
 	}
 }

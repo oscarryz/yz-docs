@@ -139,10 +139,10 @@ func TestGenerateMethodThunk(t *testing.T) {
     count: 0
     value: { count }
 }`)
-	// E.3: all methods return *std.Thunk[T] uniformly.
+	// Phase 7: scalar methods return the scalar type directly via std.LazyX wrapper.
 	contains(t, got,
-		"func (self *_counterBoc) Value() *std.Thunk[std.Int]",
-		"std.Schedule(&self.Cown, func() std.Int {",
+		"func (self *_counterBoc) Value() std.Int",
+		"std.LazyInt(std.Schedule(&self.Cown, func() std.Int {",
 		"return self.value()",
 	)
 }
@@ -230,12 +230,13 @@ main: {
     counter.increment()
     print("`+"`"+`counter.value()`+"`"+`")
 }`)
-	// E.3: boc calls return *Thunk[T]; print needs .Force() on the value.
+	// YZC-0094: BocGroup.Add replaces GoWait; intermediate thunk var ensures
+	// goroutine starts at registration time (not deferred to Wait).
 	contains(t, got,
 		"_bg0 := &std.BocGroup{}",
-		"_bg0.GoWait(Counter.Increment())",
+		"_bg0.Add(func() {",
 		"_bg0.Wait()",
-		"Counter.Value().Force()",
+		"Counter.Value()",
 	)
 }
 

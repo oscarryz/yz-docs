@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0095**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0096**.
 
 # Yz Compiler Implementation
 
@@ -41,6 +41,7 @@ YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant
 ~~YZC-0092 -- Always-wrap root files; main() as explicit entry invocation -- M~~ **DONE**
 ~~YZC-0093 -- Uppercase root file (Foo.yz) always-wrap: example + spec §9 clarification -- S~~ **DONE**
 YZC-0094 -- Fully lazy thunk model: propagate through all exprs, force only at BocGroup boundary -- *design*
+YZC-0095 -- Phase 7: dethunkification — scalar-intrinsic lazy types, eliminate ThunkX wrappers -- M -- needs YZC-0094
 YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods -- M -- needs YZC-0021 -- superseded by YZC-0080
 YZC-0090 -- Multi-return for nested bocs (methods on singleton) -- S -- superseded by YZC-0080  
 YZC-0022 -- Multiple source roots -- M -- needs YZC-0085  

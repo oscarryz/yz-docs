@@ -37,26 +37,28 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var n std.Int
 		std.Schedule(&self.Cown, func() std.Unit {
-			std.GoStore(_bg0, transform(std.NewInt(42), func(x std.Int) std.Int {
+			_st0 := transform(std.NewInt(42), func(x std.Int) std.Int {
 				return x.Star(std.NewInt(2))
-			}), &n)
+			})
+			_bg0.Add(func() { n = _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		var b *Box[std.Int] = NewBox(std.NewInt(99))
 		_bg1 := &std.BocGroup{}
 		var v std.Int
-		std.GoStore(_bg1, unwrap(b), &v)
+		_th0 := unwrap(b)
+		_bg1.Add(func() { v = _th0.Force() })
 		_bg1.Wait()
 		std.Print(std.NewString(std.StringifyRepr(n)))
 		std.Print(std.NewString(std.StringifyRepr(v)))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

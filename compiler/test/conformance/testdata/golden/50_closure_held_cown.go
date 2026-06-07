@@ -22,10 +22,10 @@ func (self *Box) set(v std.Int) std.Unit {
 	return std.TheUnit
 }
 
-func (self *Box) Set(v std.Int) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *Box) Set(v std.Int) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.set(v)
-	})
+	}))
 }
 
 type _applyBoc struct {
@@ -38,12 +38,12 @@ func (self *_applyBoc) String() string {
 	return "{ " + "a: " + std.StringifyRepr(self.a) + "; " + "fn: " + std.StringifyRepr(self.fn) + "; " + "call: {}" + " }"
 }
 
-func (self *_applyBoc) Call(a *Box, fn func() std.Unit) *std.Thunk[std.Unit] {
-	return std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
+func (self *_applyBoc) Call(a *Box, fn func() std.Unit) std.Unit {
+	return std.LazyUnit(std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
 		self.a = a
 		self.fn = fn
 		return self.fn()
-	})
+	}))
 }
 
 var Apply = &_applyBoc{
@@ -57,21 +57,22 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var box *Box
 		std.Schedule(&self.Cown, func() std.Unit {
 			box = NewBox(std.NewInt(0))
-			_bg0.GoWait(Apply.Call(box, func() std.Unit {
+			_st0 := Apply.Call(box, func() std.Unit {
 				return box.set(std.NewInt(42))
-			}))
+			})
+			_bg0.Add(func() { _st0.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		std.Print(std.NewString(std.StringifyRepr(box.val)))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

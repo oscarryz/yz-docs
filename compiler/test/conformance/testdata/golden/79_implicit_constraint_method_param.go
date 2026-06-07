@@ -3,7 +3,7 @@ package main
 import std "yz/runtime/rt"
 
 type Holer interface {
-	Hola() *std.Thunk[std.Unit]
+	Hola() std.Unit
 }
 
 
@@ -24,10 +24,10 @@ func (self *HolerImpl) hola() std.Unit {
 	return std.Print(std.NewString("hola"))
 }
 
-func (self *HolerImpl) Hola() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *HolerImpl) Hola() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.hola()
-	})
+	}))
 }
 
 type Wrapper[V Holer] struct {
@@ -46,13 +46,14 @@ func (self *Wrapper[V]) String() string {
 }
 
 func (self *Wrapper[V]) doIt(value V) std.Unit {
-	return value.Hola().Force()
+	value.Hola().Await()
+	return std.TheUnit
 }
 
-func (self *Wrapper[V]) DoIt(value V) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *Wrapper[V]) DoIt(value V) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.doIt(value)
-	})
+	}))
 }
 
 type _mainBoc struct {
@@ -63,20 +64,21 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var h *HolerImpl
 		var w *Wrapper[*HolerImpl]
 		std.Schedule(&self.Cown, func() std.Unit {
 			h = &HolerImpl{}
 			w = NewWrapper(h)
-			_bg0.GoWait(w.DoIt(h))
+			_st0 := w.DoIt(h)
+			_bg0.Add(func() { _st0.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

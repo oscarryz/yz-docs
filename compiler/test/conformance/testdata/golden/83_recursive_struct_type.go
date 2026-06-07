@@ -28,11 +28,11 @@ func (self *_first_valueBoc) String() string {
 	return "{ " + "n: " + std.StringifyRepr(self.n) + "; " + "call: {}" + " }"
 }
 
-func (self *_first_valueBoc) Call(n *Node) *std.Thunk[std.Int] {
-	return std.ScheduleMulti([]*std.Cown{&self.Cown, &n.Cown}, func() std.Int {
+func (self *_first_valueBoc) Call(n *Node) std.Int {
+	return std.LazyInt(std.ScheduleMulti([]*std.Cown{&self.Cown, &n.Cown}, func() std.Int {
 		self.n = n
 		return self.n.value
-	})
+	}))
 }
 
 var First_value = &_first_valueBoc{
@@ -51,10 +51,10 @@ func (self *_mainBoc) call() std.Unit {
 	return std.TheUnit
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.call()
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

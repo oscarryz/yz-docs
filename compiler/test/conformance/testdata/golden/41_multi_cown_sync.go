@@ -16,10 +16,10 @@ func (self *_bankBoc) deposit(amount std.Int) std.Unit {
 	return std.TheUnit
 }
 
-func (self *_bankBoc) Deposit(amount std.Int) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_bankBoc) Deposit(amount std.Int) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.deposit(amount)
-	})
+	}))
 }
 
 var Bank = &_bankBoc{
@@ -40,10 +40,10 @@ func (self *_ledgerBoc) add(amount std.Int) std.Unit {
 	return std.TheUnit
 }
 
-func (self *_ledgerBoc) Add(amount std.Int) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_ledgerBoc) Add(amount std.Int) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		return self.add(amount)
-	})
+	}))
 }
 
 var Ledger = &_ledgerBoc{
@@ -60,14 +60,14 @@ func (self *_syncBoc) String() string {
 	return "{ " + "b: " + std.StringifyRepr(self.b) + "; " + "l: " + std.StringifyRepr(self.l) + "; " + "call: {}" + " }"
 }
 
-func (self *_syncBoc) Call(b *_bankBoc, l *_ledgerBoc) *std.Thunk[std.Unit] {
-	return std.ScheduleMulti([]*std.Cown{&self.Cown, &b.Cown, &l.Cown}, func() std.Unit {
+func (self *_syncBoc) Call(b *_bankBoc, l *_ledgerBoc) std.Unit {
+	return std.LazyUnit(std.ScheduleMulti([]*std.Cown{&self.Cown, &b.Cown, &l.Cown}, func() std.Unit {
 		self.b = b
 		self.l = l
 		self.b.balance = self.b.balance.Plus(std.NewInt(1))
 		self.l.total = self.l.total.Plus(std.NewInt(1))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Sync = &_syncBoc{
@@ -81,18 +81,19 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		std.Schedule(&self.Cown, func() std.Unit {
-			_bg0.GoWait(Sync.Call(Bank, Ledger))
+			_st0 := Sync.Call(Bank, Ledger)
+			_bg0.Add(func() { _st0.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		std.Print(std.NewString(std.StringifyRepr(Bank.balance)))
 		std.Print(std.NewString(std.StringifyRepr(Ledger.total)))
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

@@ -59,8 +59,8 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var u *User
 		var sg *SocialGraph
@@ -68,13 +68,14 @@ func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
 		std.Schedule(&self.Cown, func() std.Unit {
 			sg = &SocialGraph{}
 			r = NewResolver(sg)
-			std.GoStore(_bg0, r.Resolve(), &u)
+			_st0 := r.Resolve()
+			_bg0.Add(func() { u = _st0.Force() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		std.Print(u.name)
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}

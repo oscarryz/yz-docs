@@ -1,0 +1,10 @@
+greeter: {
+    greet: { "hello" }
+}
+main: {
+    greeter.greet() == "hello" ? {
+        print("matched")
+    }, {
+        print("no match")
+    }
+}

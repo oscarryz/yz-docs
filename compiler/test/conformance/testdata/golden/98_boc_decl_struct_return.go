@@ -17,45 +17,41 @@ func (self *Animal) String() string {
 	return "Animal(name: " + std.StringifyRepr(self.name) + ")"
 }
 
-func (self *Animal) describe() std.String {
+func (self *Animal) speak() std.String {
 	return self.name
 }
 
-func (self *Animal) Describe() std.String {
+func (self *Animal) Speak() std.String {
 	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
-		return self.describe()
+		return self.speak()
 	}))
 }
 
-type _BoxVConstraint interface {
-	Describe() std.String
-}
-
-
-type Box[V _BoxVConstraint] struct {
+type _fooBoc struct {
 	std.Cown
-	value V
 }
 
-func NewBox[V _BoxVConstraint](value V) *Box[V] {
-	return &Box[V]{
-		value: value,
-	}
+func (self *_fooBoc) String() string {
+	return "{ " + "call: {}" + " }"
 }
 
-func (self *Box[V]) String() string {
-	return "Box(" + std.YzTypeName(self.value) + ", " + "value: " + std.StringifyRepr(self.value) + ")"
-}
-
-func (self *Box[V]) desc() std.String {
-	return self.value.Describe()
-}
-
-func (self *Box[V]) Desc() std.String {
-	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
-		return self.desc()
+func (self *_fooBoc) Call() std.String {
+	return std.LazyString(std.NewThunk(func() std.String {
+		var _bocret std.String
+		_bg0 := &std.BocGroup{}
+		var a *Animal
+		std.Schedule(&self.Cown, func() std.Unit {
+			a = NewAnimal(std.NewString("cat"))
+			_bocret = a.Speak()
+			_bg0.Add(func() { _bocret.Await() })
+			return std.TheUnit
+		}).Force()
+		_bg0.Wait()
+		return _bocret
 	}))
 }
+
+var Foo = &_fooBoc{}
 
 type _mainBoc struct {
 	std.Cown
@@ -66,9 +62,7 @@ func (self *_mainBoc) String() string {
 }
 
 func (self *_mainBoc) call() std.Unit {
-	var a *Animal = NewAnimal(std.NewString("Cat"))
-	var b *Box[*Animal] = NewBox(a)
-	std.Print(b.Desc())
+	std.Print(Foo.Call())
 	return std.TheUnit
 }
 

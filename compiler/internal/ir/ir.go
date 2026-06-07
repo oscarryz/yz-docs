@@ -280,9 +280,13 @@ type ThunkExpr struct {
 	ExtraCowns []string // additional cowns for ScheduleMulti (requires RecvCown to be set)
 }
 
-// ForceExpr materializes a thunk: Thunk.Force().
+// ForceExpr materializes a thunk or awaits a scalar lazy value.
+// When IsScalar is true, Thunk is a scalar lazy expression and codegen emits
+// Thunk.Await() instead of Thunk.Force(), then evaluates to std.TheUnit
+// (since scalar Await is used only for side-effect sequencing in stmt position).
 type ForceExpr struct {
-	Thunk Expr
+	Thunk    Expr
+	IsScalar bool // true when Thunk is a scalar lazy type (emit .Await())
 }
 
 // ClosureExpr is an anonymous func literal (for passing boc args to builtins
@@ -293,15 +297,21 @@ type ClosureExpr struct {
 	Body       []Stmt
 }
 
-// SpawnExpr registers a boc-call goroutine on a BocGroup.
-// When StoreVar is empty, codegen emits _bg.GoWait(thunk) — for Unit returns.
-// When StoreVar is non-empty, codegen emits std.GoStore(_bg, thunk, &StoreVar) — for value returns.
-// When StoreAnyType is also non-empty, uses std.GoStoreAny[T] to coerce *Thunk[any] to T.
+// SpawnExpr registers a thunk's Await/Force on a BocGroup.
+// When IsScalar is true the expression returns a scalar lazy type (std.Int etc.)
+// rather than *Thunk[T]; codegen uses .Await() and skips the intermediate _thN var.
+// Codegen emits:
+//   IsScalar, no StoreVar:   v := Thunk; GroupVar.Add(func() { v.Await() })
+//   IsScalar, StoreVar:      StoreVar = Thunk; GroupVar.Add(func() { StoreVar.Await() })
+//   No StoreVar:             _thN := Thunk; GroupVar.Add(func() { _thN.Force() })
+//   With StoreVar:           _thN := Thunk; GroupVar.Add(func() { StoreVar = _thN.Force() })
+//   With StoreAnyType (path-dependent): ... Force().(StoreAnyType)
 type SpawnExpr struct {
 	GroupVar     string // the *std.BocGroup local var
-	Body         []Stmt
-	StoreVar     string // if non-empty: emit GoStore; if empty: emit GoWait
-	StoreAnyType string // if non-empty: use GoStoreAny[T] instead of GoStore
+	Thunk        Expr   // the expression (scalar lazy type or *Thunk[T])
+	StoreVar     string // if non-empty: assign value to this var
+	StoreAnyType string // if non-empty: type-assert Force() result to this type
+	IsScalar     bool   // true when Thunk returns a scalar lazy type
 }
 
 // NewGroupExpr creates a new BocGroup: &std.BocGroup{}.

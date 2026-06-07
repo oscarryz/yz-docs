@@ -29,13 +29,13 @@ func (self *_greetBoc) String() string {
 	return "{ " + "name: " + std.StringifyRepr(self.name) + "; " + "greeting: " + std.StringifyRepr(self.greeting) + "; " + "call: {}" + " }"
 }
 
-func (self *_greetBoc) Call(name std.String, greeting std.String) *std.Thunk[std.Unit] {
-	return std.Schedule(&self.Cown, func() std.Unit {
+func (self *_greetBoc) Call(name std.String, greeting std.String) std.Unit {
+	return std.LazyUnit(std.Schedule(&self.Cown, func() std.Unit {
 		self.name = name
 		self.greeting = greeting
 		std.Print(self.greeting)
 		return std.Print(self.name)
-	})
+	}))
 }
 
 var Greet = &_greetBoc{
@@ -49,22 +49,25 @@ func (self *_mainBoc) String() string {
 	return "{ " + "call: {}" + " }"
 }
 
-func (self *_mainBoc) Call() *std.Thunk[std.Unit] {
-	return std.NewThunk(func() std.Unit {
+func (self *_mainBoc) Call() std.Unit {
+	return std.LazyUnit(std.NewThunk(func() std.Unit {
 		_bg0 := &std.BocGroup{}
 		var p *Person
 		std.Schedule(&self.Cown, func() std.Unit {
 			p = NewPerson(std.NewString("Alice"), std.NewInt(30))
 			std.Print(p.name)
 			std.Print(std.NewString(std.StringifyRepr(p.age)))
-			_bg0.GoWait(Greet.Call(std.NewString("Bob"), std.NewString("Hello")))
-			_bg0.GoWait(Greet.Call(std.NewString("Carol"), std.NewString("Hi")))
-			_bg0.GoWait(Greet.Call(std.NewString("Dave"), std.NewString("Hello")))
+			_st0 := Greet.Call(std.NewString("Bob"), std.NewString("Hello"))
+			_bg0.Add(func() { _st0.Await() })
+			_st1 := Greet.Call(std.NewString("Carol"), std.NewString("Hi"))
+			_bg0.Add(func() { _st1.Await() })
+			_st2 := Greet.Call(std.NewString("Dave"), std.NewString("Hello"))
+			_bg0.Add(func() { _st2.Await() })
 			return std.TheUnit
 		}).Force()
 		_bg0.Wait()
 		return std.TheUnit
-	})
+	}))
 }
 
 var Main = &_mainBoc{}
