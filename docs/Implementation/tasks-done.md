@@ -3,6 +3,13 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+- [x] **[YZC-0022] Multiple source roots**
+
+  `yzc build <project-dir> [extra-roots...]` — multiple positional source root
+  directories, each contributing FQNs to the same namespace with its prefix
+  stripped. First arg owns `target/`. Same-FQN same-name collision across roots
+  is a compilation error. No implicit default root. Added `examples/multi_root/`.
+
 - [~] **[YZC-0040] Smart Nesting / Namespace Flattening**
 
   `house/house.yz` flattens to `house.method`. Superseded by YZC-0085.
