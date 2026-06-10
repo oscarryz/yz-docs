@@ -743,7 +743,7 @@ main: {
 
 ### Binary Tree
 
-```javascript
+```yz
 Tree: {
   T
   Empty(),
