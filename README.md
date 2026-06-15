@@ -180,6 +180,38 @@ swap: {
 x, y = swap("hello", "world")  // x = "world", y = "hello"
 ```
 
+### [Boc Signature / Interface](docs/Features/Boc%20Interface.md)
+
+A `#(...)` is a **boc signature** — the type and interface of a boc. It is useful for declaring boc parameters, and structural constraints:
+
+```js
+hello_world #(String) // a boc that returns a String
+```
+
+The block body has to be assigned to use the boc:
+
+```javascript
+// Boc declaration: signature + body together (no = needed)
+greet #(message String, to_whom String, String) {
+  "${message}, ${to_whom}!"
+}
+
+// Boc expanded form: = separates signature from body; body re-declares params
+greet #(message String, to_whom String, String) = {
+  message String
+  to_whom String
+  "${message}, ${to_whom}!"
+}
+
+// Declare signature only — assign implementation later
+greet #(message String, to_whom String, String)
+greet = {
+  message String
+  to_whom String
+  message
+}
+```
+
 ## [Concurrency](docs/Features/Concurrency.md)
 
 The concurrency model is an adaptation of the [Behaviour-Oriented Concurrency](https://marioskogias.github.io/docs/boc.pdf) model.
@@ -273,37 +305,6 @@ greet: { msg String
     "Hello ${msg}"
 }
 hi: { 42 }
-```
-
-### [Boc Signature / Interface](docs/Features/Boc%20Interface.md)
-
-A `#(...)` is a **boc signature** — the type and interface of a boc. It is useful for declaring boc parameters, arrays of bocs, and structural constraints:
-```js
-hello_world #(String) // a boc that returns a String
-```
-
-The block body has to be assigned to use the boc:
-
-```javascript
-// Boc declaration: signature + body together (no = needed)
-greet #(message String, to_whom String, String) {
-  "${message}, ${to_whom}!"
-}
-
-// Boc expanded form: = separates signature from body; body re-declares params
-greet #(message String, to_whom String, String) = {
-  message String
-  to_whom String
-  "${message}, ${to_whom}!"
-}
-
-// Declare signature only — assign implementation later
-greet #(message String, to_whom String, String)
-greet = {
-  message String
-  to_whom String
-  message
-}
 ```
 
 ## [Creating New Types ](docs/Features/Define%20new%20types.md)
