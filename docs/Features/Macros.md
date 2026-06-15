@@ -8,8 +8,7 @@ Yz provides a macro system built from regular Yz code. Macros run during compila
 
 The system is built on one rule:
 
-> **A `macros: [...]` variable inside a boc's annotation triggers `Macro` implementations during type inference. Their return values are merged into the parent boc.
-> The variable name `!` is an alias for `macros`.**
+> **Uppercase type names in a boc's annotation trigger `Macro` implementations during type inference. Their return values are merged into the subject boc.**
 
 Everything else follows from existing Yz concepts.
 
@@ -24,13 +23,15 @@ See also: [Yz Language Overview](../../README.md) · [Generics](Generics%20-%20T
 ```
 Macro : {
     Schema #()
-    run    #(parent Boc, Boc)   // parent = input boc; output = boc to merge
+    run    #(subject Boc, config Schema, Boc)
 }
 ```
 
-`Schema` is an associated type — each implementation fixes it to the concrete shape it expects from the annotation. `run` receives the parent boc (`parent`) and returns a boc whose slots are merged into it.
+`Schema` is an associated type — each implementation fixes it to the concrete shape it expects from the annotation config block. The compiler extracts the config block from the annotation, validates it against `Schema`, and passes it as `config`. `run` returns a boc whose slots are merged into the subject.
+	
+Since `Schema` is an associated type, `config` is already typed as the concrete schema of each implementation — no casting or special lookup needed.
 
-The `name` that maps a macro to its annotation variable lives in the macro's own annotation, not in the interface. When `name` is absent the compiler derives it from `Schema`: if `Schema` has exactly one field, that field's name is used. If `Schema` has multiple fields, `name` is required — a compile error if missing.
+The macro's own type name is the dispatch key. No `name` annotation is needed.
 
 See also: [Structural Typing](Structural%20typing.md) · [Boc Type](Boc%20Interface.md)
 
@@ -38,36 +39,35 @@ See also: [Structural Typing](Structural%20typing.md) · [Boc Type](Boc%20Interf
 
 ## Triggering Macros
 
-Macros are declared in the `macros` variable of the boc's annotation (`!` is an alias):
+Macros are triggered by uppercase type names in a boc's annotation. A bare name triggers with no config; a named boc provides config validated against the macro's `Schema`:
 
 ```
-`macros: [Derive, JSON, Logger]`
+`
+Derive
+JSON: { ignore: false }
+Logger
+`
 Person : {
     name String
     age  Int
 }
 ```
 
-During parsing the compiler scans annotations for `macros`. When found, the listed macros are scheduled to run during type inference — sequentially, in array order. Referenced types are resolved at parse time — `macros: [Deribe]` is a compile error.
+During parsing the compiler scans annotations for uppercase names. When found, the referenced macros are scheduled to run during type inference — sequentially, in top-to-bottom declaration order. Referenced types are resolved at parse time — `Deribe` in an annotation is a compile error if no such macro exists.
 
 The boc body carries no macro-triggering mechanism. All macro concerns live in the annotation.
 
 ---
 
-## Annotations as Boc Bodies
+## Annotation Config
 
-An annotation is a backtick-delimited literal placed immediately before a boc or field definition. Its content is a **boc body** — parsed and compiled, but never executed. Multiple concerns live as separate variables inside a single annotation.
+The compiler extracts the uppercase block matching the macro's type name, validates it against `Schema`, and passes it as `config` to `run`. Each macro receives only its own config — already typed. Lowercase entries in the annotation are passive metadata for field-walking:
 
 ```
 `
-macros: [Derive, JSON, GraphQL]
-graphql: {
-    schema: "https://myapi.com/graphql"
-    keep_foo: { "bar" }
-}
-json: {
-    ignore: false
-}
+Derive
+JSON: { ignore: false }
+Logger: { level: "debug", format: "json" }
 `
 Movies : {
     `json: { field_name: "movie_title" }`
@@ -78,67 +78,52 @@ Movies : {
 }
 ```
 
-`self.annotation` inside a macro is typed as `Boc` — the full shared annotation of the annotated type. Each macro accesses only the variable it owns, typed via its `Schema` associated type:
-
 ```
-GraphQL : {
-    Schema : #(schema String)        // associated type — declares expected shape
-    run #(parent Boc, Boc) = {
-        // self.annotation is Boc
-        // self.annotation.graphql is typed as Schema = #(schema String)
-        schema_url = self.annotation.graphql.schema   // String — validated
-        ...
+Logger : {
+    Schema : #(level String, format String)
+    run #(subject Boc, config Schema, Boc) = {
+        level  = config.level    // String
+        format = config.format   // String
+        // generate logging methods
     }
 }
 
 JSON : {
     Schema : #(field_name String, ignore Bool)
-    run #(parent Boc, Boc) = {
-        self.fields.forEach({ f Boc
-            config      = f.annotation.json            // typed as Schema
-            field_name  = config.field_name            // String
-            should_skip = config.ignore                // Bool
+    run #(subject Boc, config Schema, Boc) = {
+        subject.fields.forEach({ f Boc
+            field_config = f.annotation.json         // field-level metadata, lowercase
+            field_name   = field_config.field_name   // String
+            should_skip  = field_config.ignore       // Bool
         })
     }
 }
 ```
 
-`self.annotation.<name>` is not a regular `Boc` field lookup — the return type is determined by the macro's `Schema`, not by `Boc`'s definition. Each macro reads its own slice; others are ignored.
-
-| Annotations | Macro slots |
-| --- | --- |
-| Passive metadata, never executed | Active code generation |
-| Attached to fields or bocs | Reads annotations via `self.annotation.<name>` |
-| Boc body — compiler validated | Full language access |
-
-See also: [Annotations](Annotations.md)
+See also: [Annotations](Annotations.md) — annotation syntax, uppercase vs lowercase rules, companion files
 
 ---
 
 ## Declaring a Macro
 
-A complete macro declares its `Schema`, optionally its `name` in the annotation, and provides `run`:
+A complete macro declares its `Schema` and provides `run`. The macro's type name is the dispatch key — no annotation needed on the macro itself:
 
 ```
-// name derived from Schema's single field — "documentation"
 Doc : {
     Schema : #(documentation String)
-    run #(parent Boc, Boc) = {
-        text = self.annotation.documentation   // String
+    run #(subject Boc, config Schema, Boc) = {
+        text = config.documentation   // String
         // generate documentation-related slots
     }
 }
 
-// name required — Schema has multiple fields
-`name: "server"`
 Server : {
     Schema : #(
         port     Int
         protocol String
         timeout  Int
     )
-    run #(parent Boc, Boc) = {
-        config   = self.annotation.server
+    run #(subject Boc, config Schema, Boc) = {
         port     = config.port       // Int
         protocol = config.protocol   // String
         timeout  = config.timeout    // Int
@@ -151,9 +136,8 @@ Used as:
 
 ```
 `
-macros: [Doc, Server]
-documentation: "Handles incoming HTTP requests."
-server: {
+Doc: { documentation: "Handles incoming HTTP requests." }
+Server: {
     port:     8080
     protocol: "https"
     timeout:  30
@@ -169,23 +153,21 @@ Handler : { ... }
 A macro has access to the full language. The same facilities available at runtime are available during compilation:
 
 ```
-GraphQL : {
-    Schema : #(schema String)
-    run #(parent Boc, Boc) = {
-        schema_url = self.annotation.graphql.schema
-
-        // fetch a remote schema at compile time
-        schema = http.get(schema_url)
+Routes : {
+    Schema : #(spec_file String)
+    run #(subject Boc, config Schema, Boc) = {
+        // fetch a remote spec at compile time
+        spec = http.get(config.spec_file)
 
         // read a local file at compile time
-        query = file.read("queries/movies.gql")
+        query = file.read("routes/base.json")
 
         // use the full Yz standard library
-        types = schema.parse().types.map({ t Type
-            // generate a boc per type
+        routes = spec.parse().routes.map({ r Route
+            // generate a boc per route
         })
 
-        { queries: types }
+        { handlers: routes }
     }
 }
 ```
@@ -193,7 +175,7 @@ GraphQL : {
 The two special properties of a macro are:
 
 1. **When** it runs — during type inference, at boc definition time
-2. **What happens to its return value** — merged into the parent boc's AST
+2. **What happens to its return value** — merged into the subject boc's AST
 
 Everything inside is regular Yz.
 
@@ -203,10 +185,14 @@ See also: [Structural Reflection](Structural%20Reflection.md) for the full `Boc`
 
 ## Ordering of Multiple Macros
 
-When `macros` lists multiple macros they run in **array order**. Each receives the result of the previous one — the progressively merged boc, not the original.
+When multiple macros appear in an annotation they run in **top-to-bottom declaration order**. Each receives the result of the previous one — the progressively merged boc, not the original.
 
 ```
-`macros: [Derive, Logging, Metrics]`
+`
+Derive
+Logging
+Metrics
+`
 Container : { T; value T }
 ```
 
@@ -220,54 +206,39 @@ original boc
     → boc₃ continues through type inference
 ```
 
-**Array order is semantically significant.** If `Logging` generates a method that calls a method generated by `Derive`, `Derive` must appear first. This is a first-class rule, not an implementation detail.
+**Declaration order is semantically significant.** If `Logging` generates a method that calls a method generated by `Derive`, `Derive` must appear first. This is a first-class rule, not an implementation detail.
 
 If two macros generate the same slot name the later one wins. Check for slot name collisions when combining third-party macros.
 
 ---
 
-## Constraint Declarations on Macros
+## Constraints Introduced by Generated Code
 
-When a macro generates code that calls methods on a type parameter, it introduces constraints on that parameter. Callers of the parent boc must satisfy them.
-
-By strong convention, macros declare the constraints they require on their type parameter using the `#(...)` structural signature syntax. For public macros this convention should be treated as mandatory.
+Macros add methods and slots to the annotated boc — not to its type parameters. `Debug` adds a `debug #(String)` method to `Container` itself:
 
 ```
-// Inline structural constraint
-`macros: [Validate]`
-Derive : {
-    Schema     #(serialize #(String))
-    S          #(serialize #(String))
-    run #(parent Boc, Boc) = { ... }
+`Debug`
+Container : {
+    value T
 }
-
-// Via a named interface if one exists
-Serializable : #(serialize #(String))
-Debuggable   : #(toString  #(String))
-
-Derive : {
-    Schema : #(serialize #(String))
-    S      #(Serializable, Debuggable, metricsId #(String))
-    run #(parent Boc, Boc) = { ... }
-}
+// Container gains: debug #(String)
+// T is unaffected — unless the generated implementation calls something on it
 ```
 
-The compiler surfaces the full flattened constraint set in error messages and tooling, with attribution:
+If the generated `debug` implementation calls a method on `T` (e.g. `value.to_string()`), type inference introduces a constraint on `T`. That constraint is invisible in `Container`'s source — it comes from generated code. The compiler attributes it to the macro:
 
 ```
 error: Point does not satisfy constraint on T in Container
-  toString #(String) required by Logging
-  Logging is in Container's macros array
+  to_string #(String)    required by Debug
 
-// tooling surfaces:
 Container #(value T)
   T requires:
-    serialize  #(String)    ← declared by Derive
-    toString   #(String)    ← declared by Logging
-    metricsId  #(String)    ← declared by Metrics
+    to_string #(String)    ← Debug
 ```
 
-See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) — constraints are optional for regular generics but by convention required for macros
+There is no declaration mechanism for this in the macro definition. The constraint emerges from type inference on the merged generated code, and attribution is automatic. Whether a macro introduces constraints on type parameters depends entirely on its generated implementation — macro authors should document this when it applies.
+
+See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md)
 
 ---
 
@@ -276,7 +247,7 @@ See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md) — 
 Macros run at **boc definition time** — when the boc is compiled, not when it is instantiated. For generic bocs this distinction matters:
 
 ```
-`macros: [Derive]`
+`Derive`
 Stack : {
     T
     items []T
@@ -301,23 +272,23 @@ Source
   │
   ▼
 Tokenizer + Parser
-  │  (scans annotations for macros)
+  │  (scans annotations for uppercase names)
   ▼
 Semantic Analysis
   │
   ▼
 Inference ←──────────────────────────┐
   │                                  │
-  │  encounters macros               │
+  │  encounters macro names          │
   │  in annotation of boc            │
   ▼                                  │
 Run macros                           │
-  (sequential, in array order)       │
+  (sequential, declaration order)    │
   │                                  │
   │  generated boc merged into AST   │
   └──────────────────────────────────┘  re-enter inference
   │
-  │  all macros slots exhausted
+  │  all macro triggers exhausted
   ▼
 IR Generation
   │
@@ -325,7 +296,7 @@ IR Generation
 Codegen
 ```
 
-When inference encounters a boc whose macros have not yet run, it triggers them in order, merges each returned `Boc` back into the AST, and continues inference on the result. The loop continues until no new macro triggers remain.
+When inference encounters a boc whose macros have not yet run, it triggers them in declaration order, merges each returned `Boc` back into the AST, and continues inference on the result. The loop continues until no new macro triggers remain.
 
 Generated code is fully analysed — its types are inferred, its constraints propagate, and it participates in the type system identically to hand-written code.
 
@@ -335,17 +306,17 @@ Generated code is fully analysed — its types are inferred, its constraints pro
 
 Macros are full Yz programs that execute during compilation. The compiler needs them as callable native code before it can compile the rest of the source. This is handled by a two-phase build.
 
-**Phase 1 — Bootstrap:** The compiler scans source for bocs satisfying the `Macro` interface (identified by `Schema #()` and `run #(parent Boc, Boc)`). It compiles only those bocs to native executables ahead of everything else. The standard library and previously compiled packages are available at this phase.
+**Phase 1 — Bootstrap:** The compiler scans source for bocs satisfying the `Macro` interface (identified by `Schema #()` and `run #(subject Boc, config Schema, Boc)`). It compiles only those bocs to native executables ahead of everything else. The standard library and previously compiled packages are available at this phase.
 
-**Phase 2 — Main compilation:** The compiler processes the full source normally. When inference encounters a `macros` annotation variable, it calls the pre-compiled executables via subprocess in array order — passing the current partially-inferred `Boc` as serialised data, receiving the generated `Boc` back, merging it into the AST, and resuming inference.
+**Phase 2 — Main compilation:** The compiler processes the full source normally. When inference encounters uppercase macro names in an annotation, it calls the pre-compiled executables via subprocess in declaration order — passing the current partially-inferred `Boc` as serialised data, receiving the generated `Boc` back, merging it into the AST, and resuming inference.
 
 ```
 Phase 1:
   scan → find Macro implementations → compile to native executables
 
 Phase 2:
-  parse → scan annotations for macros → build AST → begin inference
-      ↓ encounter macros
+  parse → scan annotations for uppercase names → build AST → begin inference
+      ↓ encounter macro names
       serialize current Boc → subprocess call → deserialize returned Boc
       merge into AST → resume inference
 ```
@@ -358,21 +329,21 @@ Phase 2:
 
 ## Circular Generation
 
-Mutually triggering `macros` arrays produce an infinite loop:
+Mutually triggering macro annotations produce an infinite loop:
 
 ```
-`macros: [GenB]`
-A : { ... }   // GenB generates something that triggers B's macros
+`GenB`
+A : { ... }   // GenB generates something that triggers B's macro annotations
 
-`macros: [GenA]`
-B : { ... }   // GenA generates something that triggers A's macros
+`GenA`
+B : { ... }   // GenA generates something that triggers A's macro annotations
 ```
 
 The compiler detects this via cycle tracking on macro execution — the same mechanism used for cycle detection in recursive type inference.
 
 The rule is:
 
-> **A macro cannot trigger the `macros` of a boc that is currently being compiled.**
+> **A macro cannot trigger a macro annotation of a boc that is currently being compiled.**
 
 A violation is a compile error. The error message names the full cycle.
 
@@ -380,20 +351,19 @@ A violation is a compile error. The error message names the full cycle.
 
 ## Macros Are Regular Bocs
 
-Macros can themselves have annotations with `macros`, type parameters, and associated types. They are bocs that satisfy the `Macro` interface:
+Macros can themselves have macro annotations, type parameters, and associated types. They are bocs that satisfy the `Macro` interface:
 
 ```
-`macros: [Validate]`
+`Validate`
 Derive : {
-    Schema : #(serialize #(String))
-    S      #(serialize #(String))
-    run #(parent Boc, Boc) = {
+    Schema : #(interfaces [String])
+    run #(subject Boc, config Schema, Boc) = {
         // implementation
     }
 }
 ```
 
-`Derive`'s own `macros` run when `Derive` is compiled as a library — long before any user boc references it. By the time `Person` lists `Derive` in its `macros` array, `Derive` is fully compiled and cached.
+`Derive`'s own macro annotations run when `Derive` is compiled as a library — long before any user boc references it. By the time `Person`'s annotation references `Derive`, `Derive` is fully compiled and cached.
 
 ---
 
@@ -401,17 +371,17 @@ Derive : {
 
 All known and planned macros. Status: **std** = in standard library, **planned** = designed but not yet implemented. Individual design notes for planned ones: [`Macros/`](Macros/)
 
-| Macro      | Status  | `name`            | `Schema`                                                       | Generates / Purpose                                            | Constraints on `S` |
-| ---------- | ------- | ----------------- | -------------------------------------------------------------- | -------------------------------------------------------------- | ------------------ |
-| `Derive`   | std     | `"derive"`        | `#(interfaces [String])`                                       | Interface implementations                                      | Varies per iface   |
-| `JSON`     | std     | `"json"`          | `#(field_name String, ignore Bool)`                            | Serialization / deserialization methods                        | None               |
-| `Debug`    | std     | derived           | `#(debug Bool)`                                                | `debug #(String)` method                                       | None               |
-| `Validate` | std     | `"validate"`      | `#(rule String, strict Bool)`                                  | Validation methods                                             | None               |
-| `Build`    | planned | `"build"`         | `#(boc String, platform String)`                               | Conditional file inclusion — picks variant body per target     | None               |
-| `Mix`      | planned | `"mix"`           | `#(mix String)`                                                | Copies methods from named boc into annotated boc at compile time | None             |
-| `Test`     | planned | `"test"`          | `#(boc String, test_engine String)`                            | Marks file as test fragment; grants access to target internals | None               |
-| `Deps`     | planned | `"deps"`          | `#(dependencies [#(name String, version String, uri String)])` | Fetches dependencies; wires into source root                   | None               |
-| `Doc`      | planned | `"documentation"` | `#(documentation String)`                                      | Generates API docs / IDE hover text from annotation field      | None               |
+| Macro      | Status  | `Schema`                                                       | Generates / Purpose                                              |
+| ---------- | ------- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `Derive`   | std     | `#(interfaces [String])`                                       | Interface implementations                                        |
+| `JSON`     | std     | `#(field_name String, ignore Bool)`                            | Serialization / deserialization methods                          |
+| `Debug`    | std     | #()                                                            | `debug #(String)` method                                         |
+| `Validate` | std     | `#(rule String, strict Bool)`                                  | Validation methods                                               |
+| `Build`    | planned | `#(boc String, platform String)`                               | Conditional file inclusion — picks variant body per target       |
+| `Mix`      | planned | `#(mix String)`                                                | Copies methods from named boc into annotated boc at compile time |
+| `Test`     | planned | `#(boc String, test_engine String)`                            | Marks file as test fragment; grants access to target internals   |
+| `Deps`     | planned | `#(dependencies [#(name String, version String, uri String)])` | Fetches dependencies; wires into source root                     |
+| `Doc`      | planned | `#(documentation String)`                                      | Generates API docs / IDE hover text from annotation field        |
 
 ---
 

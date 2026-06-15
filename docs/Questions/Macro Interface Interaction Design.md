@@ -103,7 +103,9 @@ When the compiler sees a key in an annotation body (e.g. `go_source:`, `json:`, 
 
 3. **Hybrid** — compiler-reserved keys (`go_source`, `dependencies`) are special-cased initially and gradually promoted to real `Annotatable` implementations as the language becomes self-hosting.
 
-The hybrid is the pragmatic path: define the interface and target design now; implement the first few cases as compiler-internal special cases; promote them to real Yz definitions when bootstrapping allows.
+4. **Uppercase type name dispatch** *(current leaning — see [Macros](../Features/Macros.md))* — uppercase names in the annotation body are the dispatch key. A bare uppercase name (`Derive`) triggers with no config; a named boc (`JSON: { ignore: false }`) provides config validated against the handler's `Schema`. Lowercase keys are passive metadata — readable by handlers but not themselves dispatch triggers. No explicit list needed; no key-name-to-handler mapping required. The handler's own type name resolves at parse time via normal name resolution, so FQN, imports, and typos are handled uniformly by the existing type system.
+
+The hybrid is the pragmatic path for options 1–3: define the interface and target design now; implement the first few cases as compiler-internal special cases; promote them to real Yz definitions when bootstrapping allows. Option 4 sidesteps the key-name mapping problem entirely — dispatch is type resolution, which the compiler already does.
 
 ---
 
@@ -124,3 +126,10 @@ This is not a reason to avoid the design — it is a reason to implement it in s
 - Can an annotation have multiple handlers for different keys? (e.g. `go_source:` AND `macros: [JSON]` in the same annotation)
 - How does `GoSource` interact with the macro system — can a macro also have `go_source`?
 - Stage-0 plan: which types must remain hardcoded forever, and which can be promoted to real Yz definitions?
+
+
+# Discussion
+
+## Dispatch
+
+Option 4 (uppercase type name dispatch) is the current direction. It resolves the open question about key-name → handler resolution by eliminating it: the name in the annotation IS the type name, resolved by the same mechanism as any other type reference. See [Macros](../Features/Macros.md) for the updated examples.
