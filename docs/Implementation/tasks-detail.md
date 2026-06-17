@@ -415,13 +415,13 @@ Open ticket details. See tasks.md for the index.
 
 - [ ] **[YZC-0058] Native type annotation — `macros: [Native]`**
 
-  compiler-internal annotation for types backed by Go primitives. Depends on: YZC-0025, YZC-0059.
+  compiler-internal annotation for types backed by Go primitives. Depends on: YZC-0025, ~~YZC-0059~~.
 
-- [ ] **[YZC-0059] Design: macro interface interaction**
+- [x] **[YZC-0059] Design: macro interface interaction** — [resolved](../Questions/solved/Macro%20Interface%20Interaction%20Design.md)
 
   Settle the taxonomy and interaction model for macros before implementing
   YZC-0028 or any macro-dependent feature (YZC-0041, YZC-0058, YZC-0060).
-  Depends on: YZC-0025.
+  Depends on: ~~YZC-0025~~.
 
   **Questions to resolve:**
 
@@ -484,34 +484,25 @@ Open ticket details. See tasks.md for the index.
 
 - [ ] **[YZC-0060] Design and implement `self` in Yz**
 
-  `self` as compiler built-in or macro-generated binding. Depends on: YZC-0058, YZC-0059.
+  `self` as compiler built-in or macro-generated binding. Depends on: YZC-0058, ~~YZC-0059~~.
 
 ---
 
 ## Tooling
 
-- [ ] **[YZC-0041] `Deps` macro — compile-time dependency validation**
+- ~~[ ] **[YZC-0041] `Deps` macro — compile-time dependency validation**~~
 
-  A thin macro that satisfies the `Macro` interface and declares the schema
-  for `dependencies:` annotations. Runs at compile time to validate that
-  declared dependencies match the lock file. Does not fetch or resolve — that
-  is `yz fetch` (YZC-0096).
-
-  - Define `schema #()` for the `dependencies:` annotation body
-  - Compiler reads `yz.lock` and validates declared deps against pinned SHAs
-  - Emit a clear error if `yz.lock` is missing or stale: "run `yz fetch`"
-  - Inject cached source roots into the compilation (passes them as extra roots
-    to `yzc build`, consistent with YZC-0022)
-
-  Depends on: YZC-0059, YZC-0028.
+  ~~Cancelled.~~ Dependencies are passive annotation metadata, not macros.
+  Superseded by YZC-0097.
 
 - [ ] **[YZC-0096] `yz fetch` — dependency fetcher**
 
   Standalone program (not a macro) that resolves, downloads, and caches
   Yz dependencies declared in annotations.
 
-  - Scan all annotations across source roots for `!:[Deps]` / `macros: [Deps]`
-    markers (in `.yz` files and `.info` companions)
+  - Scan all annotations across source roots for `dependencies:` keys in
+    annotation metadata (in `.yz` files and `name.info` companions); no macro
+    dispatch — reads passive metadata directly
   - Resolve each dependency to an exact SHA (git commit SHA preferred;
     URL + content SHA as fallback)
   - Write / update `yz.lock` at the project root pinning exact SHAs
@@ -519,8 +510,33 @@ Open ticket details. See tasks.md for the index.
   - On subsequent runs: read lock file, skip already-cached deps (offline-capable)
   - If lock file exists and all deps cached: no-op (fast path)
 
-  Depends on: YZC-0059 (annotation format), YZC-0022 (multi-root, so cached
+  Depends on: YZC-0097, YZC-0022 (multi-root, so cached
   source can be passed as extra roots to `yzc build`).
+
+- [ ] **[YZC-0097] Annotation metadata contract for project and dependency configuration** *(replaces YZC-0041)*
+
+  Define the annotation format for project-level and dependency metadata so
+  that external tools (`yz fetch`, build tool) have a stable, documented
+  contract to read from. This is passive metadata — lowercase keys, no macro
+  dispatch, no AST transformation. The compiler validates the annotation shape
+  at compile time (typed metadata) but never fetches or resolves anything.
+  Compilation remains predictable: no external processes are triggered by the
+  compiler as a side effect of annotation processing.
+
+  - Define `dependencies:` annotation format (fields: `version`, `url`, `sha`)
+  - Define `project:` annotation format (name, source paths, description)
+  - Specify where these annotations may appear (project root `.yz` file or
+    `project.info` companion)
+  - Document the contract between annotation metadata and external tools
+
+  ```yz
+  `dependencies: [
+      my_lib: { version: "1.0.0", url: "https://..." }
+  ]
+  project: { name: "my_project", source_paths: ["src/"] }`
+  ```
+
+  Depends on: ~~YZC-0059~~.
 
 - [ ] **[YZC-0042] `yz` — user-facing tool**
 
@@ -537,7 +553,7 @@ Open ticket details. See tasks.md for the index.
   - Reads `project.info` to derive source roots; calls `yzc build` with the
     full root list (project + cached deps)
 
-  Depends on: YZC-0041, YZC-0096.
+  Depends on: ~~YZC-0041~~, YZC-0096, YZC-0097.
 
 ---
 
@@ -563,7 +579,7 @@ Deferred from YZC-0025. Once the macro system (YZC-0028) is defined, the compile
 
 ### YZC-0028 — Macros (`Macro` interface)
 
-Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, YZC-0059.
+Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, ~~YZC-0059~~.
 
 - [ ] Sema — recognize `Macro` structural interface
 - [ ] Sema — scan annotation for `macros: [...]`

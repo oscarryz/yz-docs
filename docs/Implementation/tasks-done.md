@@ -3,6 +3,14 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+- [x] **[YZC-0059] Design: macro interface interaction** — [resolved](../Questions/solved/Macro%20Interface%20Interaction%20Design.md)
+
+  Settled annotation taxonomy: runtime metadata (typed boc, accessed via
+  `value.annotation.field`), macro dispatch (uppercase type name in annotation
+  body, `run #(Boc, Boc)`), and native extension (`GoSource`, hardcoded
+  first-pass before type resolution). Conditional compilation, compiler
+  directives, and ABI layout deferred to future work.
+
 - [x] **[YZC-0022] Multiple source roots**
 
   `yzc build <project-dir> [extra-roots...]` — multiple positional source root
