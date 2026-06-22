@@ -3,6 +3,13 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+- [x] **[YZC-0097] Annotation metadata contract for project and dependency configuration** *(replaces YZC-0041)*
+
+  Defined the format for `project:` and `dependencies:` as passive annotation
+  metadata in `project.info`. Lock file is Yz array syntax. `yz fetch` owns
+  resolution and pinning; compiler never fetches. See
+  [Dependencies](../Features/Dependencies.md).
+
 - [x] **[YZC-0059] Design: macro interface interaction** — [resolved](../Questions/solved/Macro%20Interface%20Interaction%20Design.md)
 
   Settled annotation taxonomy: runtime metadata (typed boc, accessed via

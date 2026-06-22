@@ -1,44 +1,6 @@
-#feature
-# Deps — Dependency Declarations
+#superseded
+# Deps — superseded
 
-## Purpose
+Dependencies are not handled by a macro. See [Dependencies](../Dependencies.md) for the current design.
 
-`Deps` processes dependency declarations from a `my-project.info` annotation companion. It fetches and caches dependencies, wires them into the build as source roots, and keeps the project code free of manifest boilerplate.
-
-## Design
-
-```
-my-project/
-  my-project.info   ← Deps reads this
-  my-project.yz     ← code stays clean
-```
-
-```yz
-// my-project.info
-!: [Deps]
-dependencies: [
-    { name: "FasterXML"; version: {5,1,0}; uri: "git@github.com/FasterXML/v5" }
-    { name: "Other";     version_str: "v2026-1"; uri: "https://example.org/other" }
-]
-```
-
-```yz
-// my-project.yz
-FastXML: org.fastxml.FasterXML   // explicit alias — visible, greppable
-
-main: {
-    f: FastXML()
-    r: f.parse("...")
-    ...
-}
-```
-
-`Deps` fetches each dependency into a cache directory (`~/.yz-cache/` or `./vendor/`), then adds the fetched source as a source root so its bocs are available by FQN.
-
-## Alias convention
-
-Dependencies are explicitly aliased in code (`FastXML: org.fastxml.FasterXML`), not auto-imported. This keeps all names visible and greppable in the source file.
-
-## Status
-
-Design phase. Depends on YZC-0025, YZC-0028, YZC-0085. Supersedes the `yz.toml` approach sketched in YZC-0041.
+The original design treated `Deps` as a macro that satisfied the `Macro` interface and ran at compile time. This was cancelled (YZC-0041) because it coupled compilation to external network/filesystem operations, making builds unpredictable. Dependencies are now passive annotation metadata read by `yz fetch`, a standalone tool that runs before the compiler.

@@ -513,7 +513,7 @@ Open ticket details. See tasks.md for the index.
   Depends on: YZC-0097, YZC-0022 (multi-root, so cached
   source can be passed as extra roots to `yzc build`).
 
-- [ ] **[YZC-0097] Annotation metadata contract for project and dependency configuration** *(replaces YZC-0041)*
+- [x] **[YZC-0097] Annotation metadata contract for project and dependency configuration** *(replaces YZC-0041)*
 
   Define the annotation format for project-level and dependency metadata so
   that external tools (`yz fetch`, build tool) have a stable, documented
