@@ -510,7 +510,7 @@ Open ticket details. See tasks.md for the index.
   - On subsequent runs: read lock file, skip already-cached deps (offline-capable)
   - If lock file exists and all deps cached: no-op (fast path)
 
-  Depends on: YZC-0097, YZC-0022 (multi-root, so cached
+  Depends on: ~~YZC-0097~~, ~~YZC-0022~~ (multi-root, so cached
   source can be passed as extra roots to `yzc build`).
 
 - [x] **[YZC-0097] Annotation metadata contract for project and dependency configuration** *(replaces YZC-0041)*
@@ -593,7 +593,7 @@ Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: Y
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 
-`Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: YZC-0025, YZC-0028, YZC-0002, YZC-0022 (stdlib needs its own source root, e.g. `/usr/local/yz/src/`).
+`Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: YZC-0025, YZC-0028, YZC-0002, ~~YZC-0022~~ (stdlib needs its own source root, e.g. `/usr/local/yz/src/`).
 
 - [ ] Define `macros: [Native]` annotation semantics
 - [ ] Move scalar types to `stdlib/`
