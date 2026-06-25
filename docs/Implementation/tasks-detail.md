@@ -417,7 +417,7 @@ Open ticket details. See tasks.md for the index.
 
   Mechanism for Yz type declarations to delegate method implementations to a
   Go source file. Covers stdlib types and user-defined Go library wrappers.
-  See [GoSource](../Features/GoSource.md) for the full design.
+  See [Go Extensions](../Features/GoExtensions.md) for the full design.
 
   **Annotation syntax**
 

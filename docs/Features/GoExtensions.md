@@ -1,5 +1,5 @@
 #feature
-# GoSource — Go-backed type implementations
+# Go Extensions — Go-backed type implementations
 
 ## Overview
 
@@ -158,3 +158,4 @@ The path in `go_source:` is relative to the project source root.
 
 - [Annotations](Annotations.md) — annotation syntax
 - [Dependencies](Dependencies.md) — declaring external Yz packages
+- [Macros](Macros.md) — compile-time code generation
