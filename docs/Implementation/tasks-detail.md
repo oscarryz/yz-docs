@@ -413,9 +413,79 @@ Open ticket details. See tasks.md for the index.
 
   `boring`/`while` producer-consumer in `docs/Features/Concurrency.md`. Depends on: YZC-0031.
 
-- [ ] **[YZC-0058] Native type annotation — `macros: [Native]`**
+- [ ] **[YZC-0058] Native type annotation — `go_source:`**
 
-  compiler-internal annotation for types backed by Go primitives. Depends on: YZC-0025, ~~YZC-0059~~.
+  Mechanism for Yz type declarations to delegate method implementations to a
+  Go source file. Covers stdlib types and user-defined Go library wrappers.
+  See [GoSource](../Features/GoSource.md) for the full design.
+
+  **Annotation syntax**
+
+  Type-level (all body-less methods in the type delegate to this file):
+  ```yz
+  `go_source: "stdlib/int.go"`
+  Int: {
+      + #(other Int, Int)           // body-less — delegated to int.go
+      parse #(s String, Int)        // body-less — delegated to int.go
+      times #(n Int, Range) {       // has body — pure Yz, not delegated
+          Range(0, n)
+      }
+  }
+  ```
+
+  Method-level (only this method delegates):
+  ```yz
+  Int: {
+      `go_source: "stdlib/int.go"`
+      parse #(s String, Int)
+  }
+  ```
+
+  **Go binding comment**
+
+  `//yz:bind` immediately above the `func` declaration (hard convention —
+  must be the line directly above, no blank lines):
+
+  ```go
+  //yz:bind Int parse #(s String, Int)
+  func IntParse(s std.String) std.Int { ... }
+
+  //yz:bind Int + #(other Int, Int)
+  func IntPlus(a, b std.Int) std.Int { ... }
+  ```
+
+  Format: `//yz:bind TypeName methodSignature` — everything after the type
+  name is a standard Yz method declaration, parsed by the existing Yz parser.
+  Non-word method names (`+`, `==`) work naturally.
+
+  **Compiler first-pass (before type resolution)**
+
+  1. Scan all annotations for `go_source:` keys
+  2. Collect listed `.go` files (which live alongside the `.yz` source files)
+  3. Line-scan each `.go` file for `//yz:bind`; parse the signature with the
+     existing Yz parser; associate with the `func` on the immediately following line
+  4. Build map: `TypeName.methodName → GoFuncName`
+  5. Validate: every body-less method on a `go_source:`-annotated type must
+     have a `//yz:bind` entry — compile error if missing
+  6. Include the Go files in the build output alongside generated code
+
+  **Go API contract**
+
+  - All parameters and return values use `std.*` types (`std.Int`,
+    `std.String`, `std.Bool`, etc.)
+  - Errors returned as `std.Result[T]`, never Go `error`
+  - No goroutines spawned directly — the Go function is synchronous from
+    Yz's perspective; concurrency is the Yz runtime's concern
+
+  **File location**
+
+  Go source files live alongside their `.yz` counterparts in the source tree.
+
+  **Out of scope for this ticket**
+
+  `self` inside Go-backed methods (YZC-0060), generic Go-backed methods.
+
+  Depends on: YZC-0025, ~~YZC-0059~~.
 
 - [x] **[YZC-0059] Design: macro interface interaction** — [resolved](../Questions/solved/Macro%20Interface%20Interaction%20Design.md)
 

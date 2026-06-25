@@ -41,7 +41,7 @@ YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods -- M
 YZC-0090 -- Multi-return for nested bocs (methods on singleton) -- S -- superseded by YZC-0080  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  
-YZC-0058 -- Native type annotation -- L -- needs YZC-0025, ~~YZC-0059~~  
+YZC-0058 -- GoSource: Go-backed type implementations -- L -- needs YZC-0025, ~~YZC-0059~~  
 YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, ~~YZC-0059~~  
 ~~YZC-0041 -- `Deps` macro: compile-time dependency validation -- cancelled, superseded by YZC-0097~~
 YZC-0096 -- `yz fetch`: dependency fetcher -- M -- needs ~~YZC-0097~~, ~~YZC-0022~~
