@@ -647,9 +647,68 @@ Deferred from YZC-0025. Once the macro system (YZC-0028) is defined, the compile
 - [ ] Codegen — emit annotation metadata in generated Go (or as a side channel for the macro runner)
 - [ ] Wire into macro invocation pipeline (YZC-0028)
 
+### YZC-0098 — Self-scope associated type resolution + structural bound codegen
+
+Two bugs found while testing the macro use case. Both block YZC-0028.
+
+**Bug 1 — Self-scope (sema):** A boc's own associated type names are not in
+scope when analyzing its method signatures. `Schema` inside `Debug` should
+resolve to `Debug.Schema`:
+
+```yz
+Debug: {
+    Schema #(include_methods Bool)
+    run #(input Boc, config Schema, String) {  // Schema = undefined type ← bug
+        "generated"
+    }
+}
+```
+
+The path-dependent pattern (`g.Node` via an external parameter) works. The
+self-scope case (`Schema` used directly inside its declaring boc) does not.
+The fix is to put a boc's own associated type names in scope during analysis
+of its method signatures.
+
+**Bug 2 — Structural bound codegen:** When a concrete type with fields is
+passed where a bound interface is expected, the generated Go interface
+requires a method (`Bar() std.Unit`) but the concrete type has a struct field
+(`bar std.String`). Two problems: accessor methods are never generated for
+struct fields, and the generated return type is wrong (Unit instead of
+the field's type). Discovered when testing `q.Schema` resolution with `Foo`
+as the concrete type.
+
+Failing test case:
+
+```yz
+Foo: { bar String }
+HasBar: { Schema #(bar String) }
+Quz: { Schema: Foo }
+hello #(q HasBar, s q.Schema, String) { "Hello ${s.bar}" }
+main: {
+    f: Foo(bar: "world")
+    q: Quz()
+    result: hello(q, f)
+    print(result)
+}
+```
+
+Expected output: `Hello world`. Currently fails at Go compile with
+`*Foo does not implement _HasBarSchemaBound`.
+
+- [ ] Sema: put boc's own associated type names in scope during method
+      signature analysis (fixes Bug 1)
+- [ ] Codegen: generate accessor methods for struct fields so concrete
+      types can satisfy bound interfaces (fixes Bug 2)
+- [ ] Codegen: fix bound interface method return type (was Unit, should
+      be the field's declared type)
+- [ ] Add failing case above as a golden test
+- [ ] Verify `Debug.run #(input Boc, config Schema, Boc)` compiles
+
+Depends on: ~~YZC-0066~~, ~~YZC-0079~~.
+
 ### YZC-0028 — Macros (`Macro` interface)
 
-Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: ~~YZC-0025~~, ~~YZC-0026~~, ~~YZC-0027~~, ~~YZC-0030~~, ~~YZC-0066~~, ~~YZC-0059~~.
+Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: ~~YZC-0025~~, ~~YZC-0026~~, ~~YZC-0027~~, ~~YZC-0030~~, ~~YZC-0066~~, ~~YZC-0059~~, YZC-0098.
 
 - [ ] Sema — recognize `Macro` structural interface
 - [ ] Sema — scan annotation for `macros: [...]`
