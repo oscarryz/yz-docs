@@ -485,7 +485,7 @@ Open ticket details. See tasks.md for the index.
 
   `self` inside Go-backed methods (YZC-0060), generic Go-backed methods.
 
-  Depends on: YZC-0025, ~~YZC-0059~~.
+  Depends on: ~~YZC-0025~~, ~~YZC-0059~~.
 
 - [x] **[YZC-0059] Design: macro interface interaction** — [resolved](../Questions/solved/Macro%20Interface%20Interaction%20Design.md)
 
@@ -649,7 +649,7 @@ Deferred from YZC-0025. Once the macro system (YZC-0028) is defined, the compile
 
 ### YZC-0028 — Macros (`Macro` interface)
 
-Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: YZC-0025, YZC-0026, YZC-0027, YZC-0030, YZC-0066, ~~YZC-0059~~.
+Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: ~~YZC-0025~~, ~~YZC-0026~~, ~~YZC-0027~~, ~~YZC-0030~~, ~~YZC-0066~~, ~~YZC-0059~~.
 
 - [ ] Sema — recognize `Macro` structural interface
 - [ ] Sema — scan annotation for `macros: [...]`
@@ -663,7 +663,7 @@ Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: Y
 
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 
-`Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: YZC-0025, YZC-0028, YZC-0002, ~~YZC-0022~~ (stdlib needs its own source root, e.g. `/usr/local/yz/src/`).
+`Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: ~~YZC-0025~~, YZC-0028, ~~YZC-0002~~, ~~YZC-0022~~ (stdlib needs its own source root, e.g. `/usr/local/yz/src/`).
 
 - [ ] Define `macros: [Native]` annotation semantics
 - [ ] Move scalar types to `stdlib/`
@@ -687,33 +687,37 @@ Phase 2: the hard part. Deferred until YZC-0079 is settled and there is real usa
 
 ### YZC-0080 — Uniform boc literal typing: one structural type derived from elements
 
+Design resolved — see [Uniform Boc Literal Typing](../Questions/solved/Uniform%20Boc%20Literal%20Typing.md).
+
 #### Invariant
 
 > Every boc literal, regardless of where it appears, receives one structural type derived mechanically from its elements. No code path branches on "is this a closure or a struct?" — that distinction is resolved at the use site by structural compatibility, not by classification during analysis.
 
-#### Target design
+#### Settled design
 
-Every boc literal gets one rich structural type:
+`BocLiteralType` is a flat list of fields. No subdivision into Params / Methods / Fields / Returns — those are use-site concerns.
 
+```yz
+// Conceptual model (Yz)
+BocLiteralType { fields [Boc] }
 ```
-BocLiteralType {
-    Params    []BocParam      // TypedDecl nil-value entries → input signature
-    Methods   []MethodField   // ShortDecl+BocLiteral or BocDecl-with-body entries
-    Fields    []ValueField    // TypedDecl with value or ShortDecl with non-boc value
-    Returns   []Type          // last-expression type(s)
-}
+```go
+// Compiler representation (Go)
+type BocLiteralType struct { Fields []FieldNode }
 ```
 
-#### Dependencies
+Structural compatibility: i1 satisfies i2 if i1 has every field in i2 with matching name and type. Default values in i2 are irrelevant to compatibility — they only matter at direct call sites.
 
-Likely needs YZC-0025 (annotations / compile-time metadata). May also simplify YZC-0031.
+#### Implementation steps
 
-- [ ] Design: define `BocLiteralType` in `sema/types.go`
+- [ ] Define flat `BocLiteralType` in `sema/types.go`
 - [ ] Sema: assign `BocLiteralType` to every `*ast.BocLiteral` in `analyzeExpr`; delete classification branches
-- [ ] Sema: structural compatibility between `BocLiteralType` and `BocType` / `StructType` / interfaces
+- [ ] Sema: implement single structural compatibility function; replace all existing compatibility checks
 - [ ] Lowerer: dispatch on use-site expected type instead of sema classification flags
 - [ ] Delete `hasInnerBocsOrMethods`, `bocLitHasParams`, `anonBocCache`, `anonDecls` from lowerer
 - [ ] All existing tests pass
+
+Depends on: ~~YZC-0025~~. May simplify YZC-0031.
 
 ### YZC-0082 — Struct-outer nested type (concrete associated type)
 
@@ -727,7 +731,7 @@ Likely needs YZC-0025 (annotations / compile-time metadata). May also simplify Y
 
 ### YZC-0084 — Generic instantiation alias: `StringList : List(String)`
 
-`StringList : List(String)` should declare a type alias for a concrete generic instantiation. Depends on: YZC-0027.
+`StringList : List(String)` should declare a type alias for a concrete generic instantiation. Depends on: ~~YZC-0027~~.
 
 - [ ] *design* — decide emission: `type StringList = List[std.String]` (Go alias) or `type StringList struct { ... }` (copy)
 - [ ] Sema: recognize `Name : GenericType(Args)` as instantiation alias
