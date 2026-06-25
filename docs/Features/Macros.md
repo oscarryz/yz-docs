@@ -380,7 +380,6 @@ All known and planned macros. Status: **std** = in standard library, **planned**
 | `Build`    | planned | `#(boc String, platform String)`                               | Conditional file inclusion — picks variant body per target       |
 | `Mix`      | planned | `#(mix String)`                                                | Copies methods from named boc into annotated boc at compile time |
 | `Test`     | planned | `#(boc String, test_engine String)`                            | Marks file as test fragment; grants access to target internals   |
-| `Deps`     | planned | `#(dependencies [#(name String, version String, uri String)])` | Fetches dependencies; wires into source root                     |
 | `Doc`      | planned | `#(documentation String)`                                      | Generates API docs / IDE hover text from annotation field        |
 
 ---
