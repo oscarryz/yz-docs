@@ -672,18 +672,27 @@ Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: ~
 - [ ] Remove all primitive-type special-casing from the compiler
 - [ ] `Bool.&&`/`||` — rewrite as lazy closure-taking boc methods
 
-### YZC-0076 — Existential associated types: opaque-token / path-identity tracking
+### ~~YZC-0076 — Existential associated types: opaque-token / path-identity tracking~~ — CLOSED
 
-**Status note:** YZC-0075 was superseded by YZC-0079, which established that Yz uses structural typing rather than nominal path-identity for associated types. It is unclear whether this ticket is still needed — the opaque-token / cross-root rejection problem it describes may be moot in a fully structural system. Revisit after YZC-0079 has been used in real code; close if no concrete use case emerges.
+**Closed.** The original motivation was to support an array of heterogeneous macros, each carrying a different `Schema` shape, validated at compile time:
 
-Phase 2: the hard part. Deferred until YZC-0079 is settled and there is real usage demand.
+```yz
+macros: [Debug, Serialize, Ord]   // each has a different Schema
+```
 
-- [ ] *design* — decide path-variable representation in the type system
-- [ ] *design* — define scoping rules for opaque tokens (block-scoped vs field-storable)
-- [ ] Sema — tag values with their existential path root at the point of production
-- [ ] Sema — verify path roots match at call sites consuming opaque tokens
-- [ ] Sema — reject cross-root usage with a clear error
-- [ ] Conformance tests — opaque-token round-trip; cross-root rejection
+Iterating over that list and validating each schema would require knowing the specific `Schema` type per element — which requires either path-dependent types (`m.Schema` where `m` is a variable) or first-class existential types.
+
+The dispatch mechanism changed (YZC-0059): macros are now triggered by uppercase type name resolution in the annotation body. The compiler always dispatches to a specific concrete type (`Debug`, `Serialize`, etc.) — it never holds a generic `Macro` variable and dispatches through it. Therefore `m.Schema` on a runtime variable never arises, and the cross-root rejection problem does not occur.
+
+**What Yz has:**
+- Associated types (YZC-0066) — compile-time, concrete shape known when the specific type is in hand
+- Structural compatibility — checks annotation body against the concrete `MacroImpl.Schema`
+
+**What Yz does not have:**
+- Runtime path-dependent types — `m.Schema` where `m` is a variable of interface type `Macro`
+- First-class existential types — holding a heterogeneous collection and unpacking each element's specific associated type shape
+
+These gaps would matter if macros were ever runtime-dispatched objects or if a user wanted a heterogeneous list of macros with per-element schema introspection. Neither is needed under the current dispatch model.
 
 ### YZC-0080 — Uniform boc literal typing: one structural type derived from elements
 

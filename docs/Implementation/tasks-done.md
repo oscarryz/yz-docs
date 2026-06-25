@@ -3,6 +3,15 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+- [x] **[YZC-0076] Existential associated types: opaque-token / path-identity tracking** — closed, not implemented
+
+  Original motivation was heterogeneous macro arrays with per-element schema
+  validation, requiring runtime path-dependent types or first-class existentials.
+  Macro dispatch changed to compile-time type name resolution (YZC-0059) —
+  the compiler always has the concrete type in hand, so the problem never arises.
+  Yz has associated types (YZC-0066) and structural compatibility but not runtime
+  path-dependent types or first-class existential types.
+
 - [x] **[YZC-0097] Annotation metadata contract for project and dependency configuration** *(replaces YZC-0041)*
 
   Defined the format for `project:` and `dependencies:` as passive annotation

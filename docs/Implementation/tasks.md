@@ -29,7 +29,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. *design* = needs a decision before implementation.
 
-YZC-0076 -- Existential associated types: opaque-token / path-identity tracking -- L -- *design* -- needs YZC-0079 -- *may not be needed: see detail*  
+~~YZC-0076 -- Existential associated types -- closed: not needed under current macro dispatch model~~  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
 YZC-0009 -- Range iteration -- S -- needs YZC-0031  
