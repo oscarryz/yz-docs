@@ -37,8 +37,8 @@ YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
-YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods -- M -- needs YZC-0021 -- superseded by YZC-0080
-YZC-0090 -- Multi-return for nested bocs (methods on singleton) -- S -- superseded by YZC-0080  
+YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods -- M -- needs YZC-0021
+YZC-0090 -- Multi-return for nested bocs (methods on singleton) -- S  
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  
 YZC-0058 -- GoSource: Go-backed type implementations -- L -- needs ~~YZC-0025~~, ~~YZC-0059~~  

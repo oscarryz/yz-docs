@@ -352,7 +352,7 @@ Open ticket details. See tasks.md for the index.
   `Utils.extra.Help undefined (type func() rt.Unit has no field or method Help)`.
 
   Test: `examples/_wip/subdir_coexist` — promote when fixed.
-  Depends on: YZC-0021. Will be superseded by YZC-0080 (uniform boc literal typing).
+  Depends on: YZC-0021.
 
 - [ ] **[YZC-0090] Multi-return for nested bocs (methods on singleton)**
 
@@ -364,7 +364,7 @@ Open ticket details. See tasks.md for the index.
   (same pattern as `lowerBodyOnlySingleton`), thread return count into
   `lowerBocBody` to collect and wrap the last N trailing expressions.
 
-  Tests added here act as a regression guard when YZC-0080 supersedes this.
+  Tests added here act as a regression guard once the lowerer handles nested singleton methods.
 
 - [ ] **[YZC-0022] Multiple source roots**
 
