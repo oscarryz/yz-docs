@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **95 golden + 25 error conformance tests passing** — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **95 golden + 25 error conformance tests passing** (+ multi_root example) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -51,7 +51,7 @@ YZC-0088 -- Codegen: attach compiled annotation boc to declaration metadata -- M
 YZC-0098 -- Self-scope associated type resolution + structural bound codegen -- M -- needs ~~YZC-0066~~, ~~YZC-0079~~
 YZC-0028 -- Macros (`Macro` interface) -- XL -- needs ~~YZC-0025~~, ~~YZC-0026~~, ~~YZC-0027~~, ~~YZC-0030~~, ~~YZC-0066~~, ~~YZC-0059~~, YZC-0098   
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs ~~YZC-0025~~, YZC-0028, ~~YZC-0002~~, ~~YZC-0022~~ 
-YZC-0080 -- Uniform boc literal typing: one structural type derived from elements -- XL -- needs ~~YZC-0025~~
+~~YZC-0080 -- Uniform boc literal typing: one structural type derived from elements -- XL -- needs ~~YZC-0025~~~~
 
 ---
 

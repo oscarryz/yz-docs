@@ -762,39 +762,11 @@ The dispatch mechanism changed (YZC-0059): macros are now triggered by uppercase
 
 These gaps would matter if macros were ever runtime-dispatched objects or if a user wanted a heterogeneous list of macros with per-element schema introspection. Neither is needed under the current dispatch model.
 
-### YZC-0080 — Uniform boc literal typing: one structural type derived from elements
+### ~~YZC-0080 — Uniform boc literal typing: one structural type derived from elements~~
 
-Design resolved — see [Uniform Boc Literal Typing](../Questions/solved/Uniform%20Boc%20Literal%20Typing.md).
+**DONE** (2026-06-28). Branch `yzc-0080-uniform-boc-literal-typing`.
 
-#### Invariant
-
-> Every boc literal, regardless of where it appears, receives one structural type derived mechanically from its elements. No code path branches on "is this a closure or a struct?" — that distinction is resolved at the use site by structural compatibility, not by classification during analysis.
-
-#### Settled design
-
-`BocLiteralType` is a flat list of fields. No subdivision into Params / Methods / Fields / Returns — those are use-site concerns.
-
-```yz
-// Conceptual model (Yz)
-BocLiteralType { fields [Boc] }
-```
-```go
-// Compiler representation (Go)
-type BocLiteralType struct { Fields []FieldNode }
-```
-
-Structural compatibility: i1 satisfies i2 if i1 has every field in i2 with matching name and type. Default values in i2 are irrelevant to compatibility — they only matter at direct call sites.
-
-#### Implementation steps
-
-- [ ] Define flat `BocLiteralType` in `sema/types.go`
-- [ ] Sema: assign `BocLiteralType` to every `*ast.BocLiteral` in `analyzeExpr`; delete classification branches
-- [ ] Sema: implement single structural compatibility function; replace all existing compatibility checks
-- [ ] Lowerer: dispatch on use-site expected type instead of sema classification flags
-- [ ] Delete `hasInnerBocsOrMethods`, `bocLitHasParams`, `anonBocCache`, `anonDecls` from lowerer
-- [ ] All existing tests pass
-
-Depends on: ~~YZC-0025~~. May simplify YZC-0031.
+Every `*ast.BocLiteral` node now receives `BocLiteralType{Fields, Returns}`. Classification functions `hasInnerBocsOrMethods`, `bocLitHasParams`, and `anonBocCache` deleted. Use-site dispatch in `lowerBocLitExpr` via `DeriveInterface()`. `bocParamsToFields` helper added. 95 golden + 25 error + multi_root example all pass.
 
 ### YZC-0082 — Struct-outer nested type (concrete associated type)
 
