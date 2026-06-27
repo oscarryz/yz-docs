@@ -412,6 +412,15 @@ Open ticket details. See tasks.md for the index.
 - [ ] **[YZC-0044] Producer-consumer example and golden test**
 
   `boring`/`while` producer-consumer in `docs/Features/Concurrency.md`. Depends on: YZC-0031.
+  Possible solution is to give parameter less calls lower (or higher) priority: 
+  ```yz
+  while { true } , { 
+     ...  // yields the cown to outer callers
+  }
+  while({true}, {
+     ... // honors the happens-before rule
+  })
+  ```
 
 - [ ] **[YZC-0058] Native type annotation — `go_source:`**
 
