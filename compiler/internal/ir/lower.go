@@ -22,7 +22,6 @@ func Lower(sf *ast.SourceFile, a *sema.Analyzer, pkgName string) *File {
 		analyzer:          a,
 		localBocVars:      make(map[string]bool),
 		localBodyBocVars:  make(map[string]string),
-		anonBocCache:      make(map[*ast.BocLiteral]string),
 		nestedTypeGoName:  make(map[*sema.StructType]string),
 		tupleResultGoType: make(map[*sema.BocType]string),
 	}
@@ -97,10 +96,6 @@ type lowerer struct {
 	// literals with inner methods (YZC-0070). Prepended to f.Decls after lowering.
 	anonDecls    []*StructDecl
 	anonBocCount int
-	// anonBocCache maps a BocLiteral AST node to the already-generated type name,
-	// so repeated lowering of the same literal (e.g. eager args + lowerStructArgs)
-	// returns the same anonymous struct rather than creating a duplicate.
-	anonBocCache map[*ast.BocLiteral]string
 	// nestedTypeGoName maps a sema StructType (for a nested type defined inside a
 	// singleton, e.g. Window: { size Int } inside room) to its namespaced Go type
 	// name (e.g. "_roomWindow"). Populated during lowerStructuredSingleton. (YZC-0081)
@@ -2881,6 +2876,18 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		}
 	}
 
+	// For struct-type constructors with named args, lower args exactly once via
+	// lowerStructArgs (field-order pass). Without this early exit, the eager loop
+	// below and lowerStructArgs would both visit the same boc-literal args, causing
+	// duplicate anonymous struct declarations.
+	if id, ok := c.Callee.(*ast.Ident); ok && len(c.Args) > 0 && hasNamedArgs(c.Args) {
+		if sym := l.analyzer.LookupInFile(id.Name); sym != nil {
+			if st, isStruct := sym.Type.(*sema.StructType); isStruct && !st.IsSingleton {
+				return &FuncCall{Func: &Ident{Name: "New" + st.Name}, Args: l.lowerStructArgs(c.Args, st)}
+			}
+		}
+	}
+
 	callee := l.lowerExpr(c.Callee)
 	var args []Expr
 	for _, arg := range c.Args {
@@ -4097,37 +4104,61 @@ func (l *lowerer) lowerBuiltinCall(goName string, c *ast.CallExpr) Expr {
 
 func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
 	semType := l.analyzer.ExprType(b)
-	if _, ok := semType.(*sema.StructType); ok {
+	switch st := semType.(type) {
+	case *sema.StructType:
 		return l.lowerAnonBocLit(b)
-	}
-	// Extract TypedDecl params (nil-value TypedDecls in the body).
-	var params []*ParamSpec
-	for _, elem := range b.Elements {
-		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
-			params = append(params, &ParamSpec{
-				Name: td.Name.Name,
-				Type: l.goTypeFromTypeExpr(td.Type),
-			})
+	case *sema.BocLiteralType:
+		// Use-site dispatch (YZC-0080): if any field has BocType (method body),
+		// emit as anonymous struct; otherwise emit as closure.
+		hasMethodField := false
+		for _, f := range st.Fields {
+			if _, isBoc := f.Type.(*sema.BocType); isBoc {
+				hasMethodField = true
+				break
+			}
 		}
+		if hasMethodField {
+			return l.lowerAnonBocLit(b)
+		}
+		// Closure path: params from non-default fields; result type from Returns.
+		var params []*ParamSpec
+		for _, f := range st.Fields {
+			if !f.HasDefault && !f.IsTypeField {
+				params = append(params, &ParamSpec{Name: f.Name, Type: l.goType(f.Type)})
+			}
+		}
+		resultType := "std.Unit"
+		if len(st.Returns) > 0 {
+			resultType = l.goType(st.Returns[0])
+		}
+		body := l.lowerClosureBody(b.Elements, resultType)
+		return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
+	default:
+		// BocType — legacy path for any remaining symbol-typed nodes.
+		var params []*ParamSpec
+		for _, elem := range b.Elements {
+			if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+				params = append(params, &ParamSpec{
+					Name: td.Name.Name,
+					Type: l.goTypeFromTypeExpr(td.Type),
+				})
+			}
+		}
+		resultType := "std.Unit"
+		if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
+			resultType = l.goType(bt.Returns[0])
+		}
+		body := l.lowerClosureBody(b.Elements, resultType)
+		return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
 	}
-	resultType := "std.Unit"
-	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
-		resultType = l.goType(bt.Returns[0])
-	}
-	body := l.lowerClosureBody(b.Elements, resultType)
-	return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
 }
 
 // lowerAnonBocLit lowers an anonymous boc literal with inner methods
 // (e.g. `{ describe: { "a boc" } }`) into an anonymous Go struct type.
 // A unique `_anonBocN` struct is emitted; the call site receives `&_anonBocN{}`.
 func (l *lowerer) lowerAnonBocLit(b *ast.BocLiteral) Expr {
-	if cached, ok := l.anonBocCache[b]; ok {
-		return &NewStructExpr{TypeName: cached}
-	}
 	name := fmt.Sprintf("_anonBoc%d", l.anonBocCount)
 	l.anonBocCount++
-	l.anonBocCache[b] = name
 
 	sd := &StructDecl{Name: name, NoConstructor: true}
 
@@ -4639,6 +4670,9 @@ func (l *lowerer) goTypeForVar(t sema.Type) string {
 			}
 			if st, isSt := arg.(*sema.StructType); isSt && st.IsSingleton && st.Name == "_anonBoc" {
 				return "" // anonymous boc — concrete _anonBocN type only known in lowerer
+			}
+			if _, isBlt := arg.(*sema.BocLiteralType); isBlt {
+				return "" // anonymous boc literal — concrete _anonBocN type only known in lowerer
 			}
 		}
 		return l.goType(t)

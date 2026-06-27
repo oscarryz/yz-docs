@@ -42,14 +42,35 @@ func TestExamples(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			// If build-roots.txt is present, treat each line as a source-root
+			// subdirectory. The first root owns target/ and main.output.
+			// This supports multi-root examples (yzc build root1 root2 ...).
+			projectDir := exampleDir
+			var buildArgs []string
+			if rootsData, err := os.ReadFile(filepath.Join(exampleDir, "build-roots.txt")); err == nil {
+				for _, line := range strings.Split(strings.TrimSpace(string(rootsData)), "\n") {
+					line = strings.TrimSpace(line)
+					if line != "" {
+						buildArgs = append(buildArgs, filepath.Join(exampleDir, line))
+					}
+				}
+				if len(buildArgs) > 0 {
+					projectDir = buildArgs[0]
+				}
+			}
+			if len(buildArgs) == 0 {
+				buildArgs = []string{exampleDir}
+			}
+
 			// Build.
-			cmd := exec.Command(yzc, "build", exampleDir)
+			cmd := exec.Command(yzc, append([]string{"build"}, buildArgs...)...)
 			if out, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("yzc build failed:\n%s", out)
 			}
 
 			// Run + compare output if a sidecar exists.
-			outputFile := filepath.Join(exampleDir, "main.output")
+			outputFile := filepath.Join(projectDir, "main.output")
 			wantBytes, err := os.ReadFile(outputFile)
 			if os.IsNotExist(err) {
 				return // compile-only check
@@ -59,7 +80,7 @@ func TestExamples(t *testing.T) {
 			}
 			want := strings.TrimRight(string(wantBytes), "\n")
 
-			appBin := filepath.Join(exampleDir, "target", "bin", "app")
+			appBin := filepath.Join(projectDir, "target", "bin", "app")
 			out, err := exec.Command(appBin).Output()
 			if err != nil {
 				t.Fatalf("running app: %v", err)

@@ -372,6 +372,110 @@ func typeSignatureFieldType(t Type) string {
 }
 
 // ---------------------------------------------------------------------------
+// BocLiteralType — the uniform type of every boc literal node (YZC-0080)
+// ---------------------------------------------------------------------------
+
+// BocLiteralType is the flat structural type assigned to every *ast.BocLiteral.
+// Fields holds every element in declaration order: data fields, method entries,
+// and type params. Sub-classification into params / methods / returns is deferred
+// to the use site.
+//
+// Returns captures the body's last-expression types so that closure-use-site
+// compatibility can compare against BocType.Returns without re-analysing the body.
+type BocLiteralType struct {
+	Fields  []StructField
+	Returns []Type
+}
+
+func (t *BocLiteralType) typeName() string {
+	var parts []string
+	for _, f := range t.Fields {
+		if f.Name != "" {
+			parts = append(parts, f.Name+" "+f.Type.typeName())
+		} else {
+			parts = append(parts, f.Type.typeName())
+		}
+	}
+	return "{ " + strings.Join(parts, "; ") + " }"
+}
+
+func (t *BocLiteralType) String() string { return t.typeName() }
+
+// fieldMap returns a name→type map for fast lookup.
+func (t *BocLiteralType) fieldMap() map[string]Type {
+	m := make(map[string]Type, len(t.Fields))
+	for _, f := range t.Fields {
+		if f.Name != "" {
+			m[f.Name] = f.Type
+		}
+	}
+	return m
+}
+
+// DeriveInterface extracts the structural #(...) interface from the flat field
+// list. Fields with no default value (TypedDecl with nil Value — declared input
+// params) become BocParams; stored/method fields (HasDefault=true) are omitted.
+// The result can be used to check closure-use-site compatibility.
+func (t *BocLiteralType) DeriveInterface() *BocType {
+	var params []BocParam
+	for _, f := range t.Fields {
+		if !f.HasDefault && !f.IsTypeField {
+			params = append(params, BocParam{Label: f.Name, Type: f.Type})
+		}
+	}
+	return &BocType{Params: params, Returns: t.Returns}
+}
+
+// IsCompatibleWith reports whether this boc literal type is compatible with
+// the target type at a use site.
+func (t *BocLiteralType) IsCompatibleWith(target Type) bool {
+	switch u := target.(type) {
+	case *BocLiteralType:
+		// Width subtyping: source must have every field the target requires.
+		srcMap := t.fieldMap()
+		for _, tf := range u.Fields {
+			if tf.Name == "" {
+				continue // unnamed positional entries: skip for now
+			}
+			srcType, ok := srcMap[tf.Name]
+			if !ok {
+				return false
+			}
+			if !srcType.IsCompatibleWith(tf.Type) {
+				return false
+			}
+		}
+		return true
+	case *StructType:
+		// Width subtyping against a named struct or interface.
+		srcMap := t.fieldMap()
+		for _, sf := range u.Fields {
+			if sf.IsTypeField {
+				continue
+			}
+			srcType, ok := srcMap[sf.Name]
+			if !ok {
+				return false
+			}
+			if !srcType.IsCompatibleWith(sf.Type) {
+				return false
+			}
+		}
+		return true
+	case *BocType:
+		// Closure-use-site: derive the structural BocType and compare.
+		return t.DeriveInterface().IsCompatibleWith(u)
+	case *UnknownType:
+		return true
+	case *GenericType:
+		return true
+	case *MetaType:
+		return true
+	}
+	return false
+}
+
+// ---------------------------------------------------------------------------
 // Array type
 // ---------------------------------------------------------------------------
 

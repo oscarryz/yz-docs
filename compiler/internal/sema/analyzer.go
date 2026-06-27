@@ -558,38 +558,6 @@ func (a *Analyzer) analyzeShortDecl(d *ast.ShortDecl) Type {
 	return TypUnit
 }
 
-// bocLitHasParams reports whether a boc literal has any TypedDecl params
-// (nil-value TypedDecls that define the closure's input signature).
-func bocLitHasParams(bocLit *ast.BocLiteral) bool {
-	for _, elem := range bocLit.Elements {
-		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
-			return true
-		}
-	}
-	return false
-}
-
-// hasInnerBocsOrMethods reports whether a boc literal contains any inner
-// body-form bocs (ShortDecl with BocLiteral value) or BocDecl methods.
-// These require StructType recording for correct field-access type-checking.
-func hasInnerBocsOrMethods(bocLit *ast.BocLiteral) bool {
-	for _, elem := range bocLit.Elements {
-		switch e := elem.(type) {
-		case *ast.BocDecl:
-			if e.Body != nil {
-				return true
-			}
-		case *ast.ShortDecl:
-			if len(e.Values) == 1 {
-				if _, ok := e.Values[0].(*ast.BocLiteral); ok {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
 // analyzeBocDecl handles `name: { ... }` for both lowercase (boc) and
 // uppercase (struct type) names.
 func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl ast.Node) Type {
@@ -600,7 +568,28 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 	prevFQN := a.pushFQN(name.Name)
 
 	isLower := name.TokType != token.TYPE_IDENT && name.TokType != token.GENERIC_IDENT
-	hasStructure := isLower && hasInnerBocsOrMethods(bocLit)
+	// Determine whether this lowercase boc has inner structure (BocDecl methods or
+	// ShortDecl-with-BocLiteral fields).
+	hasStructure := false
+	if isLower {
+		for _, elem := range bocLit.Elements {
+			switch e := elem.(type) {
+			case *ast.BocDecl:
+				if e.Body != nil {
+					hasStructure = true
+				}
+			case *ast.ShortDecl:
+				if len(e.Values) == 1 {
+					if _, ok := e.Values[0].(*ast.BocLiteral); ok {
+						hasStructure = true
+					}
+				}
+			}
+			if hasStructure {
+				break
+			}
+		}
+	}
 
 	// For lowercase boc definitions, pre-register the symbol in the current
 	// (outer) scope before pushing the inner body scope, so that recursive
@@ -657,6 +646,12 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 			returns = []Type{TypUnit}
 		}
 		typ = &BocType{Params: params, Returns: returns}
+		// Stamp the literal node with BocLiteralType (Invariant 1 — YZC-0080).
+		var litFields []StructField
+		for _, p := range params {
+			litFields = append(litFields, StructField{Name: p.Label, Type: p.Type, HasDefault: p.HasDefault})
+		}
+		a.setType(bocLit, &BocLiteralType{Fields: litFields, Returns: returns})
 	}
 
 	// If this is the file wrapper boc, capture the inner scope for the lowerer.
@@ -1201,7 +1196,7 @@ func (a *Analyzer) analyzeBocBody(elements []ast.Node) []Type {
 // analyzeBranchBody analyzes a BocLiteral as a control-flow branch (ConditionalExpr
 // arm or match arm). Unlike the BocLiteral case in analyzeExpr, this does NOT
 // save/restore fieldInit — the caller manages cloning and merging.
-func (a *Analyzer) analyzeBranchBody(boc *ast.BocLiteral) Type {
+func (a *Analyzer) analyzeBranchBody(boc *ast.BocLiteral) *BocLiteralType {
 	prev := a.pushScope()
 	bodyReturns := a.analyzeBocBody(boc.Elements)
 	params := a.collectParams(boc.Elements)
@@ -1209,9 +1204,13 @@ func (a *Analyzer) analyzeBranchBody(boc *ast.BocLiteral) Type {
 	if len(bodyReturns) == 0 {
 		bodyReturns = []Type{TypUnit}
 	}
-	bt := &BocType{Params: params, Returns: bodyReturns}
-	a.setType(boc, bt)
-	return bt
+	var fields []StructField
+	for _, p := range params {
+		fields = append(fields, StructField{Name: p.Label, Type: p.Type, HasDefault: p.HasDefault})
+	}
+	blt := &BocLiteralType{Fields: fields, Returns: bodyReturns}
+	a.setType(boc, blt)
+	return blt
 }
 
 // ---------------------------------------------------------------------------
@@ -1474,6 +1473,11 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 		st.IsInterface = isIface
 	}
 
+	// Stamp the literal node with BocLiteralType (Invariant 1 — YZC-0080).
+	litFields := make([]StructField, len(st.Fields))
+	copy(litFields, st.Fields)
+	a.setType(b, &BocLiteralType{Fields: litFields, Returns: lastExprTypes})
+
 	return st, lastExprTypes
 }
 
@@ -1565,8 +1569,10 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 			a.analyzeExpr(expr.FalseCase)
 		}
 		// The ? operator calls the branch; the result is the branch's return value,
-		// not the branch boc itself. Unwrap one BocType level.
-		if bt, ok := trueType.(*BocType); ok && len(bt.Returns) == 1 {
+		// not the branch boc itself. Unwrap one level.
+		if blt, ok := trueType.(*BocLiteralType); ok && len(blt.Returns) == 1 {
+			t = blt.Returns[0]
+		} else if bt, ok := trueType.(*BocType); ok && len(bt.Returns) == 1 {
 			t = bt.Returns[0]
 		} else {
 			t = trueType
@@ -1586,35 +1592,17 @@ func (a *Analyzer) analyzeExpr(e ast.Expr) Type {
 	case *ast.GroupExpr:
 		t = a.analyzeExpr(expr.Expr)
 	case *ast.BocLiteral:
+		// Uniform path: every anonymous boc literal gets BocLiteralType (YZC-0080).
+		// analyzeStructBoc handles all element kinds and stamps the literal node.
 		outerFI := a.fieldInit
-		if hasInnerBocsOrMethods(expr) && !bocLitHasParams(expr) {
-			// Anonymous boc literal with inner methods and no params: type as anonymous StructType.
-			// If the literal has TypedDecl params it is a closure regardless of inner named bocs.
-			prev := a.pushScope()
-			if outerFI != nil {
-				a.fieldInit = outerFI.clone()
-			}
-			st, _ := a.analyzeStructBoc("_anonBoc", expr)
-			a.popScope(prev)
-			a.fieldInit = outerFI
-			st.IsSingleton = true
-			t = st
-		} else {
-			prev := a.pushScope()
-			// Closures get an isolated copy of the field-init state so that
-			// assignments inside the closure don't affect the outer scope.
-			if outerFI != nil {
-				a.fieldInit = outerFI.clone()
-			}
-			bodyReturns := a.analyzeBocBody(expr.Elements)
-			params := a.collectParams(expr.Elements)
-			a.popScope(prev)
-			a.fieldInit = outerFI // restore outer state
-			if len(bodyReturns) == 0 {
-				bodyReturns = []Type{TypUnit}
-			}
-			t = &BocType{Params: params, Returns: bodyReturns}
+		prev := a.pushScope()
+		if outerFI != nil {
+			a.fieldInit = outerFI.clone()
 		}
+		a.analyzeStructBoc("_anonBoc", expr)
+		a.popScope(prev)
+		a.fieldInit = outerFI
+		t = a.ExprType(expr) // BocLiteralType was stamped by analyzeStructBoc
 	case *ast.ArrayLiteral:
 		t = a.analyzeArrayLiteral(expr)
 	case *ast.DictLiteral:
@@ -2659,6 +2647,19 @@ func unifyTypes(formal, actual Type, bindings map[string]Type) {
 			for i := range f.Returns {
 				if i < len(a.Returns) {
 					unifyTypes(f.Returns[i], a.Returns[i], bindings)
+				}
+			}
+		} else if blt, ok := actual.(*BocLiteralType); ok {
+			// Derive the BocType interface from the literal and unify (YZC-0080).
+			derived := blt.DeriveInterface()
+			for i := range f.Params {
+				if i < len(derived.Params) {
+					unifyTypes(f.Params[i].Type, derived.Params[i].Type, bindings)
+				}
+			}
+			for i := range f.Returns {
+				if i < len(derived.Returns) {
+					unifyTypes(f.Returns[i], derived.Returns[i], bindings)
 				}
 			}
 		}
