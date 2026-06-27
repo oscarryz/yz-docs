@@ -354,17 +354,6 @@ Open ticket details. See tasks.md for the index.
   Test: `examples/_wip/subdir_coexist` — promote when fixed.
   Depends on: YZC-0021.
 
-- [ ] **[YZC-0090] Multi-return for nested bocs (methods on singleton)**
-
-  Multi-return (`wins, total : summary(3, 5)`) works for top-level singleton bocs
-  but not for bocs that are methods on another singleton. `lowerMethod` only
-  takes `Returns[0]`; `lowerBocBody` doesn't handle multi-return at all.
-
-  Fix: detect `len(Returns) > 1` in `lowerMethod`, generate a result struct
-  (same pattern as `lowerBodyOnlySingleton`), thread return count into
-  `lowerBocBody` to collect and wrap the last N trailing expressions.
-
-  Tests added here act as a regression guard once the lowerer handles nested singleton methods.
 
 - [ ] **[YZC-0022] Multiple source roots**
 

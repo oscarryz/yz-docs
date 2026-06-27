@@ -461,6 +461,10 @@ Compiler removal done.
 
 Every `*ast.BocLiteral` node now receives `BocLiteralType{Fields, Returns}`. Use-site dispatch replaces content-based classification. Deleted `hasInnerBocsOrMethods`, `bocLitHasParams`, `anonBocCache`. `DeriveInterface()` and `bocParamsToFields` added. Branch `yzc-0080-uniform-boc-literal-typing`.
 
+### [x] YZC-0090 — Multi-return for methods on singleton bocs ✓
+
+`stats: { swap: { a String; b String; b; a } }` → `stats.swap("x","y")` now returns a result struct. Extended `lowerMethod` to detect `len(BocType.Returns) > 1`, generate `_RecvNameResult` struct, and post-process the ThunkExpr body via `fixMethodMultiReturnBody`. Golden test 99.
+
 ### [x] YZC-0086 — Rename: infostring → annotation, compile-time boc → macro, `_name.yz` → `name.info` ✓
 
 - [x] `docs/Features/Info strings.md` → `docs/Features/Annotations.md`

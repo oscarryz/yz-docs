@@ -1256,10 +1256,29 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 	// Infer return type from the provided sema type (set on the ShortDecl node).
 	// May be BocType (simple inner boc) or StructType{IsSingleton:true} (inner boc with structure).
 	resultType := "std.Unit"
+	var multiReturnBt *sema.BocType
 	switch st := semType.(type) {
 	case *sema.BocType:
-		if len(st.Returns) > 0 {
+		switch len(st.Returns) {
+		case 0:
+			// Unit
+		case 1:
 			resultType = l.goType(st.Returns[0])
+		default:
+			// Multi-return (YZC-0090): generate a result struct.
+			structName := strings.TrimPrefix(recvType, "*") + capitalize(name) + "Result"
+			var fields []*FieldSpec
+			for i, ret := range st.Returns {
+				fields = append(fields, &FieldSpec{Name: fmt.Sprintf("_r%d", i), Type: l.goType(ret)})
+			}
+			l.anonDecls = append(l.anonDecls, &StructDecl{
+				Name:         structName,
+				Fields:       fields,
+				IsResultType: true,
+			})
+			l.tupleResultGoType[st] = structName
+			resultType = structName
+			multiReturnBt = st
 		}
 	case *sema.StructType:
 		if len(st.Returns) > 0 {
@@ -1271,6 +1290,10 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 	body := l.lowerBocBody(b, resultType, "&self.Cown")
 	l.restoreReceiver(prev)
 
+	if multiReturnBt != nil {
+		body = l.fixMethodMultiReturnBody(body, len(multiReturnBt.Returns), l.tupleResultGoType[multiReturnBt])
+	}
+
 	return &MethodDecl{
 		RecvType: recvType,
 		RecvName: "self",
@@ -1279,6 +1302,59 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 		Results:  []string{thunkOrScalar(resultType)},
 		Body:     body,
 	}
+}
+
+// fixMethodMultiReturnBody rewrites the ThunkExpr body produced by lowerBocBody
+// for a multi-return method: pops the trailing N return-value statements and
+// replaces them with a single ReturnStmt wrapping a result struct literal.
+func (l *lowerer) fixMethodMultiReturnBody(body []Stmt, nReturns int, structName string) []Stmt {
+	if len(body) != 1 {
+		return body
+	}
+	es, ok := body[0].(*ExprStmt)
+	if !ok {
+		return body
+	}
+	thunk, ok := es.Expr.(*ThunkExpr)
+	if !ok {
+		return body
+	}
+	inner := thunk.Body
+
+	// Collect nReturns trailing expressions in order.
+	// lowerBocBody emits the last element as ReturnStmt and preceding ones as ExprStmts.
+	var retExprs []Expr
+	// 1. Pop the final ReturnStmt (last element).
+	if n := len(inner); n > 0 {
+		if rs, ok := inner[n-1].(*ReturnStmt); ok {
+			if _, isUnit := rs.Value.(*UnitLit); !isUnit && rs.Value != nil {
+				retExprs = append([]Expr{rs.Value}, retExprs...)
+				inner = inner[:n-1]
+			} else {
+				inner = inner[:n-1] // trailing ReturnStmt(unit) — strip only
+			}
+		}
+	}
+	// 2. Pop nReturns-1 more ExprStmts from the end.
+	for len(retExprs) < nReturns && len(inner) > 0 {
+		last := inner[len(inner)-1]
+		if stmt, ok := last.(*ExprStmt); ok {
+			retExprs = append([]Expr{stmt.Expr}, retExprs...)
+			inner = inner[:len(inner)-1]
+		} else {
+			break
+		}
+	}
+	// 3. Build the struct literal return if we collected all N values.
+	if len(retExprs) == nReturns {
+		var fieldInits []*FieldInit
+		for i, e := range retExprs {
+			fieldInits = append(fieldInits, &FieldInit{Name: fmt.Sprintf("_r%d", i), Value: e})
+		}
+		inner = append(inner, &ReturnStmt{Value: &StructLitExpr{TypeName: structName, Fields: fieldInits}})
+		thunk.Body = inner
+	}
+	return body
 }
 
 // lowerBocBody lowers the contents of a boc into a single ThunkExpr statement.

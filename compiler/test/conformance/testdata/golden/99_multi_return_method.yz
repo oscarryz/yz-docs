@@ -1,0 +1,15 @@
+// YZC-0090: Multi-return values from a method on a singleton boc.
+stats: {
+    swap: {
+        a String
+        b String
+        b
+        a
+    }
+}
+
+main: {
+    x, y : stats.swap("hello", "world")
+    print(x)
+    print(y)
+}
