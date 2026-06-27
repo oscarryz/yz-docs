@@ -457,6 +457,10 @@ Compiler removal done.
 - [x] `docs/Features/Macros.md` (was `Compile Time Bocs.md`) — macro catalogue
 - [x] New: `docs/Features/Macros/` subdir with individual macro docs
 
+### [x] YZC-0080 — Uniform boc literal typing: one structural type derived from elements ✓
+
+Every `*ast.BocLiteral` node now receives `BocLiteralType{Fields, Returns}`. Use-site dispatch replaces content-based classification. Deleted `hasInnerBocsOrMethods`, `bocLitHasParams`, `anonBocCache`. `DeriveInterface()` and `bocParamsToFields` added. Branch `yzc-0080-uniform-boc-literal-typing`.
+
 ### [x] YZC-0086 — Rename: infostring → annotation, compile-time boc → macro, `_name.yz` → `name.info` ✓
 
 - [x] `docs/Features/Info strings.md` → `docs/Features/Annotations.md`

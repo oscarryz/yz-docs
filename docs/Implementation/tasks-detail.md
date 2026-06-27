@@ -762,11 +762,6 @@ The dispatch mechanism changed (YZC-0059): macros are now triggered by uppercase
 
 These gaps would matter if macros were ever runtime-dispatched objects or if a user wanted a heterogeneous list of macros with per-element schema introspection. Neither is needed under the current dispatch model.
 
-### ~~YZC-0080 — Uniform boc literal typing: one structural type derived from elements~~
-
-**DONE** (2026-06-28). Branch `yzc-0080-uniform-boc-literal-typing`.
-
-Every `*ast.BocLiteral` node now receives `BocLiteralType{Fields, Returns}`. Classification functions `hasInnerBocsOrMethods`, `bocLitHasParams`, and `anonBocCache` deleted. Use-site dispatch in `lowerBocLitExpr` via `DeriveInterface()`. `bocParamsToFields` helper added. 95 golden + 25 error + multi_root example all pass.
 
 ### YZC-0082 — Struct-outer nested type (concrete associated type)
 
