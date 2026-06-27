@@ -352,7 +352,7 @@ Open ticket details. See tasks.md for the index.
   `Utils.extra.Help undefined (type func() rt.Unit has no field or method Help)`.
 
   Test: `examples/_wip/subdir_coexist` — promote when fixed.
-  Depends on: YZC-0021. Will be superseded by YZC-0080 (uniform boc literal typing).
+  Depends on: YZC-0021.
 
 - [ ] **[YZC-0090] Multi-return for nested bocs (methods on singleton)**
 
@@ -364,7 +364,7 @@ Open ticket details. See tasks.md for the index.
   (same pattern as `lowerBodyOnlySingleton`), thread return count into
   `lowerBocBody` to collect and wrap the last N trailing expressions.
 
-  Tests added here act as a regression guard when YZC-0080 supersedes this.
+  Tests added here act as a regression guard once the lowerer handles nested singleton methods.
 
 - [ ] **[YZC-0022] Multiple source roots**
 
@@ -762,39 +762,6 @@ The dispatch mechanism changed (YZC-0059): macros are now triggered by uppercase
 
 These gaps would matter if macros were ever runtime-dispatched objects or if a user wanted a heterogeneous list of macros with per-element schema introspection. Neither is needed under the current dispatch model.
 
-### YZC-0080 — Uniform boc literal typing: one structural type derived from elements
-
-Design resolved — see [Uniform Boc Literal Typing](../Questions/solved/Uniform%20Boc%20Literal%20Typing.md).
-
-#### Invariant
-
-> Every boc literal, regardless of where it appears, receives one structural type derived mechanically from its elements. No code path branches on "is this a closure or a struct?" — that distinction is resolved at the use site by structural compatibility, not by classification during analysis.
-
-#### Settled design
-
-`BocLiteralType` is a flat list of fields. No subdivision into Params / Methods / Fields / Returns — those are use-site concerns.
-
-```yz
-// Conceptual model (Yz)
-BocLiteralType { fields [Boc] }
-```
-```go
-// Compiler representation (Go)
-type BocLiteralType struct { Fields []FieldNode }
-```
-
-Structural compatibility: i1 satisfies i2 if i1 has every field in i2 with matching name and type. Default values in i2 are irrelevant to compatibility — they only matter at direct call sites.
-
-#### Implementation steps
-
-- [ ] Define flat `BocLiteralType` in `sema/types.go`
-- [ ] Sema: assign `BocLiteralType` to every `*ast.BocLiteral` in `analyzeExpr`; delete classification branches
-- [ ] Sema: implement single structural compatibility function; replace all existing compatibility checks
-- [ ] Lowerer: dispatch on use-site expected type instead of sema classification flags
-- [ ] Delete `hasInnerBocsOrMethods`, `bocLitHasParams`, `anonBocCache`, `anonDecls` from lowerer
-- [ ] All existing tests pass
-
-Depends on: ~~YZC-0025~~. May simplify YZC-0031.
 
 ### YZC-0082 — Struct-outer nested type (concrete associated type)
 
