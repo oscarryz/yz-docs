@@ -344,17 +344,6 @@ Open ticket details. See tasks.md for the index.
   - Add clarifying example to spec §9 Invariant 1 covering `Foo.yz` and
     `main.yz` with inner `main: {}`
 
-- [ ] **[YZC-0091] Nested singleton codegen: sub-singleton struct with own methods**
-
-  `foo: { bar: { baz #() {} } }` — `bar` inside a singleton must lower to a
-  sub-singleton struct with its own `Baz()` method, not a closure-returning
-  `bar() Unit` method. Currently `foo.bar.baz()` fails:
-  `Utils.extra.Help undefined (type func() rt.Unit has no field or method Help)`.
-
-  Test: `examples/_wip/subdir_coexist` — promote when fixed.
-  Depends on: YZC-0021.
-
-
 - [ ] **[YZC-0022] Multiple source roots**
 
   Enable `yzc build` to accept multiple source root directories. Each root

@@ -3,6 +3,15 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0091 — Nested singleton codegen: sub-singleton struct with own methods ✓
+
+  Lowercase boc with inner methods (`extra: { help #() {} }`) inside a
+  singleton now lowers to a struct field (`extra *_utilsExtraBoc`) rather than
+  a method. The outer singleton var is initialized with `extra: &_utilsExtraBoc{}`.
+  Also fixed `injectIntoBocLiteral` to inject sub-directory files into the inner
+  named boc (not the file wrapper), enabling the `utils.yz` + `utils/` coexistence
+  pattern. Golden test: `100_nested_singleton`. Example promoted: `subdir_coexist`.
+
 - [x] **[YZC-0076] Existential associated types: opaque-token / path-identity tracking** — closed, not implemented
 
   Original motivation was heterogeneous macro arrays with per-element schema

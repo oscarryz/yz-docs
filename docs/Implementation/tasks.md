@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **96 golden + 25 error conformance tests passing** (+ multi_root example) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **97 golden + 25 error conformance tests passing** (+ multi_root + subdir_coexist examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -37,7 +37,7 @@ YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
 YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
-YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods -- M -- needs YZC-0021
+~~YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods~~
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  
 YZC-0058 -- GoSource: Go-backed type implementations -- L -- needs ~~YZC-0025~~, ~~YZC-0059~~  

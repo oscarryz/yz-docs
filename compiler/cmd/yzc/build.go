@@ -352,6 +352,10 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendi
 
 // injectIntoBocLiteral finds the top-level ShortDecl named bocName in sf and
 // appends nodes to its BocLiteral body (spec §9 Invariant 5 loader merge).
+// When the outer ShortDecl is a file wrapper that itself contains an inner
+// ShortDecl with the same name (e.g. utils.yz wrapping `utils: {}`), the
+// nodes are injected into the inner boc so they appear as fields/methods of
+// the named singleton rather than as siblings of it.
 // No-ops if no matching ShortDecl is found.
 func injectIntoBocLiteral(sf *ast.SourceFile, bocName string, nodes []ast.Node) {
 	for _, stmt := range sf.Stmts {
@@ -363,6 +367,19 @@ func injectIntoBocLiteral(sf *ast.SourceFile, bocName string, nodes []ast.Node) 
 			continue
 		}
 		if bl, ok := sd.Values[0].(*ast.BocLiteral); ok {
+			// If this is a file wrapper with an inner same-named boc, inject there.
+			if sd.IsFileWrapper {
+				for _, inner := range bl.Elements {
+					if innerSD, ok2 := inner.(*ast.ShortDecl); ok2 &&
+						len(innerSD.Names) > 0 && innerSD.Names[0].Name == bocName &&
+						len(innerSD.Values) > 0 {
+						if innerBL, ok3 := innerSD.Values[0].(*ast.BocLiteral); ok3 {
+							innerBL.Elements = append(innerBL.Elements, nodes...)
+							return
+						}
+					}
+				}
+			}
 			bl.Elements = append(bl.Elements, nodes...)
 			return
 		}

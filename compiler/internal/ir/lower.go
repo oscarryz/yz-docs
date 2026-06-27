@@ -92,9 +92,10 @@ type lowerer struct {
 	// closure can be called safely while the cown is held.
 	closureHeldCowns map[string]bool
 
-	// anonDecls collects anonymous struct types generated for anonymous boc
-	// literals with inner methods (YZC-0070). Prepended to f.Decls after lowering.
-	anonDecls    []*StructDecl
+	// anonDecls collects anonymous struct/singleton types generated for anonymous
+	// boc literals with inner methods (YZC-0070) and nested sub-singletons
+	// (YZC-0091). Prepended to f.Decls after lowering.
+	anonDecls    []Decl
 	anonBocCount int
 	// nestedTypeGoName maps a sema StructType (for a nested type defined inside a
 	// singleton, e.g. Window: { size Int } inside room) to its namespaced Go type
@@ -984,8 +985,22 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 			if len(e.Names) == 1 && len(e.Values) == 1 {
 				inner, isInnerBoc := e.Values[0].(*ast.BocLiteral)
 				if isInnerBoc && !isUppercase(e.Names[0].Name) {
-					// Inner boc → method. The BocType is on the ShortDecl, not the BocLiteral.
 					bocSemType := l.analyzer.ExprType(e)
+					// Sub-singleton: lowercase boc with inner structure (IsSingleton) → nested
+					// struct field rather than a method (YZC-0091).
+					if st, ok := bocSemType.(*sema.StructType); ok && st.IsSingleton {
+						childName := e.Names[0].Name
+						subSD := l.lowerStructuredSingleton(name+capitalize(childName), inner)
+						subSD.VarName = "" // embedded, not a package-level var
+						l.anonDecls = append(l.anonDecls, subSD)
+						sd.Fields = append(sd.Fields, &FieldSpec{
+							Name: childName,
+							Type: "*" + subSD.TypeName,
+							Init: &NewStructExpr{TypeName: subSD.TypeName},
+						})
+						continue
+					}
+					// Inner boc → method. The BocType is on the ShortDecl, not the BocLiteral.
 					prevMethods := l.recvMethods
 					l.recvMethods = methodNames
 					m := l.lowerMethod(e.Names[0].Name, "*"+typeName, inner, fieldNames, bocSemType)
@@ -1171,7 +1186,13 @@ func (l *lowerer) collectFieldNames(b *ast.BocLiteral) map[string]bool {
 		case *ast.ShortDecl:
 			if len(e.Names) == 1 && len(e.Values) == 1 {
 				if _, isBoc := e.Values[0].(*ast.BocLiteral); isBoc {
-					continue // method, not field
+					// Sub-singletons (IsSingleton) are fields; plain methods are not.
+					if st, ok := l.analyzer.ExprType(e).(*sema.StructType); ok && st.IsSingleton {
+						for _, n := range e.Names {
+							fields[n.Name] = true
+						}
+					}
+					continue
 				}
 			}
 			for _, n := range e.Names {

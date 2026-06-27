@@ -1,0 +1,12 @@
+// YZC-0091: nested sub-singleton lowering.
+// A lowercase boc with inner methods inside a singleton becomes a struct field,
+// not a method. The outer singleton holds a pointer to the inner struct.
+utils: {
+    extra: {
+        help #(String) { "extra help" }
+    }
+}
+
+main: {
+    print(utils.extra.help())
+}
