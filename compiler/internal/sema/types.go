@@ -144,6 +144,16 @@ type BocParam struct {
 	IsReturn   bool // true for return-type-position entries
 }
 
+// bocParamsToFields converts a BocParam slice to StructFields, mapping Label→Name.
+// Used when stamping BocLiteralType on a boc literal node.
+func bocParamsToFields(params []BocParam) []StructField {
+	fields := make([]StructField, len(params))
+	for i, p := range params {
+		fields[i] = StructField{Name: p.Label, Type: p.Type, HasDefault: p.HasDefault}
+	}
+	return fields
+}
+
 // BocType is the structural type of a boc (function/block).
 // Parameters represent inputs; Returns are the types of the last expression(s).
 type BocType struct {

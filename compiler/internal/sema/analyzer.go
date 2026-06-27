@@ -646,12 +646,7 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 			returns = []Type{TypUnit}
 		}
 		typ = &BocType{Params: params, Returns: returns}
-		// Stamp the literal node with BocLiteralType (Invariant 1 — YZC-0080).
-		var litFields []StructField
-		for _, p := range params {
-			litFields = append(litFields, StructField{Name: p.Label, Type: p.Type, HasDefault: p.HasDefault})
-		}
-		a.setType(bocLit, &BocLiteralType{Fields: litFields, Returns: returns})
+		a.setType(bocLit, &BocLiteralType{Fields: bocParamsToFields(params), Returns: returns})
 	}
 
 	// If this is the file wrapper boc, capture the inner scope for the lowerer.
@@ -1204,11 +1199,7 @@ func (a *Analyzer) analyzeBranchBody(boc *ast.BocLiteral) *BocLiteralType {
 	if len(bodyReturns) == 0 {
 		bodyReturns = []Type{TypUnit}
 	}
-	var fields []StructField
-	for _, p := range params {
-		fields = append(fields, StructField{Name: p.Label, Type: p.Type, HasDefault: p.HasDefault})
-	}
-	blt := &BocLiteralType{Fields: fields, Returns: bodyReturns}
+	blt := &BocLiteralType{Fields: bocParamsToFields(params), Returns: bodyReturns}
 	a.setType(boc, blt)
 	return blt
 }

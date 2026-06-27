@@ -2876,14 +2876,25 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		}
 	}
 
-	// For struct-type constructors with named args, lower args exactly once via
-	// lowerStructArgs (field-order pass). Without this early exit, the eager loop
-	// below and lowerStructArgs would both visit the same boc-literal args, causing
-	// duplicate anonymous struct declarations.
+	// For struct-type and generic-alias constructors with named args, lower args
+	// exactly once via lowerStructArgs (field-order pass). Without this early exit,
+	// the eager loop below and lowerStructArgs would both visit the same boc-literal
+	// args, creating duplicate anonymous struct declarations.
 	if id, ok := c.Callee.(*ast.Ident); ok && len(c.Args) > 0 && hasNamedArgs(c.Args) {
 		if sym := l.analyzer.LookupInFile(id.Name); sym != nil {
 			if st, isStruct := sym.Type.(*sema.StructType); isStruct && !st.IsSingleton {
 				return &FuncCall{Func: &Ident{Name: "New" + st.Name}, Args: l.lowerStructArgs(c.Args, st)}
+			}
+			if git, isGI := sym.Type.(*sema.GenericInstType); isGI {
+				if baseSym := l.analyzer.LookupInFile(git.Name); baseSym != nil {
+					if baseSt, ok := baseSym.Type.(*sema.StructType); ok {
+						typeArgs := make([]string, len(git.TypeArgs))
+						for i, ta := range git.TypeArgs {
+							typeArgs[i] = l.goType(ta)
+						}
+						return &FuncCall{Func: &Ident{Name: "New" + git.Name}, Args: l.lowerStructArgs(c.Args, baseSt), TypeArgs: typeArgs}
+					}
+				}
 			}
 		}
 	}
@@ -4103,54 +4114,30 @@ func (l *lowerer) lowerBuiltinCall(goName string, c *ast.CallExpr) Expr {
 }
 
 func (l *lowerer) lowerBocLitExpr(b *ast.BocLiteral) Expr {
-	semType := l.analyzer.ExprType(b)
-	switch st := semType.(type) {
-	case *sema.StructType:
-		return l.lowerAnonBocLit(b)
-	case *sema.BocLiteralType:
-		// Use-site dispatch (YZC-0080): if any field has BocType (method body),
-		// emit as anonymous struct; otherwise emit as closure.
-		hasMethodField := false
-		for _, f := range st.Fields {
-			if _, isBoc := f.Type.(*sema.BocType); isBoc {
-				hasMethodField = true
-				break
-			}
-		}
-		if hasMethodField {
+	st, ok := l.analyzer.ExprType(b).(*sema.BocLiteralType)
+	if !ok {
+		// Invariant 1 (YZC-0080): every BocLiteral node must be stamped with
+		// BocLiteralType by sema. Reaching here means a stamp was missed.
+		panic(fmt.Sprintf("lowerBocLitExpr: BocLiteral missing BocLiteralType stamp (got %T)", l.analyzer.ExprType(b)))
+	}
+	// Use-site dispatch: if any field has BocType (method body), emit as anonymous
+	// struct; otherwise emit as closure using the derived interface for params.
+	for _, f := range st.Fields {
+		if _, isBoc := f.Type.(*sema.BocType); isBoc {
 			return l.lowerAnonBocLit(b)
 		}
-		// Closure path: params from non-default fields; result type from Returns.
-		var params []*ParamSpec
-		for _, f := range st.Fields {
-			if !f.HasDefault && !f.IsTypeField {
-				params = append(params, &ParamSpec{Name: f.Name, Type: l.goType(f.Type)})
-			}
-		}
-		resultType := "std.Unit"
-		if len(st.Returns) > 0 {
-			resultType = l.goType(st.Returns[0])
-		}
-		body := l.lowerClosureBody(b.Elements, resultType)
-		return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
-	default:
-		// BocType — legacy path for any remaining symbol-typed nodes.
-		var params []*ParamSpec
-		for _, elem := range b.Elements {
-			if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
-				params = append(params, &ParamSpec{
-					Name: td.Name.Name,
-					Type: l.goTypeFromTypeExpr(td.Type),
-				})
-			}
-		}
-		resultType := "std.Unit"
-		if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
-			resultType = l.goType(bt.Returns[0])
-		}
-		body := l.lowerClosureBody(b.Elements, resultType)
-		return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
 	}
+	iface := st.DeriveInterface()
+	var params []*ParamSpec
+	for _, p := range iface.Params {
+		params = append(params, &ParamSpec{Name: p.Label, Type: l.goType(p.Type)})
+	}
+	resultType := "std.Unit"
+	if len(iface.Returns) > 0 {
+		resultType = l.goType(iface.Returns[0])
+	}
+	body := l.lowerClosureBody(b.Elements, resultType)
+	return &ClosureExpr{Params: params, ResultType: resultType, Body: body}
 }
 
 // lowerAnonBocLit lowers an anonymous boc literal with inner methods
