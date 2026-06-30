@@ -36,3 +36,7 @@ func (self *Person) Label() std.String {
 		return self.label()
 	}))
 }
+
+func (self *Person) Name() std.String {
+	return self.name
+}

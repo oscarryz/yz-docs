@@ -27,6 +27,10 @@ func (self *Wrapper[T]) Describe() std.String {
 	}))
 }
 
+func (self *Wrapper[T]) Value() T {
+	return self.value
+}
+
 type _mainBoc struct {
 	std.Cown
 }

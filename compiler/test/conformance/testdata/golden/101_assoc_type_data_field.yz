@@ -1,0 +1,27 @@
+// YZC-0098: self-scope and structural bound codegen.
+// HasBar declares Schema with a data field bound (bar String).
+// Quz provides Schema: Foo (type alias satisfying HasBar).
+// hello takes a HasBar and a q.Schema — bar is accessed via accessor method.
+
+Foo: {
+    bar String
+}
+
+HasBar: {
+    Schema #(bar String)
+}
+
+Quz: {
+    Schema: Foo
+}
+
+hello #(q HasBar, s q.Schema, String) {
+    "Hello ${s.bar}"
+}
+
+main: {
+    f: Foo(bar: "world")
+    q: Quz()
+    result: hello(q, f)
+    print(result)
+}

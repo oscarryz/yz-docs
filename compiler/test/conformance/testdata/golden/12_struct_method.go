@@ -26,3 +26,7 @@ func (self *Named) Hi() std.Unit {
 		return self.hi()
 	}))
 }
+
+func (self *Named) Name() std.String {
+	return self.name
+}

@@ -17,6 +17,10 @@ func (self *Account) String() string {
 	return "Account(balance: " + std.StringifyRepr(self.balance) + ")"
 }
 
+func (self *Account) Balance() std.Int {
+	return self.balance
+}
+
 type Transfer struct {
 	std.Cown
 	src *Account
@@ -42,6 +46,18 @@ func (self *Transfer) Run() std.Unit {
 		self.dst.balance = self.dst.balance.Plus(self.amount)
 		return std.TheUnit
 	}))
+}
+
+func (self *Transfer) Src() *Account {
+	return self.src
+}
+
+func (self *Transfer) Dst() *Account {
+	return self.dst
+}
+
+func (self *Transfer) Amount() std.Int {
+	return self.amount
 }
 
 type _mainBoc struct {

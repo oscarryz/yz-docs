@@ -3,6 +3,25 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0098 — Self-scope associated type resolution + structural bound codegen ✓
+
+  Three bugs fixed to unblock YZC-0028 (Macros):
+  1. **Self-scope (sema)**: abstract type fields (`Schema #(bar String)`) in struct bodies
+     are now registered in `currentScope` via `Define`, so later method signatures in the
+     same body can reference those names without "undefined type" errors.
+  2. **Bound interface return type (lowerer)**: `buildInterfaceDecl` now uses the field's
+     own type as return (not `std.Unit`) when `bt == nil` (data field), so
+     `_HasBarSchemaBound` correctly declares `Bar() std.String` instead of `Bar() std.Unit`.
+  3. **Accessor methods (lowerer)**: `lowerStructBoc` now generates synchronous accessor
+     methods (`Bar() T { return self.bar }`) for all data fields, enabling structs to
+     satisfy bound interfaces that expose those fields as methods.
+  4. **PDT member emit (lowerer)**: `lowerExpr` MemberExpr case detects PDT receivers and
+     emits `MethodCall` (accessor) instead of `FieldAccess` for data fields, while keeping
+     BocType members as `FieldAccess` (handled by `lowerCall`).
+  Golden test: `101_assoc_type_data_field`.
+
+---
+
 ### [x] YZC-0091 — Nested singleton codegen: sub-singleton struct with own methods ✓
 
   Lowercase boc with inner methods (`extra: { help #() {} }`) inside a

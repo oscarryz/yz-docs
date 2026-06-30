@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **97 golden + 25 error conformance tests passing** (+ multi_root + subdir_coexist examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **101 golden + 25 error conformance tests passing** (+ multi_root + subdir_coexist examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`
 
@@ -47,7 +47,7 @@ YZC-0096 -- `yz fetch`: dependency fetcher -- M -- needs ~~YZC-0097~~, ~~YZC-002
 YZC-0042 -- `yz` tool: run, new, add, init (wraps yzc + yz fetch) -- L -- needs ~~YZC-0041~~, YZC-0096, ~~YZC-0097~~  
 YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
 YZC-0088 -- Codegen: attach compiled annotation boc to declaration metadata -- M -- needs YZC-0028  
-YZC-0098 -- Self-scope associated type resolution + structural bound codegen -- M -- needs ~~YZC-0066~~, ~~YZC-0079~~
+~~YZC-0098 -- Self-scope associated type resolution + structural bound codegen~~
 YZC-0028 -- Macros (`Macro` interface) -- XL -- needs ~~YZC-0025~~, ~~YZC-0026~~, ~~YZC-0027~~, ~~YZC-0030~~, ~~YZC-0066~~, ~~YZC-0059~~, YZC-0098   
 YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs ~~YZC-0025~~, YZC-0028, ~~YZC-0002~~, ~~YZC-0022~~ 
 

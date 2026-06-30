@@ -27,6 +27,10 @@ func (self *Animal) Speak() std.String {
 	}))
 }
 
+func (self *Animal) Name() std.String {
+	return self.name
+}
+
 type _fooBoc struct {
 	std.Cown
 }

@@ -36,6 +36,10 @@ func (self *City) Label() std.String {
 	}))
 }
 
+func (self *City) Name() std.String {
+	return self.name
+}
+
 type CityGraph struct {
 	std.Cown
 }

@@ -27,6 +27,10 @@ func (self *Greeter) Plusplus(other std.String) std.String {
 	}))
 }
 
+func (self *Greeter) Name() std.String {
+	return self.name
+}
+
 type _mainBoc struct {
 	std.Cown
 }

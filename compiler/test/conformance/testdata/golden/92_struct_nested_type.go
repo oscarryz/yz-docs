@@ -42,6 +42,10 @@ func (self *Foo) String() string {
 	return "Foo(name: " + std.StringifyRepr(self.name) + ")"
 }
 
+func (self *Foo) Name() std.String {
+	return self.name
+}
+
 type _mainBoc struct {
 	std.Cown
 }

@@ -17,6 +17,10 @@ func (self *Box[T]) String() string {
 	return "Box(" + std.YzTypeName(self.value) + ", " + "value: " + std.StringifyRepr(self.value) + ")"
 }
 
+func (self *Box[T]) Value() T {
+	return self.value
+}
+
 type _mainBoc struct {
 	std.Cown
 }

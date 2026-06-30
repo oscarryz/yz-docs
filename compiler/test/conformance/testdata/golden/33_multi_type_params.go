@@ -19,6 +19,14 @@ func (self *Pair[K, V]) String() string {
 	return "Pair(" + std.YzTypeName(self.first) + ", " + std.YzTypeName(self.second) + ", " + "first: " + std.StringifyRepr(self.first) + ", second: " + std.StringifyRepr(self.second) + ")"
 }
 
+func (self *Pair[K, V]) First() K {
+	return self.first
+}
+
+func (self *Pair[K, V]) Second() V {
+	return self.second
+}
+
 func makePair[K any, V any](a K, b V) *std.Thunk[*Pair[K, V]] {
 	return std.Go(func() *Pair[K, V] {
 		return NewPair(a, b)

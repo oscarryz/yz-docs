@@ -31,3 +31,7 @@ func (self *Person) Greet() std.Unit {
 		return self.greet()
 	}))
 }
+
+func (self *Person) Name() std.String {
+	return self.name
+}

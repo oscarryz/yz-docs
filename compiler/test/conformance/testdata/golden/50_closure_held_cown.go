@@ -28,6 +28,10 @@ func (self *Box) Set(v std.Int) std.Unit {
 	}))
 }
 
+func (self *Box) Val() std.Int {
+	return self.val
+}
+
 type _applyBoc struct {
 	std.Cown
 	a *Box

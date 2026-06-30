@@ -38,6 +38,10 @@ func (self *Counter) Value() std.Int {
 	}))
 }
 
+func (self *Counter) Count() std.Int {
+	return self.count
+}
+
 type _mainBoc struct {
 	std.Cown
 }

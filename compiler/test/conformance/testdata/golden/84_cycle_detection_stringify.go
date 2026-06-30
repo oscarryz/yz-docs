@@ -54,6 +54,14 @@ func (self *Node) String() string {
 	return "Node(value: " + std.StringifyRepr(self.value) + ", next: " + std.StringifyRepr(self.next) + ")"
 }
 
+func (self *Node) Value() std.Int {
+	return self.value
+}
+
+func (self *Node) Next() *Option {
+	return self.next
+}
+
 type _mainBoc struct {
 	std.Cown
 }

@@ -27,6 +27,10 @@ func (self *Container[T]) Get() *std.Thunk[T] {
 	})
 }
 
+func (self *Container[T]) Value() T {
+	return self.value
+}
+
 type _mainBoc struct {
 	std.Cown
 }

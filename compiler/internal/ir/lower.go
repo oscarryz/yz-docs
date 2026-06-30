@@ -343,9 +343,14 @@ func (l *lowerer) buildInterfaceDecl(name string, st *sema.StructType) *Interfac
 			continue
 		}
 		bt, _ := f.Type.(*sema.BocType)
-		resultType := "std.Unit"
+		var resultType string
 		if bt != nil && len(bt.Returns) == 1 {
 			resultType = l.goType(bt.Returns[0])
+		} else if bt != nil {
+			resultType = "std.Unit"
+		} else {
+			// Data field: accessor returns the field's own type.
+			resultType = l.goType(f.Type)
 		}
 		var params []*ParamSpec
 		if bt != nil {
@@ -1914,6 +1919,29 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 			}
 		}
 	}
+
+	// YZC-0098: generate synchronous accessor methods for data fields so that
+	// struct types can satisfy bound interfaces that expose those fields as methods.
+	existingMethods := make(map[string]bool)
+	for _, m := range sd.Methods {
+		existingMethods[m.Name] = true
+	}
+	for _, f := range sd.Fields {
+		accName := capitalize(f.Name)
+		if accName == "String" || existingMethods[accName] {
+			continue
+		}
+		sd.Methods = append(sd.Methods, &MethodDecl{
+			RecvType: recvType,
+			RecvName: "self",
+			Name:     accName,
+			Results:  []string{f.Type},
+			Body: []Stmt{
+				&ReturnStmt{Value: &FieldAccess{Object: &Ident{Name: "self"}, Field: f.Name}},
+			},
+		})
+	}
+
 	return sd
 }
 
@@ -2580,6 +2608,14 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 			switch field {
 			case "value":
 				field = "Value"
+			}
+		}
+		// YZC-0098: PDT receiver (e.g. q.Schema) is a Go interface — data field
+		// access must go through the accessor method (s.bar → s.Bar()). BocType
+		// members are left as FieldAccess so lowerCall emits the MethodCall.
+		if _, ok := l.analyzer.ExprType(expr.Object).(*sema.PathDependentType); ok {
+			if _, isBoc := l.analyzer.ExprType(expr).(*sema.BocType); !isBoc {
+				return &MethodCall{Recv: obj, Method: capitalize(field), Args: nil}
 			}
 		}
 		return &FieldAccess{Object: obj, Field: field}

@@ -1353,6 +1353,9 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 				if !fieldSet[e.Name.Name] {
 					fieldSet[e.Name.Name] = true
 					st.Fields = append(st.Fields, StructField{Name: e.Name.Name, Type: TypMeta, IsTypeField: true, Bound: bound})
+					// YZC-0098: register in scope so later method signatures in the same
+					// struct body can reference this name as a type without errors.
+					a.currentScope.Define(&Symbol{Name: e.Name.Name, Type: TypMeta, Node: e.Name})
 				}
 				lastExprTypes = nil
 				continue

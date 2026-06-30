@@ -17,6 +17,10 @@ func (self *Wrapper) String() string {
 	return "Wrapper(inner: " + std.StringifyRepr(self.inner) + ")"
 }
 
+func (self *Wrapper) Inner() *Inner {
+	return self.inner
+}
+
 type Inner struct {
 	std.Cown
 	value std.Int
@@ -30,6 +34,10 @@ func NewInner(value std.Int) *Inner {
 
 func (self *Inner) String() string {
 	return "Inner(value: " + std.StringifyRepr(self.value) + ")"
+}
+
+func (self *Inner) Value() std.Int {
+	return self.value
 }
 
 type _mainBoc struct {

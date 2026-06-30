@@ -17,6 +17,10 @@ func (self *User) String() string {
 	return "User(name: " + std.StringifyRepr(self.name) + ")"
 }
 
+func (self *User) Name() std.String {
+	return self.name
+}
+
 type SocialGraph struct {
 	std.Cown
 }

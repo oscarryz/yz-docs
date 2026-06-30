@@ -19,6 +19,14 @@ func (self *Person) String() string {
 	return "Person(name: " + std.StringifyRepr(self.name) + ", age: " + std.StringifyRepr(self.age) + ")"
 }
 
+func (self *Person) Name() std.String {
+	return self.name
+}
+
+func (self *Person) Age() std.Int {
+	return self.age
+}
+
 type _mainBoc struct {
 	std.Cown
 }

@@ -34,6 +34,14 @@ func (self *Person) Greet() std.Unit {
 	}))
 }
 
+func (self *Person) Name() std.String {
+	return self.name
+}
+
+func (self *Person) Secret() std.String {
+	return self.secret
+}
+
 type _greet_allBoc struct {
 	std.Cown
 	g Greeter

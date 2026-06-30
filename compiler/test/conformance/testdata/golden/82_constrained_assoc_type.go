@@ -38,6 +38,14 @@ func (self *Point) Label() std.String {
 	}))
 }
 
+func (self *Point) X() std.Int {
+	return self.x
+}
+
+func (self *Point) Y() std.Int {
+	return self.y
+}
+
 type PointGraph struct {
 	std.Cown
 }

@@ -39,6 +39,10 @@ func (self *Account) Withdraw(amount std.Int) std.Unit {
 	}))
 }
 
+func (self *Account) Balance() std.Int {
+	return self.balance
+}
+
 type _transferBoc struct {
 	std.Cown
 	src *Account

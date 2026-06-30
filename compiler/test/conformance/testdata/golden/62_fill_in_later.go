@@ -17,6 +17,10 @@ func (self *Bar) String() string {
 	return "Bar(f: " + std.StringifyRepr(self.f) + ")"
 }
 
+func (self *Bar) F() std.String {
+	return self.f
+}
+
 type _mainBoc struct {
 	std.Cown
 }

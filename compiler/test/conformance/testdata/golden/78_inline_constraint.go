@@ -27,6 +27,10 @@ func (self *Animal) Describe() std.String {
 	}))
 }
 
+func (self *Animal) Name() std.String {
+	return self.name
+}
+
 type _BoxVConstraint interface {
 	Describe() std.String
 }
@@ -55,6 +59,10 @@ func (self *Box[V]) Desc() std.String {
 	return std.LazyString(std.Schedule(&self.Cown, func() std.String {
 		return self.desc()
 	}))
+}
+
+func (self *Box[V]) Value() V {
+	return self.value
 }
 
 type _mainBoc struct {

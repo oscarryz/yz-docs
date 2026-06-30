@@ -56,6 +56,10 @@ func (self *Wrapper[V]) DoIt(value V) std.Unit {
 	}))
 }
 
+func (self *Wrapper[V]) Item() V {
+	return self.item
+}
+
 type _mainBoc struct {
 	std.Cown
 }
