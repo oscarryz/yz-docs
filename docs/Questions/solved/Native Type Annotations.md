@@ -1,4 +1,11 @@
-#open-question
+#solved in [GoExtensions](../../Features/GoExtensions.md)
+
+The `go_source:` annotation key links a Yz type declaration to a Go source file. Body-less methods
+delegate to the Go file, which uses `//yz:bind` comments to declare the binding. This covers stdlib
+scalar types (`Int`, `String`, `Bool`, `Decimal`) and third-party Go library wrappers. It is
+processed in the compiler's first pass, before type resolution, to avoid the bootstrapping problem.
+
+---
 
 ## How should Yz types declare a native (Go) implementation?
 

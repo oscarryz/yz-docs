@@ -3,7 +3,7 @@
 Some data types need self, but this is not a keyword
 
 
-When [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md) [Info strings](docs/Features/Info%20strings.md) and [Native Type Annotations](docs/Questions/Native%20Type%20Annotations.md) is completed it can be used to generate the self type
+When [Macros](docs/Features/Macros.md) and [GoExtensions](docs/Features/GoExtensions.md) is completed it can be used to generate the self type
 
 e.g. 
 
