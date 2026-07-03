@@ -143,7 +143,7 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 		g.linef("type %s struct {", sd.Name)
 		g.level++
 		for _, f := range sd.Fields {
-			g.linef("%s %s", f.Name, f.Type)
+			g.linef("%s %s", goSafeName(f.Name), f.Type)
 		}
 		g.level--
 		g.line("}")
@@ -166,7 +166,7 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 	g.level++
 	g.line("std.Cown")
 	for _, f := range sd.Fields {
-		g.linef("%s %s", f.Name, f.Type)
+		g.linef("%s %s", goSafeName(f.Name), f.Type)
 	}
 	g.level--
 	g.line("}")
@@ -176,14 +176,14 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 	if !sd.NoConstructor {
 		var params []string
 		for _, f := range sd.Fields {
-			params = append(params, f.Name+" "+f.Type)
+			params = append(params, goSafeName(f.Name)+" "+f.Type)
 		}
 		g.linef("func New%s%s(%s) *%s%s {", sd.Name, typeConstraints, strings.Join(params, ", "), sd.Name, typeArgs)
 		g.level++
 		g.linef("return &%s%s{", sd.Name, typeArgs)
 		g.level++
 		for _, f := range sd.Fields {
-			g.linef("%s: %s,", f.Name, f.Name)
+			g.linef("%s: %s,", goSafeName(f.Name), goSafeName(f.Name))
 		}
 		g.level--
 		g.line("}")
@@ -211,10 +211,10 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 			g.linef("return %q", sd.Name+"()")
 		} else if hasTypeParams {
 			// Generic: Name(TypeA, TypeB, field: val, ...)
-			typeNames := "std.YzTypeName(self." + firstFieldForParam[sd.TypeParams[0]] + ")"
+			typeNames := "std.YzTypeName(self." + goSafeName(firstFieldForParam[sd.TypeParams[0]]) + ")"
 			for _, tp := range sd.TypeParams[1:] {
 				if fn, ok := firstFieldForParam[tp]; ok {
-					typeNames += " + \", \" + std.YzTypeName(self." + fn + ")"
+					typeNames += " + \", \" + std.YzTypeName(self." + goSafeName(fn) + ")"
 				}
 			}
 			if len(sd.Fields) == 0 {
@@ -222,10 +222,10 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 			} else {
 				result := fmt.Sprintf("%q", sd.Name+"(") + " + " + typeNames +
 					" + \", \" + " + fmt.Sprintf("%q", sd.Fields[0].Name+": ") +
-					" + std.StringifyRepr(self." + sd.Fields[0].Name + ")"
+					" + std.StringifyRepr(self." + goSafeName(sd.Fields[0].Name) + ")"
 				for _, f := range sd.Fields[1:] {
 					result += " + " + fmt.Sprintf("%q", ", "+f.Name+": ") +
-						" + std.StringifyRepr(self." + f.Name + ")"
+						" + std.StringifyRepr(self." + goSafeName(f.Name) + ")"
 				}
 				result += " + \")\""
 				g.linef("return %s", result)
@@ -233,10 +233,10 @@ func (g *generator) emitStructDecl(sd *ir.StructDecl) {
 		} else {
 			// Non-generic: Name(field: val, ...)
 			result := fmt.Sprintf("%q", sd.Name+"("+sd.Fields[0].Name+": ") +
-				" + std.StringifyRepr(self." + sd.Fields[0].Name + ")"
+				" + std.StringifyRepr(self." + goSafeName(sd.Fields[0].Name) + ")"
 			for _, f := range sd.Fields[1:] {
 				result += " + " + fmt.Sprintf("%q", ", "+f.Name+": ") +
-					" + std.StringifyRepr(self." + f.Name + ")"
+					" + std.StringifyRepr(self." + goSafeName(f.Name) + ")"
 			}
 			result += " + \")\""
 			g.linef("return %s", result)
@@ -258,7 +258,7 @@ func (g *generator) emitSingletonDecl(sd *ir.SingletonDecl) {
 	g.level++
 	g.line("std.Cown")
 	for _, f := range sd.Fields {
-		g.linef("%s %s", f.Name, f.Type)
+		g.linef("%s %s", goSafeName(f.Name), f.Type)
 	}
 	g.level--
 	g.line("}")
@@ -276,7 +276,7 @@ func (g *generator) emitSingletonDecl(sd *ir.SingletonDecl) {
 			if !first {
 				result += " + \"; \""
 			}
-			result += " + " + fmt.Sprintf("%q", f.Name+": ") + " + std.StringifyRepr(self."+f.Name+")"
+			result += " + " + fmt.Sprintf("%q", f.Name+": ") + " + std.StringifyRepr(self."+goSafeName(f.Name)+")"
 			first = false
 		}
 		for _, m := range sd.Methods {
@@ -307,7 +307,7 @@ func (g *generator) emitSingletonDecl(sd *ir.SingletonDecl) {
 			g.writef("var %s = &%s{\n", sd.VarName, sd.TypeName)
 			for _, f := range sd.Fields {
 				if f.Init != nil {
-					g.writef("\t%s: %s,\n", f.Name, g.expr(f.Init))
+					g.writef("\t%s: %s,\n", goSafeName(f.Name), g.expr(f.Init))
 				}
 			}
 			g.write("}\n")
@@ -326,7 +326,7 @@ func (g *generator) emitMethodDecl(md *ir.MethodDecl) {
 	// the receiver's cown (reentrant context) call the sync version directly instead
 	// of going through std.Schedule, which would deadlock or break ordering.
 	if th := extractSingleCownThunk(md.Body); th != nil {
-		syncName := strings.ToLower(md.Name[:1]) + md.Name[1:]
+		syncName := goSafeName(strings.ToLower(md.Name[:1]) + md.Name[1:])
 		g.linef("func (%s %s) %s(%s) %s {", md.RecvName, md.RecvType, syncName, params, th.ResultType)
 		g.level++
 		g.emitBodyStmts(th.Body, true)
@@ -336,7 +336,7 @@ func (g *generator) emitMethodDecl(md *ir.MethodDecl) {
 		// Async method delegates to the sync body.
 		names := make([]string, len(md.Params))
 		for i, p := range md.Params {
-			names[i] = p.Name
+			names[i] = goSafeName(p.Name)
 		}
 		g.linef("func (%s %s) %s(%s)%s {", md.RecvName, md.RecvType, md.Name, params, result)
 		g.level++
@@ -393,7 +393,7 @@ func (g *generator) emitBodyStmts(stmts []ir.Stmt, hasResult bool) {
 		}
 		g.emitStmt(s)
 		if ds, ok := s.(*ir.DeclStmt); ok && !used[ds.Name] {
-			g.linef("_ = %s", ds.Name)
+			g.linef("_ = %s", goSafeName(ds.Name))
 		}
 	}
 }
@@ -408,11 +408,11 @@ func (g *generator) emitStmt(s ir.Stmt) {
 	switch st := s.(type) {
 	case *ir.DeclStmt:
 		if st.Type == "" {
-			g.linef("%s := %s", st.Name, g.expr(st.Init))
+			g.linef("%s := %s", goSafeName(st.Name), g.expr(st.Init))
 		} else if st.Init == nil {
-			g.linef("var %s %s", st.Name, st.Type)
+			g.linef("var %s %s", goSafeName(st.Name), st.Type)
 		} else {
-			g.linef("var %s %s = %s", st.Name, st.Type, g.expr(st.Init))
+			g.linef("var %s %s = %s", goSafeName(st.Name), st.Type, g.expr(st.Init))
 		}
 	case *ir.AssignStmt:
 		g.linef("%s = %s", g.expr(st.Target), g.expr(st.Value))
@@ -467,9 +467,9 @@ func (g *generator) expr(e ir.Expr) string {
 	case *ir.UnitLit:
 		return "std.TheUnit"
 	case *ir.Ident:
-		return ex.Name
+		return goSafeName(ex.Name)
 	case *ir.FieldAccess:
-		return g.expr(ex.Object) + "." + ex.Field
+		return g.expr(ex.Object) + "." + goSafeName(ex.Field)
 	case *ir.IndexExpr:
 		return g.expr(ex.Object) + ".At(" + g.expr(ex.Index) + ")"
 	case *ir.MethodCall:
@@ -507,7 +507,7 @@ func (g *generator) expr(e ir.Expr) string {
 	case *ir.StructLitExpr:
 		var parts []string
 		for _, f := range ex.Fields {
-			parts = append(parts, f.Name+": "+g.expr(f.Value))
+			parts = append(parts, goSafeName(f.Name)+": "+g.expr(f.Value))
 		}
 		return ex.TypeName + "{" + strings.Join(parts, ", ") + "}"
 	default:
@@ -1427,7 +1427,7 @@ func collectUsedExpr(e ir.Expr, seen map[string]bool) {
 func joinParams(params []*ir.ParamSpec) string {
 	parts := make([]string, len(params))
 	for i, p := range params {
-		parts[i] = p.Name + " " + p.Type
+		parts[i] = goSafeName(p.Name) + " " + p.Type
 	}
 	return strings.Join(parts, ", ")
 }
