@@ -1,0 +1,10 @@
+Debug: {
+    Schema: NoConfig
+    run #(subject Boc, config NoConfig, Boc) {
+        generated("debug #(String) { \"\" }")
+    }
+}
+
+main: {
+    print("hello")
+}

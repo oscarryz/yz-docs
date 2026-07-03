@@ -1,0 +1,12 @@
+Debug: {
+    Schema: NoConfig
+    run #(subject Boc, config NoConfig, Boc) {
+        body: subject.name + "("
+        sep: ""
+        subject.fields.each({ f Field
+            body = body + sep + f.name + ": $" + "{" + f.name + "}"
+            sep = ", "
+        })
+        generated("debug #(String) {\n    \"" + body + ")\"\n}")
+    }
+}

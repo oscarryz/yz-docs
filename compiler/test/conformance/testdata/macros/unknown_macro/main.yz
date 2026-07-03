@@ -1,0 +1,10 @@
+`Debgu: {}`
+Person: {
+    name String
+    age Int
+}
+
+main: {
+    p: Person(name: "Alice", age: 30)
+    print(p.name)
+}

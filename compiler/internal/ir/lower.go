@@ -417,7 +417,7 @@ func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocDecl) Decl {
 	if len(bocFields) == 0 {
 		sd := &StructDecl{Name: bws.Name.Name, NoConstructor: true}
 		for _, f := range dataFields {
-			sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+			sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(f.Name), Type: l.goType(f.Type)})
 		}
 		return sd
 	}
@@ -425,11 +425,11 @@ func (l *lowerer) lowerTypeOnlyDecl(bws *ast.BocDecl) Decl {
 	// Mixed: data fields + BocType fields → struct with constructor + method wrappers.
 	sd := &StructDecl{Name: bws.Name.Name}
 	for _, f := range dataFields {
-		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(f.Name), Type: l.goType(f.Type)})
 	}
 	for _, f := range bocFields {
 		bt := f.Type.(*sema.BocType)
-		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.bocFuncType(bt)})
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(f.Name), Type: l.bocFuncType(bt)})
 		sd.Methods = append(sd.Methods, l.bocFieldMethod(bws.Name.Name, f.Name, bt))
 	}
 	return sd
@@ -1034,7 +1034,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 					initExpr = l.lowerExpr(e.Values[i])
 				}
 				typ := l.goType(l.analyzer.ExprType(l.valueAt(e.Values, i)))
-				sd.Fields = append(sd.Fields, &FieldSpec{Name: n.Name, Type: typ, Init: initExpr})
+				sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(n.Name), Type: typ, Init: initExpr})
 			}
 
 		case *ast.TypedDecl:
@@ -1044,7 +1044,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 			if e.Value != nil {
 				initExpr = l.lowerExpr(e.Value)
 			}
-			sd.Fields = append(sd.Fields, &FieldSpec{Name: e.Name.Name, Type: typ, Init: initExpr})
+			sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(e.Name.Name), Type: typ, Init: initExpr})
 
 		case *ast.BocDecl:
 			if e.Body != nil {
@@ -1104,7 +1104,7 @@ func (l *lowerer) lowerNestedStructType(goName string, st *sema.StructType) *Str
 		if _, isBoc := f.Type.(*sema.BocType); isBoc {
 			continue
 		}
-		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(f.Name), Type: l.goType(f.Type)})
 	}
 	return sd
 }
@@ -1125,7 +1125,7 @@ func (l *lowerer) lowerStructOuterNestedType(goName, outerGoType string, st *sem
 		if _, isBoc := f.Type.(*sema.BocType); isBoc {
 			continue
 		}
-		sd.Fields = append(sd.Fields, &FieldSpec{Name: f.Name, Type: l.goType(f.Type)})
+		sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(f.Name), Type: l.goType(f.Type)})
 	}
 
 	recvType := "*" + goName
@@ -1869,7 +1869,7 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 			if e.Value != nil {
 				init = l.lowerExpr(e.Value)
 			}
-			sd.Fields = append(sd.Fields, &FieldSpec{Name: e.Name.Name, Type: typ, Init: init})
+			sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(e.Name.Name), Type: typ, Init: init})
 		case *ast.ShortDecl:
 			if len(e.Names) == 1 && len(e.Values) == 1 {
 				inner, isInnerBoc := e.Values[0].(*ast.BocLiteral)
@@ -1904,7 +1904,7 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 					initExpr = l.lowerExpr(e.Values[i])
 				}
 				typ := l.goType(l.analyzer.ExprType(l.valueAt(e.Values, i)))
-				sd.Fields = append(sd.Fields, &FieldSpec{Name: n.Name, Type: typ, Init: initExpr})
+				sd.Fields = append(sd.Fields, &FieldSpec{Name: goSafeName(n.Name), Type: typ, Init: initExpr})
 			}
 		case *ast.Ident:
 			// TypeParams already pre-populated above; nothing else to do here.
@@ -1928,7 +1928,8 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 	}
 	for _, f := range sd.Fields {
 		accName := capitalize(f.Name)
-		if accName == "String" || existingMethods[accName] {
+		// Skip if accessor name would clash with the field itself (already exported).
+		if accName == f.Name || accName == "String" || existingMethods[accName] {
 			continue
 		}
 		sd.Methods = append(sd.Methods, &MethodDecl{
@@ -2618,7 +2619,7 @@ func (l *lowerer) lowerExpr(e ast.Expr) Expr {
 				return &MethodCall{Recv: obj, Method: capitalize(field), Args: nil}
 			}
 		}
-		return &FieldAccess{Object: obj, Field: field}
+		return &FieldAccess{Object: obj, Field: goSafeName(field)}
 	case *ast.IndexExpr:
 		obj := l.lowerExpr(expr.Object)
 		idx := l.lowerExpr(expr.Index)
@@ -4450,10 +4451,16 @@ func (l *lowerer) lowerArrayLit(arr *ast.ArrayLiteral) Expr {
 	for _, el := range arr.Elements {
 		args = append(args, l.lowerExpr(el))
 	}
-	return &FuncCall{
+	fc := &FuncCall{
 		Func: &Ident{Name: "std.NewArray"},
 		Args: args,
 	}
+	// When the array has an explicit element type (e.g. [Field]()) but no elements,
+	// Go cannot infer T. Include the type argument explicitly.
+	if arr.ElemType != nil && len(args) == 0 {
+		fc.TypeArgs = []string{l.goTypeFromTypeExpr(arr.ElemType)}
+	}
+	return fc
 }
 
 func (l *lowerer) lowerDictLit(d *ast.DictLiteral) Expr {
@@ -4924,6 +4931,19 @@ func capitalize(name string) string {
 		return name
 	}
 	return strings.ToUpper(name[:1]) + name[1:]
+}
+
+// goSafeName appends "_" when name is a Go keyword to avoid compilation errors.
+// Applied to Yz field names that are emitted verbatim into Go struct definitions.
+func goSafeName(name string) string {
+	switch name {
+	case "break", "case", "chan", "const", "continue", "default", "defer",
+		"else", "fallthrough", "for", "func", "go", "goto", "if", "import",
+		"interface", "map", "package", "range", "return", "select", "struct",
+		"switch", "type", "var":
+		return name + "_"
+	}
+	return name
 }
 
 // goIdentGoName converts any Yz identifier to an exported Go identifier.

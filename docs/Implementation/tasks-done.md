@@ -3,6 +3,30 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0028 — Macros (`Macro` interface) ✓
+
+First slice of the macro system. Branch: `macros-sonnet`.
+
+**What was built:**
+- Two-phase build: macro packages (in `macros/` subdirs) are compiled first to Go binaries before the main project build.
+- Macro interface: any boc with `Schema: NoConfig` and `run #(subject Boc, config NoConfig, Boc)` satisfies the Macro contract.
+- Annotation trigger: `\`Debug: {}\`` before an uppercase boc triggers the `Debug` macro.
+- Wire format: Yz-source payload (subject name + fields + config) passed to macro binary on stdin; macro returns raw Yz boc body on stdout (via `generated(src String)`).
+- Macro prelude: compiler-injected `Boc`, `Field`, `NoConfig`, `generated()` types prepended to macro package before compilation.
+- AST merge: returned boc body parsed and appended to the subject's BocLiteral elements.
+- Caching: macro runs keyed on `sha256(macroName + payload)`.
+- Error cases: unknown macro name, macro defined in root package, root-package macro rejection.
+- Parser fix: `ident [TYPE_IDENT]` now recognized as TypedDecl in struct bodies.
+- Lowerer fix: accessor methods skipped when field is already exported (uppercase).
+- Lowerer fix: empty typed array literals `[T]()` emit `std.NewArray[T]()` with explicit type param.
+- Conformance: `TestMacros` driver (3 cases: debug_merge, unknown_macro, root_macro) + `TestExamples/macro_debug`.
+
+**Deferred:**
+- Complex schema types (non-NoConfig)
+- Macro-in-macro (recursive macro expansion)
+- same_package and cycle detection (architecturally unreachable in current impl)
+- Macro output caching invalidation on source change
+
 ### [x] YZC-0098 — Self-scope associated type resolution + structural bound codegen ✓
 
   Three bugs fixed to unblock YZC-0028 (Macros):
