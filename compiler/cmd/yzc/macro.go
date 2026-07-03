@@ -15,10 +15,12 @@ package main
 // the config block, validated against the macro's schema fields.
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -54,14 +56,16 @@ const (
 type macroRegistry struct {
 	byName  map[string]*macroDef
 	byDir   map[string][]*macroDef
-	binPath map[string]string     // relDir → built executable path
-	state   map[string]buildState // relDir → bootstrap state
+	files   map[string][]fileEntry // relDir → macro package source files
+	binPath map[string]string      // relDir → built executable path
+	state   map[string]buildState  // relDir → bootstrap state
 }
 
 func newMacroRegistry() *macroRegistry {
 	return &macroRegistry{
 		byName:  map[string]*macroDef{},
 		byDir:   map[string][]*macroDef{},
+		files:   map[string][]fileEntry{},
 		binPath: map[string]string{},
 		state:   map[string]buildState{},
 	}
@@ -530,8 +534,10 @@ func macroSourceHash(files []fileEntry) (string, error) {
 // target/macros/<pkgKey>/bin/macros, reusing a cached binary when the source
 // hash matches. The package compiles unwrapped (statements concatenated, no
 // file-wrapper bocs) with the macro prelude prepended, so Boc/Field/NoConfig
-// resolve and macro types stay top-level Go types.
-func bootstrapMacroPackage(projectDir string, files []fileEntry, relDir string, reg *macroRegistry) error {
+// resolve and macro types stay top-level Go types. stack carries the macro
+// expansion chain for cycle detection (macros can themselves be annotated
+// with macros from other packages).
+func bootstrapMacroPackage(projectDir string, files []fileEntry, relDir string, reg *macroRegistry, stack []string) error {
 	pkgKey := macroPkgKey(relDir)
 	macroDir := filepath.Join(projectDir, "target", "macros", pkgKey)
 	binPath := filepath.Join(macroDir, "bin", "macros")
@@ -583,6 +589,13 @@ func bootstrapMacroPackage(projectDir string, files []fileEntry, relDir string, 
 		srcs = append(srcs, parsedSrc{path: fe.absPath, src: src})
 	}
 
+	// Macros are regular bocs: they may themselves carry macro annotations
+	// (from other packages). Expand them before analysis; the stack detects
+	// mutually-triggering cycles.
+	if err := expandMacros(combinedSF.Stmts, relDir, reg, stack, projectDir); err != nil {
+		return err
+	}
+
 	a := sema.NewAnalyzer()
 	if err := a.AnalyzeFile(combinedSF); err != nil {
 		if ses, ok := err.(sema.SemaErrors); ok && len(srcs) > 0 {
@@ -615,5 +628,131 @@ func bootstrapMacroPackage(projectDir string, files []fileEntry, relDir string, 
 		return err
 	}
 	reg.binPath[relDir] = binPath
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Expansion (Phase 2 of the two-phase build)
+// ---------------------------------------------------------------------------
+
+// ensureMacroPackageBuilt lazily bootstraps the macro package that defines a
+// triggered macro. stack carries the chain of "<dir>.<Macro>" frames being
+// expanded; re-entering a package that is already building is a cycle.
+func ensureMacroPackageBuilt(projectDir string, def *macroDef, reg *macroRegistry, stack []string) error {
+	switch reg.state[def.RelDir] {
+	case macroBuilt:
+		return nil
+	case macroBuilding:
+		chain := append(append([]string(nil), stack...), def.RelDir+"."+def.Name)
+		return fmt.Errorf("macro cycle detected: %s", strings.Join(chain, " -> "))
+	}
+	reg.state[def.RelDir] = macroBuilding
+	err := bootstrapMacroPackage(projectDir, reg.files[def.RelDir], def.RelDir, reg,
+		append(stack, def.RelDir+"."+def.Name))
+	if err != nil {
+		return err
+	}
+	reg.state[def.RelDir] = macroBuilt
+	return nil
+}
+
+// invokeMacro runs a macro executable with the payload on stdin and returns
+// its stdout (the generated Yz source). Results are cached per payload under
+// target/macros/<pkgKey>/runs/ — the payload is the input boc's structure,
+// so an unchanged subject reuses the previous output.
+func invokeMacro(projectDir string, def *macroDef, reg *macroRegistry, payload string) (string, error) {
+	runKey := sha256.Sum256([]byte(def.Name + "\x00" + payload))
+	runsDir := filepath.Join(projectDir, "target", "macros", macroPkgKey(def.RelDir), "runs")
+	cachePath := filepath.Join(runsDir, hex.EncodeToString(runKey[:])+".out")
+	if out, err := os.ReadFile(cachePath); err == nil {
+		return string(out), nil
+	}
+
+	cmd := exec.Command(reg.binPath[def.RelDir], def.Name)
+	cmd.Stdin = strings.NewReader(payload)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("macro %q failed (%v):\n%s", def.Name, err, stderr.String())
+	}
+	if err := os.MkdirAll(runsDir, 0o755); err == nil {
+		_ = os.WriteFile(cachePath, stdout.Bytes(), 0o644)
+	}
+	return stdout.String(), nil
+}
+
+// expandMacros walks top-level statements (descending into file-wrapper
+// bocs) looking for annotated uppercase declarations, and runs each
+// triggered macro in annotation order — merging the generated slots into
+// the subject boc literal before sema sees it. Each macro receives the
+// progressively merged subject.
+func expandMacros(stmts []ast.Node, relDir string, reg *macroRegistry, stack []string, projectDir string) error {
+	if reg == nil || len(reg.byName) == 0 {
+		return nil
+	}
+	for _, stmt := range stmts {
+		sd, ok := stmt.(*ast.ShortDecl)
+		if !ok {
+			continue
+		}
+		if sd.IsFileWrapper {
+			if bl, ok := sd.Values[0].(*ast.BocLiteral); ok {
+				if err := expandMacros(bl.Elements, relDir, reg, stack, projectDir); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+		if err := expandSubject(sd, relDir, reg, stack, projectDir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// expandSubject runs all macros triggered by one annotated declaration.
+func expandSubject(sd *ast.ShortDecl, relDir string, reg *macroRegistry, stack []string, projectDir string) error {
+	if sd.Annotation == nil || len(sd.Names) != 1 || sd.Names[0].TokType != token.TYPE_IDENT || len(sd.Values) != 1 {
+		return nil
+	}
+	subjectBl, ok := sd.Values[0].(*ast.BocLiteral)
+	if !ok {
+		return nil
+	}
+	triggers, err := annotationTriggers(sd.Annotation)
+	if err != nil {
+		return err
+	}
+	for _, tr := range triggers {
+		def, ok := reg.byName[tr.Name]
+		if !ok {
+			return fmt.Errorf("unknown macro %q: no Macro implementation with that name found", tr.Name)
+		}
+		if def.RelDir == relDir {
+			return fmt.Errorf("macro %q is defined in package %q and cannot be applied to a boc in the same package; macros must live in a separate package from the bocs they process",
+				def.Name, def.RelDir)
+		}
+		if err := ensureMacroPackageBuilt(projectDir, def, reg, stack); err != nil {
+			return err
+		}
+		entries, err := encodeConfig(tr.Config)
+		if err != nil {
+			return fmt.Errorf("macro %q: %w", def.Name, err)
+		}
+		if err := validateConfig(tr, def, entries); err != nil {
+			return err
+		}
+		payload := buildSubjectPayload(sd.Names[0].Name, subjectBl, entries).Encode()
+		out, err := invokeMacro(projectDir, def, reg, payload)
+		if err != nil {
+			return err
+		}
+		genSF, parseErr := parser.New([]byte(out)).ParseFile()
+		if parseErr != nil {
+			return fmt.Errorf("macro %q returned invalid Yz source: %v\noutput:\n%s", def.Name, parseErr, out)
+		}
+		subjectBl.Elements = append(subjectBl.Elements, genSF.Stmts...)
+	}
 	return nil
 }

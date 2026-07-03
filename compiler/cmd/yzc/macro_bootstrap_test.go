@@ -146,7 +146,7 @@ func TestBootstrapDebugEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := bootstrapMacroPackage(projectDir, files, "macros", reg); err != nil {
+	if err := bootstrapMacroPackage(projectDir, files, "macros", reg, nil); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
 	binPath := reg.binPath["macros"]
@@ -179,7 +179,7 @@ func TestBootstrapDebugEndToEnd(t *testing.T) {
 
 	// Second bootstrap must reuse the cached binary.
 	info1, _ := os.Stat(binPath)
-	if err := bootstrapMacroPackage(projectDir, files, "macros", reg); err != nil {
+	if err := bootstrapMacroPackage(projectDir, files, "macros", reg, nil); err != nil {
 		t.Fatalf("re-bootstrap: %v", err)
 	}
 	info2, _ := os.Stat(binPath)

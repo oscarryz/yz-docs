@@ -159,6 +159,53 @@ func compileProject(projectDir string, srcRoots []string) (map[string]string, er
 		byDir[e.relDir] = append(byDir[e.relDir], e)
 	}
 
+	// Macro discovery (YZC-0028): scan each directory for Macro-shaped bocs.
+	// Directories that define macros are compile-time artifacts — removed
+	// from the app build and bootstrap-compiled lazily on first trigger.
+	reg := newMacroRegistry()
+	{
+		var dirNames []string
+		for d := range byDir {
+			dirNames = append(dirNames, d)
+		}
+		sort.Strings(dirNames)
+		for _, dir := range dirNames {
+			var stmts []ast.Node
+			for _, fe := range byDir[dir] {
+				src, err := os.ReadFile(fe.absPath)
+				if err != nil {
+					return nil, fmt.Errorf("reading %s: %w", fe.absPath, err)
+				}
+				parsed, parseErr := parser.New(src).ParseFile()
+				if parseErr != nil {
+					if pe, ok := parseErr.(*parser.ParseError); ok {
+						fmt.Fprint(os.Stderr, diagnostic.Format(src, fe.absPath, pe.Line, pe.Col, pe.Len, pe.Msg))
+						return nil, fmt.Errorf("parse error in %s", fe.absPath)
+					}
+					return nil, fmt.Errorf("parse %s: %w", fe.absPath, parseErr)
+				}
+				stmts = append(stmts, parsed.Stmts...)
+			}
+			defs, err := scanMacroDefs(stmts, dir)
+			if err != nil {
+				return nil, err
+			}
+			if len(defs) == 0 {
+				continue
+			}
+			if dir == "" {
+				return nil, fmt.Errorf("macro %q cannot be defined in the project root package; move it to a sub-package (e.g. macros/)", defs[0].Name)
+			}
+			for _, def := range defs {
+				if err := reg.register(def); err != nil {
+					return nil, err
+				}
+			}
+			reg.files[dir] = byDir[dir]
+			delete(byDir, dir)
+		}
+	}
+
 	// Invariant 5 (spec §9): foo.yz + foo/ can coexist. Detect pairs where a
 	// root file and a same-named directory share a stem, parse and wrap the
 	// directory's files, and inject them into the root boc literal at analysis
@@ -228,7 +275,7 @@ func compileProject(projectDir string, srcRoots []string) (map[string]string, er
 		if dir == "" {
 			continue // root compiled last
 		}
-		goSrc, exp, err := compilePackageDir(byDir[dir], dir, nil, nil)
+		goSrc, exp, err := compilePackageDir(byDir[dir], dir, nil, nil, reg, projectDir)
 		if err != nil {
 			return nil, err
 		}
@@ -246,7 +293,7 @@ func compileProject(projectDir string, srcRoots []string) (map[string]string, er
 
 	// Compile the root (main) package with the seeded analyzer.
 	if rootFiles, ok := byDir[""]; ok {
-		goSrc, _, err := compilePackageDir(rootFiles, "", rootAnalyzer, pendingInjections)
+		goSrc, _, err := compilePackageDir(rootFiles, "", rootAnalyzer, pendingInjections, reg, projectDir)
 		if err != nil {
 			return nil, err
 		}
@@ -260,7 +307,7 @@ func compileProject(projectDir string, srcRoots []string) (map[string]string, er
 // source string and returns the exported symbols of the package.
 // If a is non-nil it is used as the analyzer (for the root package which has
 // pre-registered sub-package exports); otherwise a fresh analyzer is created.
-func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendingInjections map[string][]ast.Node) (string, *pkgExport, error) {
+func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendingInjections map[string][]ast.Node, reg *macroRegistry, projectDir string) (string, *pkgExport, error) {
 	pkgName := pkgNameFromDir(relDir)
 
 	// Sort: main.yz last within each dir.
@@ -310,6 +357,14 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendi
 			injectIntoBocLiteral(sf, fe.name, nodes)
 		}
 		pfiles = append(pfiles, parsedFile{sf: sf, path: fe.absPath, src: src})
+	}
+
+	// Macro expansion (YZC-0028): run triggered macros and merge their
+	// generated slots into the annotated bocs before analysis.
+	for _, pf := range pfiles {
+		if err := expandMacros(pf.sf.Stmts, relDir, reg, nil, projectDir); err != nil {
+			return "", nil, err
+		}
 	}
 
 	if a == nil {
