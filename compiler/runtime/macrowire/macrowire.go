@@ -321,12 +321,24 @@ func decodeConfig(bl *ast.BocLiteral) ([]ConfigEntry, error) {
 	return entries, nil
 }
 
-func decodeString(e ast.Expr) (string, error) {
+// StringFromExpr extracts a Go string from a parsed Yz string literal.
+// Shared by the payload decoder and the compiler-side config encoder.
+func StringFromExpr(e ast.Expr) (string, error) {
 	lit, ok := e.(*ast.StringLit)
 	if !ok {
 		return "", fmt.Errorf("expected string literal, got %T", e)
 	}
 	return unquoteYz(lit.Value)
+}
+
+func decodeString(e ast.Expr) (string, error) {
+	return StringFromExpr(e)
+}
+
+// ValueFromExpr converts a parsed Yz scalar literal into a ConfigValue.
+// Shared by the payload decoder and the compiler-side config encoder.
+func ValueFromExpr(e ast.Expr) (ConfigValue, error) {
+	return decodeValue(e)
 }
 
 func decodeValue(e ast.Expr) (ConfigValue, error) {
