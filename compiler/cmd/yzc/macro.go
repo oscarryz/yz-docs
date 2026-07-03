@@ -15,9 +15,20 @@ package main
 // the config block, validated against the macro's schema fields.
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	"yz/internal/ast"
+	"yz/internal/codegen"
+	"yz/internal/diagnostic"
+	"yz/internal/ir"
+	"yz/internal/parser"
+	"yz/internal/sema"
 	"yz/internal/token"
 	"yz/runtime/macrowire"
 )
@@ -169,15 +180,10 @@ func resolveSchema(def *macroDef, schemaEntry ast.Node, runDecl *ast.BocDecl, st
 		}
 		def.SchemaFields = fields
 	case *ast.BocDecl: // inline form: Schema #(fields...)
-		if configTypeName != "Schema" {
-			return fmt.Errorf("macro %q: run config type %q does not match inline Schema declaration",
-				def.Name, configTypeName)
-		}
-		fields, err := schemaFieldsFromSig(def.Name, se.Sig)
-		if err != nil {
-			return err
-		}
-		def.SchemaFields = fields
+		// The abstract associated-type form has no concrete constructor for
+		// the synthesized macro main. Deferred — use a named config type.
+		return fmt.Errorf("macro %q: inline `Schema #(...)` is not yet supported; declare a named config type and alias it (Schema : MyConfig)",
+			def.Name)
 	}
 	return nil
 }
@@ -218,26 +224,6 @@ func schemaFieldsFromType(macroName, typeName string, stmts []ast.Node) ([]macro
 		return fields, nil
 	}
 	return nil, fmt.Errorf("macro %q: schema type %q not found in package", macroName, typeName)
-}
-
-// schemaFieldsFromSig extracts config fields from an inline `Schema #(...)`.
-func schemaFieldsFromSig(macroName string, sig *ast.BocTypeExpr) ([]macrowire.FieldSpec, error) {
-	if sig == nil {
-		return nil, nil
-	}
-	var fields []macrowire.FieldSpec
-	for _, p := range sig.Params {
-		if p.Label == "" {
-			return nil, fmt.Errorf("macro %q: inline Schema params must be labeled", macroName)
-		}
-		ft := ast.TypeExprString(p.Type)
-		if !scalarConfigTypes[ft] {
-			return nil, fmt.Errorf("macro %q: config field %q: only scalar config fields are supported, got %s",
-				macroName, p.Label, ft)
-		}
-		fields = append(fields, macrowire.FieldSpec{Name: p.Label, Type: ft})
-	}
-	return fields, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -377,4 +363,257 @@ func buildSubjectPayload(name string, bl *ast.BocLiteral, cfg []macrowire.Config
 		})
 	}
 	return p
+}
+
+// ---------------------------------------------------------------------------
+// Macro prelude
+// ---------------------------------------------------------------------------
+
+// macroPrelude is Yz source prepended to every macro package during
+// bootstrap compilation. It declares the reflection types a macro's run
+// method works with. Boc/Field fields use the defaulted ShortDecl form
+// because bare array-typed TypedDecls (`fields [Field]`) are not
+// recognized as field declarations by the parser.
+const macroPrelude = `
+Field : {
+    name: ""
+    type: ""
+}
+
+Boc : {
+    name: ""
+    fields: [Field]()
+    source: ""
+}
+
+NoConfig : {
+    none #(Bool) { true }
+}
+
+generated #(src String, Boc) {
+    Boc(name: "generated", fields: [Field](), source: src)
+}
+
+while #(cond #(Bool), body #()) {
+    cond() ? { body(), while(cond, body) }, {}
+}
+`
+
+// preludeStmts parses the macro prelude. Parsed fresh per call — callers
+// splice the returned nodes into their own SourceFile, so sharing AST nodes
+// across analyses would leak sema state.
+func preludeStmts() ([]ast.Node, error) {
+	sf, err := parser.New([]byte(macroPrelude)).ParseFile()
+	if err != nil {
+		return nil, fmt.Errorf("internal: macro prelude does not parse: %w", err)
+	}
+	return sf.Stmts, nil
+}
+
+// ---------------------------------------------------------------------------
+// Synthesized macro main
+// ---------------------------------------------------------------------------
+
+// genMacroMain generates the Go main for a macro package executable. The
+// executable reads a wire payload on stdin, dispatches on os.Args[1] to the
+// requested macro, and writes the returned Boc's source to stdout.
+func genMacroMain(defs []*macroDef) string {
+	var sb strings.Builder
+	sb.WriteString(`package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+
+	mw "yz/runtime/macrowire"
+	std "yz/runtime/rt"
+)
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "usage: macros <MacroName>")
+		os.Exit(2)
+	}
+	in, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "macro: reading stdin: %v\n", err)
+		os.Exit(1)
+	}
+	p, err := mw.DecodePayload(in)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "macro: bad payload: %v\n", err)
+		os.Exit(1)
+	}
+	var fs []*Field
+	for _, f := range p.Fields {
+		fs = append(fs, NewField(std.NewString(f.Name), std.NewString(f.Type)))
+	}
+	subject := NewBoc(std.NewString(p.SubjectName), std.NewArray(fs...), std.NewString(""))
+	cfg := map[string]mw.ConfigValue{}
+	for _, e := range p.Config {
+		cfg[e.Key] = e.Value
+	}
+	_ = cfg
+
+	var out *Boc
+	switch os.Args[1] {
+`)
+	for _, def := range defs {
+		sb.WriteString(fmt.Sprintf("\tcase %q:\n", def.Name))
+		sb.WriteString(fmt.Sprintf("\t\tout = New%s().Run(subject, %s).Force()\n",
+			def.Name, configCtorExpr(def)))
+	}
+	sb.WriteString(`	default:
+		fmt.Fprintf(os.Stderr, "macro: unknown macro %q\n", os.Args[1])
+		os.Exit(2)
+	}
+	os.Stdout.WriteString(out.Source().GoString())
+}
+`)
+	return sb.String()
+}
+
+// configCtorExpr returns the Go expression constructing a macro's config
+// value from the decoded payload entries.
+func configCtorExpr(def *macroDef) string {
+	if len(def.SchemaFields) == 0 {
+		return "New" + def.SchemaTypeName + "()"
+	}
+	args := make([]string, len(def.SchemaFields))
+	for i, f := range def.SchemaFields {
+		key := fmt.Sprintf("%q", f.Name)
+		switch f.Type {
+		case "String":
+			args[i] = "std.NewString(cfg[" + key + "].Str)"
+		case "Int":
+			args[i] = "std.NewInt(cfg[" + key + "].Int)"
+		case "Decimal":
+			args[i] = "std.NewDecimal(cfg[" + key + "].Dec)"
+		case "Bool":
+			args[i] = "std.NewBool(cfg[" + key + "].Bool)"
+		}
+	}
+	return "New" + def.SchemaTypeName + "(" + strings.Join(args, ", ") + ")"
+}
+
+// ---------------------------------------------------------------------------
+// Bootstrap build (Phase 1 of the two-phase build)
+// ---------------------------------------------------------------------------
+
+// macroPkgKey converts a package relDir into a directory-name-safe key.
+func macroPkgKey(relDir string) string {
+	return strings.ReplaceAll(relDir, "/", "_")
+}
+
+// macroSourceHash fingerprints a macro package: its sources, the prelude,
+// and the compiler version.
+func macroSourceHash(files []fileEntry) (string, error) {
+	h := sha256.New()
+	sorted := append([]fileEntry(nil), files...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].absPath < sorted[j].absPath })
+	for _, fe := range sorted {
+		src, err := os.ReadFile(fe.absPath)
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(h, "%s\x00", fe.name)
+		h.Write(src)
+		h.Write([]byte{0})
+	}
+	h.Write([]byte(macroPrelude))
+	h.Write([]byte(version))
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// bootstrapMacroPackage compiles a macro package to a native executable at
+// target/macros/<pkgKey>/bin/macros, reusing a cached binary when the source
+// hash matches. The package compiles unwrapped (statements concatenated, no
+// file-wrapper bocs) with the macro prelude prepended, so Boc/Field/NoConfig
+// resolve and macro types stay top-level Go types.
+func bootstrapMacroPackage(projectDir string, files []fileEntry, relDir string, reg *macroRegistry) error {
+	pkgKey := macroPkgKey(relDir)
+	macroDir := filepath.Join(projectDir, "target", "macros", pkgKey)
+	binPath := filepath.Join(macroDir, "bin", "macros")
+	hashPath := filepath.Join(macroDir, "source.hash")
+
+	hash, err := macroSourceHash(files)
+	if err != nil {
+		return err
+	}
+	if prev, err := os.ReadFile(hashPath); err == nil && string(prev) == hash {
+		if _, err := os.Stat(binPath); err == nil {
+			reg.binPath[relDir] = binPath
+			return nil
+		}
+	}
+
+	// Parse all package files (sorted for determinism) and concatenate.
+	sorted := append([]fileEntry(nil), files...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].name < sorted[j].name })
+	prelude, err := preludeStmts()
+	if err != nil {
+		return err
+	}
+	combinedSF := &ast.SourceFile{Stmts: prelude}
+	type parsedSrc struct {
+		path string
+		src  []byte
+	}
+	var srcs []parsedSrc
+	for _, fe := range sorted {
+		src, err := os.ReadFile(fe.absPath)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", fe.absPath, err)
+		}
+		sf, parseErr := parser.New(src).ParseFile()
+		if parseErr != nil {
+			if pe, ok := parseErr.(*parser.ParseError); ok {
+				fmt.Fprint(os.Stderr, diagnostic.Format(src, fe.absPath, pe.Line, pe.Col, pe.Len, pe.Msg))
+				return fmt.Errorf("parse error in %s", fe.absPath)
+			}
+			return fmt.Errorf("parse %s: %w", fe.absPath, parseErr)
+		}
+		for _, stmt := range sf.Stmts {
+			if sd, ok := stmt.(*ast.ShortDecl); ok && len(sd.Names) == 1 && sd.Names[0].Name == "main" {
+				return fmt.Errorf("macro package %q must not declare a main boc", relDir)
+			}
+		}
+		combinedSF.Stmts = append(combinedSF.Stmts, sf.Stmts...)
+		srcs = append(srcs, parsedSrc{path: fe.absPath, src: src})
+	}
+
+	a := sema.NewAnalyzer()
+	if err := a.AnalyzeFile(combinedSF); err != nil {
+		if ses, ok := err.(sema.SemaErrors); ok && len(srcs) > 0 {
+			// Positions may point into any file (or the prelude); report
+			// against the first file for context.
+			for _, se := range ses {
+				fmt.Fprint(os.Stderr, diagnostic.Format(srcs[0].src, srcs[0].path, se.Line, se.Col, se.Len, se.Msg))
+			}
+			return fmt.Errorf("semantic errors in macro package %q", relDir)
+		}
+		return fmt.Errorf("macro package %q: %w", relDir, err)
+	}
+
+	f := ir.Lower(combinedSF, a, "main")
+	goSrc := codegen.Generate(f)
+
+	defs := reg.byDir[relDir]
+	sources := map[string]string{
+		"macros_gen.go": goSrc,
+		"macro_main.go": genMacroMain(defs),
+	}
+	genDir := filepath.Join(macroDir, "gen")
+	if err := writeGeneratedGo(genDir, sources, projectDir); err != nil {
+		return err
+	}
+	if err := goBuild(genDir, binPath); err != nil {
+		return fmt.Errorf("building macro package %q: %w", relDir, err)
+	}
+	if err := os.WriteFile(hashPath, []byte(hash), 0o644); err != nil {
+		return err
+	}
+	reg.binPath[relDir] = binPath
+	return nil
 }

@@ -76,7 +76,7 @@ JSON : {
 	}
 }
 
-func TestScanMacroDefsInlineSchema(t *testing.T) {
+func TestScanMacroDefsInlineSchemaRejected(t *testing.T) {
 	src := `
 Doc : {
     Schema #(documentation String)
@@ -85,16 +85,9 @@ Doc : {
     }
 }
 `
-	defs, err := scanMacroDefs(parseStmts(t, src), "macros")
-	if err != nil {
-		t.Fatalf("scanMacroDefs: %v", err)
-	}
-	if len(defs) != 1 {
-		t.Fatalf("expected 1 def, got %d", len(defs))
-	}
-	d := defs[0]
-	if d.SchemaTypeName != "" || len(d.SchemaFields) != 1 || d.SchemaFields[0].Name != "documentation" {
-		t.Errorf("unexpected def: %+v", d)
+	_, err := scanMacroDefs(parseStmts(t, src), "macros")
+	if err == nil || !strings.Contains(err.Error(), "inline `Schema #(...)` is not yet supported") {
+		t.Errorf("expected inline-schema rejection, got %v", err)
 	}
 }
 
