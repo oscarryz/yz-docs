@@ -928,3 +928,94 @@ func TestParseTrailingBlockNewlineSeparates(t *testing.T) {
 		t.Errorf("stmt 1: expected *ast.BocLiteral, got %T", sf.Stmts[1])
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Multiline array literals (YZC-0028: macro wire format)
+// ---------------------------------------------------------------------------
+
+func TestParseMultilineArrayLiteral(t *testing.T) {
+	src := `xs: [
+    {
+        name: "a"
+    },
+    {
+        name: "b"
+    }
+]`
+	sf := parse(t, src)
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	arr, ok := sd.Values[0].(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("expected *ast.ArrayLiteral, got %T", sd.Values[0])
+	}
+	if len(arr.Elements) != 2 {
+		t.Fatalf("expected 2 elements, got %d", len(arr.Elements))
+	}
+	for i, el := range arr.Elements {
+		if _, ok := el.(*ast.BocLiteral); !ok {
+			t.Errorf("element %d: expected *ast.BocLiteral, got %T", i, el)
+		}
+	}
+}
+
+func TestParseMultilineDictLiteral(t *testing.T) {
+	src := `d: [
+    "a": 1,
+    "b": 2
+]`
+	sf := parse(t, src)
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	dict, ok := sd.Values[0].(*ast.DictLiteral)
+	if !ok {
+		t.Fatalf("expected *ast.DictLiteral, got %T", sd.Values[0])
+	}
+	if len(dict.Entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(dict.Entries))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TypeExprString (YZC-0028: macro wire format)
+// ---------------------------------------------------------------------------
+
+func TestTypeExprStringSimple(t *testing.T) {
+	// TypedDecl-position types: only named forms are recognized there
+	// (bracket types deliberately go to the expression path).
+	cases := []struct {
+		src  string
+		want string
+	}{
+		{"f String", "String"},
+		{"f Option(Int)", "Option(Int)"},
+		{"f g.Node", "g.Node"},
+	}
+	for _, c := range cases {
+		sf := parse(t, "X: {\n"+c.src+"\n}")
+		sd := asShortDecl(t, stmt(t, sf, 0))
+		bl := sd.Values[0].(*ast.BocLiteral)
+		td, ok := bl.Elements[0].(*ast.TypedDecl)
+		if !ok {
+			t.Errorf("%q: expected *ast.TypedDecl element, got %T", c.src, bl.Elements[0])
+			continue
+		}
+		if got := ast.TypeExprString(td.Type); got != c.want {
+			t.Errorf("TypeExprString(%q) = %q, want %q", c.src, got, c.want)
+		}
+	}
+}
+
+func TestTypeExprStringBocSig(t *testing.T) {
+	// Array, dict, and nested boc types occur inside boc signatures, where
+	// parseTypeExpr handles all forms.
+	sig := "#(a Option(Int), items [Int], lookup [String:Int], n g.Node, cb #(x Int, Bool), String)"
+	sf := parse(t, "X: {\nf "+sig+" { \"\" }\n}")
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	bl := sd.Values[0].(*ast.BocLiteral)
+	bd, ok := bl.Elements[0].(*ast.BocDecl)
+	if !ok {
+		t.Fatalf("expected *ast.BocDecl element, got %T", bl.Elements[0])
+	}
+	if got := ast.TypeExprString(bd.Sig); got != sig {
+		t.Errorf("TypeExprString(sig) = %q, want %q", got, sig)
+	}
+}
