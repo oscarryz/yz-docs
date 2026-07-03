@@ -685,20 +685,6 @@ Deferred from YZC-0025. Once the macro system (YZC-0028) is defined, the compile
 - [ ] Wire into macro invocation pipeline (YZC-0028)
 
 
-### YZC-0028 — Macros (`Macro` interface)
-
-Any boc with `Schema #()` and `run #(Boc, Boc)` satisfies `Macro`. Depends on: ~~YZC-0025~~, ~~YZC-0026~~, ~~YZC-0027~~, ~~YZC-0030~~, ~~YZC-0066~~, ~~YZC-0059~~, YZC-0098.
-
-- [ ] Sema — recognize `Macro` structural interface
-- [ ] Sema — scan annotation for `macros: [...]`
-- [ ] Boc metatype — `Boc` value type for `run`
-- [ ] Two-phase build — compile `Compile` implementations first
-- [ ] Serialization — `Boc` wire format
-- [ ] AST merge — merge returned `Boc` into parent
-- [ ] Cycle detection
-- [ ] Caching — keyed on source hash
-- [ ] Spec 12 — new spec file
-
 ### YZC-0031 — Scalar Types in Yz Source (uppering)
 
 `Int/String/Bool/Decimal/Unit` move from Go to `stdlib/` with `compile-time:[Native]`. Depends on: ~~YZC-0025~~, YZC-0028, ~~YZC-0002~~, ~~YZC-0022~~ (stdlib needs its own source root, e.g. `/usr/local/yz/src/`).
