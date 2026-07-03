@@ -1,0 +1,7 @@
+`GenA: {}`
+GenB : {
+    Schema : NoConfig
+    run #(subject Boc, config NoConfig, Boc) {
+        generated("from_b #(String) {\n    \"b\"\n}")
+    }
+}

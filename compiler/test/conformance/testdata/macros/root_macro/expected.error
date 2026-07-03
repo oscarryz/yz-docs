@@ -1,0 +1,1 @@
+macro "Debug" cannot be defined in the project root package; move it to a sub-package (e.g. macros/)

@@ -1,0 +1,19 @@
+// Debug macro (YZC-0028): generates a `debug #(String)` method that renders
+// the subject's fields. Triggered by `Debug: {}` in a boc's annotation.
+// The interpolation marker `${` is assembled as "$" + "{" so it does not
+// start interpolation inside this macro's own strings.
+Debug : {
+    Schema : NoConfig
+    run #(subject Boc, config NoConfig, Boc) {
+        body: subject.name + "("
+        sep: ""
+        i: 0
+        while({ i < subject.fields.length() }, {
+            f: subject.fields.at(i)
+            body = body + sep + f.name + ": $" + "{" + f.name + "}"
+            sep = ", "
+            i = i + 1
+        })
+        generated("debug #(String) {\n    \"" + body + ")\"\n}")
+    }
+}

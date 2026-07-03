@@ -1,0 +1,12 @@
+// Macro example (YZC-0028): the Debug macro in macros/debug.yz runs at
+// compile time and merges a generated `debug` method into Person.
+`Debug: {}`
+Person : {
+    name String
+    age Int
+}
+
+main: {
+    p: Person("Ada", 36)
+    print(p.debug())
+}

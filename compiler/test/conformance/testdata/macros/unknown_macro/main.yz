@@ -1,0 +1,9 @@
+`Debgu: {}`
+Person : {
+    name String
+}
+
+main: {
+    p: Person("Ada")
+    print(p.name)
+}

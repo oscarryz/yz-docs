@@ -1,0 +1,1 @@
+macro "Debug" is defined in package "macros" and cannot be applied to a boc in the same package
