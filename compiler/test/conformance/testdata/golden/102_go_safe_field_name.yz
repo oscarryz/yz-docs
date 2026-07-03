@@ -1,0 +1,10 @@
+// Struct with a field named "type" (a Go keyword); compiler must rename to "type_".
+Token: {
+    type String
+    value String
+}
+
+main: {
+    t: Token(type: "keyword", value: "if")
+    print(t.type)
+}

@@ -1,0 +1,10 @@
+`Debug: {}`
+Person: {
+    name String
+    age Int
+}
+
+main: {
+    p: Person(name: "Ada", age: 36)
+    print(p.debug())
+}
