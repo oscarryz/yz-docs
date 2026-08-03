@@ -470,7 +470,7 @@ Open ticket details. See tasks.md for the index.
 
   **Out of scope for this ticket**
 
-  `self` inside Go-backed methods (YZC-0060), generic Go-backed methods.
+  `self` inside Go-backed methods (YZC-0099), generic Go-backed methods.
 
   Depends on: ~~YZC-0025~~, ~~YZC-0059~~.
 
@@ -539,9 +539,59 @@ Open ticket details. See tasks.md for the index.
   `Macro` interface and do not transform AST. The `Deps` macro and `yz fetch`
   are complementary: the macro validates, the tool acts.
 
-- [ ] **[YZC-0060] Design and implement `self` in Yz**
+- [ ] **[YZC-0060] Implement `self` as a lexically-resolved compiler built-in** — [proposal](../Questions/Self%20keyword.md)
 
-  `self` as compiler built-in or macro-generated binding. Depends on: YZC-0058, ~~YZC-0059~~.
+  Design decided: `self` is a reserved identifier, valid inside any struct-boc or singleton-boc
+  method body, resolved lexically at compile time to the enclosing receiver — not a macro-generated
+  or constructor-assigned binding (both were considered and rejected; see the proposal for why).
+  The lowerer already tracks this internally (`RecvName`/`setReceiver` in `internal/ir/lower.go`);
+  this ticket exposes it to Yz source as a first-class expression.
+
+  - [ ] Parser/lexer — reserve `self` (decide hard-reserved vs. context-sensitive; see proposal)
+  - [ ] Sema — resolve `self` against the enclosing method's receiver type; compile error if no
+    enclosing receiver; nested boc-literal closures lexically capture the outer `self`
+  - [ ] Lowerer — wire source-level `self` expression to the existing internal receiver machinery
+  - [ ] Decide: `self` read-only, or assignable?
+  - [ ] Golden tests — field access via `self.x`, whole-instance `self`, closure capture of outer `self`
+  - [ ] Error test — `self` outside any receiver scope
+
+  Depends on: ~~YZC-0059~~. YZC-0058 is only a prerequisite for the narrower "`self` inside a
+  Go-backed (`go_source`) method" sub-case, which is out of scope here — see YZC-0099.
+
+- [ ] **[YZC-0099] `self` / native-builtins: confirm `go_source` calling convention covers built-in operators**
+
+  Follow-up from YZC-0060. YZC-0031 moves scalar types (`Int`, `String`, etc.) to Yz source
+  annotated `go_source`/`Native`, with tier-1 (compiler built-in) / tier-2 (`go_source`-backed,
+  body-less in Yz) / tier-3 (pure Yz) methods per the three-tier model in
+  [Macro Interface Interaction Design](../Questions/solved/Macro%20Interface%20Interaction%20Design.md).
+
+  **Working hypothesis (needs confirmation, not assumed to require new engineering):**
+  tier-2 methods have no Yz body, so the Yz `self` keyword never appears inside them — the bound
+  Go function already receives the instance value explicitly as its first parameter by the
+  existing `//yz:bind` convention (e.g. `//yz:bind Int + #(other Int, Int)` →
+  `func IntPlus(a, b std.Int) std.Int`), so there's no missing "self" on the Go side either. The
+  only place `self` could matter for a `go_source`-annotated type is inside its tier-3
+  (pure-Yz-bodied) methods (e.g. `times #(n Int, Range) { ... }`), which are ordinary struct-boc
+  methods and should already be covered by YZC-0060's core semantics with no special-casing.
+
+  ```yz
+  `go_source: "stdlib/int.go"`
+  Int: {
+      + #(other Int, Int)              // tier 1/2 — no Yz body, no `self`
+      times #(n Int, Range) {          // tier 3 — pure Yz, `self` works via YZC-0060
+          Range(0, n)
+      }
+  }
+  ```
+
+  - [ ] Confirm the `go_source` calling convention (explicit first param) fully replaces any
+    need for `self` inside tier-2 method bodies — document explicitly; no engineering needed
+    if confirmed
+  - [ ] Confirm tier-3 pure-Yz methods on a `go_source`-annotated type resolve `self` via
+    ordinary YZC-0060 rules; add a golden test once YZC-0031 lands
+  - [ ] If the hypothesis holds, close as documentation-only; if not, scope the actual gap
+
+  Depends on: YZC-0058, YZC-0060, YZC-0031.
 
 ---
 

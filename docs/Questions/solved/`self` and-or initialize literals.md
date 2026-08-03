@@ -1,5 +1,7 @@
 #open-question We need it, but need to establish the proper rules
 
+~~Superseded~~ — see [Self keyword](../Self%20keyword.md) (YZC-0060). The constructor-assigned `self` field explored below is the exact failure mode being avoided: a value re-assigned per instance/call, same root problem as JavaScript's `this`. The new proposal resolves `self` lexically at compile time instead, so it's never reassigned or overridden.
+
 
 <hr>
 

@@ -1,5 +1,5 @@
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0099**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0100**.
 
 # Yz Compiler Implementation
 
@@ -41,7 +41,8 @@ YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  
 YZC-0058 -- GoSource: Go-backed type implementations -- L -- needs ~~YZC-0025~~, ~~YZC-0059~~  
-YZC-0060 -- Design and implement `self` in Yz -- L -- needs YZC-0058, ~~YZC-0059~~  
+YZC-0060 -- Implement `self` as a lexically-resolved compiler built-in -- L -- needs ~~YZC-0059~~ (YZC-0058 only for the Go-backed-method sub-case)  
+YZC-0099 -- `self` / native-builtins: confirm go_source calling convention covers built-in operators -- S -- needs YZC-0058, YZC-0060, YZC-0031  
 ~~YZC-0041 -- `Deps` macro: compile-time dependency validation -- cancelled, superseded by YZC-0097~~
 YZC-0096 -- `yz fetch`: dependency fetcher -- M -- needs ~~YZC-0097~~, ~~YZC-0022~~
 YZC-0042 -- `yz` tool: run, new, add, init (wraps yzc + yz fetch) -- L -- needs ~~YZC-0041~~, YZC-0096, ~~YZC-0097~~  

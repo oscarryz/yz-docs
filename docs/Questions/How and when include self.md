@@ -1,4 +1,8 @@
-#open-question 
+#open-question
+
+~~Superseded~~ — see [Self keyword](Self%20keyword.md) (YZC-0060). The macro-generated approach sketched below was considered and rejected: macros run at compile time over a type declaration, before any instance exists, so they can't produce a value that points back at a specific instance. `self` is proposed as a compiler built-in resolved lexically instead.
+
+---
 
 Some data types need self, but this is not a keyword
 
