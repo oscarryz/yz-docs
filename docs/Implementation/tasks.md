@@ -4,7 +4,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **102 golden + 25 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **103 golden + 25 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`, macro wire codec: `compiler/runtime/macrowire/`
 

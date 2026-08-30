@@ -213,11 +213,11 @@ func (p *Parser) isBocDeclStart() bool {
 	return result
 }
 
-// isTypedDeclStart returns true for `ident TypeIdent` or `ident GenericIdent`.
-// We only trigger on TYPE_IDENT and GENERIC_IDENT as the following token —
-// not on LBRACKET, because `array[0]` (index access) and `names [String]`
-// (array-type decl) cannot be distinguished without deeper lookahead.
-// Array-type declarations (`x [T]`) are handled via the expression path.
+// isTypedDeclStart returns true for `ident TypeIdent`, `ident GenericIdent`,
+// or `ident [TypeIdent]` (array-typed field). The bracket form needs deeper
+// lookahead to separate `names [String]` (array-type decl) from `array[0]`
+// (index access): only a TYPE_IDENT or GENERIC_IDENT directly inside the
+// brackets marks a declaration, so `a[0]` and `a[i]` stay expressions.
 func (p *Parser) isTypedDeclStart() bool {
 	if p.cur().Type != token.IDENT {
 		return false
@@ -231,6 +231,13 @@ func (p *Parser) isTypedDeclStart() bool {
 		if p.at(token.DOT) {
 			p.advance()
 			isType = p.at(token.TYPE_IDENT)
+		}
+	}
+	if !isType && p.at(token.LBRACKET) {
+		p.advance() // skip [
+		if p.at(token.TYPE_IDENT) || p.at(token.GENERIC_IDENT) {
+			p.advance()
+			isType = p.at(token.RBRACKET)
 		}
 	}
 	p.pos = save

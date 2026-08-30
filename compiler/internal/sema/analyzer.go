@@ -2057,19 +2057,18 @@ func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
 		if varName, path := memberPath(m); varName != "" {
 			if sym := a.currentScope.Lookup(varName); sym != nil {
 				if _, ok := sym.Type.(*StructType); ok {
-					// Only check non-method fields (methods are never tracked).
-					skipCheck := false
-					if st, ok := objType.(*StructType); ok {
-						for _, f := range st.Fields {
-							if f.Name == m.Member.Name {
-								if _, isBoc := f.Type.(*BocType); isBoc {
-									skipCheck = true // method field
-								}
-								if f.IsTypeField {
-									skipCheck = true // compile-time type field; always available
-								}
-								break
-							}
+					// Only check declared data fields. A member that is not a
+					// field of objType is a method — on the struct itself, or
+					// on a non-struct segment of the path (`bag.names.at`,
+					// where `at` is an Array method) — and is never tracked.
+					f, isField := a.structField(objType, m.Member.Name)
+					skipCheck := !isField
+					if isField {
+						if _, isBoc := f.Type.(*BocType); isBoc {
+							skipCheck = true // method field
+						}
+						if f.IsTypeField {
+							skipCheck = true // compile-time type field; always available
 						}
 					}
 					if !skipCheck && !a.fieldInit.isAssigned(varName, path) {
@@ -2080,6 +2079,36 @@ func (a *Analyzer) analyzeMember(m *ast.MemberExpr) Type {
 		}
 	}
 	return a.fieldType(objType, m.Member.Name, m.Pos)
+}
+
+// structField resolves a declared data field by name on a struct-like type,
+// looking through generic instantiations to the base struct. It reports false
+// for non-struct types (arrays, builtins, bocs), whose members are methods
+// rather than fields.
+func (a *Analyzer) structField(objType Type, fieldName string) (*StructField, bool) {
+	var st *StructType
+	switch ot := objType.(type) {
+	case *StructType:
+		st = ot
+	case *GenericInstType:
+		sym := a.currentScope.Lookup(ot.Name)
+		if sym == nil {
+			return nil, false
+		}
+		base, ok := sym.Type.(*StructType)
+		if !ok {
+			return nil, false
+		}
+		st = base
+	default:
+		return nil, false
+	}
+	for i := range st.Fields {
+		if st.Fields[i].Name == fieldName {
+			return &st.Fields[i], true
+		}
+	}
+	return nil, false
 }
 
 func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {

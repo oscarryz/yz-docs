@@ -375,19 +375,17 @@ func buildSubjectPayload(name string, bl *ast.BocLiteral, cfg []macrowire.Config
 
 // macroPrelude is Yz source prepended to every macro package during
 // bootstrap compilation. It declares the reflection types a macro's run
-// method works with. Boc/Field fields use the defaulted ShortDecl form
-// because bare array-typed TypedDecls (`fields [Field]`) are not
-// recognized as field declarations by the parser.
+// method works with, in the annotated-field form documented in spec 12.5.
 const macroPrelude = `
 Field : {
-    name: ""
-    type: ""
+    name String
+    type String
 }
 
 Boc : {
-    name: ""
-    fields: [Field]()
-    source: ""
+    name String
+    fields [Field]
+    source String
 }
 
 NoConfig : {

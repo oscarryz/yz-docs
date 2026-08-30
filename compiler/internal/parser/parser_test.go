@@ -974,13 +974,45 @@ func TestParseMultilineDictLiteral(t *testing.T) {
 	}
 }
 
+// TestParseArrayTypedDecl covers `name [Type]` field declarations and the
+// lookahead that keeps index access on the expression path.
+func TestParseArrayTypedDecl(t *testing.T) {
+	sf := parse(t, "Bag: {\nnames [String]\n}")
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	bl := sd.Values[0].(*ast.BocLiteral)
+	td, ok := bl.Elements[0].(*ast.TypedDecl)
+	if !ok {
+		t.Fatalf("expected *ast.TypedDecl, got %T", bl.Elements[0])
+	}
+	if td.Name.Name != "names" {
+		t.Errorf("name = %q, want \"names\"", td.Name.Name)
+	}
+	if got := ast.TypeExprString(td.Type); got != "[String]" {
+		t.Errorf("type = %q, want \"[String]\"", got)
+	}
+}
+
+func TestParseIndexAccessNotTypedDecl(t *testing.T) {
+	// `a[0]` and `a[i]` have no type token inside the brackets, so they must
+	// stay index expressions rather than becoming array-typed declarations.
+	for _, src := range []string{"m: {\na: [1, 2]\ni: 0\nb: a[0]\nc: a[i]\n}"} {
+		sf := parse(t, src)
+		sd := asShortDecl(t, stmt(t, sf, 0))
+		bl := sd.Values[0].(*ast.BocLiteral)
+		for _, el := range bl.Elements {
+			if td, ok := el.(*ast.TypedDecl); ok {
+				t.Fatalf("index access parsed as TypedDecl: %s", td.Name.Name)
+			}
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // TypeExprString (YZC-0028: macro wire format)
 // ---------------------------------------------------------------------------
 
 func TestTypeExprStringSimple(t *testing.T) {
-	// TypedDecl-position types: only named forms are recognized there
-	// (bracket types deliberately go to the expression path).
+	// TypedDecl-position types: named forms plus the array form `f [T]`.
 	cases := []struct {
 		src  string
 		want string
@@ -988,6 +1020,8 @@ func TestTypeExprStringSimple(t *testing.T) {
 		{"f String", "String"},
 		{"f Option(Int)", "Option(Int)"},
 		{"f g.Node", "g.Node"},
+		{"f [String]", "[String]"},
+		{"f [T]", "[T]"},
 	}
 	for _, c := range cases {
 		sf := parse(t, "X: {\n"+c.src+"\n}")

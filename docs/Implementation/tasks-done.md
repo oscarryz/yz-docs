@@ -33,7 +33,16 @@ Completed tickets. Ticket numbers are permanent.
   **Enablers landed en route**: goSafeName (Go-keyword field names, golden
   102); multiline array/dict literals (`skipNewlines` in parseArrayOrDict);
   `std.NewArray[T]()` type arg for empty array literals; empty struct bocs
-  emit as Go interfaces → NoConfig carries a dummy method.
+  emit as Go interfaces → NoConfig carries a dummy method; array-typed field
+  declarations `name [Type]` (golden 103).
+
+  **Array-typed fields** (`name [Type]`): `isTypedDeclStart` gained bracket
+  lookahead — a TYPE_IDENT/GENERIC_IDENT directly inside `[]` marks a
+  declaration, so `a[0]`/`a[i]` stay index expressions. The definite-assignment
+  check (YZC-0034) was made field-precise via `Analyzer.structField`: it now
+  fires only on declared data fields, not on methods reached through a
+  non-struct path segment (`bag.names.at`). This let the macro prelude adopt
+  the annotated-field form documented in spec 12.5.
 
   Tests: macrowire round-trips; scan/trigger/config table tests; expansion
   merge + sema on merged AST (via primed run cache, no subprocess);

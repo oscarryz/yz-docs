@@ -7,12 +7,9 @@ Debug : {
     run #(subject Boc, config NoConfig, Boc) {
         body: subject.name + "("
         sep: ""
-        i: 0
-        while({ i < subject.fields.length() }, {
-            f: subject.fields.at(i)
+        subject.fields.each({ f Field
             body = body + sep + f.name + ": $" + "{" + f.name + "}"
             sep = ", "
-            i = i + 1
         })
         generated("debug #(String) {\n    \"" + body + ")\"\n}")
     }
