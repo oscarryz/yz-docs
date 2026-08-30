@@ -1,0 +1,12 @@
+// YZC-0028 Phase 0: Yz field names that collide with Go keywords must be
+// escaped in generated Go identifiers (but not in display strings).
+Field: {
+    name String
+    type String
+}
+
+main: {
+    f: Field(name: "age", type: "Int")
+    print(f.type)
+    print("`f`")
+}

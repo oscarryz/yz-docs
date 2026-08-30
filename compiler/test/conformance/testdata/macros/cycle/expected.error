@@ -1,0 +1,1 @@
+macro cycle detected: macros_a.GenB -> macros_b.GenA -> macros_a.GenB

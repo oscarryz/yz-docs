@@ -8,7 +8,7 @@ Yz provides a macro system built from regular Yz code. Macros run during compila
 
 The system is built on one rule:
 
-> **Uppercase type names in a boc's annotation trigger `Macro` implementations during type inference. Their return values are merged into the subject boc.**
+> **Uppercase-keyed entries in a boc's annotation trigger `Macro` implementations during type inference. Their return values are merged into the subject boc.**
 
 Everything else follows from existing Yz concepts.
 
@@ -39,13 +39,13 @@ See also: [Structural Typing](Structural%20typing.md) · [Boc Type](Boc%20Interf
 
 ## Triggering Macros
 
-Macros are triggered by uppercase type names in a boc's annotation. A bare name triggers with no config; a named boc provides config validated against the macro's `Schema`:
+Macros are triggered by uppercase-keyed entries in a boc's annotation. The value is the config, validated against the macro's `Schema`. An empty boc `{}` means no config:
 
 ```
 `
-Derive
-JSON: { ignore: false }
-Logger
+Derive:  {}
+JSON:    { ignore: false }
+Logger:  {}
 `
 Person : {
     name String
@@ -53,7 +53,7 @@ Person : {
 }
 ```
 
-During parsing the compiler scans annotations for uppercase names. When found, the referenced macros are scheduled to run during type inference — sequentially, in top-to-bottom declaration order. Referenced types are resolved at parse time — `Deribe` in an annotation is a compile error if no such macro exists.
+During parsing the compiler scans annotations for uppercase keys. When found, the referenced macros are scheduled to run during type inference — sequentially, in top-to-bottom declaration order. Referenced types are resolved at parse time — `Deribe: {}` in an annotation is a compile error if no such macro exists.
 
 The boc body carries no macro-triggering mechanism. All macro concerns live in the annotation.
 
@@ -65,8 +65,8 @@ The compiler extracts the uppercase block matching the macro's type name, valida
 
 ```
 `
-Derive
-JSON: { ignore: false }
+Derive: {}
+JSON:   { ignore: false }
 Logger: { level: "debug", format: "json" }
 `
 Movies : {
@@ -189,9 +189,9 @@ When multiple macros appear in an annotation they run in **top-to-bottom declara
 
 ```
 `
-Derive
-Logging
-Metrics
+Derive:  {}
+Logging: {}
+Metrics: {}
 `
 Container : { T; value T }
 ```
@@ -217,7 +217,7 @@ If two macros generate the same slot name the later one wins. Check for slot nam
 Macros add methods and slots to the annotated boc — not to its type parameters. `Debug` adds a `debug #(String)` method to `Container` itself:
 
 ```
-`Debug`
+`Debug: {}`
 Container : {
     value T
 }
@@ -247,7 +247,7 @@ See also: [Generics - Type Parameters](Generics%20-%20Type%20Parameters.md)
 Macros run at **boc definition time** — when the boc is compiled, not when it is instantiated. For generic bocs this distinction matters:
 
 ```
-`Derive`
+`Derive: {}`
 Stack : {
     T
     items []T
@@ -354,7 +354,7 @@ A violation is a compile error. The error message names the full cycle.
 Macros can themselves have macro annotations, type parameters, and associated types. They are bocs that satisfy the `Macro` interface:
 
 ```
-`Validate`
+`Validate: {}`
 Derive : {
     Schema : #(interfaces [String])
     run #(subject Boc, config Schema, Boc) = {

@@ -1,0 +1,13 @@
+// Array-typed field declarations: `name [Type]` in a boc body is a field
+// declaration, while `a[0]` stays index access. Methods reached through an
+// array-typed field are not subject to the YZC-0034 initialization check.
+Bag: {
+    label String
+    names [String]
+}
+
+main: {
+    b: Bag(label: "letters", names: ["a", "b", "c"])
+    print(b.label)
+    print(b.names.at(1))
+}

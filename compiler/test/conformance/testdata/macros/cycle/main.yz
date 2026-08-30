@@ -1,0 +1,9 @@
+`GenB: {}`
+Person : {
+    name String
+}
+
+main: {
+    p: Person("Ada")
+    print(p.from_b())
+}

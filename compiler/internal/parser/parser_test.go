@@ -928,3 +928,128 @@ func TestParseTrailingBlockNewlineSeparates(t *testing.T) {
 		t.Errorf("stmt 1: expected *ast.BocLiteral, got %T", sf.Stmts[1])
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Multiline array literals (YZC-0028: macro wire format)
+// ---------------------------------------------------------------------------
+
+func TestParseMultilineArrayLiteral(t *testing.T) {
+	src := `xs: [
+    {
+        name: "a"
+    },
+    {
+        name: "b"
+    }
+]`
+	sf := parse(t, src)
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	arr, ok := sd.Values[0].(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("expected *ast.ArrayLiteral, got %T", sd.Values[0])
+	}
+	if len(arr.Elements) != 2 {
+		t.Fatalf("expected 2 elements, got %d", len(arr.Elements))
+	}
+	for i, el := range arr.Elements {
+		if _, ok := el.(*ast.BocLiteral); !ok {
+			t.Errorf("element %d: expected *ast.BocLiteral, got %T", i, el)
+		}
+	}
+}
+
+func TestParseMultilineDictLiteral(t *testing.T) {
+	src := `d: [
+    "a": 1,
+    "b": 2
+]`
+	sf := parse(t, src)
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	dict, ok := sd.Values[0].(*ast.DictLiteral)
+	if !ok {
+		t.Fatalf("expected *ast.DictLiteral, got %T", sd.Values[0])
+	}
+	if len(dict.Entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(dict.Entries))
+	}
+}
+
+// TestParseArrayTypedDecl covers `name [Type]` field declarations and the
+// lookahead that keeps index access on the expression path.
+func TestParseArrayTypedDecl(t *testing.T) {
+	sf := parse(t, "Bag: {\nnames [String]\n}")
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	bl := sd.Values[0].(*ast.BocLiteral)
+	td, ok := bl.Elements[0].(*ast.TypedDecl)
+	if !ok {
+		t.Fatalf("expected *ast.TypedDecl, got %T", bl.Elements[0])
+	}
+	if td.Name.Name != "names" {
+		t.Errorf("name = %q, want \"names\"", td.Name.Name)
+	}
+	if got := ast.TypeExprString(td.Type); got != "[String]" {
+		t.Errorf("type = %q, want \"[String]\"", got)
+	}
+}
+
+func TestParseIndexAccessNotTypedDecl(t *testing.T) {
+	// `a[0]` and `a[i]` have no type token inside the brackets, so they must
+	// stay index expressions rather than becoming array-typed declarations.
+	for _, src := range []string{"m: {\na: [1, 2]\ni: 0\nb: a[0]\nc: a[i]\n}"} {
+		sf := parse(t, src)
+		sd := asShortDecl(t, stmt(t, sf, 0))
+		bl := sd.Values[0].(*ast.BocLiteral)
+		for _, el := range bl.Elements {
+			if td, ok := el.(*ast.TypedDecl); ok {
+				t.Fatalf("index access parsed as TypedDecl: %s", td.Name.Name)
+			}
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TypeExprString (YZC-0028: macro wire format)
+// ---------------------------------------------------------------------------
+
+func TestTypeExprStringSimple(t *testing.T) {
+	// TypedDecl-position types: named forms plus the array form `f [T]`.
+	cases := []struct {
+		src  string
+		want string
+	}{
+		{"f String", "String"},
+		{"f Option(Int)", "Option(Int)"},
+		{"f g.Node", "g.Node"},
+		{"f [String]", "[String]"},
+		{"f [T]", "[T]"},
+	}
+	for _, c := range cases {
+		sf := parse(t, "X: {\n"+c.src+"\n}")
+		sd := asShortDecl(t, stmt(t, sf, 0))
+		bl := sd.Values[0].(*ast.BocLiteral)
+		td, ok := bl.Elements[0].(*ast.TypedDecl)
+		if !ok {
+			t.Errorf("%q: expected *ast.TypedDecl element, got %T", c.src, bl.Elements[0])
+			continue
+		}
+		if got := ast.TypeExprString(td.Type); got != c.want {
+			t.Errorf("TypeExprString(%q) = %q, want %q", c.src, got, c.want)
+		}
+	}
+}
+
+func TestTypeExprStringBocSig(t *testing.T) {
+	// Array, dict, and nested boc types occur inside boc signatures, where
+	// parseTypeExpr handles all forms.
+	sig := "#(a Option(Int), items [Int], lookup [String:Int], n g.Node, cb #(x Int, Bool), String)"
+	sf := parse(t, "X: {\nf "+sig+" { \"\" }\n}")
+	sd := asShortDecl(t, stmt(t, sf, 0))
+	bl := sd.Values[0].(*ast.BocLiteral)
+	bd, ok := bl.Elements[0].(*ast.BocDecl)
+	if !ok {
+		t.Fatalf("expected *ast.BocDecl element, got %T", bl.Elements[0])
+	}
+	if got := ast.TypeExprString(bd.Sig); got != sig {
+		t.Errorf("TypeExprString(sig) = %q, want %q", got, sig)
+	}
+}

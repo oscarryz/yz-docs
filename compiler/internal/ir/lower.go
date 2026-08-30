@@ -4450,8 +4450,20 @@ func (l *lowerer) lowerArrayLit(arr *ast.ArrayLiteral) Expr {
 	for _, el := range arr.Elements {
 		args = append(args, l.lowerExpr(el))
 	}
+	fn := "std.NewArray"
+	if len(args) == 0 {
+		// Empty form `[T]()` / `[]`: Go cannot infer T without elements,
+		// so emit an explicit type argument (mirrors lowerDictLit).
+		elemType := "any"
+		if at, ok := l.analyzer.ExprType(arr).(*sema.ArrayType); ok {
+			elemType = l.goType(at.Elem)
+		} else if arr.ElemType != nil {
+			elemType = l.goTypeFromTypeExpr(arr.ElemType)
+		}
+		fn = "std.NewArray[" + elemType + "]"
+	}
 	return &FuncCall{
-		Func: &Ident{Name: "std.NewArray"},
+		Func: &Ident{Name: fn},
 		Args: args,
 	}
 }

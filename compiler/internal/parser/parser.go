@@ -213,11 +213,11 @@ func (p *Parser) isBocDeclStart() bool {
 	return result
 }
 
-// isTypedDeclStart returns true for `ident TypeIdent` or `ident GenericIdent`.
-// We only trigger on TYPE_IDENT and GENERIC_IDENT as the following token —
-// not on LBRACKET, because `array[0]` (index access) and `names [String]`
-// (array-type decl) cannot be distinguished without deeper lookahead.
-// Array-type declarations (`x [T]`) are handled via the expression path.
+// isTypedDeclStart returns true for `ident TypeIdent`, `ident GenericIdent`,
+// or `ident [TypeIdent]` (array-typed field). The bracket form needs deeper
+// lookahead to separate `names [String]` (array-type decl) from `array[0]`
+// (index access): only a TYPE_IDENT or GENERIC_IDENT directly inside the
+// brackets marks a declaration, so `a[0]` and `a[i]` stay expressions.
 func (p *Parser) isTypedDeclStart() bool {
 	if p.cur().Type != token.IDENT {
 		return false
@@ -231,6 +231,13 @@ func (p *Parser) isTypedDeclStart() bool {
 		if p.at(token.DOT) {
 			p.advance()
 			isType = p.at(token.TYPE_IDENT)
+		}
+	}
+	if !isType && p.at(token.LBRACKET) {
+		p.advance() // skip [
+		if p.at(token.TYPE_IDENT) || p.at(token.GENERIC_IDENT) {
+			p.advance()
+			isType = p.at(token.RBRACKET)
 		}
 	}
 	p.pos = save
@@ -751,6 +758,9 @@ func (p *Parser) parseArrayOrDict() (ast.Expr, error) {
 		p.pos = save
 	}
 
+	// Newlines inside a bracketed literal are not statement separators.
+	p.skipNewlines()
+
 	// Try to detect empty `[]`
 	if p.at(token.RBRACKET) {
 		p.advance()
@@ -762,6 +772,7 @@ func (p *Parser) parseArrayOrDict() (ast.Expr, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.skipNewlines()
 
 	if p.at(token.COLON) {
 		// Dict literal: [key: val, ...]
@@ -771,8 +782,10 @@ func (p *Parser) parseArrayOrDict() (ast.Expr, error) {
 			return nil, err
 		}
 		entries := []*ast.DictEntry{{Pos: pos, Key: first, Value: val}}
+		p.skipNewlines()
 		for p.at(token.COMMA) {
 			p.advance()
+			p.skipNewlines()
 			if p.at(token.RBRACKET) {
 				break
 			}
@@ -788,6 +801,7 @@ func (p *Parser) parseArrayOrDict() (ast.Expr, error) {
 				return nil, err
 			}
 			entries = append(entries, &ast.DictEntry{Pos: p.curPos(), Key: k, Value: v})
+			p.skipNewlines()
 		}
 		if err := p.expect(token.RBRACKET); err != nil {
 			return nil, err
@@ -799,6 +813,7 @@ func (p *Parser) parseArrayOrDict() (ast.Expr, error) {
 	elements := []ast.Expr{first}
 	for p.at(token.COMMA) {
 		p.advance()
+		p.skipNewlines()
 		if p.at(token.RBRACKET) {
 			break
 		}
@@ -807,6 +822,7 @@ func (p *Parser) parseArrayOrDict() (ast.Expr, error) {
 			return nil, err
 		}
 		elements = append(elements, el)
+		p.skipNewlines()
 	}
 	if err := p.expect(token.RBRACKET); err != nil {
 		return nil, err
@@ -1371,6 +1387,16 @@ func (p *Parser) skipSemis() {
 //     standalone expression following the first BinaryExpr)
 func (p *Parser) skipSeps() {
 	for p.at(token.SEMICOLON) || p.at(token.COMMA) {
+		p.advance()
+	}
+}
+
+// skipNewlines skips statement separators (ASI newlines and explicit
+// semicolons) that have no meaning inside bracketed literals. Unlike
+// skipSeps it does not skip commas, which stay significant as element
+// separators.
+func (p *Parser) skipNewlines() {
+	for p.at(token.SEMICOLON) {
 		p.advance()
 	}
 }

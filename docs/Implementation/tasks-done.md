@@ -3,6 +3,67 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0028 — Macros (`Macro` interface) — first slice ✓
+
+  Thin end-to-end slice of the macro system (design: docs/Features/Macros.md,
+  spec stub: spec/12-macros.md). A boc with `Schema : NamedConfig` and
+  `run #(subject Boc, config NamedConfig, Boc)` is a macro; uppercase-keyed
+  annotation entries (`Debug: {}`) trigger it.
+
+  **Two-phase build**: macro packages are excluded from the app build and
+  bootstrap-compiled (unwrapped, prelude prepended) to native executables at
+  `target/macros/<pkg>/bin/macros`, cached on a source hash. During the main
+  build, `expandMacros` runs before sema: it invokes each triggered macro as a
+  subprocess and appends the parsed output to the subject boc literal.
+  Progressive merge across multiple triggers; per-payload run cache.
+
+  **Wire format**: Yz source (non-executable data subset) both directions —
+  `yz/runtime/macrowire` encodes subject+config, decodes with the real parser;
+  macro stdout is a raw boc body of generated slots.
+
+  **Prelude**: `Boc { name, fields [Field], source }`, `Field { name, type }`,
+  `NoConfig`, `generated(src)`, recursive `while` (sema's builtin while has no
+  codegen backing).
+
+  **Errors**: unknown macro, same-package, root-package macro, duplicate name,
+  cycle (full chain), macro runtime failure, invalid output, config/schema
+  mismatch. Cycle detection via expansion stack through recursive bootstrap
+  (macro-on-macro annotations expand during bootstrap).
+
+  **Enablers landed en route**: goSafeName (Go-keyword field names, golden
+  102); multiline array/dict literals (`skipNewlines` in parseArrayOrDict);
+  `std.NewArray[T]()` type arg for empty array literals; empty struct bocs
+  emit as Go interfaces → NoConfig carries a dummy method; array-typed field
+  declarations `name [Type]` (golden 103).
+
+  **Array-typed fields** (`name [Type]`): `isTypedDeclStart` gained bracket
+  lookahead — a TYPE_IDENT/GENERIC_IDENT directly inside `[]` marks a
+  declaration, so `a[0]`/`a[i]` stay index expressions. The definite-assignment
+  check (YZC-0034) was made field-precise via `Analyzer.structField`: it now
+  fires only on declared data fields, not on methods reached through a
+  non-struct path segment (`bag.names.at`). This let the macro prelude adopt
+  the annotated-field form documented in spec 12.5.
+
+  Tests: macrowire round-trips; scan/trigger/config table tests; expansion
+  merge + sema on merged AST (via primed run cache, no subprocess);
+  TestBootstrapDebugEndToEnd; TestMacros driver harness (debug_merge,
+  unknown_macro, cycle, same_package, root_macro); examples/macro_debug.
+
+  **Follow-ups (deferred)**:
+  - Full Structural Reflection Boc API (methods, type_params, annotation slot, field-level annotations)
+  - JSON / Derive / Validate std macros
+  - Bare `` `Debug` `` trigger form (needs analyzeAnnotationBody exemption)
+  - Expansion interleaved with inference (inferred field types, generated-constraint attribution, `q.Schema` subjects)
+  - Serializing ShortDecl-default fields, methods, type params of the subject
+  - Inline `Schema #(...)` config typing; non-scalar/defaulted config; full sema Schema validation
+  - Mixed runtime+macro packages (macro dirs are currently compile-time only)
+  - Prelude → stdlib source root (converges with YZC-0031); runtime backing for builtin `while`
+  - `name.info` companion triggers; `TypedDecl`/`BocDecl` subjects
+  - Structure-hash run caching independent of formatting; cache invalidation for macro-on-macro deps
+  - Spec 12 full text (stub landed)
+
+---
+
 ### [x] YZC-0098 — Self-scope associated type resolution + structural bound codegen ✓
 
   Three bugs fixed to unblock YZC-0028 (Macros):
