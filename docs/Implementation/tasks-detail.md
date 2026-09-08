@@ -27,6 +27,20 @@ Open ticket details. See tasks.md for the index.
      `self.Cown` while held. This was the `39_local_boc_recursive` case; it currently passes,
      likely because the recursive call is handled inline rather than scheduled.
 
+  4. **Method call on a cown held by an enclosing `ScheduleMulti`** (`examples/transfer_instance`
+     — confirmed deadlock, reported 2026-09-08): `Transfer.run` acquires `[self.Cown, src.Cown,
+     dst.Cown]` via `ScheduleMulti` to move balance between two `Account` instances. Adding
+     `print("${src}")` inside that body string-interpolates `src`, which lowers to
+     `self.src.ToStr()`. `Account.ToStr()` schedules on `&self.Cown` (i.e. `src.Cown`) — the same
+     cown `Transfer.run`'s `ScheduleMulti` already holds. The new request is queued as `src.Cown`'s
+     successor and can only run after the current behaviour releases `src.Cown`, but the current
+     behaviour is blocked forcing that same request's `Thunk` — self-deadlock ("all goroutines are
+     asleep"). Repro: add `to_str: { "${balance}" }` to `Account` and `print("${src}")` as the first
+     line of `Transfer.run` in `compiler/examples/transfer_instance/main.yz`, then `yzc build && yzc
+     run`. Unlike manifestation 1 (single cown, direct self-call), this is a *multi*-cown
+     (`ScheduleMulti`) case triggered indirectly through string interpolation codegen — any method
+     call on `src`/`dst` from inside `run`'s body would trigger the same deadlock, not just `ToStr`.
+
   **Root cause:** the lowerer emits all local boc vars as methods on the enclosing struct,
   sharing its cown. There is no mechanism to detect or prevent a task re-scheduling on a cown
   it already holds.

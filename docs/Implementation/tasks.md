@@ -36,7 +36,7 @@ YZC-0009 -- Range iteration -- S -- needs YZC-0031
 YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
-YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- dormant  
+YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- confirmed via `examples/transfer_instance`  
 ~~YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods~~
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  
