@@ -50,6 +50,63 @@ Open ticket details. See tasks.md for the index.
   could be lowered to plain Go closures (not cown-scheduled methods) when they don't capture
   cown-bearing state — this would be a targeted fix without requiring the full Phase E rewrite.
 
+- [ ] **[YZC-0100] Boc-typed field in a body-only singleton silently dropped as a param**
+
+  Repro (`compiler/simple_func/main.yz`):
+
+  ```
+  foo : { a String; b #(String); print(a); b() }
+  bar #(a String, b #(String), String) {
+     print(a)
+     b()
+  }
+  ```
+
+  `bar` (explicit `#(...)` signature + body) compiles correctly: `b #(String)` in the signature
+  is resolved as a param of function type `func() std.String` and threaded through to
+  `Call(a, b)`. `foo` (bare `name: { ... }` short boc declaration, no outer signature) should be
+  equivalent per the param-entry grammar, but fails `go build`:
+
+  ```
+  ./main.go:36:9: cannot use std.Go(func() std.String {…}) (…) as rt.String value in return statement
+  ./main.go:37:10: undefined: b
+  ```
+
+  **Root cause:** `b #(String);` written as a body statement parses as `*ast.BocDecl{Body: nil}`
+  (the same node used for `Name #(params)` type-only declarations), not `*ast.TypedDecl`.
+  `sema.analyzeBocDeclNode` handles this fine for a lowercase name — it registers `b` in scope
+  with `BocType{Params: nil, Returns: [String]}`, i.e. `func() std.String`, matching how
+  `resolveBocSigParams` types the same shorthand inside an explicit signature.  But the codegen
+  path for bare short-decl singletons, `lowerBodyOnlySingleton` (`internal/ir/lower.go` ~line
+  732, added under YZC-0049), only scans for leading `*ast.TypedDecl` elements and `break`s at
+  the first element that isn't one:
+
+  ```go
+  for _, elem := range b.Elements {
+      td, ok := elem.(*ast.TypedDecl)
+      if !ok || td.Value != nil {
+          break
+      }
+      params = append(params, &ParamSpec{...})
+  }
+  ```
+
+  `b`'s `*ast.BocDecl` element fails the type assertion, so the loop stops immediately — `b`
+  never becomes a `Call()` param or struct field. `lowerSingletonBodyStmts` then lowers the
+  trailing `b()` call as an ordinary (undeclared) global-function call, which Go rejects as
+  `undefined: b`. The same TypedDecl-only, break-on-mismatch pattern also appears in
+  `lowerLocalBocDecl`/`lowerLocalBodyBoc`/`lowerBocDeclAsLocal`'s body-only param loops, and
+  `sema.collectParams` (used by the "simple lowercase boc" analysis path) silently skips
+  `*ast.BocDecl` elements rather than folding them in — so no diagnostic fires anywhere; the
+  break happens quietly and invalid Go is emitted.
+
+  **Fix direction:** either (a) recognize a body-position `*ast.BocDecl` with `Body == nil` as
+  a param declaration everywhere a leading `*ast.TypedDecl` is currently accepted (sema
+  `collectParams` + all four lowerer loops above), consistent with how `bar`'s explicit
+  signature already treats `b #(String)`; or (b), if boc-typed body fields are meant to require
+  an explicit outer `#(...)` signature, make `analyzeBocDeclNode` reject a bare, uncalled-for
+  `ident #(sig)` body statement with a clear compile error instead of silently typing it.
+
 ---
 
 ## Language Features
