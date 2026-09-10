@@ -1,0 +1,4 @@
+- [Examples/](./Examples) - Transliteration of other programming languages into Yz to see what would it look like. Many thing wont compile yet 
+- [Features/](./Features) - What the language can do. 
+- [Implementation/](./Implemementation) - Compiler implementation operational notes, tasks, designs etc. 
+- [Questions/](./Questions) - Design exploration, how would Yz do this or that.
