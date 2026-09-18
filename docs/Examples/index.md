@@ -1,144 +1,148 @@
-# Index
+# Examples — cross-language code samples and demonstrations
 
-- [1ML - Stack.md](<./1ML - Stack.md>)
-- [Alumina - Stack.md](<./Alumina - Stack.md>)
-- [Argon - Samples.md](<./Argon - Samples.md>)
-- [Arturo  - Examples.md](<./Arturo  - Examples.md>)
-- [Arturo - Arturo in a Nutshell.md](<./Arturo - Arturo in a Nutshell.md>)
-- [Arturo - Factorial.md](<./Arturo - Factorial.md>)
-- [Arturo - Floyd.md](<./Arturo - Floyd.md>)
-- [Arturo - first class functions.md](<./Arturo - first class functions.md>)
-- [Ballerina - Concurrency.md](<./Ballerina - Concurrency.md>)
-- [Ballerina - Github repos.md](<./Ballerina - Github repos.md>)
-- [Bau - Chess.md](<./Bau - Chess.md>)
-- [CCL - Example.md](<./CCL - Example.md>)
-- [Carbon - tic-tac-toe.md](<./Carbon - tic-tac-toe.md>)
-- [Carbon lang - Sorting.md](<./Carbon lang - Sorting.md>)
-- [Crystal - Http Server.md](<./Crystal - Http Server.md>)
-- [Cue - cuetorials.md](<./Cue - cuetorials.md>)
-- [Dahll - Functions.md](<./Dahll - Functions.md>)
-- [Dart - Misc.md](<./Dart - Misc.md>)
-- [Diamond - Pong game.md](<./Diamond - Pong game.md>)
-- [Elixir - Get Token.md](<./Elixir - Get Token.md>)
-- [Eve - Quickstart.md](<./Eve - Quickstart.md>)
-- [Fat - http-server.md](<./Fat - http-server.md>)
-- [Gleam - Multiple subjects.md](<./Gleam - Multiple subjects.md>)
-- [Go - Go Concurrency Patterns.md](<./Go - Go Concurrency Patterns.md>)
-- [Go - Philosophers.md](<./Go - Philosophers.md>)
-- [Go - Pipeline 3 v2.md](<./Go - Pipeline 3 v2.md>)
-- [Go - Pipeline 3.md](<./Go - Pipeline 3.md>)
-- [Go - Scrape.md](<./Go - Scrape.md>)
-- [Go - gc.md](<./Go - gc.md>)
-- [Go - static-files.md](<./Go - static-files.md>)
-- [GraphQL - misc.md](<./GraphQL - misc.md>)
-- [Hare - Introduction.md](<./Hare - Introduction.md>)
-- [Haskell - BinaryTree.md](<./Haskell - BinaryTree.md>)
-- [Haskell - Double Cola.md](<./Haskell - Double Cola.md>)
-- [Haskell - Drone.md](<./Haskell - Drone.md>)
-- [Haskell - Learn X in Y Minutes.md](<./Haskell - Learn X in Y Minutes.md>)
-- [Haskell - Try Haskell.md](<./Haskell - Try Haskell.md>)
-- [IO - Account.md](<./IO - Account.md>)
-- [Inko - Error Handling.md](<./Inko - Error Handling.md>)
-- [Inko - Generic Data types.md](<./Inko - Generic Data types.md>)
-- [Inko - Implementing traits.md](<./Inko - Implementing traits.md>)
-- [Inko - Unit testing.md](<./Inko - Unit testing.md>)
-- [Jakt - Bubble sort.md](<./Jakt - Bubble sort.md>)
-- [Java - Find two indexes.md](<./Java - Find two indexes.md>)
-- [Java - Guess Number.md](<./Java - Guess Number.md>)
-- [Java - levels.md](<./Java - levels.md>)
-- [Javascript - Lion.yz.md](<./Javascript - Lion.yz.md>)
-- [Jevko - Data.md](<./Jevko - Data.md>)
-- [Kotlin - Lean X in Y minutes.md](<./Kotlin - Lean X in Y minutes.md>)
-- [Kotlin - Non local returns.md](<./Kotlin - Non local returns.md>)
-- [ML - Hyerpolyglot.md](<./ML - Hyerpolyglot.md>)
-- [MLscript - Binary Search Tree.md](<./MLscript - Binary Search Tree.md>)
-- [MLscript - Guide.md](<./MLscript - Guide.md>)
-- [Naptune - aoc23-1-1.md](<./Naptune - aoc23-1-1.md>)
-- [Nim - Simple Example.md](<./Nim - Simple Example.md>)
-- [Odin - Hellope.md](<./Odin - Hellope.md>)
-- [Pomar - http request.md](<./Pomar - http request.md>)
-- [Pomar - loading thread.md](<./Pomar - loading thread.md>)
-- [Pony - Counter.md](<./Pony - Counter.md>)
-- [Pony - Message delivery.md](<./Pony - Message delivery.md>)
-- [Pony Promise.md](<./Pony Promise.md>)
-- [Pyret - Misc.md](<./Pyret - Misc.md>)
-- [Python - Rendezvous.md](<./Python - Rendezvous.md>)
-- [README.md](./README.md)
-- [Reddit.st - Smalltalk.md](<./Reddit.st - Smalltalk.md>)
-- [Roc - email.md](<./Roc - email.md>)
-- [Ruby - Composition.md](<./Ruby - Composition.md>)
-- [Ruby - Rgb.md](<./Ruby - Rgb.md>)
-- [Rust - Enums.md](<./Rust - Enums.md>)
-- [Rust - Good Students.md](<./Rust - Good Students.md>)
-- [Rust - Rust Lang in a nutshell.md](<./Rust - Rust Lang in a nutshell.md>)
-- [Rust - modules.md](<./Rust - modules.md>)
-- [Rye - Split and Save.md](<./Rye - Split and Save.md>)
-- [Smalltalk - Blocks.md](<./Smalltalk - Blocks.md>)
-- [Smalltalk - Shipping.md](<./Smalltalk - Shipping.md>)
-- [StandardML - learnxiny.md](<./StandardML - learnxiny.md>)
-- [Starlark - tour.md](<./Starlark - tour.md>)
-- [TypeScript - Tagged Unions.md](<./TypeScript - Tagged Unions.md>)
-- [V - Anonymous & High Order Functions.md](<./V - Anonymous & High Order Functions.md>)
-- [V - Anonymous Blocks.md](<./V - Anonymous Blocks.md>)
-- [V - Fibonacci.md](<./V - Fibonacci.md>)
-- [V - Filter log file.md](<./V - Filter log file.md>)
-- [V - Generics.md](<./V - Generics.md>)
-- [V - Structs and embedded structs.md](<./V - Structs and embedded structs.md>)
-- [V - Sum types (or the lack thereof).md](<./V - Sum types (or the lack thereof>).md)
-- [V - json.md](<./V - json.md>)
-- [V - related_posts.md](<./V - related_posts.md>)
-- [V - simple app.md](<./V - simple app.md>)
-- [V - vweb.md](<./V - vweb.md>)
-- [V- desk.yz.md](<./V- desk.yz.md>)
-- [Yz - 24 game.md](<./Yz - 24 game.md>)
-- [Yz - 99bottles.md](<./Yz - 99bottles.md>)
-- [Yz - Account.md](<./Yz - Account.md>)
-- [Yz - Ackermann.md](<./Yz - Ackermann.md>)
-- [Yz - Add Two Numbers.md](<./Yz - Add Two Numbers.md>)
-- [Yz - Annotations, Macros, Natives, and Deps.md](<./Yz - Annotations, Macros, Natives, and Deps.md>)
-- [Yz - Array Wrapper.md](<./Yz - Array Wrapper.md>)
-- [Yz - Associated Types.md](<./Yz - Associated Types.md>)
-- [Yz - BOC.md](<./Yz - BOC.md>)
-- [Yz - Binary Tree 2.md](<./Yz - Binary Tree 2.md>)
-- [Yz - Binary Tree 3.md](<./Yz - Binary Tree 3.md>)
-- [Yz - Binary Tree.md](<./Yz - Binary Tree.md>)
-- [Yz - Compile Time Mix.md](<./Yz - Compile Time Mix.md>)
-- [Yz - Concurrent Fetch.md](<./Yz - Concurrent Fetch.md>)
-- [Yz - Counter.md](<./Yz - Counter.md>)
-- [Yz - Dining Philosophers.md](<./Yz - Dining Philosophers.md>)
-- [Yz - Dot product.md](<./Yz - Dot product.md>)
-- [Yz - Equal Row and Column Pairs.md](<./Yz - Equal Row and Column Pairs.md>)
-- [Yz - Fetch data.md](<./Yz - Fetch data.md>)
-- [Yz - Fib.yz.md](<./Yz - Fib.yz.md>)
-- [Yz - FizzBuzz.yz.md](<./Yz - FizzBuzz.yz.md>)
-- [Yz - Hanoi.md](<./Yz - Hanoi.md>)
-- [Yz - Is Armstrong.md](<./Yz - Is Armstrong.md>)
-- [Yz - Learn X in Y minutes.md](<./Yz - Learn X in Y minutes.md>)
-- [Yz - Level Order Tree Traversal.md](<./Yz - Level Order Tree Traversal.md>)
-- [Yz - Regression Tool - Simple.md](<./Yz - Regression Tool - Simple.md>)
-- [Yz - Roman to Int.md](<./Yz - Roman to Int.md>)
-- [Yz - Sample code.md](<./Yz - Sample code.md>)
-- [Yz - SumTypes.md](<./Yz - SumTypes.md>)
-- [Yz - Task manager - JSON.md](<./Yz - Task manager - JSON.md>)
-- [Yz - Task manager - plain text.md](<./Yz - Task manager - plain text.md>)
-- [Yz - TreeNode.md](<./Yz - TreeNode.md>)
-- [Yz - Yz.md](<./Yz - Yz.md>)
-- [Yz - aoc23-1.md](<./Yz - aoc23-1.md>)
-- [Yz - cat.md](<./Yz - cat.md>)
-- [Yz - filter.md](<./Yz - filter.md>)
-- [Yz - for loop.md](<./Yz - for loop.md>)
-- [Yz - kth element.md](<./Yz - kth element.md>)
-- [Yz - static strong type.md](<./Yz - static strong type.md>)
-- [Yz - two_sum.md](<./Yz - two_sum.md>)
-- [Yz - yzc.yz.md](<./Yz - yzc.yz.md>)
-- [Yz - λf. λx. f x.md](<./Yz - λf. λx. f x.md>)
-- [Zig - Formatting.md](<./Zig - Formatting.md>)
-- [Zig - If.md](<./Zig - If.md>)
-- [Zig - json.md](<./Zig - json.md>)
-- [boc_trace_annotated.png](./boc_trace_annotated.png)
-- [drn - Sum CSV file.md](<./drn - Sum CSV file.md>)
-- [match - examples.md](<./match - examples.md>)
-- [qdbp - Examples.md](<./qdbp - Examples.md>)
-- [qdbp - Misc.md](<./qdbp - Misc.md>)
-- [qdbp - stack.md](<./qdbp - stack.md>)
-- [yz - aoc2023-1.md](<./yz - aoc2023-1.md>)
+A collection of cross-language examples demonstrating how specific Yz concepts—such as Blocks of Code (Bocs), concurrency, type system patterns, and data structures—are implemented across various programming ecosystems.
+
+## Directories
+
+
+# Files
+
+- [1ML - Stack.md](<./1ML - Stack.md>) — Stack implementation in 1ML
+- [Alumina - Stack.md](<./Alumina - Stack.md>) — Stack implementation in Alumina
+- [Argon - Samples.md](<./Argon - Samples.md>) — Example samples in Argon
+- [Arturo  - Examples.md](<./Arturo  - Examples.md>) — Example collection in Arturo
+- [Arturo - Arturo in a Nutshell.md](<./Arturo - Arturo in a Nutshell.md>) — Overview of the Arturo language
+- [Arturo - Factorial.md](<./Arturo - Factorial.md>) — Recursive factorial example in Arturo
+- [Arturo - Floyd.md](<./Arturo - Floyd.md>) — Floyd's algorithm implementation
+- [Arturo - first class functions.md](<./Arturo - first class functions.md>) — First-class function usage
+- [Ballerina - Concurrency.md](<./Ballerina - Concurrency.md>) — Asynchronous execution patterns in Ballerina
+- [Ballerina - Github repos.md](<./Ballerina - Github repos.md>) — Fetching repositories via API
+- [Bau - Chess.md](<./Bau - Chess.md>) — Game logic for Chess in Bau
+- [CCL - Example.md](<./CCL - Example.md>) — Basic usage patterns in CCL
+- [Carbon - tic-tac-toe.md](<./Carbon - tic-tac-toe.md>) — Logic for Tic-Tac-Toe in Carbon
+- [Carbon lang - Sorting.md](<./Carbon lang - Sorting.md>) — Sorting algorithm demonstration in Carbon
+- [Crystal - Http Server.md](<./Crystal - Http Server.md>) — Web server setup in Crystal
+- [Cue - cuetorials.md](<./Cue - cuetorials.md>) — Tutorial documentation for Cue
+- [Dahll - Functions.md](<./Dahll - Functions.md>) — Function composition in Dahll
+- [Dart - Misc.md](<./Dart - Misc.md>) — Miscellaneous code snippets from Dart
+- [Diamond - Pong game.md](<./Diamond - Pong game.md>) — Classic Pong implementation in Diamond
+- [Elixir - Get Token.md](<./Elixir - Get Token.md>) — Authentication token logic in Elixir
+- [Eve - Quickstart.md](<./Eve - Quickstart.md>) — Introduction to the Eve environment
+- [Fat - http-server.md](<./Fat - http-server.md>) — HTTP server routing example
+- [Gleam - Multiple subjects.md](<./Gleam - Multiple subjects.md>) — Multi-subject patterns in Gleam
+- [Go - Go Concurrency Patterns.md](<./Go - Go Concurrency Patterns.md>) — Standard concurrency idioms for Go
+- [Go - Philosophers.md](<./Go - Philosophers.md>) — Dining Philosophers problem implementation
+- [Go - Pipeline 3 v2.md](<./Go - Pipeline 3 v2.md>) — Streaming pipelines in Go, version 2
+- [Go - Pipeline 3.md](<./Go - Pipeline 3.md>) — Streaming pipelines in Go
+- [Go - Scrape.md](<./Go - Scrape.md>) — Web scraping patterns in Go
+- [Go - gc.md](<./Go - gc.md>) — Garbage collector mechanics in Go
+- [Go - static-files.md](<./Go - static-files.md>) — Serving static assets with Go
+- [GraphQL - misc.md](<./GraphQL - misc.md>) — Miscellaneous GraphQL concepts
+- [Hare - Introduction.md](<./Hare - Introduction.md>) — Getting started with the Hare language
+- [Haskell - BinaryTree.md](<./Haskell - BinaryTree.md>) — Recursive tree structures in Haskell
+- [Haskell - Double Cola.md](<./Haskell - Double Cola.md>) — Queue simulation in Haskell
+- [Haskell - Drone.md](<./Haskell - Drone.md>) — Simulating movement and logic
+- [Haskell - Learn X in Y Minutes.md](<./Haskell - Learn X in Y Minutes.md>) — Syntax overview for Haskell
+- [Haskell - Try Haskell.md](<./Haskell - Try Haskell.md>) — Basic interactive concepts
+- [IO - Account.md](<./IO - Account.md>) — Object state and logic patterns
+- [Inko - Error Handling.md](<./Inko - Error Handling.md>) — Result propagation in Inko
+- [Inko - Generic Data types.md](<./Inko - Generic Data types.md>) — Polymorphic structure handling
+- [Inko - Implementing traits.md](<./Inko - Implementing traits.md>) — Interface composition techniques
+- [Inko - Unit testing.md](<./Inko - Unit testing.md>) — Test suite setup and assertions
+- [Jakt - Bubble sort.md](<./Jakt - Bubble sort.md>) — Sorting algorithm in Jakt
+- [Java - Find two indexes.md](<./Java - Find two indexes.md>) — Array iteration logic
+- [Java - Guess Number.md](<./Java - Guess Number.md>) — Logic for number-guessing game
+- [Java - levels.md](<./Java - levels.md>) — Level-based data processing in Java
+- [Javascript - Lion.yz.md](<./Javascript - Lion.yz.md>) — Porting concepts to Yz from JS
+- [Jevko - Data.md](<./Jevko - Data.md>) — Data interchange patterns in Jevko
+- [Kotlin - Lean X in Y minutes.md](<./Kotlin - Lean X in Y minutes.md>) — Syntax overview for Kotlin
+- [Kotlin - Non local returns.md](<./Kotlin - Non local returns.md>) — Control flow escaping in Kotlin
+- [MLscript - Binary Search Tree.md](<./MLscript - Binary Search Tree.md>) — Recursive data structures
+- [MLscript - Guide.md](<./MLscript - Guide.md>) — Language introduction and rules
+- [Naptune - aoc23-1-1.md](<./Naptune - aoc23-1-1.md>) — Advent of Code solution 1
+- [Nim - Simple Example.md](<./Nim - Simple Example.md>) — Basic Nim syntax demonstration
+- [Odin - Hellope.md](<./Odin - Hellope.md>) — I/O fundamentals in Odin
+- [Pomar - http request.md](<./Pomar - http request.md>) — Outgoing HTTP logic
+- [Pomar - loading thread.md](<./Pomar - loading thread.md>) — Concurrent background processing
+- [Pony - Counter.md](<./Pony - Counter.md>) — Actor state management in Pony
+- [Pony - Message delivery.md](<./Pony - Message delivery.md>) — Asynchronous messaging concepts
+- [Pony Promise.md](<./Pony Promise.md>) — Handling future values and promises
+- [Pyret - Misc.md](<./Pyret - Misc.md>) — Miscellaneous code samples from Pyret
+- [Python - Rendezvous.md](<./Python - Rendezvous.md>) — Synchronization patterns in Python
+- [README.md](./README.md) — Directory metadata
+- [Reddit.st - Smalltalk.md](<./Reddit.st - Smalltalk.md>) — Parsing logic in a Lisp-like syntax
+- [Roc - email.md](<./Roc - email.md>) — Email composition example in Roc
+- [Ruby - Composition.md](<./Ruby - Composition.md>) — Object-oriented composition patterns
+- [Ruby - Rgb.md](<./Ruby - Rgb.md>) — Color logic and data structures
+- [Rust - Enums.md](<./Rust - Enums.md>) — Discriminated unions in Rust
+- [Rust - Good Students.md](<./Rust - Good Students.md>) — Case study example in Rust
+- [Rust - Rust Lang in a nutshell.md](<./Rust - Rust Lang in a nutshell.md>) — Syntax overview for Rust
+- [Rust - modules.md](<./Rust - modules.md>) — Crate organization and naming
+- [Rye - Split and Save.md](<./Rye - Split and Save.md>) — String manipulation logic
+- [Smalltalk - Blocks.md](<./Smalltalk - Blocks.md>) — Lambda expressions in Smalltalk
+- [Smalltalk - Shipping.md](<./Smalltalk - Shipping.md>) — Object inheritance patterns
+- [StandardML - learnxiny.md](<./StandardML - learnxiny.md>) — Syntax overview for Standard ML
+- [Starlark - tour.md](<./Starlark - tour.md>) — Configuration language concepts
+- [TypeScript - Tagged Unions.md](<./TypeScript - Tagged Unions.md>) — Algebraic data types in TS
+- [V - Anonymous & High Order Functions.md](<./V - Anonymous & High Order Functions.md>) — Lambda syntax and functional patterns
+- [V - Anonymous Blocks.md](<./V - Anonymous Blocks.md>) — Inline code block execution
+- [V - Fibonacci.md](<./V - Fibonacci.md>) — Recursive sequence generation
+- [V - Filter log file.md](<./V - Filter log file.md>) — Text processing pipeline example
+- [V - Generics.md](<./V - Generics.md>) — Type parameterization basics
+- [V - Structs and embedded structs.md](<./V - Structs and embedded structs.md>) — Composite data structures
+- [V - json.md](<./V - json.md>) — Serialization and deserialization
+- [V - related_posts.md](<./V - related_posts.md>) — Graph traversal concepts
+- [V - simple app.md](<./V - simple app.md>) — Application scaffolding example
+- [V - vweb.md](<./V - vweb.md>) — Web framework routing setup
+- [V- desk.yz.md](<./V- desk.yz.md>) — Desktop application logic in V
+- [Yz - 24 game.md](<./Yz - 24 game.md>) — Arithmetic puzzle algorithm in Yz
+- [Yz - 99bottles.md](<./Yz - 99bottles.md>) — String repetition logic
+- [Yz - Account.md](<./Yz - Account.md>) — Object state management
+- [Yz - Ackermann.md](<./Yz - Ackermann.md>) — Deep recursion example in Yz
+- [Yz - Add Two Numbers.md](<./Yz - Add Two Numbers.md>) — Basic arithmetic expression handling
+- [Yz - Annotations, Macros, Natives, and Deps.md](<./Yz - Annotations, Macros, Natives, and Deps.md>) — Metadata-driven compilation example
+- [Yz - Array Wrapper.md](<./Yz - Array Wrapper.md>) — Encapsulation of list operations
+- [Yz - Associated Types.md](<./Yz - Associated Types.md>) — Generic path-dependent typing concepts
+- [Yz - BOC.md](<./Yz - BOC.md>) — Core implementation of the Block of Code (BOC) system
+- [Yz - Binary Tree 2.md](<./Yz - Binary Tree 2.md>) — Tree traversal and insertion
+- [Yz - Binary Tree 3.md](<./Yz - Binary Tree 3.md>) — Balanced tree construction attempt
+- [Yz - Binary Tree.md](<./Yz - Binary Tree.md>) — Fundamental node structure example
+- [Yz - Compile Time Mix.md](<./Yz - Compile Time Mix.md>) — Metaprogramming and code generation
+- [Yz - Concurrent Fetch.md](<./Yz - Concurrent Fetch.md>) — Asynchronous HTTP requests in Yz
+- [Yz - Counter.md](<./Yz - Counter.md>) — Stateful function example
+- [Yz - Dining Philosophers.md](<./Yz - Dining Philosophers.md>) — Concurrency problem solving
+- [Yz - Dot product.md](<./Yz - Dot product.md>) — Linear algebra operations in Yz
+- [Yz - Equal Row and Column Pairs.md](<./Yz - Equal Row and Column Pairs.md>) — Matrix logic example
+- [Yz - Fetch data.md](<./Yz - Fetch data.md>) — External resource loading
+- [Yz - Fib.yz.md](<./Yz - Fib.yz.md>) — Fibonacci sequence implementation
+- [Yz - FizzBuzz.yz.md](<./Yz - FizzBuzz.yz.md>) — Conditional logic example
+- [Yz - Hanoi.md](<./Yz - Hanoi.md>) — Tower of Hanoi recursive logic
+- [Yz - Is Armstrong.md](<./Yz - Is Armstrong.md>) — Number theory property check
+- [Yz - Learn X in Y minutes.md](<./Yz - Learn X in Y minutes.md>) — Language syntax overview
+- [Yz - Level Order Tree Traversal.md](<./Yz - Level Order Tree Traversal.md>) — Queue-based graph visit
+- [Yz - Regression Tool - Simple.md](<./Yz - Regression Tool - Simple.md>) — Statistical calculation example
+- [Yz - Roman to Int.md](<./Yz - Roman to Int.md>) — String parsing and math logic
+- [Yz - Sample code.md](<./Yz - Sample code.md>) — General syntax demonstration
+- [Yz - SumTypes.md](./Yz - SumTypes.md) — Union type and pattern matching implementation
+- [Yz - Task manager - JSON.md](<./Yz - Task manager - JSON.md>) — Data serialization for a to-do list
+- [Yz - Task manager - plain text.md](<./Yz - Task manager - plain text.md>) — File I/O for task management
+- [Yz - TreeNode.md](<./Yz - TreeNode.md>) — Node definition and manipulation
+- [Yz - Yz.md](<./Yz - Yz.md>) — Core language concepts summary
+- [Yz - aoc23-1.md](<./Yz - aoc23-1.md>) — Advent of Code Day 1 solution in Yz
+- [Yz - cat.md](<./Yz - cat.md>) — File reading and printing pipeline
+- [Yz - filter.md](<./Yz - filter.md>) — Stream processing example
+- [Yz - for loop.md](<./Yz - for loop.md>) — Iteration mechanics in Yz
+- [Yz - kth element.md](<./Yz - kth element.md>) — Selection and sorting logic
+- [Yz - static strong type.md](<./Yz - static strong type.md>) — Type system boundary examples
+- [Yz - two_sum.md](<./Yz - two_sum.md>) — Hash-based lookup algorithm in Yz
+- [Yz - yzc.yz.md](<./Yz - yzc.yz.md>) — Compiler (yzc) source code example
+- [Yz - λf. λx. f x.md](<./Yz - λf. λx. f x.md>) — Lambda calculus mechanics in Yz
+- [Zig - Formatting.md](<./Zig - Formatting.md>) — String formatting utilities in Zig
+- [Zig - If.md](<./Zig - If.md>) — Conditional syntax and control flow in Zig
+- [Zig - json.md](<./Zig - json.md>) — Structured data handling in Zig
+- [drn - Sum CSV file.md](<./drn - Sum CSV file.md>) — Data import and aggregation
+- [match - examples.md](<./match - examples.md>) — Pattern matching demonstrations
+- [qdbp - Examples.md](<./qdbp - Examples.md>) — Example implementation in QueryDBP
+- [qdbp - Misc.md](<./qdbp - Misc.md>) — Miscellaneous database utility code
+- [qdbp - stack.md](<./qdbp - stack.md>) — Stack data structure example
+- [yz - aoc2023-1.md](<./yz - aoc2023-1.md>) — Legacy AoC solution
