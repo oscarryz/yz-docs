@@ -6,8 +6,8 @@
 
 ## Directories
 
-- [rejected](./rejected/)
-- [solved](./solved/)
+- [rejected](./rejected/index.md)
+- [solved](./solved/index.md)
 
 ## Files 
 - [Dependency Management.md](<./Dependency Management.md>) — Documentation regarding Dependency Management.

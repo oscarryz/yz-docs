@@ -22,7 +22,7 @@ Documentation outlining the syntax, semantics, and design principles of the Yz p
 - [Conditional Bocs.md](<./Conditional Bocs.md>) — Usage patterns for conditional logic within code blocks.
 - [Create instances.md](<./Create instances.md>) — Design documentation regarding object instantiation and constructor syntax.
 - [Decimal.md](./Decimal.md) — Documentation regarding precision handling and decimal arithmetic rules in Yz.
-- [Define new types.md](./Define new types.md) — Syntax for declaring custom object structures and data types.
+- [Define new types.md](<./Define new types.md>) — Syntax for declaring custom object structures and data types.
 - [Dependencies.md](./Dependencies.md) — Design documentation regarding project dependency management and linking.
 - [Error handling.md](<./Error handling.md>) — Design documentation regarding `Result` types and error propagation mechanisms.
 - [Generics - Type Parameters.md](<./Generics - Type Parameters.md>) — Constraints and definitions for generic type parameters in Yz.
@@ -35,7 +35,7 @@ Documentation outlining the syntax, semantics, and design principles of the Yz p
 - [Reserved words and characters and symbols.md](<./Reserved words and characters and symbols.md>) — Symbols and keywords strictly prohibited or reserved in the Yz grammar.
 - [String interpolation.md](<./String interpolation.md>) — Design documentation regarding embedding variables within string literals using `${}` .
 - [Strings.md](./Strings.md) — Rules for string literal quoting, escaping, and text manipulation in Yz.
-- [Structural Reflection.md](./Structural Reflection.md) — Inspecting types at compile-time based on their internal structure fields.
+- [Structural Reflection.md](<./Structural Reflection.md>) — Inspecting types at compile-time based on their internal structure fields.
 - [Structural typing.md](<./Structural typing.md>) — Defining type compatibility based on field layout rather than inheritance names.
 - [SumTypes.md](./SumTypes.md) — Implementation of union/sum types and pattern matching in Yz.
 - [Trailing block syntax.md](<./Trailing block syntax.md>) — Rules for omitting parentheses when passing block literals as arguments.

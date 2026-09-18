@@ -4,7 +4,7 @@ Conclusions regarding core semantic decisions including array initialization, pa
 
 ## Subdirectories
 
-- [Type signature](./Type signature/) — Details on how method and block signatures are defined and validated.
+- [Type signature](<./Type signature/>) — Details on how method and block signatures are defined and validated.
 - [concurrency](./concurrency/) — Conclusions on async evaluation, channels, and actor models.
 - [generics](./generics/) — Resolutions for generic type enforcement and polymorphic functions.
 
@@ -30,7 +30,7 @@ Conclusions regarding core semantic decisions including array initialization, pa
 - [Flow typing and conditionals.md](<./Flow typing and conditionals.md>) — Dynamic type narrowing based on `if`/`?` operators.
 - [Generics - Bound depending on use.md](<./Generics - Bound depending on use.md>) — Inferred generic boundaries based on block usage.
 - [Generics - momorphized qm.md](<./Generics - momorphized qm.md>) — Polymorphic implementations across different types.
-- [Generics without <>.md](<./Generics without <>.md>) — Exploring syntax alternatives that omit angle brackets for generics.
+- [Generics without <>.md](Generics%20without%20<>.md) — Exploring syntax alternatives that omit angle brackets for generics.
 - [Generics.md](./Generics.md) — Core design for generic type parameters in Yz.
 - [How much magic should we allow qm.md](<./How much magic should we allow qm.md>) — Defining the limits of type inference and macro execution.
 - [How to add sum types.md](<./How to add sum types.md>) — Implementation of SumTypes for pattern matching.
