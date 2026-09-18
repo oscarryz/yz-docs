@@ -1,4 +1,9 @@
-## Document
+---
+# OKF v0.2
+type: index
+---
+
+## Documents
 
 - [LICENSE](./LICENSE) - MIT license for the project
 - [README.md](./README.md) - Yz language overview  and primer 
