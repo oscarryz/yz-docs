@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-05-21T21:09:07+02:00 }
+---
 #feature
 
 ## Design Philosophy

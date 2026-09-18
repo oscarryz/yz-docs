@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 
 [Reddit.st](http://web.archive.org/web/20110122114420/http://homepage.mac.com/svc/Reddit.st/)

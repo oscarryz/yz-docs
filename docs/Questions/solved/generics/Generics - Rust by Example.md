@@ -1,3 +1,7 @@
+---
+type: answered
+generated: { by: "oscarryz", at: 2024-03-05T20:58:27-06:00 }
+---
 #answered 
 
 ## Generics 

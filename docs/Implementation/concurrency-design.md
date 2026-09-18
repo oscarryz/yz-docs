@@ -1,3 +1,7 @@
+---
+type: implementation
+generated: { by: "oscarryz", at: 2026-05-09T04:23:18+02:00 }
+---
 #implementation 
 # Yz Concurrency: BOC Model and Implementation Design
 

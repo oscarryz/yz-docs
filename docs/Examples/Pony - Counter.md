@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 
 [counter/main.pony](https://github.com/ponylang/ponyc/blob/54225e41bd141b8b7a64f0e65d3dbe46bc5317d4/examples/counter/main.pony)

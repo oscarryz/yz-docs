@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #solved 
 
 We don't use commas nor semicolons but sometimes it seems to be a good idea to have a way to say: "this ends here". 

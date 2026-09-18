@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 
 https://github.com/golang/go/blob/f32519e5fbcf1b12f9654a6175e5e72b09ae8f3a/src/cmd/go/internal/work/gc.go#L68

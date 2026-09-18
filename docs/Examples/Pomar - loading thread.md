@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-03-05T20:58:27-06:00 }
+---
 #example
 
 [Pomar](https://twitter.com/pomarlang/status/1764763278624887290/photo/1)

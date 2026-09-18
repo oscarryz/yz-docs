@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-10-20T22:30:06+02:00 }
+---
 #example 
 
 https://github.com/octalide/mach?tab=readme-ov-file#simple-examples

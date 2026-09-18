@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-05-12T02:33:54+02:00 }
+---
 #example
 
 ## Behaviour-Oriented Concurrency (BOC)

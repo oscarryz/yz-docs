@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2025-09-10T21:52:32+02:00 }
+---
 #feature 
 # Comments
 

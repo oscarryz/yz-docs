@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2026-06-25T22:03:08+02:00 }
+---
 #solved
 
 Define how a boc literal gets its type and how that type is used for compatibility checking across all use sites (struct, closure, interface).

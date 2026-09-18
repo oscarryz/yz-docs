@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-05-17T00:03:50+02:00 }
+---
 #feature
 # Generics — Type Parameters
 

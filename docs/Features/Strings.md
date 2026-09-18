@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2025-08-07T00:44:44+02:00 }
+---
 #feature 
 # Strings
 

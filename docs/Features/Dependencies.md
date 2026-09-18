@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-06-22T17:02:40+02:00 }
+---
 #feature
 # Dependencies
 

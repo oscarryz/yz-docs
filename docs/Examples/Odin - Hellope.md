@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-05-14T17:05:47+02:00 }
+---
 #example 
 
 https://odin-lang.org/

@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2026-05-23T07:55:50+02:00 }
+---
 #solved in [GoExtensions](../../Features/GoExtensions.md)
 
 The `go_source:` annotation key links a Yz type declaration to a Go source file. Body-less methods

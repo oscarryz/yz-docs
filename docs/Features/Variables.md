@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2025-09-21T09:10:58+02:00 }
+---
 #feature
 
 Variables are declared with an identifier followed by a type identifier or type signature.

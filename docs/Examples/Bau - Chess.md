@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-05-23T22:36:26+02:00 }
+---
 #example 
 
 [chass.bau](https://github.com/thomasmueller/bau-lang/blob/main/src/test/resources/org/bau/converter/chess.bau)

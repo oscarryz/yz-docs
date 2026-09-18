@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2024-10-23T12:30:27-05:00 }
+---
 
 #solved  There will be macros [Compile Time Bocs](docs/Features/Compile%20Time%20Bocs.md), and [Type variants](docs/Features/Type%20variants.md), and [Type Alias](docs/Features/Type%20Alias.md)
 

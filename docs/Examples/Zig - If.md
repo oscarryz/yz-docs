@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 https://zig.news/edyu/zig-if-wtf-is-bool-48hh
 

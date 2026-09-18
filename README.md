@@ -1,3 +1,7 @@
+---
+type: readme
+generated: { by: "oscarryz", at: 2023-12-07T09:54:11-06:00 }
+---
 #readme 
 # The Yz Programming Language
 

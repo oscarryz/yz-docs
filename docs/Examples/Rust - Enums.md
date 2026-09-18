@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-09-20T17:16:56+02:00 }
+---
 #example 
 
 https://doc.rust-lang.org/rust-by-example/custom_types/enum.html

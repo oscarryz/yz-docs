@@ -1,3 +1,7 @@
+---
+type: rejected
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #rejected 
 #dropped  All things will be mutable; with [Concurrency](../../Features/Concurrency.md)  each variable would have a single writer, thus, this is not strictly speaking needed
 ....

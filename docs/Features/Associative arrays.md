@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #feature 
 Also known as dictionaries or hash maps
 ```js

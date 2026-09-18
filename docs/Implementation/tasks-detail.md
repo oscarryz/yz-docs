@@ -1,3 +1,7 @@
+---
+type: impl
+generated: { by: "oscarryz", at: 2026-06-05T23:56:26+02:00 }
+---
 #impl
 Open ticket details. See tasks.md for the index.
 

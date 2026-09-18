@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #solved See [Error handling](docs/Features/Error%20handling.md)
 
 [Error handling](../../Features/Error%20handling.md) provides some options to handle errors, most promising is `Optional` with `some` and `none`  instances, similar to `Boolean` with `true` and `false` but still needs some work. 

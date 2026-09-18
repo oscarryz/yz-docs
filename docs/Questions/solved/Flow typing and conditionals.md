@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2025-01-16T11:40:13-06:00 }
+---
 #solved in  [Conditional Bocs](../../Features/Conditional%20Bocs.md)
 #pattern-matching 
 #flow-typing

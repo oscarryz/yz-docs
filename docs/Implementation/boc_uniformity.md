@@ -1,3 +1,7 @@
+---
+type: impl
+generated: { by: "oscarryz", at: 2026-04-19T07:11:57+02:00 }
+---
 #impl 
 # Boc Uniformity — Design Gap Analysis
 

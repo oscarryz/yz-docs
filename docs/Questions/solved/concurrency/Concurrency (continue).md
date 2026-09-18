@@ -1,3 +1,7 @@
+---
+type: answered
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #answered  [Async + Lazy eval + Structured Concurrency](Async%20+%20Lazy%20eval%20+%20Structured%20Concurrency.md)
 
 Feb 27 2023

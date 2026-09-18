@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-09-09T06:08:50-05:00 }
+---
 #example
 
 Fat - http-server

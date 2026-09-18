@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2026-05-23T07:55:50+02:00 }
+---
 #solved 
 
 Define the exact way the `Macro` interface will work and how the many implementations would implement it, aside from the definition in [Macros](../docs/Features/Macros.md).

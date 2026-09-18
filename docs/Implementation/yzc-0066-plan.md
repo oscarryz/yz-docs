@@ -1,3 +1,7 @@
+---
+type: impl-plan
+generated: { by: "oscarryz", at: 2026-05-28T17:30:45+02:00 }
+---
 #impl-plan
 # YZC-0066 Implementation Plan — Path-Dependent Types
 

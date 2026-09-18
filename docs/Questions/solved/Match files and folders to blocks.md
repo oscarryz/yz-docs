@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #solved 
 
 In project structure I basically equated files to blocks, let's make sure that's what we want

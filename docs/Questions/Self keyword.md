@@ -1,3 +1,7 @@
+---
+type: open-question
+generated: { by: "oscarryz", at: 2026-08-03T09:41:42+02:00 }
+---
 #open-question
 
 Tracked as **YZC-0060**.

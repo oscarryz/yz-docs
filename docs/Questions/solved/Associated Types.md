@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2026-05-28T00:28:38+02:00 }
+---
 #solved in [Path Dependent Types](docs/Features/Path%20Dependent%20Types.md)
 
 The questions raised here are resolved by the path-dependent types model:

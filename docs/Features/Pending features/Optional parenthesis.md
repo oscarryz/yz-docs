@@ -1,3 +1,7 @@
+---
+type: pending-feature
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #pending-feature
 
 When there's at least one arg and no named params

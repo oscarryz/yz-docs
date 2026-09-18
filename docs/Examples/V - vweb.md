@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 From [2048.v](https://github.com/vlang/v/blob/master/examples/2048/2048.v#:~:text=%7D-,fn%20(app%20%26App)%20draw_tiles()%20%7B,app,-.theme.tile_colors.last)
 

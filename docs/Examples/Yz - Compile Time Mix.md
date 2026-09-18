@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-05-11T22:53:49+02:00 }
+---
 #example 
 
 The [Macros](../Features/Macros.md) feature provides code generation such as embedding (or mixing) a boc content into another, similar to Go's embedding but through code generation

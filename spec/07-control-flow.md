@@ -1,3 +1,7 @@
+---
+type: spec
+generated: { by: "oscarryz", at: 2026-02-16T15:11:23+01:00 }
+---
 #spec 
 # 7. Control Flow
 

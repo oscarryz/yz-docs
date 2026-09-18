@@ -1,3 +1,7 @@
+---
+type: impl
+generated: { by: "oscarryz", at: 2026-03-05T08:36:04+01:00 }
+---
 #impl 
 # Yz Compiler — Implementation Decisions
 

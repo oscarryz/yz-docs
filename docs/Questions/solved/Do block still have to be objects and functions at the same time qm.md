@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2025-09-10T21:52:32+02:00 }
+---
 #solved Yes, they are both at the same time
 
 

@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-03-07T16:00:59-06:00 }
+---
 #example
 
 https://iolanguage.org/samples/index.html

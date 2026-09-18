@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-09-22T22:51:46+02:00 }
+---
 #example 
 
 https://discuss.kotlinlang.org/t/confusion-about-whether-non-local-returns-work-or-not/2408

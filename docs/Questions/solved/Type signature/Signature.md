@@ -1,3 +1,7 @@
+---
+type: answered
+generated: { by: "oscarryz", at: 2024-03-12T13:54:09-05:00 }
+---
 #answered 
 #accepted 
 How a block interface is defined

@@ -1,3 +1,7 @@
+---
+type: spec
+generated: { by: "oscarryz", at: 2026-02-16T12:56:22+01:00 }
+---
 #spec
 # 2. Grammar
 

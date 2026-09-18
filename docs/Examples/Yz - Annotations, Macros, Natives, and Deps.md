@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-07-01T09:40:24+02:00 }
+---
 ```js
 // native binding — wraps the goslug Go library
 `go_source: "vendor/slug_binding.go"`

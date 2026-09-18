@@ -1,3 +1,7 @@
+---
+type: readme
+generated: { by: "oscarryz", at: 2026-06-07T06:06:38+02:00 }
+---
 # multi_root
 
 Demonstrates multiple source roots (YZC-0022).

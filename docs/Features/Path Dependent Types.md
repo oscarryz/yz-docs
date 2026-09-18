@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-05-28T00:28:38+02:00 }
+---
 #feature
 # Path-Dependent Types
 

@@ -1,3 +1,7 @@
+---
+type: impl
+generated: { by: "oscarryz", at: 2026-05-27T22:35:53+02:00 }
+---
 #impl
 Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0101**.
 

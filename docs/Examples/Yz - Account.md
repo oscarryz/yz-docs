@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-10-18T07:13:42-05:00 }
+---
 #example
 https://dl.acm.org/doi/pdf/10.1145/3622852
 

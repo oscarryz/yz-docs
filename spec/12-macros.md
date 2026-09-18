@@ -1,3 +1,7 @@
+---
+type: spec
+generated: { by: "oscarryz", at: 2026-07-03T11:37:27+02:00 }
+---
 #spec
 # 12. Macros
 

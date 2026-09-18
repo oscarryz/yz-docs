@@ -1,3 +1,7 @@
+---
+type: open-question
+generated: { by: "oscarryz", at: 2026-05-31T16:33:46+02:00 }
+---
 #open-question #resolved
 
 ## How should Yz handle existential types over associated types?

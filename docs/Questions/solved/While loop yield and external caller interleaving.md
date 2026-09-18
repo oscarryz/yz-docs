@@ -1,3 +1,7 @@
+---
+type: resolved
+generated: { by: "oscarryz", at: 2026-05-20T01:00:05+02:00 }
+---
 #resolved
 
 # While Loop Yield and External Caller Interleaving

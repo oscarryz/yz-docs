@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2025-09-09T20:24:40+02:00 }
+---
 #solved Use them all. Each one preferred for a different use
 
 `#(){}` For variable declaration

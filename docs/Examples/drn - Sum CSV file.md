@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-09-14T13:46:50-05:00 }
+---
 #example
 
 [DRN Example](https://www.reddit.com/r/ProgrammingLanguages/comments/1fey7qm/rate_my_syntax/)

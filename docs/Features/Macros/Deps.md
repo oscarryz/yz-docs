@@ -1,3 +1,7 @@
+---
+type: superseded
+generated: { by: "oscarryz", at: 2026-06-02T22:49:55+02:00 }
+---
 #superseded
 # Deps — superseded
 

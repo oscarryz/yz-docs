@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2025-09-22T22:51:46+02:00 }
+---
 #feature 
 # Non-Word Method Invocation
 

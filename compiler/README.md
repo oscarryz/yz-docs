@@ -1,3 +1,7 @@
+---
+type: readme
+generated: { by: "oscarryz", at: 2026-03-17T15:29:42+01:00 }
+---
 #readme 
 # yzc — The Yz Compiler
 

@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #feature
 ## Memory, Concurrency, Ownership
 Variables declared in a block are owned by that block, they cannot be modified outside of the block directly but instead Yz  internally channels the modification to the owning block. 

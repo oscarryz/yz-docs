@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-01-08T10:00:16-06:00 }
+---
 #example
 
 Description

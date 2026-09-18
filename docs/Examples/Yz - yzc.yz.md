@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-05-30T17:48:34+02:00 }
+---
 #example
 
 ## yzc — compiler entry point (intent version)

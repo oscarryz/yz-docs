@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-10-15T21:32:25+02:00 }
+---
 #example 
 
 https://github.com/letsgetrusty/combinators/blob/master/src/final.rs

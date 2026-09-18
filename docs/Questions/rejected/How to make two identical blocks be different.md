@@ -1,3 +1,7 @@
+---
+type: rejected
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #rejected You can't that's what structural typing is all about. Nominal only applies to type variants. 
 
 <hr>

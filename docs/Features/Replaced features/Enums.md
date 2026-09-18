@@ -1,3 +1,7 @@
+---
+type: answered
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #answered with [Type variants](Type%20variants.md)
 
 There's no enums, but following the convention instances of a given type can be created and use them as enumeration types

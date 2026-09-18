@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 [From zig](https://ziglearn.org/chapter-2/#formatting:~:text=over%20string%20printing.-,const%20Person%20%3D%20struct%20%7B,%7D,-JSON)
 

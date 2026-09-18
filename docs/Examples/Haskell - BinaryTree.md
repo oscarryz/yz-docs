@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-01-07T05:12:47-06:00 }
+---
 #example
 
 https://www.anardil.net/2018/binary-tree-in-haskell.html

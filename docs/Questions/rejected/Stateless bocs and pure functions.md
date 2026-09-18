@@ -1,3 +1,7 @@
+---
+type: rejected
+generated: { by: "oscarryz", at: 2026-04-18T08:37:05+02:00 }
+---
 #rejected
 #solved
 

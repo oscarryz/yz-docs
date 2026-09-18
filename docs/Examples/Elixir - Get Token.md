@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 
 [Writing Assertive Code With Elixir](https://dashbit.co/blog/writing-assertive-code-with-elixir)

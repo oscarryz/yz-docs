@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 [twitter](https://twitter.com/preslavrachev/status/1467555292242186241/photo/1)
 ```js

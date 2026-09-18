@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-05-09T02:13:54+02:00 }
+---
 #feature 
 
 ```js

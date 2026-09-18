@@ -1,3 +1,7 @@
+---
+type: implementation
+generated: { by: "oscarryz", at: 2026-05-02T16:19:12-04:00 }
+---
 #implementation #open-question 
 
 ### Package Isolation & Circular Dependencies

@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 [FizzBuzz.st] https://gist.github.com/oscarryz/d54dd569fea585ec008c6f20af2e97ec
 

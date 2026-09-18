@@ -1,3 +1,7 @@
+---
+type: open-question
+generated: { by: "oscarryz", at: 2026-05-29T22:39:25+02:00 }
+---
 #open-question 
 
 > The following is a draft of what the stdlib could look like

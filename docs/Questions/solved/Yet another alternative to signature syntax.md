@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2024-10-18T07:13:42-05:00 }
+---
 #solved This was the wining design! Yey, now lives in [Boc Interface](docs/Features/Boc%20Interface.md)
 
 <hr>

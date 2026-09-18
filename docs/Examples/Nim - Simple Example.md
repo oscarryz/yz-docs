@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-06-04T21:14:50+02:00 }
+---
 https://nim-lang.org/
 
 ```js

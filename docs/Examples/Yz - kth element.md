@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 ```js
 `Given an integer array `nums` and an integer `k`, return _the_ `kth` _largest element in the array_.

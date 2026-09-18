@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-01-09T10:16:03-06:00 }
+---
 #example
 
 1. Same data types on all the variants

@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #solved See [return, break, continue](docs/Features/return,%20break,%20continue.md)
 
 <hr>

@@ -1,3 +1,7 @@
+---
+type: rejected
+generated: { by: "oscarryz", at: 2026-04-29T23:16:47-04:00 }
+---
 #rejected No for now. Doesn't add much
 
 # Yz Language Design: Types as First-Class Values

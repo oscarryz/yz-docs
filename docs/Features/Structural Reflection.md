@@ -1,3 +1,7 @@
+---
+type: open-question
+generated: { by: "oscarryz", at: 2026-04-28T17:10:56-04:00 }
+---
 #open-question
 
 # Yz Structural Reflection — The `Boc` Type

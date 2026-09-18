@@ -1,3 +1,7 @@
+---
+type: open-question
+generated: { by: "oscarryz", at: 2026-05-29T22:39:25+02:00 }
+---
 #open-question
 
 How can `.?()` — a no-argument call to the `?` method on `Result` — propagate errors non-locally to the enclosing named boc?

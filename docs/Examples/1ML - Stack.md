@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-07-19T16:15:40-05:00 }
+---
 #example
 
 [Notes on 1ML](https://shonfeder.github.io/themata/programming/notes-on-1ml.html)

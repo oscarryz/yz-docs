@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-04-08T18:00:05+02:00 }
+---
 #feature
 
 When the last (or only) argument to a method is a block literal, the enclosing parentheses can be omitted. The block is written directly after the method name, separated by a space.

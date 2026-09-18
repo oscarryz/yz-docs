@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-05-18T22:29:02+02:00 }
+---
 #feature
 # Boc Interface `#()`
 

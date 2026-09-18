@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 
 https://github.com/adonovan/gopl.io/blob/master/ch8/pipeline3/main.go

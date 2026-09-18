@@ -1,3 +1,7 @@
+---
+type: rejected
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #rejected Do use thin dispatchers if needed, BOC should handle the rest. 
 
 In the current proposal most of the control structures are in the standard library, e.g. `if`, `when`, `while`, `some`, `none` etc. 

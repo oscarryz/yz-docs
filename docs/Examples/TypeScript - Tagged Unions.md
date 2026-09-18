@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #example
 
 [https://learnxinyminutes.com/typescript/](https://learnxinyminutes.com/typescript/#:~:text=//%20Tagged%20Union%20Types%20for%20modelling%20state%20that%20can%20be%20in%20one%20of%20many%20shapes)

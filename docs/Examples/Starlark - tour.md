@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-10-07T20:40:42+02:00 }
+---
 #example 
 
 https://github.com/bazelbuild/starlark?tab=readme-ov-file#tour

@@ -1,3 +1,7 @@
+---
+type: rejected
+generated: { by: "oscarryz", at: 2025-01-07T05:12:47-06:00 }
+---
 #rejected Yz will use `()` notation to create instance e.g. `Person()`
 
 We could have a notation for object literal such that the Boc defined with

@@ -1,3 +1,7 @@
+---
+type: answered
+generated: { by: "oscarryz", at: 2025-08-07T19:51:51+02:00 }
+---
 #answered  Use it
 
 There is an [interesting suggestion](https://www.reddit.com/r/ProgrammingLanguages/comments/1m4sse2/comment/n51yxkh/) about how Yz could handle concurrency: All the functions to be async, but the value returned (not a promise) to be "thunk" that can be passed around until it is used. 

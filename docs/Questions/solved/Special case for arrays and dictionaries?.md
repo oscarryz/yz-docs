@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #solved Yes, see [Array](docs/Features/Array.md) [Associative arrays](docs/Features/Associative%20arrays.md) 
 
 <hr>

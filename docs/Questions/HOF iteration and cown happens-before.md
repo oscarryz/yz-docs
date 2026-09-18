@@ -1,3 +1,7 @@
+---
+type: open-question
+generated: { by: "oscarryz", at: 2026-05-16T22:57:19+02:00 }
+---
 #open-question
 
 # HOF Iteration and Cown Happens-Before Semantics

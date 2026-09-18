@@ -1,3 +1,7 @@
+---
+type: open-question
+generated: { by: "oscarryz", at: 2026-04-20T21:38:06+02:00 }
+---
 #open-question 
 
 Fist inclination is to use https to get dependencies, following a similar approach to Deno 

@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-06-25T17:34:38+02:00 }
+---
 #feature
 # Go Extensions — Go-backed type implementations
 

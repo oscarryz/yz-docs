@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2023-12-06T21:03:48-06:00 }
+---
 
 #answered Answer: Use single upper case letter and specify in parameters using parenthesis. e.g. 
 

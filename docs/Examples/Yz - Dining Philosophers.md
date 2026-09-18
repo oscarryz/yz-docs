@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-07-26T10:14:40-05:00 }
+---
 #example
 [Dining Philosophers](https://en.wikipedia.org/wiki/Dining_philosophers_problem)
 

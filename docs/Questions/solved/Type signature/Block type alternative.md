@@ -1,3 +1,7 @@
+---
+type: answered
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #answered 
 #rejected 
 What if the block type could use `::` and `;`

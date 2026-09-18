@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2024-09-01T07:34:45-05:00 }
+---
 #solved with constraints see [Generics - Type Parameters](docs/Features/Generics%20-%20Type%20Parameters.md)
 
 <hr>

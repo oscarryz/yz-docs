@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2026-04-17T10:35:41+02:00 }
+---
 #example
 
 ## Concurrent HTTP Fetch

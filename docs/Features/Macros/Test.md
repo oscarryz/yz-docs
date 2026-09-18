@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2026-06-02T22:49:55+02:00 }
+---
 #feature
 # Test — Test Fragment Companion
 

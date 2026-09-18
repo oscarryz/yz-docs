@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2025-09-10T21:52:32+02:00 }
+---
 #feature
 
 In Yz, sum types (discriminated unions) are expressed as **type variants**: a boc that lists named constructors, each carrying its own data. A value of the type holds exactly one constructor at a time, and `match` dispatches on which one it is.

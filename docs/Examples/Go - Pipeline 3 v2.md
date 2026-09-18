@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-09-06T19:54:10+02:00 }
+---
 #example
 
 [Go - Pipeline 3](Examples/Go%20-%20Pipeline%203.md)

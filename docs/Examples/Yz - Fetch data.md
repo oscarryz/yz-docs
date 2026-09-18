@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-10-18T07:13:42-05:00 }
+---
 #example
 ```js
 http: std.net.http

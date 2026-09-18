@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #feature
 
 To define a new type, we use upper case names, followed by the type body, the following would define a new type `Person`

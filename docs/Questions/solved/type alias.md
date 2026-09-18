@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2024-10-23T12:30:27-05:00 }
+---
 #solved Yes, just use `:` see [Type Alias](Features/Type%20Alias.md)
 
 <hr>

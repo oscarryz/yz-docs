@@ -1,3 +1,7 @@
+---
+type: spec
+generated: { by: "oscarryz", at: 2026-02-16T15:12:48+01:00 }
+---
 #spec 
 # 10. Standard Library
 

@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2024-10-18T07:13:42-05:00 }
+---
 #example
 
 [pongGame.dmd](https://gist.githubusercontent.com/amzamora/ad4c84a73e1006a1d17d784c74b40a0a/raw/5f73279abaf9670545f696afee65838ac1b8d44c/pongGame.dmd)

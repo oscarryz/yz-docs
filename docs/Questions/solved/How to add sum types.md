@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2024-11-05T10:46:26-06:00 }
+---
 
 #solved in [Type variants](../../Features/Type%20variants.md)
 

@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2025-01-24T07:47:32-06:00 }
+---
 #feature
 #pattern-matching
 

@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #solved Use Go's GC, keep programs short lived, Yz is not intended to be a heavy use language
 
 

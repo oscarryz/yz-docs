@@ -1,3 +1,7 @@
+---
+type: spec
+generated: { by: "oscarryz", at: 2026-02-16T13:37:34+01:00 }
+---
 #spec
 # 5. Type Inference
 

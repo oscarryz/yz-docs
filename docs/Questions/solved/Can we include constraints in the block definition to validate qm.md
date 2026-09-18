@@ -1,3 +1,7 @@
+---
+type: solved
+generated: { by: "oscarryz", at: 2024-11-08T19:37:24-06:00 }
+---
 #solved 
 Yes, use infostrings for that 
 

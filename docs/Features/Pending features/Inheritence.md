@@ -1,3 +1,7 @@
+---
+type: feature
+generated: { by: "oscarryz", at: 2023-12-06T20:13:02-06:00 }
+---
 #feature
 ~~Not like this, is not super obvious and still not decided if import would do something else that just use the names like in Java
 

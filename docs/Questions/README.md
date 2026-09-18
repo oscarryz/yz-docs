@@ -1,3 +1,7 @@
+---
+type: readme
+generated: { by: "oscarryz", at: 2023-12-06T20:21:54-06:00 }
+---
 #readme 
 
 To ask: _How would Yz do X_ and explore answers. 

@@ -1,3 +1,7 @@
+---
+type: example
+generated: { by: "oscarryz", at: 2025-10-30T18:26:17+01:00 }
+---
 #example 
 
 https://www.reddit.com/r/ProgrammingLanguages/comments/1oe31os/should_object_fields_be_protected_or_private/
