@@ -123,7 +123,7 @@ A collection of cross-language examples demonstrating how specific Yz concepts�
 - [Yz - Regression Tool - Simple.md](<./Yz - Regression Tool - Simple.md>) — Statistical calculation example
 - [Yz - Roman to Int.md](<./Yz - Roman to Int.md>) — String parsing and math logic
 - [Yz - Sample code.md](<./Yz - Sample code.md>) — General syntax demonstration
-- [Yz - SumTypes.md](./Yz - SumTypes.md) — Union type and pattern matching implementation
+- [Yz - SumTypes.md](<./Yz - SumTypes.md>) — Union type and pattern matching implementation
 - [Yz - Task manager - JSON.md](<./Yz - Task manager - JSON.md>) — Data serialization for a to-do list
 - [Yz - Task manager - plain text.md](<./Yz - Task manager - plain text.md>) — File I/O for task management
 - [Yz - TreeNode.md](<./Yz - TreeNode.md>) — Node definition and manipulation
