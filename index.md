@@ -5,6 +5,6 @@
 
 ## Directories 
 
-- [compiler/](./compiler) - Yz compiler frontend written in Go, transpiling into `.go` source and linked with `go` 
-- [docs/](./docs) - Yz language documentation, examples, features etc. 
-- [spec](./spec) - Ya language specification
+- [compiler/](./compiler/) - Yz compiler frontend written in Go, transpiling into `.go` source and linked with `go` 
+- [docs/](./docs/index.md) - Yz language documentation, examples, features etc. 
+- [spec](./spec/) - Yz language specification
