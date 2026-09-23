@@ -1,0 +1,16 @@
+// YZC-0100 regression test: boc-typed field in a body-only singleton must be lowered
+// as a Call() param, and its semantic type must be the signature's function type
+// (e.g. func(String) Unit) rather than the type of the signature's own inner param.
+
+my_func : {
+  name String
+  greet #(msg String)
+  print(name)
+  greet("Hello")
+}
+
+main: {
+  my_func("World", { msg String
+    print(msg)
+  })
+}

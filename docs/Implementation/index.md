@@ -6,6 +6,7 @@ Design documents, decisions, and implementation plans for the Go-based Yz compil
 
 - [boc_uniformity.md](./boc_uniformity.md) — Design documentation regarding Boc Uniformity (Design Gap Analysis).
 - [concurrency-design.md](./concurrency-design.md) — Design documentation regarding Yz Concurrency: BOC Model Implementation Design.
+- [conformance-golden-tests.md](./conformance-golden-tests.md) — Why a golden test needs a `.output` sidecar for `TestRuntime` to catch broken generated code.
 - [decisions.md](./decisions.md) — Design documentation regarding Yz Compiler Implementation Decisions.
 - [implementation_plan.md](./implementation_plan.md) — Design documentation regarding the Yz Compiler Implementation Plan.
 - [tasks-detail.md](./tasks-detail.md) — Detailed breakdown of compiler implementation tasks.

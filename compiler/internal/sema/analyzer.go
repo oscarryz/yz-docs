@@ -714,14 +714,40 @@ func (a *Analyzer) analyzeBocDecl(name *ast.Ident, bocLit *ast.BocLiteral, decl 
 	return typ
 }
 
-// collectParams scans boc elements for uninitialized TypedDecls — these are
-// the boc's input parameters.
+// collectParams scans the LEADING boc elements for uninitialized TypedDecls and
+// signature-only BocDecls — these are the boc's input parameters. It stops at the
+// first element that isn't one of those, matching the leading-params-only scan
+// every lower.go counterpart (lowerBodyOnlySingleton, lowerMethod, etc.) uses to
+// build the actual Go parameter list — the two must agree on arity/order or a
+// call gets type-checked against a signature the generated code doesn't have.
 func (a *Analyzer) collectParams(elements []ast.Node) []BocParam {
 	var params []BocParam
 	for _, elem := range elements {
 		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
 			typ := a.resolveTypeExpr(td.Type)
 			params = append(params, BocParam{Label: td.Name.Name, Type: typ})
+		} else if bd, ok := elem.(*ast.BocDecl); ok && bd.Sig != nil && bd.Body == nil {
+			// Signature-only boc used as a callback-typed param, e.g. `greet #(msg String)`
+			// or `b #(String)`. The whole signature is ONE param of function type: split
+			// its entries into inputs vs. an unlabeled trailing return type exactly as
+			// analyzeBocDeclNode does for the same shorthand (bd.BodyOnly is always false
+			// here since a signature-only decl has no `= { body }`).
+			sigParams := a.resolveBocSigParams(bd.Sig, bd.BodyOnly)
+			var inputs []BocParam
+			var returns []Type
+			for _, p := range sigParams {
+				if p.IsReturn {
+					returns = append(returns, p.Type)
+				} else {
+					inputs = append(inputs, p)
+				}
+			}
+			if len(returns) == 0 {
+				returns = []Type{TypUnit}
+			}
+			params = append(params, BocParam{Label: bd.Name.Name, Type: &BocType{Params: inputs, Returns: returns}})
+		} else {
+			break
 		}
 	}
 	return params

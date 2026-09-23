@@ -291,14 +291,23 @@ func (l *lowerer) lowerTopAssignment(asgn *ast.Assignment) Decl {
 	} else if len(bt.Returns) > 0 {
 		resultType = l.goType(bt.Returns[0])
 	}
-	// Collect params from the body's leading TypedDecls.
+	// Collect params from the body's leading TypedDecls or signature-only BocDecls.
+	// Boc-typed params are registered as syncParams so calls to them inside the body
+	// are direct function calls, not std.Go-wrapped boc calls (see lowerBodyOnlySingleton).
 	var params []*ParamSpec
+	prevSyncParams := l.syncParams
+	defer func() { l.syncParams = prevSyncParams }()
 	for _, elem := range bocLit.Elements {
 		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
-			params = append(params, &ParamSpec{
-				Name: td.Name.Name,
-				Type: l.goTypeFromTypeExpr(td.Type),
-			})
+			params = append(params, &ParamSpec{Name: td.Name.Name, Type: l.goTypeFromTypeExpr(td.Type)})
+		} else if bd, ok := elem.(*ast.BocDecl); ok && bd.Sig != nil && bd.Body == nil {
+			params = append(params, &ParamSpec{Name: bd.Name.Name, Type: l.goTypeFromTypeExpr(bd.Sig)})
+			if l.syncParams == nil {
+				l.syncParams = map[string]bool{}
+			}
+			l.syncParams[bd.Name.Name] = true
+		} else {
+			break
 		}
 	}
 
@@ -729,18 +738,34 @@ func (l *lowerer) lowerBodyOnlySingleton(name string, b *ast.BocLiteral) *Single
 		resultType = resultStructName
 	}
 
-	// Collect leading TypedDecl-no-value entries as Call() params (YZC-0049).
-	// e.g. `foo: { n Int; print(n) }` → Call(n std.Int); n captured by the closure.
+	// Collect leading declarations as Call() params: TypedDecl-no-value or signature-only BocDecl.
+	// e.g. `foo: { n Int; b #(String); print(n) }` → Call(a std.String, b func() std.String)
+	// Boc-typed params are also registered as syncParams so calls to them inside the body
+	// are direct function calls, not std.Go-wrapped boc calls — mirroring the syncParams
+	// registration lowerBocDeclAsSingleton does for the explicit-signature form of the
+	// same shorthand (`bar #(a String, b #(String)) { ... }`).
 	var params []*ParamSpec
+	prevSyncParams := l.syncParams
+	defer func() { l.syncParams = prevSyncParams }()
 	for _, elem := range b.Elements {
-		td, ok := elem.(*ast.TypedDecl)
-		if !ok || td.Value != nil {
+		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+			params = append(params, &ParamSpec{
+				Name: td.Name.Name,
+				Type: l.goTypeFromTypeExpr(td.Type),
+			})
+		} else if bd, ok := elem.(*ast.BocDecl); ok && bd.Sig != nil && bd.Body == nil {
+			// signature-only function declaration used as a param e.g. `b #(String)`
+			params = append(params, &ParamSpec{
+				Name: bd.Name.Name,
+				Type: l.goTypeFromTypeExpr(bd.Sig),
+			})
+			if l.syncParams == nil {
+				l.syncParams = map[string]bool{}
+			}
+			l.syncParams[bd.Name.Name] = true
+		} else {
 			break
 		}
-		params = append(params, &ParamSpec{
-			Name: td.Name.Name,
-			Type: l.goTypeFromTypeExpr(td.Type),
-		})
 	}
 
 	prevCtx := l.contextName
@@ -1268,14 +1293,23 @@ func applyExtraCowns(md *MethodDecl, extraCowns []string) {
 // apply the same change to the others. There is no `self` or `this` in Yz — the
 // receiver name used in Go output is an implementation detail of the lowerer.
 func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFields map[string]bool, semType sema.Type) *MethodDecl {
-	// Collect params (TypedDecl with no value inside the body).
+	// Collect params (TypedDecl-no-value or signature-only BocDecls in the body).
+	// Boc-typed params are registered as syncParams so calls to them inside the body
+	// are direct function calls, not std.Go-wrapped boc calls (see lowerBodyOnlySingleton).
 	var params []*ParamSpec
+	prevSyncParams := l.syncParams
+	defer func() { l.syncParams = prevSyncParams }()
 	for _, elem := range b.Elements {
 		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
-			params = append(params, &ParamSpec{
-				Name: td.Name.Name,
-				Type: l.goTypeFromTypeExpr(td.Type),
-			})
+			params = append(params, &ParamSpec{Name: td.Name.Name, Type: l.goTypeFromTypeExpr(td.Type)})
+		} else if bd, ok := elem.(*ast.BocDecl); ok && bd.Sig != nil && bd.Body == nil {
+			params = append(params, &ParamSpec{Name: bd.Name.Name, Type: l.goTypeFromTypeExpr(bd.Sig)})
+			if l.syncParams == nil {
+				l.syncParams = map[string]bool{}
+			}
+			l.syncParams[bd.Name.Name] = true
+		} else {
+			break
 		}
 	}
 
@@ -2400,18 +2434,25 @@ func (l *lowerer) lowerBocDeclAsLocal(bws *ast.BocDecl) []Stmt {
 	bocSemType := l.analyzer.ExprType(bws)
 	bt, _ := bocSemType.(*sema.BocType)
 	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
-	// Collect input params from sig (shorthand) or body leading TypedDecls (body-only).
+	// Collect input params from sig (shorthand) or body leading TypedDecls/BocDecls (body-only).
+	// Boc-typed params are registered as syncParams so calls to them inside the body
+	// are direct function calls, not std.Go-wrapped boc calls (see lowerBodyOnlySingleton).
 	var params []*ParamSpec
+	prevSyncParams := l.syncParams
+	defer func() { l.syncParams = prevSyncParams }()
 	if bws.BodyOnly && bws.Body != nil {
 		for _, elem := range bws.Body.Elements {
-			td, ok := elem.(*ast.TypedDecl)
-			if !ok || td.Value != nil {
+			if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+				params = append(params, &ParamSpec{Name: td.Name.Name, Type: l.goTypeFromTypeExpr(td.Type)})
+			} else if bd, ok := elem.(*ast.BocDecl); ok && bd.Sig != nil && bd.Body == nil {
+				params = append(params, &ParamSpec{Name: bd.Name.Name, Type: l.goTypeFromTypeExpr(bd.Sig)})
+				if l.syncParams == nil {
+					l.syncParams = map[string]bool{}
+				}
+				l.syncParams[bd.Name.Name] = true
+			} else {
 				break
 			}
-			params = append(params, &ParamSpec{
-				Name: td.Name.Name,
-				Type: l.goTypeFromTypeExpr(td.Type),
-			})
 		}
 	} else {
 		params = l.sigParams(bws.Sig, bt)
@@ -2450,18 +2491,25 @@ func (l *lowerer) lowerLocalBocDecl(bws *ast.BocDecl) []Stmt {
 	bt, _ := bocSemType.(*sema.BocType)
 	resultType := l.getResultTypeFromSig(bws.Sig, bt, bws.BodyOnly)
 
-	// Collect method params from sig (shorthand) or body leading TypedDecls (body-only).
+	// Collect method params from TypedDecl-no-value or signature-only BocDecl (body-only form).
+	// Boc-typed params are registered as syncParams so calls to them inside the body
+	// are direct function calls, not std.Go-wrapped boc calls (see lowerBodyOnlySingleton).
 	var methodParams []*ParamSpec
+	prevSyncParams := l.syncParams
+	defer func() { l.syncParams = prevSyncParams }()
 	if bws.BodyOnly && bws.Body != nil {
 		for _, elem := range bws.Body.Elements {
-			td, ok := elem.(*ast.TypedDecl)
-			if !ok || td.Value != nil {
+			if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
+				methodParams = append(methodParams, &ParamSpec{Name: td.Name.Name, Type: l.goTypeFromTypeExpr(td.Type)})
+			} else if bd, ok := elem.(*ast.BocDecl); ok && bd.Sig != nil && bd.Body == nil {
+				methodParams = append(methodParams, &ParamSpec{Name: bd.Name.Name, Type: l.goTypeFromTypeExpr(bd.Sig)})
+				if l.syncParams == nil {
+					l.syncParams = map[string]bool{}
+				}
+				l.syncParams[bd.Name.Name] = true
+			} else {
 				break
 			}
-			methodParams = append(methodParams, &ParamSpec{
-				Name: td.Name.Name,
-				Type: l.goTypeFromTypeExpr(td.Type),
-			})
 		}
 	} else {
 		methodParams = l.sigParams(bws.Sig, bt)
@@ -2491,14 +2539,23 @@ func (l *lowerer) lowerLocalBodyBoc(name string, bocLit *ast.BocLiteral, decl as
 		resultType = "std.Unit"
 	}
 
-	// Collect method params from TypedDecls with nil value.
+	// Collect method params from TypedDecl-no-value or signature-only BocDecl.
+	// Boc-typed params are registered as syncParams so calls to them inside the body
+	// are direct function calls, not std.Go-wrapped boc calls (see lowerBodyOnlySingleton).
 	var methodParams []*ParamSpec
+	prevSyncParams := l.syncParams
+	defer func() { l.syncParams = prevSyncParams }()
 	for _, elem := range bocLit.Elements {
 		if td, ok := elem.(*ast.TypedDecl); ok && td.Value == nil {
-			methodParams = append(methodParams, &ParamSpec{
-				Name: td.Name.Name,
-				Type: l.goTypeFromTypeExpr(td.Type),
-			})
+			methodParams = append(methodParams, &ParamSpec{Name: td.Name.Name, Type: l.goTypeFromTypeExpr(td.Type)})
+		} else if bd, ok := elem.(*ast.BocDecl); ok && bd.Sig != nil && bd.Body == nil {
+			methodParams = append(methodParams, &ParamSpec{Name: bd.Name.Name, Type: l.goTypeFromTypeExpr(bd.Sig)})
+			if l.syncParams == nil {
+				l.syncParams = map[string]bool{}
+			}
+			l.syncParams[bd.Name.Name] = true
+		} else {
+			break
 		}
 	}
 
