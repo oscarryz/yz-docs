@@ -7,6 +7,19 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0100 — Boc-typed field in a body-only singleton no longer dropped as a param ✓
+
+  Ticket described a bug where `b #(String);` written as a bare body statement in a
+  body-only singleton (`foo : { a String; b #(String); print(a); b() }`) parsed as
+  `*ast.BocDecl{Body: nil}` and was silently skipped by the leading-param-collection loops,
+  producing invalid Go (`undefined: b`). Verified 2026-09-24: all four cited call sites
+  (`lowerBodyOnlySingleton`, `lowerLocalBodyBoc`, `lowerBocDeclAsLocal` in `internal/ir/lower.go`,
+  and `sema.collectParams` in `internal/sema/analyzer.go`) already handle
+  `*ast.BocDecl{Sig != nil, Body == nil}` as a param alongside `*ast.TypedDecl`. Rebuilt the
+  exact repro from the ticket — compiles and runs correctly, `b` threaded through as
+  `func() std.String`. No code change needed; closing as already fixed (fix landed under an
+  earlier, unlinked ticket/commit).
+
 ### [x] YZC-0028 — Macros (`Macro` interface) — first slice ✓
 
   Thin end-to-end slice of the macro system (design: docs/Features/Macros.md,
