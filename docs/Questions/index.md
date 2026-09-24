@@ -1,6 +1,4 @@
-# Yz-Questions — This directory documents dependency management, hof iteration and cown happens-before, how and when include self concepts.
-
----
+# Yz-Questions 
 
 # Index
 

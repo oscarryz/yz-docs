@@ -1,8 +1,9 @@
 ---
 type: readme
-generated: { by: "oscarryz", at: 2023-12-07T09:54:11-06:00 }
+generated:
+  by: oscarryz
+  at: 2023-12-07T09:54:11-06:00
 ---
-#readme 
 # The Yz Programming Language
 
 > <sub> <i>The <a href="./compiler">Yz compiler</a> is work in progress. All examples and features described here represent the intended design.</i></sub>
@@ -825,8 +826,6 @@ match
 
 `=` might be part of an identifier, but there are also `=` and `==` operators.
 
-## Repository Structure
+# Repository structure
 
-- **`docs/`** — Additional documentation, design notes, and implementation decisions.
-- **`compiler/`** — Go implementation of the Yz compiler. Includes the lexer, parser, AST, lowerer, and code generator. Emits Go source and invokes `go build` to produce binaries.
-- **`spec/`** — Language specification split across numbered sections (01–11), describing syntax, semantics, and type system.
+Follow the [index](index.md)

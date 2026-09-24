@@ -4,9 +4,9 @@ Conclusions regarding core semantic decisions including array initialization, pa
 
 ## Subdirectories
 
-- [Type signature](<./Type signature/>) — Details on how method and block signatures are defined and validated.
-- [concurrency](./concurrency/) — Conclusions on async evaluation, channels, and actor models.
-- [generics](./generics/) — Resolutions for generic type enforcement and polymorphic functions.
+- [Type signature/](./Type%20signature/index.md)— Details on how method and block signatures are defined and validated.
+- [concurrency](./concurrency/index.md) — Conclusions on async evaluation, channels, and actor models.
+- [generics](./generics/index.md) — Resolutions for generic type enforcement and polymorphic functions.
 
 ## Files
 
