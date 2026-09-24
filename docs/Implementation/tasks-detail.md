@@ -9,50 +9,50 @@ Open ticket details. See tasks.md for the index.
 
 ## Bugs
 
-- [ ] **[YZC-0008] Same-cown reentrant scheduling deadlock**
+- [ ] **[YZC-0101] Sibling method call fails sema resolution when callee is declared after caller**
 
-  Any code path that calls `Schedule(&self.Cown, ...)` while already executing inside a closure
-  scheduled on `self.Cown` deadlocks — the outer task waits for its own completion.
+  Discovered 2026-09-24 while constructing a YZC-0008 repro from the `counter` example in
+  Bocs.md/Concurrency.md. Calling a sibling method declared *later* in the same singleton body
+  fails semantic analysis, even though the lowerer's own cross-method name collection
+  (`collectMethodNames`, `internal/ir/lower.go:1003` — "so recursive and cross-method calls can
+  be resolved... inside bodies") is explicitly order-independent:
 
-  **Known manifestations:**
+  ```yz
+  counter: {
+      count: 0
+      increment: { value(); count = count + 1 }   // value declared below
+      value: { count }
+  }
+  main: { counter.increment() }
+  ```
+  ```
+  error: undefined: value
+   --> main.yz:3:18
+    |
+  3 |     increment: { value(); count = count + 1 }
+    |                  ^^^^^
+  ```
 
-  1. **Local boc vars in main** (`37_local_boc_var` — confirmed deadlock with `TestRuntime`):
-     Local boc variables (`foo #(String) = { ... }`) are lowered as methods on the enclosing
-     singleton (`_mainBoc.Foo()`). When `Call()` — which holds `self.Cown` — calls
-     `self.Foo().Force()`, `Foo()` schedules on the same `self.Cown` → deadlock.
+  Swapping the declaration order (`value` before `increment`) compiles cleanly. **Root cause:**
+  `Analyzer.analyzeStructBoc` (`internal/sema/analyzer.go:1276`) analyzes `b.Elements` in a
+  single forward pass — each `*ast.ShortDecl` is fully analyzed via `analyzeShortDecl` (including
+  its body, which resolves `value()` against the scope as it stands *at that point*) before the
+  next element is even looked at. There is no pre-scan that registers all sibling method names
+  into scope before any method body is analyzed — unlike the lowerer's `collectMethodNames`,
+  which exists specifically to make this order-independent at the lowering stage, one phase too
+  late to help sema's own name resolution.
 
-  2. **HOF closures inside ScheduleMulti** (original case, still dormant):
-     A closure passed as a callback argument and generated inside a `ScheduleMulti` body
-     contains sync-body calls that assume the cown is held. If the closure escapes and is
-     invoked outside the multi-cown body, those calls fire without holding the cown — data race.
+  **Fix direction:** add a pre-scan pass over `b.Elements` in `analyzeStructBoc`, before the main
+  loop, that registers a stub/forward-declared symbol for every method-shaped `ShortDecl`
+  (lowercase name, `BocLiteral` value) and `BocDecl` (lowercase, has a body) — mirroring
+  `collectMethodNames`'s selection criteria — so the main loop's per-element `analyzeShortDecl`
+  calls can resolve forward references. Care needed: the pre-scan must not double-register or
+  conflict with the existing "stub pre-registered by `AnalyzeFile`" forward-reference mechanism
+  already used for the struct type itself (comment at `analyzer.go:1242`).
 
-  3. **Recursive local bocs** (was failing, now passing — see note):
-     A local boc `f` calling itself via `self.F(n-1).Force()` inside `f()` would re-acquire
-     `self.Cown` while held. This was the `39_local_boc_recursive` case; it currently passes,
-     likely because the recursive call is handled inline rather than scheduled.
-
-  4. **Method call on a cown held by an enclosing `ScheduleMulti`** (`examples/transfer_instance`
-     — confirmed deadlock, reported 2026-09-08): `Transfer.run` acquires `[self.Cown, src.Cown,
-     dst.Cown]` via `ScheduleMulti` to move balance between two `Account` instances. Adding
-     `print("${src}")` inside that body string-interpolates `src`, which lowers to
-     `self.src.ToStr()`. `Account.ToStr()` schedules on `&self.Cown` (i.e. `src.Cown`) — the same
-     cown `Transfer.run`'s `ScheduleMulti` already holds. The new request is queued as `src.Cown`'s
-     successor and can only run after the current behaviour releases `src.Cown`, but the current
-     behaviour is blocked forcing that same request's `Thunk` — self-deadlock ("all goroutines are
-     asleep"). Repro: add `to_str: { "${balance}" }` to `Account` and `print("${src}")` as the first
-     line of `Transfer.run` in `compiler/examples/transfer_instance/main.yz`, then `yzc build && yzc
-     run`. Unlike manifestation 1 (single cown, direct self-call), this is a *multi*-cown
-     (`ScheduleMulti`) case triggered indirectly through string interpolation codegen — any method
-     call on `src`/`dst` from inside `run`'s body would trigger the same deadlock, not just `ToStr`.
-
-  **Root cause:** the lowerer emits all local boc vars as methods on the enclosing struct,
-  sharing its cown. There is no mechanism to detect or prevent a task re-scheduling on a cown
-  it already holds.
-
-  **Fix direction:** Phase E.1 (implicit BocGroup per scope) removes statement-position `.Force()`
-  calls, eliminating the blocking wait that causes the deadlock. Alternatively, local boc vars
-  could be lowered to plain Go closures (not cown-scheduled methods) when they don't capture
-  cown-bearing state — this would be a targeted fix without requiring the full Phase E rewrite.
+  **Test:** error test confirming today's exact failure is fixed; golden test with
+  `increment`/`value` (or similarly named siblings) declared in call order *after* their caller,
+  compiling and running correctly.
 
 ---
 

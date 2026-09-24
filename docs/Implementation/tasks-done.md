@@ -7,6 +7,43 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0008 — Same-cown reentrant scheduling deadlock ✓
+
+  Fixed manifestations 1 (local boc vars / sibling methods sharing genuine state) and 4 (method
+  call on a cown held via an enclosing `ScheduleMulti`). Both were the same root cause: a
+  held-cown call reached through a *nested* expression position (a call argument or a
+  string-interpolation part) bypassed every existing held-cown-to-sync mechanism, which only
+  checked top-level statement expressions.
+
+  **Part A** (`internal/ir/lower.go`): `isBocMethodCall`'s struct-instance branch and `lowerCall`'s
+  matching dispatch now check `closureHeldCowns` before treating a call as async, mirroring
+  `trySyncExpr`'s existing narrow check — reused directly rather than duplicated.
+  `lowerInterpString` needed the same check added by hand, since it builds its `ToStr()`
+  `MethodCall` without going through `lowerCall` at all.
+
+  **Part B** (`internal/ir/lower.go`): `isBocMethodCall`'s bare-`Ident` branch and `lowerCall`'s
+  `recvMethods` dispatch now rewrite a sibling-method call to the sync body (`self.foo()` instead
+  of `self.Foo()`) when the callee is a "leaf" method — its own body makes no boc calls of its
+  own (`syncEligibleMethods`, computed via a new `nodeHasBocCall` AST walker). This restriction was
+  required, not just conservative: a *non-leaf* sibling (e.g. a self-recursive method like
+  `39_local_boc_recursive`'s `f`) may itself have pending sub-work that needs `self`'s cown
+  released before it can complete, so sync-rewriting a call to it can deadlock even though the
+  call target is a plain sibling method. Genuine self-recursion is excluded the same way (new
+  `currentMethodName` field), independently of `IsRecursive`/`selfBocDeclName`, which turned out
+  not to cover this code path.
+
+  Golden tests: `.output` sidecar added to `37_local_boc_var` (previously untested by
+  `TestRuntime`, which is why this deadlock went undetected); new `108_nested_held_cown_call`
+  (manifestation 4) and `109_reentrant_sibling_calls` (manifestation 1, combining the doc's
+  `counter` example with `37`'s local-boc-var shape in one file). `go test -race -count=1 ./...`
+  green; all 89 `TestRuntime` cases produce unchanged stdout, confirming the `.go` diffs in
+  `37_local_boc_var`, `48_cown_if_branch_force`, and `52_transfer_cown_reentrant` are
+  behavior-preserving simplifications, not regressions.
+
+  Manifestation 2 (an escaping HOF closure invoked after its captured cowns are released) remains
+  unreproduced and out of scope — see the plan doc's "Explicitly out of scope" section. Not filed
+  as a separate ticket; revisit if/when a concrete repro surfaces.
+
 ### [x] YZC-0100 — Boc-typed field in a body-only singleton no longer dropped as a param ✓
 
   Ticket described a bug where `b #(String);` written as a bare body statement in a

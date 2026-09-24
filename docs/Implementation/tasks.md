@@ -3,7 +3,7 @@ type: impl
 generated: { by: "oscarryz", at: 2026-05-27T22:35:53+02:00 }
 ---
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0101**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0102**.
 
 # Yz Compiler Implementation
 
@@ -40,8 +40,9 @@ YZC-0009 -- Range iteration -- S -- needs YZC-0031
 YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
-YZC-0008 -- Same-cown reentrant scheduling deadlock -- M -- confirmed via `examples/transfer_instance`  
+YZC-0101 -- Sibling method call fails sema resolution when callee is declared after caller -- S -- confirmed via modified `counter` example  
 ~~YZC-0100 -- Boc-typed field in a body-only singleton silently dropped as a param~~
+~~YZC-0008 -- Same-cown reentrant scheduling deadlock~~
 ~~YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods~~
 YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
 YZC-0023 -- Cancellation / non-local return -- L  

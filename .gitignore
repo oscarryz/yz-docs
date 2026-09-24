@@ -6,3 +6,4 @@ compiler/bin/yzc
 **/target
 .envrc
 .idea/
+**/*.swp

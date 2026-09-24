@@ -31,8 +31,8 @@ func (self *_mainBoc) Bar() std.String {
 }
 
 func (self *_mainBoc) call() std.Unit {
-	std.Print(self.Foo())
-	std.Print(self.Bar())
+	std.Print(self.foo())
+	std.Print(self.bar())
 	return std.TheUnit
 }
 

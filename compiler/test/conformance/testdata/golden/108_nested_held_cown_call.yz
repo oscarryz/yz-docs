@@ -1,0 +1,18 @@
+// YZC-0008 manifestation 4: a struct-instance method call nested inside
+// another expression's arguments (print("${src}") — the to_str() call the
+// interpolation lowers to), where the receiver's cown is already held via
+// the enclosing ScheduleMulti (BocWithSig params src/dst). Neither
+// bodyHasBocCallsInStmtPos (top-level statement expressions only) nor the
+// hand-built ToStr() MethodCall in lowerInterpString saw this nested call,
+// so it deadlocked.
+Account: { balance Int; to_str: { "${balance}" } }
+
+show #(src Account, dst Account) {
+    print("${src}")
+}
+
+main: {
+    a: Account(10)
+    b: Account(0)
+    show(a, b)
+}

@@ -70,6 +70,27 @@ type lowerer struct {
 	// that return *Thunk[T] and need special handling in lowerCall / isBocMethodCall.
 	recvMethods map[string]bool
 
+	// currentMethodName is the Yz name of the sibling method (lowerMethod /
+	// lowerBocDeclAsMethod) currently being lowered. A bare call inside that
+	// method's own body whose name matches this is a genuine self-recursive
+	// call — it must stay on the async tail-queue path (IsRecursive) rather
+	// than being rewritten to a sync call by the YZC-0008 held-cown fix, or a
+	// recursive `while`-style call could never let an external caller
+	// interleave between iterations.
+	currentMethodName string
+
+	// syncEligibleMethods tracks, for the current receiver singleton, which
+	// sibling method names are "leaf" methods — their own body makes no boc
+	// calls of any kind. Only leaf methods are guaranteed a sync body
+	// counterpart in codegen (extractSingleCownThunk bails out on any method
+	// whose body needs its own BocGroup Wait, e.g. a self-recursive method).
+	// A non-leaf method's cown may not actually be free to reacquire until its
+	// own pending sub-work completes, so YZC-0008's Part B sync-rewrite is
+	// restricted to calls whose target is in this set — everything else keeps
+	// the existing async (capitalize) path, which already handles those
+	// shapes correctly via the split-BocGroup pattern.
+	syncEligibleMethods map[string]bool
+
 	// syncParams tracks parameter names that are sync callback functions (e.g. from
 	// a param declared as `cond #(Bool)` → Go type `func() std.Bool`). These must
 	// be called directly — never wrapped in std.Go — because they are already sync.
@@ -1001,6 +1022,7 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 	// Pre-scan: collect all method names before lowering any method body, so that
 	// recursive and cross-method calls can be resolved as self.Method() inside bodies.
 	methodNames := l.collectMethodNames(b)
+	methodEligible := l.collectMethodEligibility(b, methodNames)
 
 	// Collect statement elements (expressions, assignments) for the optional Call() method.
 	var stmtElems []ast.Node
@@ -1032,9 +1054,12 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 					}
 					// Inner boc → method. The BocType is on the ShortDecl, not the BocLiteral.
 					prevMethods := l.recvMethods
+					prevEligible := l.syncEligibleMethods
 					l.recvMethods = methodNames
+					l.syncEligibleMethods = methodEligible
 					m := l.lowerMethod(e.Names[0].Name, "*"+typeName, inner, fieldNames, bocSemType)
 					l.recvMethods = prevMethods
+					l.syncEligibleMethods = prevEligible
 					applyExtraCowns(m, extraCowns)
 					sd.Methods = append(sd.Methods, m)
 					continue
@@ -1074,9 +1099,12 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 		case *ast.BocDecl:
 			if e.Body != nil {
 				prevMethods := l.recvMethods
+				prevEligible := l.syncEligibleMethods
 				l.recvMethods = methodNames
+				l.syncEligibleMethods = methodEligible
 				m := l.lowerBocDeclAsMethod(e, "*"+typeName, fieldNames)
 				l.recvMethods = prevMethods
+				l.syncEligibleMethods = prevEligible
 				applyExtraCowns(m, extraCowns)
 				sd.Methods = append(sd.Methods, m)
 			}
@@ -1093,13 +1121,16 @@ func (l *lowerer) lowerStructuredSingleton(name string, b *ast.BocLiteral) *Sing
 		l.contextName = name
 
 		prevMethods := l.recvMethods
+		prevEligible := l.syncEligibleMethods
 		l.recvMethods = methodNames
+		l.syncEligibleMethods = methodEligible
 
 		prev := l.setReceiver("self", fieldNames)
 		innerStmts := l.lowerSingletonBodyStmts(stmtElems)
 		l.restoreReceiver(prev)
 
 		l.recvMethods = prevMethods
+		l.syncEligibleMethods = prevEligible
 		l.contextName = prevCtx
 
 		thunk := &ThunkExpr{ResultType: "std.Unit", Body: innerStmts, Spawn: true, RecvCown: "&self.Cown"}
@@ -1156,10 +1187,13 @@ func (l *lowerer) lowerStructOuterNestedType(goName, outerGoType string, st *sem
 	recvType := "*" + goName
 	innerFieldNames := l.collectFieldNames(b)
 	innerMethodNames := l.collectMethodNames(b)
+	innerMethodEligible := l.collectMethodEligibility(b, innerMethodNames)
 	prevRecvMethods := l.recvMethods
+	prevEligible := l.syncEligibleMethods
 	prevOuterFields := l.outerFields
 	l.outerFields = outerFieldNames
 	l.recvMethods = innerMethodNames
+	l.syncEligibleMethods = innerMethodEligible
 
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {
@@ -1181,7 +1215,137 @@ func (l *lowerer) lowerStructOuterNestedType(goName, outerGoType string, st *sem
 
 	l.outerFields = prevOuterFields
 	l.recvMethods = prevRecvMethods
+	l.syncEligibleMethods = prevEligible
 	return sd
+}
+
+// collectMethodEligibility returns, for each sibling method in the boc literal
+// (same element shapes as collectMethodNames), whether that method's own body
+// is a "leaf" — makes no boc calls of its own. See syncEligibleMethods' doc.
+//
+// methodNames must be the result of collectMethodNames(b) for the same boc
+// literal — it is temporarily installed as l.recvMethods (with a placeholder
+// l.recvName) so that isBocMethodCall correctly recognizes bare sibling/
+// self-recursive calls found while walking each candidate method's body.
+func (l *lowerer) collectMethodEligibility(b *ast.BocLiteral, methodNames map[string]bool) map[string]bool {
+	prevRecvMethods := l.recvMethods
+	prevRecvName := l.recvName
+	l.recvMethods = methodNames
+	l.recvName = "self"
+	defer func() {
+		l.recvMethods = prevRecvMethods
+		l.recvName = prevRecvName
+	}()
+
+	eligible := map[string]bool{}
+	for _, elem := range b.Elements {
+		switch e := elem.(type) {
+		case *ast.ShortDecl:
+			if len(e.Names) == 1 && len(e.Values) == 1 {
+				if inner, isBoc := e.Values[0].(*ast.BocLiteral); isBoc && !isUppercase(e.Names[0].Name) {
+					eligible[e.Names[0].Name] = !l.nodeHasBocCall(inner)
+				}
+			}
+		case *ast.BocDecl:
+			if e.Body != nil {
+				eligible[e.Name.Name] = !l.nodeHasBocCall(e.Body)
+			}
+		}
+	}
+	return eligible
+}
+
+// nodeHasBocCall reports whether n (recursively, including nested boc-literal
+// bodies such as conditional/match branches) contains any expression that
+// isBocMethodCall recognizes as a boc/thunk-returning call. See
+// syncEligibleMethods' doc for why this determines sync-rewrite eligibility.
+func (l *lowerer) nodeHasBocCall(n ast.Node) bool {
+	if n == nil {
+		return false
+	}
+	if e, ok := n.(ast.Expr); ok && l.isBocMethodCall(e) {
+		return true
+	}
+	switch v := n.(type) {
+	case *ast.ShortDecl:
+		for _, val := range v.Values {
+			if l.nodeHasBocCall(val) {
+				return true
+			}
+		}
+	case *ast.TypedDecl:
+		return l.nodeHasBocCall(v.Value)
+	case *ast.Assignment:
+		for _, val := range v.Values {
+			if l.nodeHasBocCall(val) {
+				return true
+			}
+		}
+	case *ast.ReturnStmt:
+		return l.nodeHasBocCall(v.Value)
+	case *ast.BocDecl:
+		if v.Body != nil {
+			return l.nodeHasBocCall(v.Body)
+		}
+	case *ast.BocLiteral:
+		for _, elem := range v.Elements {
+			if l.nodeHasBocCall(elem) {
+				return true
+			}
+		}
+	case *ast.ConditionalExpr:
+		return l.nodeHasBocCall(v.Cond) || l.nodeHasBocCall(v.TrueCase) || l.nodeHasBocCall(v.FalseCase)
+	case *ast.MatchExpr:
+		if l.nodeHasBocCall(v.Subject) {
+			return true
+		}
+		for _, arm := range v.Arms {
+			if l.nodeHasBocCall(arm.Condition) {
+				return true
+			}
+			for _, bn := range arm.Body {
+				if l.nodeHasBocCall(bn) {
+					return true
+				}
+			}
+		}
+	case *ast.CallExpr:
+		if l.nodeHasBocCall(v.Callee) {
+			return true
+		}
+		for _, arg := range v.Args {
+			if l.nodeHasBocCall(arg.Value) {
+				return true
+			}
+		}
+	case *ast.MemberExpr:
+		return l.nodeHasBocCall(v.Object)
+	case *ast.BinaryExpr:
+		return l.nodeHasBocCall(v.Left) || l.nodeHasBocCall(v.Right)
+	case *ast.UnaryExpr:
+		return l.nodeHasBocCall(v.Operand)
+	case *ast.IndexExpr:
+		return l.nodeHasBocCall(v.Object) || l.nodeHasBocCall(v.Index)
+	case *ast.InterpolatedStringExpr:
+		for _, part := range v.Parts {
+			if part.IsExpr && l.nodeHasBocCall(part.Expr) {
+				return true
+			}
+		}
+	case *ast.ArrayLiteral:
+		for _, el := range v.Elements {
+			if l.nodeHasBocCall(el) {
+				return true
+			}
+		}
+	case *ast.DictLiteral:
+		for _, entry := range v.Entries {
+			if l.nodeHasBocCall(entry.Key) || l.nodeHasBocCall(entry.Value) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // collectMethodNames returns the set of method names (ShortDecl+BocLiteral and BocDecl
@@ -1347,7 +1511,10 @@ func (l *lowerer) lowerMethod(name, recvType string, b *ast.BocLiteral, parentFi
 	}
 	// Lower method body with receiver context.
 	prev := l.setReceiver("self", parentFields)
+	prevMethodName := l.currentMethodName
+	l.currentMethodName = name
 	body := l.lowerBocBody(b, resultType, "&self.Cown")
+	l.currentMethodName = prevMethodName
 	l.restoreReceiver(prev)
 
 	if multiReturnBt != nil {
@@ -1889,7 +2056,9 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 	fieldNames := l.collectFieldNames(b)
 	// Pre-scan method names so struct methods can call themselves (and each other) recursively.
 	methodNames := l.collectMethodNames(b)
+	methodEligible := l.collectMethodEligibility(b, methodNames)
 	prevRecvMethods := l.recvMethods
+	prevEligible := l.syncEligibleMethods
 
 	// Pre-compute extra cowns from struct-typed fields so every method acquires
 	// all field cowns atomically via ScheduleMulti.
@@ -1910,8 +2079,10 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 				if isInnerBoc && !isUppercase(e.Names[0].Name) {
 					bocSemType := l.analyzer.ExprType(e)
 					l.recvMethods = methodNames
+					l.syncEligibleMethods = methodEligible
 					m := l.lowerMethod(e.Names[0].Name, recvType, inner, fieldNames, bocSemType)
 					l.recvMethods = prevRecvMethods
+					l.syncEligibleMethods = prevEligible
 					applyExtraCowns(m, extraCowns)
 					sd.Methods = append(sd.Methods, m)
 					continue
@@ -1946,8 +2117,10 @@ func (l *lowerer) lowerStructBoc(name string, b *ast.BocLiteral) Decl {
 		case *ast.BocDecl:
 			if e.Body != nil {
 				l.recvMethods = methodNames
+				l.syncEligibleMethods = methodEligible
 				m := l.lowerBocDeclAsMethod(e, recvType, fieldNames)
 				l.recvMethods = prevRecvMethods
+				l.syncEligibleMethods = prevEligible
 				applyExtraCowns(m, extraCowns)
 				sd.Methods = append(sd.Methods, m)
 			}
@@ -2226,7 +2399,10 @@ func (l *lowerer) lowerBocDeclAsMethod(bws *ast.BocDecl, recvType string, parent
 	}
 
 	prev := l.setReceiver("self", parentFields)
+	prevMethodName := l.currentMethodName
+	l.currentMethodName = bws.Name.Name
 	body := l.lowerBocBody(bws.Body, resultType, "&self.Cown")
+	l.currentMethodName = prevMethodName
 	l.restoreReceiver(prev)
 	l.syncParams = prevSyncParams
 
@@ -3095,6 +3271,13 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		args = append(args, l.lowerExpr(arg.Value))
 	}
 
+	// Held-cown reentrant call (YZC-0008): mirrors the isBocMethodCall check
+	// above — the receiver's cown is already held, so emit a direct sync call
+	// instead of the normal async MethodCall path.
+	if synced := l.trySyncExpr(c); synced != nil {
+		return synced
+	}
+
 	// Sync callback params (BocType fields stored as func() values): call directly as
 	// function field values — e.g. self.cond() not self.Cond(). Must be checked before
 	// the FieldAccess path which would incorrectly emit a method call.
@@ -3227,10 +3410,21 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 			}
 			return &MethodCall{Recv: recv, Method: "Call", Args: args}
 		}
-		// Unqualified call to a method on the current receiver singleton (inside Call() body).
-		// foo() → self.Foo() — the method already returns *Thunk[T].
+		// Unqualified call to a sibling method on the current receiver.
 		if l.recvMethods[id.Name] && l.recvName != "" {
-			return &MethodCall{Recv: &Ident{Name: l.recvName}, Method: capitalize(id.Name), Args: args}
+			if id.Name == l.currentMethodName || !l.syncEligibleMethods[id.Name] {
+				// Genuine self-recursion, or a non-leaf callee with no
+				// guaranteed sync body: stay on the async tail-queue path
+				// (self.F(), IsRecursive-equivalent) so an external caller can
+				// still interleave, and so a callee that itself has pending
+				// sub-work isn't forced to reacquire self's cown before it is
+				// released — see currentMethodName / syncEligibleMethods' doc.
+				return &MethodCall{Recv: &Ident{Name: l.recvName}, Method: capitalize(id.Name), Args: args}
+			}
+			// YZC-0008: self's cown is already held, so call the sync body
+			// method directly — foo() → self.foo() — no Schedule/Force, no
+			// reentrant deadlock.
+			return &MethodCall{Recv: &Ident{Name: l.recvName}, Method: id.Name, Args: args}
 		}
 	}
 
@@ -3312,6 +3506,15 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 					}
 				}
 			}
+			// Held-cown reentrant call (YZC-0008): the receiver's cown is already
+			// acquired by the running behaviour (closureHeldCowns), so this call is
+			// lowered as a direct sync call in lowerCall (see trySyncExpr), not a
+			// thunk — no Schedule/Force needed and none would ever complete.
+			if recvIdent, ok := mem.Object.(*ast.Ident); ok {
+				if l.closureHeldCowns["&"+recvIdent.Name+".Cown"] {
+					return false
+				}
+			}
 			return true
 		}
 		if _, isGenInst := objType.(*sema.GenericInstType); isGenInst {
@@ -3354,9 +3557,19 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		if _, isBodyBoc := l.localBodyBocVars[id.Name]; isBodyBoc {
 			return true
 		}
-		// Method call on the current receiver singleton: foo() → self.Foo() → returns *Thunk.
-		if l.recvMethods[id.Name] {
-			return true
+		// Sibling method call on the current receiver.
+		if l.recvMethods[id.Name] && l.recvName != "" {
+			if id.Name == l.currentMethodName || !l.syncEligibleMethods[id.Name] {
+				// Genuine self-recursion, or a non-leaf callee with no
+				// guaranteed sync body, stays on the async path — still
+				// returns *Thunk[T] — see currentMethodName / syncEligibleMethods' doc.
+				return true
+			}
+			// YZC-0008: self's cown is already held by the running behaviour
+			// (every method body runs inside Schedule(&self.Cown, ...)), so
+			// this is a reentrant held-cown call — lowered as a direct sync
+			// call in lowerCall, not a thunk.
+			return false
 		}
 		sym := l.analyzer.LookupInFile(id.Name)
 		if sym != nil {
@@ -4470,7 +4683,19 @@ func (l *lowerer) lowerInterpString(e *ast.InterpolatedStringExpr) Expr {
 				}
 			} else {
 				// Dollar-brace form: call to_str() — sema ensures it exists.
-				toStrCall := &MethodCall{Recv: inner, Method: "ToStr"}
+				// YZC-0008: this MethodCall is built by hand, bypassing
+				// lowerCall/isBocMethodCall entirely, so a held-cown receiver
+				// here is invisible to Part A's check there — check directly
+				// and call the sync body (toStr) instead of the async ToStr().
+				toStrMethod := "ToStr"
+				if recvIdent, ok := part.Expr.(*ast.Ident); ok {
+					if l.closureHeldCowns["&"+recvIdent.Name+".Cown"] {
+						if st, isStruct := l.analyzer.ExprType(part.Expr).(*sema.StructType); isStruct && !st.IsSingleton && !st.IsInterface {
+							toStrMethod = "toStr"
+						}
+					}
+				}
+				toStrCall := &MethodCall{Recv: inner, Method: toStrMethod}
 				// Builtin types and Option return std.String directly.
 				// Concrete struct/generic-inst/boc types: ToStr() is dethunkified (returns std.String).
 				// Generic type params and path-dependent types still return *Thunk[String].

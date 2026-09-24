@@ -1,9 +1,12 @@
 # update log  
 
 ## 2026-09-24
-- **Update**: [tasks.md](./tasks.md) -- Marked YZC-0100 as closed (`~~YZC-0100~~`); already fixed in code, just not reflected in the open-ticket index.
-- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0100 bug writeup.
-- **Update**: [tasks-done.md](./tasks-done.md) -- Added YZC-0100 entry: fix had already landed 2026-09-23 alongside the `107_boc_typed_param.yz` golden test (see [./conformance-golden-tests.md](./conformance-golden-tests.md)); verified via rebuilt repro.
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0100 and YZC-0008; added and indexed YZC-0101.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0100/YZC-0008 writeups; added YZC-0101.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-ups for YZC-0100 and YZC-0008.
+- **Update**: [concurrency-design.md](./concurrency-design.md) -- Added a re-entrancy addendum: sync-rewriting a held-cown call is only safe for leaf/non-recursive callees.
+- **Creation**: [doc-lifecycle.md](./doc-lifecycle.md) -- Rules for plan-doc lifecycle, `index.md`, and `log.md` in this OKF bundle.
+- **Update**: [index.md](./index.md) -- Indexed `doc-lifecycle.md`.
 
 ## 2026-09-23
 - **Creation**: [./conformance-golden-tests.md](./conformance-golden-tests.md) -- Document the `.output` sidecar requirement for `TestRuntime` to catch broken generated Go, using YZC-0100 as the example.

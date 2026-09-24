@@ -55,26 +55,18 @@ func (self *_transferBoc) String() string {
 }
 
 func (self *_transferBoc) Call(src *Account, dst *Account, amount std.Int) std.Unit {
-	return func() std.Unit {
-		_bg0 := &std.BocGroup{}
-		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &src.Cown, &dst.Cown}, func() std.Unit {
-			self.src = src
-			self.dst = dst
-			self.amount = amount
-			if self.src.balance.Gteq(self.amount).GoBool() {
-				self.src.withdraw(self.amount)
-				self.dst.deposit(self.amount)
-			} else {
-				std.Print(std.NewString("insufficient funds"))
-			}
-			return std.TheUnit
-		})
-		return std.LazyUnit(std.NewThunk(func() std.Unit {
-			_sched.Force()
-			_bg0.Wait()
-			return std.TheUnit
-		}))
-	}()
+	return std.LazyUnit(std.ScheduleMulti([]*std.Cown{&self.Cown, &src.Cown, &dst.Cown}, func() std.Unit {
+		self.src = src
+		self.dst = dst
+		self.amount = amount
+		if self.src.balance.Gteq(self.amount).GoBool() {
+			self.src.withdraw(self.amount)
+			self.dst.deposit(self.amount)
+		} else {
+			std.Print(std.NewString("insufficient funds"))
+		}
+		return std.TheUnit
+	}))
 }
 
 var Transfer = &_transferBoc{

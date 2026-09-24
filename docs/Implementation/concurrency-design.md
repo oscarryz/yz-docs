@@ -250,6 +250,30 @@ func (self *_fooBoc) Run() *Thunk[std.Unit] {
 
 This preserves structured concurrency (parent waits for all children) while avoiding the deadlock.
 
+#### Re-entrancy, take two: sync-rewriting instead of deferring (2026-09-24, YZC-0008)
+
+The deferred-`Wait()` fix above only covers a re-entrant call in **statement position** — the
+lowerer only scanned top-level statement expressions for calls needing this treatment. A held-cown
+call reached through a *nested* expression position (a call argument, e.g. `print(baz())`, or a
+string-interpolation part, e.g. `"${baz}"`) was invisible to that scan and still deadlocked.
+
+The fix isn't another deferred-`Wait()` variant: since the caller already holds the cown a nested
+call needs, that call can just be executed as a **plain synchronous call** — no `Schedule`, no
+goroutine, no `BocGroup` — with identical observable behavior. This is cheaper than deferral and
+covers any AST shape uniformly (nested boc-param call, struct-instance method call, sibling-method
+call all reduce to the same check: is the target's cown already held?).
+
+**The one thing this is not safe for: a callee that itself has pending sub-work on the same
+cown.** If the callee is self-recursive (or otherwise spawns a further call that needs the same
+cown), converting the *outer* call to sync does not make the *inner* one safe — the inner call
+still needs the cown released to run, and it now can't be, because the sync rewrite kept everyone
+inside the same still-running, cown-holding call. Concretely: `f() { ...; f(n-1) }` calling itself
+reentrantly must stay on the async/deferred-`Wait()` path above; only a call to a **leaf** callee
+(no boc calls of its own) may be rewritten to sync. This isn't a conservative choice — rewriting
+the recursive case to sync reintroduces the original deadlock: the inner call needs the cown that
+the outer (now-synchronous) call cannot yet release. See `tasks-done.md`'s YZC-0008 entry for the
+code-level details.
+
 ### Phase C — Closures capturing cowns
 
 Nested bocs close over their enclosing boc's fields, which include potential cown references:

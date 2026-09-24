@@ -43,24 +43,16 @@ func (self *_cond_setBoc) String() string {
 }
 
 func (self *_cond_setBoc) Call(a *Box, flag std.Bool) std.Unit {
-	return func() std.Unit {
-		_bg0 := &std.BocGroup{}
-		_sched := std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
-			self.a = a
-			self.flag = flag
-			if self.flag.GoBool() {
-				self.a.set(std.NewInt(1))
-			} else {
-				self.a.set(std.NewInt(0))
-			}
-			return std.TheUnit
-		})
-		return std.LazyUnit(std.NewThunk(func() std.Unit {
-			_sched.Force()
-			_bg0.Wait()
-			return std.TheUnit
-		}))
-	}()
+	return std.LazyUnit(std.ScheduleMulti([]*std.Cown{&self.Cown, &a.Cown}, func() std.Unit {
+		self.a = a
+		self.flag = flag
+		if self.flag.GoBool() {
+			self.a.set(std.NewInt(1))
+		} else {
+			self.a.set(std.NewInt(0))
+		}
+		return std.TheUnit
+	}))
 }
 
 var Cond_set = &_cond_setBoc{

@@ -1,0 +1,21 @@
+// YZC-0008 manifestation 1: a sibling method call nested inside another
+// expression's arguments (print(foo()), or a string-interpolation part),
+// where the callee shares the caller's own cown. recvMethods always emitted
+// the async (capitalized) form, so a nested reentrant call to a sibling
+// deadlocked. Both syntactic shapes that trigger it:
+//   - *ast.ShortDecl-shaped siblings sharing genuine state (Bocs.md's own
+//     counter example, modified so increment reads value() reentrantly)
+//   - *ast.BocDecl-shaped local boc vars (37_local_boc_var's foo/bar)
+counter: {
+    count: 0
+    value: { count }
+    increment: { print("now: ${value()}"); count = count + 1 }
+}
+
+main: {
+    foo #(String) = { "hello" }
+    bar #(String) { "world" }
+    print(foo())
+    print(bar())
+    counter.increment()
+}
