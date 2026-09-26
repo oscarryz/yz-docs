@@ -7,6 +7,64 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0110 — Bare identifier inside any closure/anonymous-boc body silently skips undefined-symbol checking ✓
+
+  Found while dogfooding HOF closures: `xs.each({ n Int -> print(n) })` (using
+  `->` by mistake — Yz's actual HOF closure syntax has no arrow, it's
+  `{ n Int; print(n) }`) did not error at the Yz level at all. Instead it
+  produced broken generated Go:
+
+  ```
+  ./main.go:16:4: syntax error: unexpected >, expected expression
+  ```
+
+  Minimized further to prove it wasn't about `->` specifically — any genuinely
+  undefined identifier used as a bare statement inside a closure/anonymous boc
+  body has the same problem:
+
+  ```yz
+  main: {
+      xs : [1, 2, 3]
+      xs.each({ n Int; totallyUndefinedName; print(n) })
+  }
+  ```
+  compiled clean through sema and only failed at `go build`:
+  `./main.go:16:3: undefined: totallyUndefinedName`.
+
+  **Root cause:** `analyzeStructBoc` (`internal/sema/analyzer.go`) is the
+  uniform path for analyzing *any* anonymous boc literal body — struct/singleton
+  bocs, but also every closure passed to a HOF (`.each`/`.filter`/`.map`) and
+  every match-arm body (`analyzeExpr`'s `case *ast.BocLiteral`, doc comment:
+  "every anonymous boc literal gets BocLiteralType"). Its per-element switch
+  had a `case *ast.Ident:` meant to register single-letter generic type params
+  (`T`, `V`, `K` declared bare on their own line, lexed as `GENERIC_IDENT`) —
+  but the branch matched on the Go AST type alone, not on `TokType`, so it fired
+  for *any* bare-Ident statement, including ordinary lowercase identifiers and
+  even invalid stray tokens like `->` (which the lexer emits as a `NON_WORD`
+  identifier per existing "`->`/`<=>`" symbol-token conventions). Every such
+  element was unconditionally registered as a new `GenericType` symbol in
+  scope — silently succeeding — instead of being resolved as a real reference
+  and validated by `analyzeIdent` (which is what correctly produces
+  `undefined: X` for the exact same identifier used at true top level, e.g.
+  inside `main: { ... }`'s own body, since that path goes through
+  `analyzeBocBody`, not `analyzeStructBoc`).
+
+  **Fix (`internal/sema/analyzer.go`):** gated the generic-type-param
+  registration on `e.TokType == token.GENERIC_IDENT`; every other bare Ident
+  element now falls through to ordinary expression analysis (`a.analyzeNode`),
+  the same as the `default:` case, so an undefined or malformed identifier is
+  flagged with a proper `undefined: %s` source-level error instead of being
+  silently absorbed as a fabricated generic type.
+
+  **Regression coverage:** `test/conformance/testdata/errors/29_undefined_ident_in_closure.yz`
+  (+ `.error`) — a genuinely undefined identifier inside a HOF closure body now
+  produces `undefined: totallyUndefinedName` instead of compiling to broken Go.
+  This case doesn't need the `examples/`-level treatment other recent tickets
+  did: it reproduces identically through the golden-test driver's unwrapped
+  `compile()` path (no file-wrap involved — the bug lives in anonymous boc
+  literal analysis, which runs the same regardless of file-wrap), so a plain
+  error-conformance fixture is sufficient.
+
 ### [x] YZC-0109 — Recursive/mutually-recursive type declarations only resolve in golden tests, not through the real CLI ✓
 
   Found while trying to write a linked-list-shaped example for further dogfooding.
