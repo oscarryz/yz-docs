@@ -1,0 +1,23 @@
+// YZC-0105: a `?:` conditional used as a boc's final statement must be
+// lowered as a value-returning expression (IIFE via lowerConditionalExpr),
+// not unconditionally as a statement-position IfStmt that discards the
+// computed value and falls through to an unconditional `return Unit`.
+// Nesting isn't required to trigger it -- a single-level `?:` failed the
+// same way; nesting is included here to also cover that shape.
+pick #(x Int, String) {
+    x > 0 ? {
+        x > 10 ? {
+            "big"
+        }, {
+            "small"
+        }
+    }, {
+        "non-positive"
+    }
+}
+
+main: {
+    print(pick(20))
+    print(pick(5))
+    print(pick(-1))
+}

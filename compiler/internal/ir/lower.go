@@ -1709,7 +1709,28 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 			}
 			inner = append(inner, &ReturnStmt{Value: val})
 		case ast.Expr:
-			if is, ok := l.tryLowerConditional(e); ok {
+			// YZC-0105: a `?:` used as a boc's final return value must be
+			// lowered as an expression (IIFE via lowerConditionalExpr), not
+			// unconditionally intercepted here as a statement-position IfStmt
+			// that discards its computed value and falls through to an
+			// unconditional `return Unit`. But a Unit-returning tail
+			// conditional (e.g. a `while`-shaped recursive boc's final
+			// `cond() ? { body(); self(...) }, {}`) must keep going through
+			// the plain IfStmt path even when it IS the last element — routing
+			// it through the value-returning IIFE path instead breaks the
+			// BocGroup/spawn scheduling a recursive self-call inside it needs.
+			// isConditional is checked without calling tryLowerConditional so
+			// it (which lowers sub-expressions and so may have side effects)
+			// is invoked at most once, whichever branch below needs it.
+			isConditional := false
+			switch c := e.(type) {
+			case *ast.ConditionalExpr:
+				isConditional = true
+			case *ast.BinaryExpr:
+				isConditional = c.Op == "?"
+			}
+			if isConditional && (!isLast || resultType == "std.Unit") {
+				is, _ := l.tryLowerConditional(e)
 				emitPendingWait()
 				inner = append(inner, is)
 			} else if !isLast {
@@ -4161,12 +4182,14 @@ func (l *lowerer) tryLowerConditional(e ast.Expr) (Stmt, bool) {
 // lowerConditionalExpr lowers a ConditionalExpr used in expression position
 // as an immediately-invoked closure (IIFE) with an if/else inside.
 func (l *lowerer) lowerConditionalExpr(cond *ast.ConditionalExpr) Expr {
-	// Determine result type from the true-case boc.
-	semType := l.analyzer.ExprType(cond.TrueCase)
-	resultType := "std.Unit"
-	if bt, ok := semType.(*sema.BocType); ok && len(bt.Returns) > 0 {
-		resultType = l.goType(bt.Returns[0])
-	}
+	// YZC-0105: the whole ConditionalExpr's sema type — not the true-case
+	// boc's own type — is already unwrapped to the branch's return value by
+	// Analyzer.analyzeExpr's *ast.ConditionalExpr case ("the ? operator calls
+	// the branch; the result is the branch's return value, not the branch boc
+	// itself"). The true-case boc literal itself is typed as *sema.BocLiteralType,
+	// never *sema.BocType, so checking for *sema.BocType here always missed and
+	// silently defaulted to std.Unit, mirroring lowerMatchExpr's approach instead.
+	resultType := l.goType(l.analyzer.ExprType(cond))
 
 	condExpr := l.lowerExpr(cond.Cond)
 

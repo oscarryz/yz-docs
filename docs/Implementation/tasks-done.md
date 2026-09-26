@@ -7,6 +7,66 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0105 — `?:` conditional as a boc's final return value was discarded ✓
+
+  Found via the same dogfooding pass as YZC-0102/0103/0104/0106
+  (`examples/_wip/library/`). Minimal repro (nesting turned out not to be
+  required — a single-level `?:` failed identically):
+
+  ```yz
+  pick #(x Int, String) {
+      x > 0 ? {
+          "positive"
+      }, {
+          "non-positive"
+      }
+  }
+  ```
+
+  Generated Go always fell through to an unconditional `return std.TheUnit`,
+  discarding whatever the conditional computed, even though `pick`'s declared
+  return type is `String`.
+
+  **Root cause, two separate bugs in the same feature:**
+
+  1. `lowerBocBody` (`internal/ir/lower.go`) tried `tryLowerConditional` (which
+     lowers a `?:` to a statement-position `IfStmt`) unconditionally on every
+     element, before ever checking `isLast`. `match` already had its
+     statement-form check correctly scoped to `!isLast`, but the `?:` check ran
+     first and intercepted unconditionally, so a `?:` in final/return position
+     never reached the branch further down that returns a value.
+  2. Once (1) was fixed to let a last-position `?:` fall through to
+     `lowerConditionalExpr` (the existing expression-position IIFE lowerer),
+     that function's own result-type inference was separately broken: it read
+     `l.analyzer.ExprType(cond.TrueCase)` and checked for `*sema.BocType`, but
+     a conditional branch's boc literal is typed by sema as `*sema.BocLiteralType`
+     (see `Analyzer.analyzeBranchBody`) — never `*sema.BocType` — so the check
+     always missed and silently defaulted to `std.Unit`. Fixed to use
+     `l.analyzer.ExprType(cond)` (the whole `ConditionalExpr`, which sema's own
+     `analyzeExpr` case already unwraps to the branch's actual return value),
+     mirroring how `lowerMatchExpr` computes its own result type.
+
+  **A regression caught before landing:** the first attempt at (1) gated
+  `tryLowerConditional` on `!isLast` unconditionally, which broke every
+  `while`-shaped Unit-returning recursive boc (`05_while`, `38_recursive_boc`,
+  `39_local_boc_recursive` all deadlocked) — routing a Unit-returning tail
+  conditional through the value-returning IIFE path breaks the BocGroup/spawn
+  scheduling a recursive self-call inside it needs. Fixed by keeping the plain
+  `IfStmt` path whenever `resultType == "std.Unit"`, regardless of `isLast` —
+  gated on a side-effect-free syntactic check (not calling `tryLowerConditional`
+  itself, which lowers sub-expressions) so it's invoked at most once.
+
+  Golden test: `112_conditional_return_value` (nested `?:`, both single- and
+  two-level, as a function's final statement) plus `.output` sidecar.
+  `go test ./...` and `go test -race -count=1 ./...` green, 106 golden + 25
+  error conformance tests passing.
+
+  **Follow-up filed as YZC-0106**: fixing this surfaced a separate, narrower bug
+  in self-recursive `#(...)`-declared bocs with a non-Unit return type — see its
+  own tasks-detail entry.
+
+---
+
 ### [x] YZC-0104 — Dict dot-call methods had no sema type-inference case and widened to `any` ✓
 
   Found via the same dogfooding pass as YZC-0102/0103/0105 (`examples/_wip/library/`).
