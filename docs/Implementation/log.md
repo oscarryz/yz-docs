@@ -1,5 +1,12 @@
 # update log  
 
+## 2026-09-26 (5)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0103; noted `examples/bare_variant_root` alongside `examples/sibling_calls` as example-only regression coverage.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0103 writeup.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0103 (parser `inTypeBoc` never set for bare-root-file variant constructors; confirmed a trailing comma was not the missing ingredient before diagnosing the real cause).
+- **Creation**: `compiler/examples/bare_variant_root/` -- Regression example for YZC-0103 (golden tests bypass the root-file auto-wrap path, same reasoning as YZC-0102/`sibling_calls`).
+- **Update**: `compiler/examples/_wip/library/BorrowResult.yz` -- Reverted to its natural bare-constructor form now that YZC-0103 is fixed.
+
 ## 2026-09-26 (4)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0105; filed YZC-0106 (surfaced while fixing it); bumped golden-test count to 106.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0105 writeup; added YZC-0106.

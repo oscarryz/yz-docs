@@ -9,26 +9,6 @@ Open ticket details. See tasks.md for the index.
 
 ## Bugs
 
-- [ ] **[YZC-0103] Uppercase root file with only bare variant constructors is not recognized as a type decl**
-
-  ```yz
-  // BorrowResult.yz
-  Approved(book Book)
-  Denied(reason String)
-  ```
-
-  Produces `error: undefined: Approved` / `undefined: book` — the auto-wrap logic
-  parses `Approved(book Book)` as a call expression, not a variant-constructor
-  declaration. YZC-0093 documents two supported sub-cases for an uppercase root
-  file (free-floating plain fields; an inner same-name boc) but not "free-floating
-  variant constructors, no fields." The explicit-boc-literal form of the same
-  content (`Pet: { Cat(...), Dog(...) }`, proven by `examples/polymorphism` and
-  golden `25_generic_variant`) works fine — this is specific to the bare-root-file
-  auto-wrap path.
-
-  **Workaround**: wrap the constructors in `Name: { ... }` matching the filename
-  (the documented inner-same-name-boc sub-case), which does get recognized.
-
 - [ ] **[YZC-0106] Self-recursive `#(...)` boc with non-Unit return produces a Schedule closure hardcoded to `func() std.Unit`**
 
   Surfaced while fixing YZC-0105 — this is what remained once a value-returning

@@ -7,6 +7,70 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0103 — Uppercase root file with only bare variant constructors was not recognized as a type decl ✓
+
+  Found via the same dogfooding pass as YZC-0102/0104/0105/0106
+  (`examples/_wip/library/`). Minimal repro:
+
+  ```yz
+  // BorrowResult.yz
+  Approved(book Book)
+  Denied(reason String)
+  ```
+
+  Produced `error: undefined: Approved` / `undefined: book` — `Approved(book Book)`
+  parsed as a call-expression statement, not a variant-constructor declaration.
+
+  Before fixing, checked whether a trailing comma after `Approved(book Book)`
+  was the actual missing ingredient (raised as a possibility — commas
+  separate elements inside an explicit boc literal, so maybe the parser needed
+  one to disambiguate a constructor list from a statement sequence). Tested
+  directly: with and without a trailing comma, the bare-root-file repro fails
+  identically. Cross-checked against existing passing fixtures using an
+  **explicit** `Name: { ... }` boc literal — golden `64_infix_match` and
+  `86_result_type` use no commas between constructors, `examples/variant`
+  uses commas — both forms already pass today, proving the separator
+  (comma/semicolon/newline) is just the generic boc-body statement separator,
+  irrelevant to constructor-vs-call recognition.
+
+  **Root cause:** `inTypeBoc` (`internal/parser/parser.go`) is the flag that
+  makes `parseBocElement` route a bare `TYPE_IDENT '(' ... ')'` element to
+  `parseVariantDef` instead of `parseStatement`. It is set only inside
+  `finishShortDecl`, when the parser sees the literal text
+  `TYPE_IDENT ':' '{'` (e.g. `Pet: { Cat(...), Dog(...) }`). A bare root file
+  like `BorrowResult.yz` never contains that text — the wrapping
+  `BorrowResult: { ... }` `ShortDecl`/`BocLiteral` is synthesized by
+  `cmd/yzc/build.go` *after* parsing (YZC-0092/93's always-wrap), so
+  `inTypeBoc` was never true while `Approved(book Book)` was being parsed,
+  regardless of comma placement.
+
+  **Fix:**
+  - `internal/parser/parser.go`: added `Parser.EnableTypeBoc()`, an exported
+    setter for `inTypeBoc`. Changed `ParseFile`'s top-level loop to call
+    `parseBocElement` instead of `parseStatement` directly (a no-op for
+    ordinary files, since `parseBocElement` falls through to `parseStatement`
+    whenever `inTypeBoc` is false).
+  - `cmd/yzc/build.go`: at both file-wrapping call sites (`compilePackageDir`
+    and the Invariant-5 `foo.yz`+`foo/` merge loop), call `p.EnableTypeBoc()`
+    before `p.ParseFile()` whenever the file's stem is uppercase
+    (`token.LookupIdent(name) == token.TYPE_IDENT`), matching the same
+    filename-capitalization convention already used to decide file-wrapper
+    naming.
+
+  Regression coverage: `examples/bare_variant_root` (a two-file example —
+  uppercase `Shape.yz` with bare `Circle(...)`/`Rectangle(...)` constructors,
+  no wrapping braces, plus a `main.yz` matching on both) with a `main.output`
+  sidecar. Golden-test coverage isn't possible here since golden fixtures
+  bypass the root-file auto-wrap path entirely (same reasoning as
+  YZC-0102/`examples/sibling_calls`). `examples/_wip/library/BorrowResult.yz`
+  reverted to its natural bare form (the YZC-0093 workaround comment removed).
+
+  `go test ./...` and `go test -race -count=1 ./...` green, 106 golden + 25
+  error conformance tests passing (unchanged — this fix has no golden-test
+  surface).
+
+---
+
 ### [x] YZC-0105 — `?:` conditional as a boc's final return value was discarded ✓
 
   Found via the same dogfooding pass as YZC-0102/0103/0104/0106

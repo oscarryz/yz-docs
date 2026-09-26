@@ -1,0 +1,8 @@
+// YZC-0103: an uppercase root file whose entire body is a bare list of
+// variant constructors (no enclosing `Shape: { ... }`, no plain fields) must
+// still be recognized as a variant type declaration. The root-file auto-wrap
+// (YZC-0092/93) builds the `Shape: { ... }` boc literal after parsing, so the
+// parser must be told up front (via EnableTypeBoc) that this file's elements
+// are constructors, not call-expression statements.
+Circle(radius Int)
+Rectangle(width Int, height Int)

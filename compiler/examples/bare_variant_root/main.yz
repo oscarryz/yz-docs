@@ -1,0 +1,12 @@
+main: {
+    s : Circle(5)
+    match s
+        { Circle => print("circle r=${s.radius}") },
+        { Rectangle => print("rectangle ${s.width}x${s.height}") }
+
+    r : Rectangle(3, 4)
+    match r
+        { Circle => print("circle r=${r.radius}") },
+        { Rectangle => print("rectangle ${r.width}x${r.height}") }
+}
+main()
