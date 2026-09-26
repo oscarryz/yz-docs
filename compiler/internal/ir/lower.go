@@ -3307,7 +3307,20 @@ func (l *lowerer) lowerCall(c *ast.CallExpr) Expr {
 		return &MethodCall{Recv: fa.Object, Method: lowerMethodName(fa.Field), Args: args}
 	}
 
+	// YZC-0102: a bare call matching a sibling method of the current receiver
+	// must always resolve as self.method(), never as a top-level/global lookup.
+	// Without this guard, a root file's own auto-wrap (YZC-0092) registers its
+	// direct sibling methods at file scope, so LookupInFile below finds them and
+	// the "plain body singleton" branch wins, emitting Capitalize(name).Call()
+	// for a var that is never generated. A method nested inside an explicitly
+	// written singleton doesn't hit this because its symbol lives in that
+	// singleton's own child scope, invisible to LookupInFile.
+	isSiblingSelfCall := false
 	if id, ok := c.Callee.(*ast.Ident); ok {
+		isSiblingSelfCall = l.recvMethods[id.Name] && l.recvName != ""
+	}
+
+	if id, ok := c.Callee.(*ast.Ident); ok && !isSiblingSelfCall {
 		sym := l.analyzer.LookupInFile(id.Name)
 		if sym != nil {
 			// Variant constructor call: Cat("Whiskers", 9) → NewPetCat(...)

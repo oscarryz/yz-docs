@@ -1,0 +1,45 @@
+// catalog.yz — book inventory; auto-wrapped as catalog: { ... }
+//
+// Sibling methods are declared out of order on purpose: `checkout` is first
+// even though it never calls anything else, but `print_catalog` (declared
+// third) calls `describe` and `available_titles`, both declared *after* it.
+// This mirrors the YZC-0101 shape (caller before callee) with more than two
+// siblings involved.
+
+books  : ["Dune": Book("Dune", "Herbert", 2), "Foundation": Book("Foundation", "Asimov", 1), "Neuromancer": Book("Neuromancer", "Gibson", 0)]
+titles : ["Dune", "Foundation", "Neuromancer"]
+
+checkout #(title String, BorrowResult) {
+    books.has(title) ? {
+        book : books.at(title)
+        (book.copies > 0) ? {
+            books[title] = Book(book.title, book.author, book.copies - 1)
+            Approved(book)
+        }, {
+            Denied("no copies left: ${title}")
+        }
+    }, {
+        Denied("no such title: ${title}")
+    }
+}
+
+return_book #(title String) {
+    books.has(title) ? {
+        book : books.at(title)
+        books[title] = Book(book.title, book.author, book.copies + 1)
+    }, {}
+}
+
+print_catalog #() {
+    titles.each({ t String; print("  ${describe(t)}") })
+    print("  available: `available_titles()`")
+}
+
+available_titles #() = {
+    titles.filter({ t String; books.at(t).copies > 0 })
+}
+
+describe #(title String, String) {
+    book : books.at(title)
+    "${book}"
+}

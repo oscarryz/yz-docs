@@ -1,0 +1,8 @@
+// Uppercase root file — auto-wraps as Book: { title String; author String; copies Int }
+title  String
+author String
+copies Int
+
+to_str #(String) {
+    "${title} by ${author} (${copies} copies)"
+}

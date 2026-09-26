@@ -1,0 +1,33 @@
+// members.yz — roster and borrow counts; auto-wrapped as members: { ... }
+//
+// `top_borrower` (declared first) calls `max_from` (declared after it, and
+// self-recursive) — another forward-reference-plus-recursion combination.
+
+roster        : ["Alice", "Bob", "Carol"]
+borrow_counts : ["Alice": 0, "Bob": 0, "Carol": 0]
+
+record_borrow #(name String) {
+    borrow_counts.has(name) ? {
+        n : borrow_counts.at(name)
+        borrow_counts[name] = n + 1
+    }, {
+        borrow_counts[name] = 1
+    }
+}
+
+top_borrower #(String) {
+    max_from(0, roster.at(0))
+}
+
+max_from #(i Int, best String, String) {
+    (i >= roster.length()) ? {
+        best
+    }, {
+        candidate : roster.at(i)
+        (borrow_counts.at(candidate) > borrow_counts.at(best)) ? {
+            max_from(i + 1, candidate)
+        }, {
+            max_from(i + 1, best)
+        }
+    }
+}

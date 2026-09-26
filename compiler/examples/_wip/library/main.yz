@@ -1,0 +1,34 @@
+// main.yz — library front desk.
+//
+// `main` is declared *before* `request_book`, its own sibling helper, at the
+// root-wrapped file scope — the exact YZC-0101 shape (caller before callee)
+// but at the auto-wrap level instead of inside an explicit boc literal.
+
+main: {
+    print("catalog:")
+    catalog.print_catalog()
+
+    request_book("Alice", "Dune")
+    request_book("Bob", "Dune")
+    request_book("Carol", "Neuromancer")
+    request_book("Alice", "Foundation")
+    request_book("Bob", "Missing Title")
+
+    catalog.return_book("Dune")
+    print("after Bob returns Dune:")
+    catalog.print_catalog()
+
+    print("busiest member: ${members.top_borrower()}")
+}
+
+request_book #(member String, title String) {
+    result : catalog.checkout(title)
+    match result
+        { Approved =>
+            print("${member} borrowed ${result.book.title}")
+            members.record_borrow(member)
+        },
+        { Denied => print("${member}: ${result.reason}") }
+}
+
+main()

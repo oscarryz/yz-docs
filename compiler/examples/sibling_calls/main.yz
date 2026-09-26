@@ -1,0 +1,24 @@
+// YZC-0102: sibling calls between top-level declarations in a root file (auto-
+// wrapped per YZC-0092) must resolve as self.method(), not as a call to a
+// nonexistent global Name.Call(). Confirmed broken both forward- and backward-
+// declared. Conformance golden tests bypass the root-file auto-wrap path
+// entirely, so only an examples/ test exercises it.
+
+greet #(name String, String) {
+    "Hello, ${name}!"
+}
+
+announce #(name String) {
+    print(greet(name))   // backward reference: greet declared above
+}
+
+farewell #(name String) {
+    print(wave(name))    // forward reference: wave declared below
+}
+
+wave #(name String, String) {
+    "Goodbye, ${name}!"
+}
+
+announce("World")
+farewell("World")

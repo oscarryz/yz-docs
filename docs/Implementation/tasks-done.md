@@ -7,6 +7,61 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0102 — Sibling calls inside an auto-wrapped root file lower to a nonexistent global instead of `self.method()` ✓
+
+  Found while dogfooding a larger example (`examples/_wip/library/`). Minimal repro:
+
+  ```yz
+  first #() {
+      second()
+  }
+  second #() {
+      print("hi")
+  }
+  ```
+
+  `yzc build` compiled this to invalid Go — `first()`'s body called `Second.Call()`,
+  a reference to a top-level package var that was never generated, instead of
+  `self.second()`. Confirmed independent of declaration order (both callee-before-
+  caller and callee-after-caller failed the same way).
+
+  **Root cause:** `lowerer.lowerCall` (`internal/ir/lower.go`) had two separate
+  mechanisms for resolving a bare-identifier call: a generic "is this name a known
+  top-level symbol" block that does `sym := l.analyzer.LookupInFile(id.Name)` and,
+  among other cases, treats any `*sema.BocType` symbol with a non-nil node and no
+  parent type as a "plain body singleton" (emitting `Capitalize(name).Call(args)`);
+  and the correct sibling-method check further down, `if l.recvMethods[id.Name] &&
+  l.recvName != "" { ... self.method(...) ... }`. The first block ran unconditionally
+  before the second and won whenever both matched. It never fired for a method
+  nested inside an explicitly-written singleton (e.g. `counter: { value: {...} }`)
+  because that method's symbol lives in `counter`'s own child scope, invisible to
+  `LookupInFile` (file-scope only). But a root `.yz` file is auto-wrapped into a
+  synthetic top-level boc (YZC-0092 "always-wrap"), so a sibling declared directly
+  in that file has its symbol registered at file scope, where `LookupInFile` *does*
+  find it — so the generic block incorrectly won.
+
+  This is a lowering-stage bug, distinct from YZC-0101 (a sema resolution bug,
+  fixed in `analyzeStructBoc`). It had zero conformance-suite coverage because
+  golden `.yz` fixtures are compiled directly, bypassing the root-file auto-wrap
+  path in `cmd/yzc/build.go` entirely — so it affected nearly any real multi-function
+  `yzc build` project without ever tripping a golden test.
+
+  **Fix:** guard the generic top-level-lookup block in `lowerCall` so it never
+  fires when the name already resolves as a sibling of the current receiver —
+  added `!isSiblingSelfCall` (computed from `l.recvMethods[id.Name] && l.recvName
+  != ""`) to its entry condition, letting execution fall through to the existing,
+  correct `self.method()` handling.
+
+  New test: `examples/sibling_calls` (two top-level functions each calling the
+  other, one backward reference and one forward reference, plus a `.output`
+  sidecar) — a golden test cannot exercise this bug since golden fixtures bypass
+  the root-file auto-wrap path; this is deliberately an `examples/`-level
+  regression test instead. `go test ./...` and `go test -race -count=1 ./...`
+  green, 104 golden (unchanged — no new golden test) + 25 error conformance tests
+  passing, plus the new `examples/sibling_calls` example.
+
+---
+
 ### [x] YZC-0101 — Sibling method call fails sema resolution when callee is declared after caller ✓
 
   `Analyzer.analyzeStructBoc` (`internal/sema/analyzer.go`) analyzed `b.Elements` in a single
