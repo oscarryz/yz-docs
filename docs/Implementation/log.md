@@ -1,5 +1,18 @@
 # update log  
 
+## 2026-09-27
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0108; bumped golden-test count to 108, next available to YZC-0109.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0108: a variant match's default arm (no `=>`) aborted discriminant-switch lowering for the *entire* match, falling back to a boolean-condition path that treated variant names as undefined globals.
+- **Update**: `internal/ir/ir.go` -- Added `SwitchCase.IsDefault`.
+- **Update**: `internal/ir/lower.go` -- `tryLowerDiscriminantMatch`/`tryLowerDiscriminantMatchExpr` now handle a default arm (`arm.Condition == nil`) as an `IsDefault` case instead of aborting discriminant-match detection.
+- **Update**: `internal/codegen/codegen.go` -- `emitSwitchStmt`/`emitSwitchIIFE` emit Go's `default:` for an `IsDefault` case.
+- **Creation**: `114_variant_match_default` golden test + `.output` sidecar (covers both expression- and statement-position match).
+
+## 2026-09-26 (7)
+- **Update**: [tasks.md](./tasks.md) -- Filed YZC-0107 (found while continuing to dogfood struct-instance bocs beyond `examples/_wip/library`); next available bumped to YZC-0108.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Added a Bugs section entry for YZC-0107: a struct method that calls a self-recursive (non-leaf) sibling and forces its result in the same expression deadlocks, since neither YZC-0008's sync-rewrite nor its deferred-`BocGroup.Wait()` mitigation cover an expression-position force. Marked *design* -- needs a caller-side split-before/after-Schedule mechanism, not yet root-caused to a fix.
+- **Verification**: minimal repro (`Counter` with `countdown`/`check`) and a realistic repro (`Waitlist` with `find_index`/`has`) both reproduce the exact same `fatal error: all goroutines are asleep - deadlock!`; kept in the session scratchpad, not committed, since there's no fix yet to regression-test.
+
 ## 2026-09-26 (6)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0106; bumped golden-test count to 107.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0106 writeup (Bugs section now empty).

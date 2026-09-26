@@ -7,6 +7,59 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0108 — Variant match with a trailing default arm misdetected as a boolean-condition match ✓
+
+  Found while continuing to dogfood past `examples/_wip/library` (a `Shape` variant
+  with `Circle`/`Square`/`Triangle` and a default `{ 0.0 }` arm). Minimal repro:
+
+  ```yz
+  Pet: {
+      Cat(name String),
+      Dog(name String),
+  }
+  describe #(pet Pet, String) {
+      match pet
+          { Cat => "cat ${pet.name}" },
+          { "unknown" }
+  }
+  main: {
+      print(describe(Cat("Whiskers")))
+      print(describe(Dog("Rex")))
+  }
+  main()
+  ```
+
+  Failed with `undefined: Cat` at `go build`. The two-variant, no-default form
+  (`match pet { Cat => .. }, { Dog => .. }`) already worked correctly (see
+  `examples/variant`, golden `25_generic_variant`) — this only broke once a
+  default arm (a bare boc with no `=>`) was added.
+
+  **Root cause:** `tryLowerDiscriminantMatch`/`tryLowerDiscriminantMatchExpr`
+  (`internal/ir/lower.go`) build a Go `switch` on the subject's `_variant` tag by
+  calling `armVariantName` on every arm to get its constructor name.
+  `armVariantName` correctly returns `false` for a default arm (`arm.Condition
+  == nil` — there's no constructor name to extract), but both callers treated
+  *any* `false` from `armVariantName` as "this isn't a discriminant match at
+  all" and aborted the whole switch-lowering attempt for every arm, not just the
+  default one. Lowering then fell through to the generic boolean-condition match
+  path (`lowerMatchExpr`'s fallback / `tryLowerMatch`'s if-chain), which treated
+  `Cat`/`Dog` as bare boolean identifiers to call `.GoBool()` on — undefined
+  globals, hence the Go build error.
+
+  **Fix (`internal/ir/lower.go`, `internal/ir/ir.go`, `internal/codegen/codegen.go`):**
+  - Added `SwitchCase.IsDefault bool` — a case with no `ConstName` to match on.
+  - Both `tryLowerDiscriminantMatch` and `tryLowerDiscriminantMatchExpr` now
+    special-case `arm.Condition == nil` *before* calling `armVariantName`,
+    appending an `IsDefault` case instead of aborting.
+  - `emitSwitchStmt`/`emitSwitchIIFE` (`internal/codegen/codegen.go`) emit Go's
+    `default:` instead of `case ConstName:` when `IsDefault` is set.
+
+  Regression coverage: golden test `114_variant_match_default` (both
+  expression-position `describe` and statement-position `announce` forms, since
+  the two lowering paths had independent copies of the same bug). `go build
+  ./...`, `make test-full`, and `make test-race` all green: 108 golden + 25
+  error conformance tests passing (was 107).
+
 ### [x] YZC-0106 — Self-recursive `#(...)` boc with non-Unit return produced a Schedule closure hardcoded to `func() std.Unit` ✓
 
   Surfaced while fixing YZC-0105 — this is what remained once a value-returning

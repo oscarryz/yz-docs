@@ -1,0 +1,31 @@
+// YZC-0108: a variant match with a trailing default arm (no `=>`) was
+// misdetected as a boolean-condition match instead of a discriminant switch,
+// because armVariantName's nil-Condition bail-out for the default arm aborted
+// discriminant-match detection for the *whole* match, not just that one arm.
+// Codegen then emitted `if Cat.GoBool()` (treating the variant name as an
+// undefined boolean global) instead of `switch subject._variant { case _PetCat: ... }`.
+
+Pet: {
+    Cat(name String),
+    Dog(name String),
+}
+
+describe #(pet Pet, String) {
+    match pet
+        { Cat => "cat ${pet.name}" },
+        { "unknown" }
+}
+
+announce #(pet Pet) {
+    match pet
+        { Cat => print("cat: ${pet.name}") },
+        { print("other") }
+}
+
+main: {
+    print(describe(Cat("Whiskers")))
+    print(describe(Dog("Rex")))
+    announce(Cat("Whiskers"))
+    announce(Dog("Rex"))
+}
+main()

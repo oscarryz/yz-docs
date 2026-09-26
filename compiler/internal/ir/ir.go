@@ -192,9 +192,12 @@ type SwitchStmt struct {
 }
 
 // SwitchCase is one case arm of a SwitchStmt.
+// IsDefault marks the match's bare (no `=>`) default arm, emitted as Go's
+// `default:` instead of `case ConstName:` (ConstName is unused when set).
 type SwitchCase struct {
 	ConstName string // e.g. "_PetCat"
 	Body      []Stmt
+	IsDefault bool
 }
 
 // ---------------------------------------------------------------------------

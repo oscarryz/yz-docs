@@ -4320,6 +4320,12 @@ func (l *lowerer) tryLowerDiscriminantMatch(m *ast.MatchExpr) (Stmt, bool) {
 		sw.FieldName = "Variant"
 	}
 	for _, arm := range m.Arms {
+		body := l.lowerElementStmts(arm.Body)
+		if arm.Condition == nil {
+			// Default arm (no `=>`) — emitted as Go's `default:` case.
+			sw.Cases = append(sw.Cases, &SwitchCase{Body: body, IsDefault: true})
+			continue
+		}
 		variantName, ok := l.armVariantName(arm)
 		if !ok {
 			return nil, false
@@ -4330,7 +4336,6 @@ func (l *lowerer) tryLowerDiscriminantMatch(m *ast.MatchExpr) (Stmt, bool) {
 		} else {
 			constName = "_" + l.variantStructName(m.Subject) + variantName
 		}
-		body := l.lowerElementStmts(arm.Body)
 		sw.Cases = append(sw.Cases, &SwitchCase{ConstName: constName, Body: body})
 	}
 	return sw, true
@@ -4352,6 +4357,12 @@ func (l *lowerer) tryLowerDiscriminantMatchExpr(m *ast.MatchExpr) (Expr, bool) {
 		sw.FieldName = "Variant"
 	}
 	for _, arm := range m.Arms {
+		body := l.lowerMatchArmBody(arm.Body, resultType)
+		if arm.Condition == nil {
+			// Default arm (no `=>`) — emitted as Go's `default:` case.
+			sw.Cases = append(sw.Cases, &SwitchCase{Body: body, IsDefault: true})
+			continue
+		}
 		variantName, ok := l.armVariantName(arm)
 		if !ok {
 			return nil, false
@@ -4362,7 +4373,6 @@ func (l *lowerer) tryLowerDiscriminantMatchExpr(m *ast.MatchExpr) (Expr, bool) {
 		} else {
 			constName = "_" + l.variantStructName(m.Subject) + variantName
 		}
-		body := l.lowerMatchArmBody(arm.Body, resultType)
 		sw.Cases = append(sw.Cases, &SwitchCase{ConstName: constName, Body: body})
 	}
 	return sw, true
