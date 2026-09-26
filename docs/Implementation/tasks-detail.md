@@ -7,6 +7,79 @@ Open ticket details. See tasks.md for the index.
 
 ---
 
+## Bugs
+
+- [ ] **[YZC-0103] Uppercase root file with only bare variant constructors is not recognized as a type decl**
+
+  ```yz
+  // BorrowResult.yz
+  Approved(book Book)
+  Denied(reason String)
+  ```
+
+  Produces `error: undefined: Approved` / `undefined: book` — the auto-wrap logic
+  parses `Approved(book Book)` as a call expression, not a variant-constructor
+  declaration. YZC-0093 documents two supported sub-cases for an uppercase root
+  file (free-floating plain fields; an inner same-name boc) but not "free-floating
+  variant constructors, no fields." The explicit-boc-literal form of the same
+  content (`Pet: { Cat(...), Dog(...) }`, proven by `examples/polymorphism` and
+  golden `25_generic_variant`) works fine — this is specific to the bare-root-file
+  auto-wrap path.
+
+  **Workaround**: wrap the constructors in `Name: { ... }` matching the filename
+  (the documented inner-same-name-boc sub-case), which does get recognized.
+
+- [ ] **[YZC-0104] Generic collection method return type widens to `any` on local-variable assignment**
+
+  ```yz
+  books : ["Dune": Book("Dune", "Herbert", 2)]
+  ...
+  book : books.at(title)   // book gets Go type `any`, not `*Book`
+  book.copies               // compile error: any has no field copies
+  ```
+
+  The `Dict[K,V]` field itself is correctly typed in generated Go
+  (`books std.Dict[std.String, *Book]`), so the generic instantiation is known —
+  but a local short-decl assigned from `.at(...)`/`.At(...)`'s return value comes
+  out as `any` instead of the concrete `V`. Breaks any subsequent field/method
+  access on the result, and cascades into HOF callback signatures: a
+  `.filter({ t String; books.at(t).copies > 0 })` closure gets emitted as
+  `func(t std.String) any` instead of `func(t std.String) std.Bool`, which then
+  fails to satisfy `Array.Filter(fn func(T) Bool)`.
+
+  Not yet root-caused past the symptom above — needs investigation into how
+  short-decl type inference resolves a generic method's return type instantiation
+  (`internal/sema/analyzer.go`, wherever `TypedDecl`/short-decl RHS types are
+  computed for calls into `Dict`/`Array` methods).
+
+- [ ] **[YZC-0105] Nested conditional as a boc's final return value is discarded**
+
+  ```yz
+  checkout #(title String, BorrowResult) {
+      books.has(title) ? {
+          (book.copies > 0) ? {
+              Approved(book)
+          }, {
+              Denied("...")
+          }
+      }, {
+          Denied("no such title")
+      }
+  }
+  ```
+
+  Generated Go lowers the outer `?:` as an `if/else` **statement** and discards
+  whatever the inner conditional produces, falling through to an unconditional
+  `return std.TheUnit` at the end of the function — even though `checkout`'s
+  declared return type is `BorrowResult`. A single-level `?:` as a function's
+  last statement is known to work elsewhere in the codebase; this was only
+  observed with a conditional nested inside another conditional, both as the
+  final statement. Needs a minimal isolated repro (single-level vs. nested,
+  varying return type) to confirm nesting specifically is the trigger before
+  root-causing further.
+
+---
+
 ## Language Features
 
 - [ ] **[YZC-0009] Range iteration**

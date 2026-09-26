@@ -1,0 +1,9 @@
+// Uppercase root file, inner-same-name-boc sub-case (YZC-0093): wrapping a
+// bare list of variant constructors directly (no plain fields, no inner
+// same-name boc) is NOT recognized — `Approved(book Book)` parses as a call
+// to an undefined function `Approved`, not a constructor decl. Filed as a
+// gap; routing around it with the documented inner-boc sub-case instead.
+BorrowResult: {
+    Approved(book Book)
+    Denied(reason String)
+}

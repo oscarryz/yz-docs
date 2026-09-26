@@ -1,5 +1,11 @@
 # update log  
 
+## 2026-09-26 (2)
+- **Creation**: [tasks.md](./tasks.md) -- Filed YZC-0102 through YZC-0105, found while dogfooding a larger example (`examples/_wip/library/`); closed YZC-0102.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Added a Bugs section with details for YZC-0103/0104/0105; removed the closed YZC-0102 writeup.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0102 (sibling-call resolution priority in `lowerCall`).
+- **Creation**: `compiler/examples/sibling_calls/` -- Regression example for YZC-0102 (golden tests bypass the root-file auto-wrap path, so this bug needed an `examples/`-level test instead).
+
 ## 2026-09-26
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0101; bumped golden-test count to 104.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0101 writeup (now-empty Bugs section removed).
