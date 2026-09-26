@@ -7,6 +7,60 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0115 — Zero-argument generic variant constructor called from another generic context fails to compile with "cannot infer T" ✓
+
+  Found while dogfooding a generic `find_first` helper returning a
+  user-declared `Option(T)`:
+
+  ```yz
+  Option: { T; Some(value T); None() }
+  find_first #(xs [T], Option(T)) {
+      (xs.length() == 0) ? { Option.None() }, { Option.Some(xs.at(0)) }
+  }
+  ```
+  failed only at `go build`:
+  `in call to NewOptionNone, cannot infer T (declared at ./main.go:24:20)`.
+
+  **Root cause:** `variantTypeArgs` (`internal/ir/lower.go`) computes explicit
+  Go type arguments for a qualified variant constructor call
+  (`Shape.Circle(5)` → `NewShapeCircle[...](...)`, YZC-0065) from
+  `l.analyzer.ExprType(c)` — the call's own sema type. It only handled that
+  type being a `*sema.GenericInstType` with concrete `TypeArgs` already
+  filled in (e.g. `Option(Int)`); for `Option.None()` returned directly from
+  a boc that is *itself* generic over the same type param (nothing at the
+  call site ever pins T down to a concrete type), sema instead hands back the
+  bare, uninstantiated `*sema.StructType` (`TypeParams: ["T"]`, no
+  `GenericInstType` wrapper at all) — a shape the function didn't recognize,
+  so it fell through to "no explicit args needed" and left Go's own
+  inference to fend for itself. For a zero-argument generic function call
+  (`None()` takes no value args), Go has no argument to infer T from, and it
+  does not infer a generic function's type params purely from the enclosing
+  `return` statement's declared type — hence "cannot infer T".
+
+  Separately, even the already-handled `GenericInstType` path had the same
+  gap one level down: if a *concrete* instantiation's `TypeArgs` slice
+  contained an unresolved `*sema.GenericType` element (same shape, nested one
+  level deeper), the existing code treated "still generic" as "give up" and
+  returned `nil` instead of emitting that type param's name directly.
+
+  **Fix (`internal/ir/lower.go`):** `variantTypeArgs` now accepts either
+  shape — a `*sema.GenericInstType` (using its `TypeArgs`) or a bare
+  `*sema.StructType` with `TypeParams` (falling back to the type param names
+  themselves, since they're the enclosing generic function's own Go type
+  parameters and valid to reference directly in its body) — and, in both
+  cases, emits an unresolved `*sema.GenericType` argument by name rather than
+  bailing out.
+
+  **Regression coverage:** `testdata/golden/118_generic_variant_zero_arg_ctor`.
+
+  **Verified against a more realistic repro** — a generic `Stack` struct with
+  a `pop #(Option(T))` method — which surfaced what looked like a second bug
+  (`r.value.ToStr undefined (type any has no field or method ToStr)`) but
+  turned out to be a pre-existing, unrelated limitation triggered by an empty
+  array literal (`Stack(items: [])`) leaving `T` unresolved to `any` for the
+  whole instance; with a non-empty initial array the same code compiles and
+  runs correctly. Not a new finding — no ticket filed for it.
+
 ### [x] YZC-0114 — Generic struct's homoiconic repr leaks the full Go import path for a nested generic type argument ✓
 
   Found while dogfooding the backtick (homoiconic) print form on a generic

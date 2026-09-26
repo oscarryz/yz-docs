@@ -1,5 +1,12 @@
 # update log  
 
+## 2026-09-27 (7)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0115; bumped golden-test count to 112, next available to YZC-0116.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0115: `variantTypeArgs` only recognized a resolved `*sema.GenericInstType` for computing a qualified variant constructor's explicit Go type args; a zero-arg constructor (`Option.None()`) called from a boc generic over the same type param instead gets a bare, uninstantiated `*sema.StructType` from sema, which fell through to "no explicit args needed" -- and Go's own inference can't recover T for a zero-argument generic call from return-type context alone.
+- **Update**: `internal/ir/lower.go` -- `variantTypeArgs` now also accepts a bare `*sema.StructType` (falling back to its `TypeParams` names) and, in both shapes, emits an unresolved `*sema.GenericType` argument by name instead of bailing out.
+- **Creation**: `118_generic_variant_zero_arg_ctor` golden test + `.output` sidecar.
+- **Note**: a second failure surfaced while stress-testing against a generic `Stack` struct (`r.value.ToStr undefined`) turned out to be the pre-existing empty-array-literal type-inference limitation, not a new bug -- no ticket filed.
+
 ## 2026-09-27 (6)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0114; bumped golden-test count to 111, next available to YZC-0115.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0114: a generic struct's homoiconic `String()` calls `std.YzTypeName` on its type-param field, which fell back to `reflect.TypeOf(v).Name()` -- correct for an ordinary struct, but Go's reflect synthesizes a generic instantiation's `Name()` from its type arguments' fully package-qualified `String()` form, leaking e.g. `yz/runtime/rt.Int` for a std collection type argument.
