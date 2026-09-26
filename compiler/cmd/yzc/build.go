@@ -235,6 +235,12 @@ func compileProject(projectDir string, srcRoots []string) (map[string]string, er
 				return nil, fmt.Errorf("reading %s: %w", sf.absPath, err)
 			}
 			p := parser.New(src)
+			if token.LookupIdent(sf.name) == token.TYPE_IDENT {
+				// YZC-0103: uppercase file wrapped as its own boc below (line ~249)
+				// never passes through finishShortDecl's `TYPE_IDENT ':' '{'` text,
+				// so it wouldn't otherwise recognize bare variant constructors.
+				p.EnableTypeBoc()
+			}
 			parsed, parseErr := p.ParseFile()
 			if parseErr != nil {
 				if pe, ok := parseErr.(*parser.ParseError); ok {
@@ -333,6 +339,12 @@ func compilePackageDir(files []fileEntry, relDir string, a *sema.Analyzer, pendi
 			return "", nil, fmt.Errorf("reading %s: %w", fe.absPath, err)
 		}
 		p := parser.New(src)
+		if token.LookupIdent(fe.name) == token.TYPE_IDENT {
+			// YZC-0103: uppercase file wrapped as its own boc below never passes
+			// through finishShortDecl's `TYPE_IDENT ':' '{'` text, so it wouldn't
+			// otherwise recognize bare variant constructors at file scope.
+			p.EnableTypeBoc()
+		}
 		sf, parseErr := p.ParseFile()
 		if parseErr != nil {
 			if pe, ok := parseErr.(*parser.ParseError); ok {

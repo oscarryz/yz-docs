@@ -53,6 +53,12 @@ func NewWithOffset(src []byte, line, col int) *Parser {
 }
 
 // ParseFile parses an entire source file and returns the root SourceFile node.
+//
+// Top-level statements route through parseBocElement (not parseStatement
+// directly) so that EnableTypeBoc lets bare `TYPE_IDENT(...)` elements at
+// file scope be recognized as variant constructors (YZC-0103). This is a
+// no-op for ordinary files: parseBocElement falls through to parseStatement
+// whenever inTypeBoc is false.
 func (p *Parser) ParseFile() (*ast.SourceFile, error) {
 	sf := &ast.SourceFile{Pos: p.curPos()}
 	for !p.at(token.EOF) {
@@ -60,7 +66,7 @@ func (p *Parser) ParseFile() (*ast.SourceFile, error) {
 		if p.at(token.EOF) {
 			break
 		}
-		node, err := p.parseStatement()
+		node, err := p.parseBocElement()
 		if err != nil {
 			return nil, err
 		}
@@ -68,6 +74,20 @@ func (p *Parser) ParseFile() (*ast.SourceFile, error) {
 		p.skipSeps()
 	}
 	return sf, nil
+}
+
+// EnableTypeBoc marks the parser as parsing the direct body of an uppercase
+// (type) boc, so parseBocElement recognizes bare `TYPE_IDENT(...)` elements
+// as variant constructors instead of call-expression statements.
+//
+// Normally this flag is set by finishShortDecl when it sees the literal
+// sequence `TYPE_IDENT ':' '{'` in source text (e.g. `Pet: { Cat(...) }`).
+// An uppercase *root file* (e.g. BorrowResult.yz) never contains that text —
+// its file-level ShortDecl wrapper is synthesized after parsing, by the
+// caller — so it must call EnableTypeBoc before ParseFile to get the same
+// treatment (YZC-0103).
+func (p *Parser) EnableTypeBoc() {
+	p.inTypeBoc = true
 }
 
 // ---------------------------------------------------------------------------
