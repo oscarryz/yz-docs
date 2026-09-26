@@ -1,0 +1,15 @@
+// YZC-0101: a sibling method call must resolve even when the callee is
+// declared *after* the caller in the same singleton body. Sema previously
+// analyzed b.Elements in a single forward pass with no pre-scan of sibling
+// method names (unlike the lowerer's collectMethodNames), so `value()` here
+// failed with "undefined: value" until this fix.
+counter: {
+    count: 0
+    increment: { value(); count = count + 1 }
+    value: { count }
+}
+
+main: {
+    counter.increment()
+    print("count: ${counter.value()}")
+}

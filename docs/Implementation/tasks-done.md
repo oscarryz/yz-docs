@@ -7,6 +7,31 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0101 — Sibling method call fails sema resolution when callee is declared after caller ✓
+
+  `Analyzer.analyzeStructBoc` (`internal/sema/analyzer.go`) analyzed `b.Elements` in a single
+  forward pass, fully resolving each method body (via `analyzeShortDecl`) before looking at the
+  next element, so a call to a sibling method declared *later* in the same singleton/struct body
+  had nothing in scope to resolve against and failed with `undefined: <name>`. The lowerer's own
+  `collectMethodNames` (`internal/ir/lower.go`) already made this order-independent one phase
+  too late to help sema.
+
+  **Fix:** new `Analyzer.preRegisterSiblingMethods` runs at the top of `analyzeStructBoc`, before
+  the main loop, and registers an approximate stub symbol (`BocType` or `StructType`, mirroring
+  the existing self-recursion pre-registration in `analyzeBocDecl`/`analyzeBocDeclNode`) for every
+  method-shaped `ShortDecl`/`BocDecl` sibling, using the same selection criteria as
+  `collectMethodNames`. Each stub is overwritten with its real, fully-analyzed symbol when the
+  main loop reaches that element. For the `BocDecl` (explicit-signature) case, the stub's params
+  come from a real `resolveBocSigParams` call whose diagnostics are discarded (`a.errors`
+  snapshot/restore) since the main loop re-resolves the signature for real and would otherwise
+  report the same problem twice.
+
+  Golden test: `110_sibling_forward_ref` (`counter` with `increment`/`value` in that declaration
+  order, `increment` calling `value()` forward) plus `.output` sidecar. `go test ./...` and
+  `go test -race -count=1 ./...` green, 104 golden + 25 error conformance tests passing.
+
+---
+
 ### [x] YZC-0008 — Same-cown reentrant scheduling deadlock ✓
 
   Fixed manifestations 1 (local boc vars / sibling methods sharing genuine state) and 4 (method
