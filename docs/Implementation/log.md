@@ -1,5 +1,11 @@
 # update log  
 
+## 2026-09-26 (4)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0105; filed YZC-0106 (surfaced while fixing it); bumped golden-test count to 106.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0105 writeup; added YZC-0106.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0105 (conditional-as-return-value in `lowerBocBody`/`lowerConditionalExpr`), including the regression caught and fixed before landing.
+- **Creation**: `112_conditional_return_value` golden test + `.output` sidecar.
+
 ## 2026-09-26 (3)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0104; bumped golden-test count to 105.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0104 writeup.

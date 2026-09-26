@@ -29,31 +29,44 @@ Open ticket details. See tasks.md for the index.
   **Workaround**: wrap the constructors in `Name: { ... }` matching the filename
   (the documented inner-same-name-boc sub-case), which does get recognized.
 
-- [ ] **[YZC-0105] Nested conditional as a boc's final return value is discarded**
+- [ ] **[YZC-0106] Self-recursive `#(...)` boc with non-Unit return produces a Schedule closure hardcoded to `func() std.Unit`**
+
+  Surfaced while fixing YZC-0105 — this is what remained once a value-returning
+  `?:` as a boc's last statement was fixed for the ordinary (non-recursive)
+  case. Minimal repro:
 
   ```yz
-  checkout #(title String, BorrowResult) {
-      books.has(title) ? {
-          (book.copies > 0) ? {
-              Approved(book)
-          }, {
-              Denied("...")
-          }
+  count_down #(n Int, String) {
+      n <= 0 ? {
+          "done"
       }, {
-          Denied("no such title")
+          count_down(n - 1)
       }
   }
+  main: {
+      print(count_down(3))
+  }
+  main()
   ```
 
-  Generated Go lowers the outer `?:` as an `if/else` **statement** and discards
-  whatever the inner conditional produces, falling through to an unconditional
-  `return std.TheUnit` at the end of the function — even though `checkout`'s
-  declared return type is `BorrowResult`. A single-level `?:` as a function's
-  last statement is known to work elsewhere in the codebase; this was only
-  observed with a conditional nested inside another conditional, both as the
-  final statement. Needs a minimal isolated repro (single-level vs. nested,
-  varying return type) to confirm nesting specifically is the trigger before
-  root-causing further.
+  Fails with `cannot use func() std.String {...}() (value of struct type
+  rt.String) as rt.Unit value in return statement`. `count_down` is a top-level
+  `#(...)`-declared boc, so it lowers via `lowerBocDeclAsSingleton`
+  (`internal/ir/lower.go`), which calls `lowerBocBody` (correctly, with
+  `resultType = "std.String"`) and then has a special case at ~line 2582 that
+  expects the result to be exactly `[]Stmt{ExprStmt{ThunkExpr}}` so it can
+  splice in the `self.param = param` preamble and hand it to `Schedule`. Since
+  YZC-0105's fix, a value-returning conditional as the last statement now
+  correctly comes back from `lowerBocBody` as `[]Stmt{ReturnStmt{Value: <IIFE>}}`
+  instead — a shape this special case doesn't recognize, so it falls through to
+  `callBody = bocBodyStmts` unwrapped, and further downstream construction
+  wraps that in a `Schedule` closure whose signature is hardcoded to
+  `func() std.Unit` regardless of the boc's actual `resultType`.
+
+  Not yet fixed: needs the `len(bocBodyStmts)==1` special case in
+  `lowerBocDeclAsSingleton` extended to also recognize a bare `ReturnStmt`
+  (not just `ExprStmt{ThunkExpr}`), threading `resultType` through to whatever
+  builds the `Schedule` closure's signature downstream.
 
 ---
 
