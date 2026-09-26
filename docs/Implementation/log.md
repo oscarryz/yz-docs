@@ -1,5 +1,11 @@
 # update log  
 
+## 2026-09-27 (3)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0110; bumped error-conformance-test count to 26, next available to YZC-0111.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0110: `analyzeStructBoc`'s `case *ast.Ident` (meant only for bare single-letter generic type params) matched on Go AST type instead of `TokType`, so any bare-Ident statement inside a closure/anonymous-boc body -- HOF closures, match arms -- was silently registered as a fabricated generic type instead of being resolved and validated.
+- **Update**: `internal/sema/analyzer.go` -- Gated the generic-type-param registration on `e.TokType == token.GENERIC_IDENT`; every other bare Ident element now falls through to ordinary expression analysis so undefined/malformed identifiers are flagged with a proper `undefined: %s` error.
+- **Creation**: `test/conformance/testdata/errors/29_undefined_ident_in_closure.yz` + `.error` -- reproduces identically through the golden-test driver's unwrapped `compile()` path (no file-wrap needed), so a plain error-conformance fixture suffices.
+
 ## 2026-09-27 (2)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0109; next available bumped to YZC-0110.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0109: golden tests for YZC-0057/YZC-0077 (recursive/mutually-recursive types) call `sema.AnalyzeFile` directly and never exercise the real CLI's mandatory per-file boc-wrap, which buries top-level type declarations one level below where `AnalyzeFile`'s forward-reference stub pre-registration pass looks.

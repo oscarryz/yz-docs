@@ -1490,14 +1490,23 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 			lastExprTypes = nil
 
 		case *ast.Ident:
-			// Generic type param declaration (T, E inside type boc body).
-			// Register as GenericType in current scope and record on the struct.
+			// Generic type param declaration (T, E inside type boc body) — these
+			// lex as GENERIC_IDENT (single uppercase letter). Anything else that
+			// parses as a bare Ident element (a plain lowercase reference, or
+			// invalid stray tokens like `->`) is NOT a type param declaration —
+			// fall through to ordinary expression analysis (YZC-0110) so an
+			// undefined or malformed identifier is actually flagged instead of
+			// being silently registered as a generic type and passed through to
+			// codegen verbatim.
 			if e.TokType == token.GENERIC_IDENT {
 				a.registerTypeParam(st, &fieldSet, e.Name)
+				gt := &GenericType{Name: e.Name}
+				a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
+				lastExprTypes = nil
+			} else {
+				t := a.analyzeNode(elem)
+				lastExprTypes = []Type{t}
 			}
-			gt := &GenericType{Name: e.Name}
-			a.currentScope.Define(&Symbol{Name: e.Name, Type: gt, Node: e})
-			lastExprTypes = nil
 
 		case *ast.BocDecl:
 			// `TypeName #(...)` with no body: abstract associated type field.

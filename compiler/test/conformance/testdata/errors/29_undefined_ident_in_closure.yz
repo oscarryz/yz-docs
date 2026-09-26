@@ -1,0 +1,4 @@
+main: {
+    xs : [1, 2, 3]
+    xs.each({ n Int; totallyUndefinedName; print(n) })
+}
