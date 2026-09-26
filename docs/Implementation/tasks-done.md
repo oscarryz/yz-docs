@@ -7,6 +7,71 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0111 — Cond-match arm with a multi-statement body block emits an uncalled closure literal ✓
+
+  Found while dogfooding the `continue` fallthrough example straight from
+  spec/07-control-flow.md's "Match with `continue`" section — it didn't
+  compile:
+
+  ```
+  ./main.go:16:3: func() std.Unit {…} (value of type func() rt.Unit) is not used
+  ```
+
+  Minimized further to prove `continue` wasn't the cause: *any* cond-match arm
+  whose body needs its own `{ }` block (because it has more than one
+  statement) triggers it, e.g.:
+
+  ```yz
+  match {
+      x > 0 => {
+          print("positive")
+          print("multi-statement arm")
+      }
+  }, {
+      x > 10 => print("and greater than 10")
+  }, {
+      print("done")
+  }
+  ```
+
+  A single-expression arm (`x > 10 => print(...)`, no extra braces) was fine —
+  only a braced multi-statement arm broke.
+
+  **Root cause:** `parseConditionalBoc` (`internal/parser/parser.go`) parses an
+  arm's body with a generic per-element loop (`parseBocElement` in a loop until
+  the arm's own closing brace). When the body after `=>` is itself written as
+  `{ stmt1; stmt2 }`, that loop runs exactly once and the single "element" it
+  parses is the *entire nested block* as one opaque `*ast.BocLiteral` node —
+  `ConditionalBoc.Body` ends up as a one-element slice wrapping it, instead of
+  the flattened `[stmt1, stmt2]` its own doc comment promises
+  ("Body []Node // Stmt | Expr"). Every downstream arm-body lowering function
+  (`lowerElementStmts`, `lowerMatchArmBody` in `internal/ir/lower.go`) assumes
+  `Body` is already flat, so the wrapping `*ast.BocLiteral` got lowered as an
+  ordinary expression instead — `lowerBocLitExpr` turns a plain (no method
+  fields) boc literal into an `ir.ClosureExpr` (a Go func literal *value*,
+  meant to be passed around, e.g. to `.each(...)`) — and that closure value
+  then got emitted as a bare statement, never invoked. `?`'s branches
+  (`ConditionalExpr.TrueCase`/`FalseCase`) don't have this bug because they're
+  typed as `*ast.BocLiteral` fields directly and lowering always unwraps
+  `.Elements` explicitly — `ConditionalBoc.Body`'s `[]Node` shape was the only
+  place a nested block could silently masquerade as a flat statement list.
+
+  **Fix (`internal/parser/parser.go`):** `parseConditionalBoc` now checks,
+  right after the optional `cond =>`, whether the next token is `{`. If so, it
+  parses that nested block as its own boc literal (`parseBocLiteral`) and sets
+  `arm.Body` to its `.Elements` directly (flattened), then expects the arm's
+  own closing brace immediately after. The old per-element loop is unchanged
+  and still handles the no-extra-braces (single-expression, or bare
+  comma/semicolon-separated) case exactly as before.
+
+  **Regression coverage:** `testdata/golden/115_match_arm_body_block` — a
+  multi-statement cond-match arm now compiles and runs correctly.
+
+  **Follow-on finding:** fixing this exposed a second, separate bug — filed as
+  [YZC-0112] in tasks-detail.md: `continue` inside a match arm (spec §7.3's
+  fallthrough-to-next-branch keyword) is completely unimplemented and silently
+  a no-op, rather than actually falling through.
+
 ### [x] YZC-0110 — Bare identifier inside any closure/anonymous-boc body silently skips undefined-symbol checking ✓
 
   Found while dogfooding HOF closures: `xs.each({ n Int -> print(n) })` (using

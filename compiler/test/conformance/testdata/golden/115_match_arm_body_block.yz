@@ -1,0 +1,25 @@
+// YZC-0111: a cond-match arm's multi-statement body block (`cond => { s1; s2 }`)
+// parsed as a single opaque *ast.BocLiteral element inside ConditionalBoc.Body
+// instead of being flattened into it. Every arm-body lowering function expects
+// Body to already be a flat statement list, so the block was silently turned
+// into an anonymous closure VALUE and emitted as a bare, uncalled Go func
+// literal ("func() std.Unit {...}" with no trailing "()") — rejected by
+// `go build` as unused. A single-expression arm body (no extra braces) was
+// unaffected, which is why this went unnoticed until an arm needed more than
+// one statement — exactly the shape spec/07-control-flow.md's own "Match with
+// continue" example uses.
+
+main: {
+    x : 15
+    match {
+        x > 0 => {
+            print("positive")
+            print("multi-statement arm")
+        }
+    }, {
+        x > 10 => print("and greater than 10")
+    }, {
+        print("done")
+    }
+}
+main()

@@ -924,6 +924,31 @@ func (p *Parser) parseConditionalBoc() (*ast.ConditionalBoc, error) {
 		p.skipSemis()
 	}
 
+	// Body block (YZC-0111): `cond => { stmt1; stmt2 }` — a multi-statement arm
+	// body needs its own nested `{ }`, matching the uniform boc-body convention
+	// used everywhere else (`?`'s branches, boc declarations, ...). Flatten its
+	// Elements directly into arm.Body instead of leaving it as a single opaque
+	// *ast.BocLiteral node: every downstream arm-body lowering function
+	// (lowerElementStmts, lowerMatchArmBody) expects arm.Body to already be the
+	// flat statement list, and silently mishandled the un-flattened form —
+	// print(...) followed by continue would lower to a bare, uncalled closure
+	// literal ("func() std.Unit {...}" with no trailing "()"), rejected by
+	// `go build` as unused. A single-expression arm body (no braces, e.g.
+	// `score >= 90 => "A"`) is unaffected — it never produces a *ast.BocLiteral
+	// element here.
+	if p.at(token.LBRACE) {
+		nested, err := p.parseBocLiteral()
+		if err != nil {
+			return nil, err
+		}
+		arm.Body = nested.Elements
+		p.skipSemis()
+		if err := p.expect(token.RBRACE); err != nil {
+			return nil, err
+		}
+		return arm, nil
+	}
+
 	// Parse body elements
 	for !p.at(token.RBRACE) && !p.at(token.EOF) {
 		node, err := p.parseBocElement()
