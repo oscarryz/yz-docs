@@ -1,0 +1,28 @@
+// YZC-0115: a zero-argument constructor of a generic variant (e.g. `None()`
+// on a user-declared `Option: { T; Some(value T); None() }`), called from
+// inside another boc that is itself generic over the same type param (so the
+// concrete type is never resolved anywhere, only the type param name flows
+// through), compiled to `NewOptionNone()` with no explicit type argument.
+// Go's own type inference has nothing to infer T from — a zero-argument
+// generic function call gives it no argument to work from, and Go does not
+// infer a generic function's type params from the enclosing return
+// statement's declared type — so it failed only at `go build`:
+// "in call to NewOptionNone, cannot infer T".
+
+Option: {
+    T
+    Some(value T)
+    None()
+}
+
+find_first #(xs [T], Option(T)) {
+    (xs.length() == 0) ? { Option.None() }, { Option.Some(xs.at(0)) }
+}
+
+main: {
+    r : find_first([1, 2, 3])
+    match r
+        { Some => print("found: ${r.value}") },
+        { print("empty") }
+}
+main()

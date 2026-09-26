@@ -5069,8 +5069,29 @@ func (l *lowerer) goType(t sema.Type) string {
 // specific variant's own fields (e.g. Err(error E) in Result[T,E] — T is not in Err's args).
 // Returns nil when Go can infer all params or when any param is still unbound.
 func (l *lowerer) variantTypeArgs(callType sema.Type, calleeBocType *sema.BocType) []string {
-	git, ok := callType.(*sema.GenericInstType)
-	if !ok || len(git.TypeArgs) == 0 {
+	// callType is a *GenericInstType for a resolved instantiation (Option(Int),
+	// or Option(T) inside another generic context where T is itself the type
+	// arg), but sema hands back the bare, uninstantiated *StructType instead
+	// (TypeParams: ["T"], no TypeArgs at all) when nothing at the call site
+	// pins down a concrete instantiation — e.g. `Option.None()` returned
+	// directly from a boc generic over T itself (YZC-0115). Both shapes name
+	// the same parent struct and the same TypeParams list; only the source of
+	// each position's concrete-or-still-generic argument differs.
+	var parentName string
+	var typeArgs []sema.Type // nil when callType carried no instantiation info at all
+	switch ct := callType.(type) {
+	case *sema.GenericInstType:
+		if len(ct.TypeArgs) == 0 {
+			return nil
+		}
+		parentName = ct.Name
+		typeArgs = ct.TypeArgs
+	case *sema.StructType:
+		if !ct.IsVariant || len(ct.TypeParams) == 0 {
+			return nil
+		}
+		parentName = ct.Name
+	default:
 		return nil
 	}
 	// Collect which generic type param names appear in the constructor's own params.
@@ -5095,9 +5116,11 @@ func (l *lowerer) variantTypeArgs(callType sema.Type, calleeBocType *sema.BocTyp
 	}
 	// Look up the parent struct to get its TypeParams list (the declaration order).
 	// We need at least one param to be unconstrained to justify emitting explicit args.
+	var parentTypeParams []string
 	needExplicit := false
-	if st := l.analyzer.LookupInFile(git.Name); st != nil {
+	if st := l.analyzer.LookupInFile(parentName); st != nil {
 		if parentSt, ok := st.Type.(*sema.StructType); ok {
+			parentTypeParams = parentSt.TypeParams
 			for _, tp := range parentSt.TypeParams {
 				if !inParams[tp] {
 					needExplicit = true
@@ -5109,11 +5132,29 @@ func (l *lowerer) variantTypeArgs(callType sema.Type, calleeBocType *sema.BocTyp
 	if !needExplicit {
 		return nil
 	}
-	// All type args must be concrete (no remaining GenericType) to emit them.
-	args := make([]string, len(git.TypeArgs))
-	for i, ta := range git.TypeArgs {
-		if _, isUnbound := ta.(*sema.GenericType); isUnbound {
-			return nil
+	// A type arg that's still a bare GenericType (e.g. Option(T) inside a boc
+	// generic over T itself, as opposed to a fully concrete instantiation like
+	// Option(Int)) is not "unknown" — T is the enclosing generic function's own
+	// type parameter, valid to reference directly in its body. Emit its name
+	// literally (NewOptionNone[T]()) rather than bailing out: a zero-argument
+	// generic variant constructor (like `None()`) gives Go's own type inference
+	// nothing to work from when only the return type constrains it, so without
+	// an explicit type argument here the generated call fails with "cannot
+	// infer T" (YZC-0115). When callType carried no instantiation at all (the
+	// bare-StructType case above), fall back to the parent's own TypeParams
+	// names directly — same reasoning, one level further removed.
+	if typeArgs == nil {
+		args := make([]string, len(parentTypeParams))
+		for i, tp := range parentTypeParams {
+			args[i] = tp
+		}
+		return args
+	}
+	args := make([]string, len(typeArgs))
+	for i, ta := range typeArgs {
+		if gt, isUnbound := ta.(*sema.GenericType); isUnbound {
+			args[i] = gt.Name
+			continue
 		}
 		args[i] = l.goType(ta)
 	}
