@@ -7,49 +7,6 @@ Open ticket details. See tasks.md for the index.
 
 ---
 
-## Bugs
-
-- [ ] **[YZC-0106] Self-recursive `#(...)` boc with non-Unit return produces a Schedule closure hardcoded to `func() std.Unit`**
-
-  Surfaced while fixing YZC-0105 — this is what remained once a value-returning
-  `?:` as a boc's last statement was fixed for the ordinary (non-recursive)
-  case. Minimal repro:
-
-  ```yz
-  count_down #(n Int, String) {
-      n <= 0 ? {
-          "done"
-      }, {
-          count_down(n - 1)
-      }
-  }
-  main: {
-      print(count_down(3))
-  }
-  main()
-  ```
-
-  Fails with `cannot use func() std.String {...}() (value of struct type
-  rt.String) as rt.Unit value in return statement`. `count_down` is a top-level
-  `#(...)`-declared boc, so it lowers via `lowerBocDeclAsSingleton`
-  (`internal/ir/lower.go`), which calls `lowerBocBody` (correctly, with
-  `resultType = "std.String"`) and then has a special case at ~line 2582 that
-  expects the result to be exactly `[]Stmt{ExprStmt{ThunkExpr}}` so it can
-  splice in the `self.param = param` preamble and hand it to `Schedule`. Since
-  YZC-0105's fix, a value-returning conditional as the last statement now
-  correctly comes back from `lowerBocBody` as `[]Stmt{ReturnStmt{Value: <IIFE>}}`
-  instead — a shape this special case doesn't recognize, so it falls through to
-  `callBody = bocBodyStmts` unwrapped, and further downstream construction
-  wraps that in a `Schedule` closure whose signature is hardcoded to
-  `func() std.Unit` regardless of the boc's actual `resultType`.
-
-  Not yet fixed: needs the `len(bocBodyStmts)==1` special case in
-  `lowerBocDeclAsSingleton` extended to also recognize a bare `ReturnStmt`
-  (not just `ExprStmt{ThunkExpr}`), threading `resultType` through to whatever
-  builds the `Schedule` closure's signature downstream.
-
----
-
 ## Language Features
 
 - [ ] **[YZC-0009] Range iteration**

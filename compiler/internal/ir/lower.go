@@ -1600,7 +1600,7 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 	elems := b.Elements
 
 	bgVar := ""
-	if l.bodyHasBocCallsInStmtPos(elems) {
+	if l.bodyHasBocCallsInStmtPos(elems, resultType) {
 		bgVar = "_bg0"
 		inner = append(inner, &DeclStmt{Name: bgVar, Init: &NewGroupExpr{}})
 	}
@@ -1802,7 +1802,11 @@ func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) [
 	// Append end-of-loop Wait for branch spawns (inside conditionals/matches).
 	// Skip when emitPendingWait already fired: direct spawns were already flushed
 	// at the right position and an extra Wait here would produce dead code.
-	if bgVar != "" && !didEmitWait {
+	// Also skip when the body already ended in a ReturnStmt (a value-returning
+	// last conditional/expression, YZC-0106): a Wait after a return is dead code
+	// and, worse, shifts codegen into the split-BocGroup pattern with its
+	// hardcoded func() std.Unit Schedule closure.
+	if bgVar != "" && !didEmitWait && (len(inner) == 0 || !isReturnStmt(inner[len(inner)-1])) {
 		inner = append(inner, &WaitStmt{GroupVar: bgVar})
 	}
 
@@ -4044,7 +4048,15 @@ func (l *lowerer) lowerExprOrSpawn(e ast.Expr) Expr {
 // statement-position boc call — either a direct boc call (non-last), a
 // conditional/match whose branches contain boc calls, or a last element that
 // is a method call on a cown-bearing struct instance (requires ScheduleAsSuccessor).
-func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
+//
+// resultType is the enclosing boc's declared result type. A last-element
+// conditional whose result type isn't std.Unit is lowered as a value-returning
+// IIFE (see the isConditional gate in lowerBocBody), not as a stmt-position
+// IfStmt with spawned branches — so its branch calls are ordinary synchronous
+// calls inside the IIFE, not BocGroup spawns, and must not be counted here.
+// Miscounting them creates an unused bgVar and, worse, a dangling WaitStmt
+// appended after the branch's terminal ReturnStmt (YZC-0106).
+func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node, resultType string) bool {
 	for i, elem := range elems {
 		// ShortDecl and TypedDecl are statement nodes, not expressions; check them directly.
 		if sd, ok := elem.(*ast.ShortDecl); ok {
@@ -4071,6 +4083,9 @@ func (l *lowerer) bodyHasBocCallsInStmtPos(elems []ast.Node) bool {
 			return true
 		}
 		if cond, ok := e.(*ast.ConditionalExpr); ok {
+			if isLast && resultType != "std.Unit" {
+				continue
+			}
 			if l.branchSliceHasBocCalls(branchElements(cond.TrueCase)) {
 				return true
 			}
