@@ -1,0 +1,15 @@
+// YZC-0104: dot-called Dict methods (.at, .has, .length) had no sema
+// type-inference case at all, so their result silently widened to `any`.
+// Analyzer.fieldType now has a DictType case mirroring ArrayType's.
+Book: {
+    title String
+}
+
+main: {
+    books : ["Dune": Book("Dune")]
+    books.has("Dune") ? { print("has Dune") }, {}
+    books.has("Foundation") ? {}, { print("no Foundation") }
+    b : books.at("Dune")
+    print(b.title)
+    print("`books.length()`")
+}

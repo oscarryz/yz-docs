@@ -29,29 +29,6 @@ Open ticket details. See tasks.md for the index.
   **Workaround**: wrap the constructors in `Name: { ... }` matching the filename
   (the documented inner-same-name-boc sub-case), which does get recognized.
 
-- [ ] **[YZC-0104] Generic collection method return type widens to `any` on local-variable assignment**
-
-  ```yz
-  books : ["Dune": Book("Dune", "Herbert", 2)]
-  ...
-  book : books.at(title)   // book gets Go type `any`, not `*Book`
-  book.copies               // compile error: any has no field copies
-  ```
-
-  The `Dict[K,V]` field itself is correctly typed in generated Go
-  (`books std.Dict[std.String, *Book]`), so the generic instantiation is known —
-  but a local short-decl assigned from `.at(...)`/`.At(...)`'s return value comes
-  out as `any` instead of the concrete `V`. Breaks any subsequent field/method
-  access on the result, and cascades into HOF callback signatures: a
-  `.filter({ t String; books.at(t).copies > 0 })` closure gets emitted as
-  `func(t std.String) any` instead of `func(t std.String) std.Bool`, which then
-  fails to satisfy `Array.Filter(fn func(T) Bool)`.
-
-  Not yet root-caused past the symptom above — needs investigation into how
-  short-decl type inference resolves a generic method's return type instantiation
-  (`internal/sema/analyzer.go`, wherever `TypedDecl`/short-decl RHS types are
-  computed for calls into `Dict`/`Array` methods).
-
 - [ ] **[YZC-0105] Nested conditional as a boc's final return value is discarded**
 
   ```yz

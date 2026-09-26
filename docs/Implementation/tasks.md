@@ -8,7 +8,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **104 golden + 25 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **105 golden + 25 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Plus `examples/sibling_calls`: YZC-0102 has zero golden-test coverage since golden fixtures bypass the root-file auto-wrap path entirely; this is an `examples/`-level regression test instead
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`, macro wire codec: `compiler/runtime/macrowire/`
@@ -37,7 +37,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 ~~YZC-0076 -- Existential associated types -- closed: not needed under current macro dispatch model~~  
 ~~YZC-0102 -- Sibling calls inside any auto-wrapped root file lower to a nonexistent global `Name.Call()` instead of `self.name()`~~
 YZC-0103 -- Uppercase root file containing only bare variant constructors (no plain fields) is not recognized as a type decl -- S -- `Approved(book Book)` parses as a call to an undefined function; workaround is wrapping in `Name: { ... }` (the inner-same-name-boc sub-case from YZC-0093)  
-YZC-0104 -- Generic collection method return type (e.g. `Dict.At`) widens to `any` instead of the concrete instantiated type on local-variable assignment -- M -- breaks field/method access on the result and cascades into HOF callback signatures (`.filter({...})` closures typed `any` instead of `Bool`)  
+~~YZC-0104 -- Dict dot-call methods (`.at`, `.has`, ...) had no sema type-inference case at all and widened to `any`~~
 YZC-0105 -- Nested conditional (`?:` inside `?:`) as a boc's final return value is discarded; codegen emits an if/else statement and falls through to `return Unit` -- S -- needs an isolated repro to confirm nesting (vs. something else) is the trigger  
 YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
 YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  

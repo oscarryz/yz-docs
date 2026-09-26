@@ -2327,6 +2327,23 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 			return &BocType{Returns: []Type{ot}}
 		}
 		return Unknown // extensible — no error for unknown array methods
+	case *DictType:
+		// YZC-0104: dot-call methods on dicts — previously missing entirely,
+		// so any such call (`d.at(k)`, `d.has(k)`, ...) fell through to the
+		// default Unknown case below and widened to `any` in generated Go.
+		switch fieldName {
+		case "at":
+			return &BocType{Returns: []Type{ot.Val}}
+		case "at_opt":
+			return &BocType{Returns: []Type{&OptionType{Inner: ot.Val}}}
+		case "has":
+			return &BocType{Returns: []Type{TypBool}}
+		case "length":
+			return &BocType{Returns: []Type{TypInt}}
+		case "set":
+			return &BocType{Returns: []Type{ot}}
+		}
+		return Unknown // extensible — no error for unknown dict methods
 	case *PathDependentType:
 		// YZC-0074: `node.label()` where node has type `g.Node` — resolve via bound.
 		// Look up the param `g` in scope to find Graph's Node field and its bound.
