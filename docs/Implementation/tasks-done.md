@@ -7,6 +7,52 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0104 — Dict dot-call methods had no sema type-inference case and widened to `any` ✓
+
+  Found via the same dogfooding pass as YZC-0102/0103/0105 (`examples/_wip/library/`).
+  Minimal repro:
+
+  ```yz
+  Book: { title String }
+  books : ["Dune": Book("Dune")]
+  show #(title String) {
+      b : books.at(title)   // b gets Go type `any`, not `*Book`
+      print(b.title)        // compile error: any has no field title
+  }
+  ```
+
+  **Root cause:** `Analyzer.fieldType` (`internal/sema/analyzer.go`) is the function
+  that types a `object.member` expression, including dot-called builtin-collection
+  methods. It has a full `case *ArrayType:` switch covering `filter`/`each`/`map`/
+  `any`/`all`/`length`/`is_empty`/`at`/`append` (proven by golden
+  `103_array_typed_field`'s `b.names.at(1)`) — but had **no `case *DictType:` at
+  all**. Any dot-called Dict method (`.at`, `.has`, `.at_opt`, `.length`, `.set`)
+  fell straight through to the `default: return Unknown` case, which lowers to
+  Go's `any`. Every existing golden/example use of dicts went through the index
+  operator (`d[k]`, `d[k] = v`) or plain field access, never a dot-called method,
+  so this had zero prior coverage — it wasn't a regression, just never
+  implemented.
+
+  This explains the cascading errors seen downstream in the library example: a
+  `.filter({ t String; books.at(t).copies > 0 })` closure body built on an
+  `any`-typed `books.at(t)` inferred `any` as its own return type instead of
+  `Bool`, failing to satisfy `Array.Filter(fn func(T) Bool)`.
+
+  **Fix:** added `case *DictType:` to `fieldType`, mirroring the `ArrayType` case
+  exactly — `at` → `Val`, `at_opt` → `Option(Val)`, `has` → `Bool`, `length` →
+  `Int`, `set` → the dict type itself, each wrapped in `&BocType{Returns: [...]}`
+  to match how the array methods signal "this is a call, not a plain field."
+
+  Golden test: `111_dict_methods` (`.has`, `.at`, `.length` on a `Dict[String,
+  Book]`) plus `.output` sidecar — unlike YZC-0102, this one doesn't need the
+  root-file auto-wrap path, so a normal golden fixture gives real regression
+  coverage. Also validated by the (still in-progress) `examples/_wip/library`
+  dogfood program advancing past this class of error entirely. `go test ./...`
+  and `go test -race -count=1 ./...` green, 105 golden + 25 error conformance
+  tests passing.
+
+---
+
 ### [x] YZC-0102 — Sibling calls inside an auto-wrapped root file lower to a nonexistent global instead of `self.method()` ✓
 
   Found while dogfooding a larger example (`examples/_wip/library/`). Minimal repro:
