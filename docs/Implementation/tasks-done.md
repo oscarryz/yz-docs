@@ -7,6 +7,75 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0106 — Self-recursive `#(...)` boc with non-Unit return produced a Schedule closure hardcoded to `func() std.Unit` ✓
+
+  Surfaced while fixing YZC-0105 — this is what remained once a value-returning
+  `?:` as a boc's last statement was fixed for the ordinary (non-recursive)
+  case. Minimal repro:
+
+  ```yz
+  count_down #(n Int, String) {
+      n <= 0 ? {
+          "done"
+      }, {
+          count_down(n - 1)
+      }
+  }
+  main: {
+      print(count_down(3))
+  }
+  main()
+  ```
+
+  Failed with `cannot use func() std.String {...}() (value of struct type
+  rt.String) as rt.Unit value in return statement`, immediately followed by a
+  second error on the fallback path (`cannot use std.TheUnit ... as rt.String
+  value in return statement`).
+
+  **Root cause:** not what the ticket originally guessed. `lowerBocBody`
+  (`internal/ir/lower.go`) always returns its result as a single
+  `[]Stmt{ExprStmt{ThunkExpr}}` regardless of what's inside — the
+  `len(bocBodyStmts)==1` special case in `lowerBocDeclAsSingleton` (~line 2582)
+  was never actually bypassed. The real bug was in `bodyHasBocCallsInStmtPos`
+  (~line 4059), which decides whether the body needs a `BocGroup` for spawned
+  child-boc calls. It recursed into a `ConditionalExpr`'s branches looking for
+  boc calls unconditionally — including when the conditional is the body's
+  *last* element with a non-`Unit` result type, a shape that `lowerBocBody`
+  lowers as a value-returning IIFE (`return func() T { if ... }()`), not as a
+  statement-position `IfStmt` with spawned branches. `count_down`'s recursive
+  self-call inside the `?:`'s false branch tripped this false positive.
+
+  That false positive created an unused `_bg0 := &std.BocGroup{}` and, because
+  `bgVar != "" && !didEmitWait` was checked without also checking whether the
+  loop had already emitted a terminal `ReturnStmt` for the IIFE, appended a
+  dangling `WaitStmt{_bg0}` *after* that return — dead code, but its presence
+  made codegen's `thunkFindWaitIdx` detect a wait and switch to the
+  split-BocGroup `Schedule` pattern (`internal/codegen/codegen.go`,
+  `emitThunk`), whose inner closure signature is hardcoded to `func() std.Unit`
+  since that pattern normally wraps spawn-registration code, not a value
+  return. Hence the type mismatch.
+
+  **Fix (`internal/ir/lower.go`):**
+  - `bodyHasBocCallsInStmtPos` now takes `resultType` and skips scanning a
+    last-element `ConditionalExpr`'s branches when `resultType != "std.Unit"`
+    — mirroring the exact gating condition (`isConditional && (!isLast ||
+    resultType == "std.Unit")`) that `lowerBocBody`'s main loop already uses
+    to decide IfStmt-with-spawns vs. value-returning IIFE.
+  - The trailing `bgVar` `WaitStmt` append in `lowerBocBody` now also checks
+    that the body doesn't already end in a `ReturnStmt`, as a defensive guard
+    against the same dead-code-after-return shape recurring through some other
+    path.
+
+  Regression coverage: golden test `113_self_recursive_return` (the
+  `count_down` repro above), reachable through the ordinary golden-test
+  compilation path since this is a pure lowering/codegen bug, not a root-file
+  auto-wrap issue like YZC-0102/0103. `examples/_wip/library`'s
+  `members.yz` self-recursive `top_borrower`/`max_from` method now builds and
+  runs correctly end-to-end — the library dogfood example is fully unblocked.
+
+  `go build ./...`, `go test ./...`, and `go test -race -count=1 ./...` all
+  green: 107 golden + 25 error conformance tests passing (was 106).
+
 ### [x] YZC-0103 — Uppercase root file with only bare variant constructors was not recognized as a type decl ✓
 
   Found via the same dogfooding pass as YZC-0102/0104/0105/0106

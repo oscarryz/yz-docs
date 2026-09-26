@@ -1,5 +1,13 @@
 # update log  
 
+## 2026-09-26 (6)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0106; bumped golden-test count to 107.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0106 writeup (Bugs section now empty).
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0106: the real root cause was `bodyHasBocCallsInStmtPos` false-flagging a last-element value-returning conditional's branch calls as needing a `BocGroup`, not the `lowerBocDeclAsSingleton` special case the ticket originally suspected.
+- **Update**: `internal/ir/lower.go` -- `bodyHasBocCallsInStmtPos` now takes `resultType` and skips a last-element conditional's branches when the result isn't `std.Unit`; the trailing `bgVar` Wait append in `lowerBocBody` now also checks the body hasn't already terminated in a `ReturnStmt`.
+- **Creation**: `113_self_recursive_return` golden test + `.output` sidecar.
+- **Verification**: `examples/_wip/library` now builds and runs end-to-end (previously blocked by this bug).
+
 ## 2026-09-26 (5)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0103; noted `examples/bare_variant_root` alongside `examples/sibling_calls` as example-only regression coverage.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0103 writeup.

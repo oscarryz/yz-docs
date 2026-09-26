@@ -1,0 +1,22 @@
+// YZC-0106: a self-recursive #(...) boc with a non-Unit return type, whose
+// last statement is a value-returning `?:` with a recursive self-call in a
+// branch, must not be misrouted into the split-BocGroup Schedule pattern.
+// bodyHasBocCallsInStmtPos previously flagged the branch's self-call as a
+// stmt-position boc call even though the conditional is lowered as a
+// value-returning IIFE (not an IfStmt with spawns) whenever it's the last
+// element and the result type isn't std.Unit -- creating an unused BocGroup
+// and a WaitStmt appended after the branch's ReturnStmt. That dangling Wait
+// then triggered codegen's split-BocGroup path, whose Schedule closure
+// signature is hardcoded to func() std.Unit regardless of the boc's actual
+// result type.
+count_down #(n Int, String) {
+    n <= 0 ? {
+        "done"
+    }, {
+        count_down(n - 1)
+    }
+}
+
+main: {
+    print(count_down(3))
+}
