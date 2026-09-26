@@ -1,5 +1,11 @@
 # update log  
 
+## 2026-09-27 (2)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0109; next available bumped to YZC-0110.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0109: golden tests for YZC-0057/YZC-0077 (recursive/mutually-recursive types) call `sema.AnalyzeFile` directly and never exercise the real CLI's mandatory per-file boc-wrap, which buries top-level type declarations one level below where `AnalyzeFile`'s forward-reference stub pre-registration pass looks.
+- **Update**: `internal/sema/analyzer.go` -- Added `preRegisterNestedTypes` (mirrors `AnalyzeFile`'s first pass for types nested inside any boc body); `analyzeStructBoc`'s stub-reuse lookup changed from `fileScope.LookupLocal` to a `currentScope.Lookup` chain walk so it finds stubs at either level.
+- **Creation**: `examples/recursive_type_forward_ref/` -- regression example (plain self-reference, mutual recursion, variant-constructor self-reference) proven to fail pre-fix and pass post-fix through the actual CLI; golden fixtures cannot exercise this path (same reasoning as `examples/sibling_calls`/`examples/bare_variant_root`).
+
 ## 2026-09-27
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0108; bumped golden-test count to 108, next available to YZC-0109.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0108: a variant match's default arm (no `=>`) aborted discriminant-switch lowering for the *entire* match, falling back to a boolean-condition path that treated variant names as undefined globals.
