@@ -7,6 +7,68 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0109 — Recursive/mutually-recursive type declarations only resolve in golden tests, not through the real CLI ✓
+
+  Found while trying to write a linked-list-shaped example for further dogfooding.
+  Minimal repro — the *exact same source* as golden test `83_recursive_struct_type`
+  (`Node: { value Int; next Node }` + a function taking `n Node`) — fails when run
+  through the actual compiler:
+
+  ```
+  $ yzc run <dir with that exact source>
+  error: undefined type: Node
+  ```
+
+  Also reproduced with golden `66_forward_type_ref`'s exact mutually-recursive
+  `Wrapper`/`Inner` source, and with a new shape (a variant constructor's own
+  field self-referencing its enclosing type: `List: { Cons(head Int, tail List),
+  Nil() }`) — all three fail identically via `yzc run`/`yzc build`, despite their
+  golden-test counterparts (YZC-0057, YZC-0077) being marked closed and green.
+
+  **Root cause:** `sema.AnalyzeFile`'s first pass (`internal/sema/analyzer.go`)
+  pre-registers a stub `*StructType` for every uppercase type name at the true
+  top level of `sf.Stmts`, so a field type that forward- or self-references
+  another type resolves against a stable pointer instead of erroring "undefined
+  type." The conformance-test driver (`test/conformance/conformance_test.go`'s
+  `compile`) calls `AnalyzeFile` directly on the parsed source, so `Node`/
+  `Wrapper`/`Inner` sit at true top level and the golden tests pass. But the
+  real CLI (`cmd/yzc/build.go`'s `compilePackageDir`) unconditionally wraps
+  *every* file's `sf.Stmts` in a synthetic boc literal named after the file
+  first (spec §9 invariant 1+2, needed so every file is "the body of a boc
+  named after the file") — before `AnalyzeFile` ever sees it. That buries
+  every top-level type declaration one level inside the wrapper's
+  `BocLiteral.Elements`, where `AnalyzeFile`'s first pass never looks (it only
+  scans `sf.Stmts` itself), so no stub ever gets pre-registered and any
+  forward/self-reference in a nested type's own field resolution hits
+  `resolveTypeExpr`'s `undefined type: %s` error. This is the same blind spot
+  documented for YZC-0102/0103 (golden fixtures bypass the root-file auto-wrap
+  path entirely) but far more consequential: it doesn't just miss uppercase
+  root files, it silently breaks every self-referential or mutually-recursive
+  type in every real `.yz` file, while the two tickets that specifically claim
+  to guarantee this feature (YZC-0057, YZC-0077) both stayed green throughout.
+
+  **Fix (`internal/sema/analyzer.go`):**
+  - Added `preRegisterNestedTypes`, mirroring `AnalyzeFile`'s first pass
+    (reusing its `topLevelTypeName` classifier) but over a boc literal's own
+    `Elements` — called at the top of `analyzeStructBoc`, alongside the
+    existing `preRegisterSiblingMethods` call, so every level of nesting gets
+    the same forward-reference stub treatment the true top level already had.
+  - `analyzeStructBoc`'s stub-reuse check changed from `a.fileScope.LookupLocal(name)`
+    to `a.currentScope.Lookup(name)` (a scope-chain walk): at true top level
+    `currentScope`'s parent chain still reaches `fileScope` (same result as
+    before), but when nested, the chain now also reaches the enclosing body
+    scope where `preRegisterNestedTypes` planted the stub.
+
+  Regression coverage: `examples/recursive_type_forward_ref` (all three
+  shapes — plain self-reference, mutual recursion, variant-constructor
+  self-reference — through actual `yzc build`/`run`), since, like
+  `examples/sibling_calls` and `examples/bare_variant_root`, golden fixtures
+  structurally cannot exercise the file-wrap path. Verified the example fails
+  with the pre-fix code (`undefined type: Node`/`Inner`/`List`) and passes
+  post-fix. `go build ./...`, `make test-full`, and `make test-race` all
+  green: 108 golden + 25 error conformance tests passing, unchanged (this bug
+  had zero golden coverage by construction).
+
 ### [x] YZC-0108 — Variant match with a trailing default arm misdetected as a boolean-condition match ✓
 
   Found while continuing to dogfood past `examples/_wip/library` (a `Shape` variant

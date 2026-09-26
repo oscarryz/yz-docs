@@ -1325,16 +1325,45 @@ func (a *Analyzer) preRegisterSiblingMethods(b *ast.BocLiteral) {
 	}
 }
 
+// preRegisterNestedTypes mirrors AnalyzeFile's top-level first pass
+// (topLevelTypeName), but for uppercase type declarations nested inside a boc
+// body rather than at the true file-scope top level. Every real .yz file
+// compiled through the CLI is wrapped in a synthetic boc literal named after
+// the file (spec §9 invariant 1+2, cmd/yzc/build.go's compilePackageDir), so
+// what looks like a top-level type declaration in source is actually a
+// ShortDecl/BocDecl nested one level inside that wrapper's Elements by the
+// time analyzeStructBoc sees it — AnalyzeFile's first pass never runs on
+// those nested elements, so a self-referential or mutually-recursive type
+// declared inside any file has no pre-registered stub for forward references
+// to resolve against (YZC-0057/YZC-0077 golden coverage never exercises this
+// because the conformance-test driver calls AnalyzeFile directly on unwrapped
+// source, bypassing the file-wrapper transformation entirely).
+func (a *Analyzer) preRegisterNestedTypes(b *ast.BocLiteral) {
+	for _, elem := range b.Elements {
+		if name, ok := topLevelTypeName(elem); ok {
+			if a.currentScope.LookupLocal(name) != nil {
+				continue
+			}
+			a.currentScope.Define(&Symbol{Name: name, Type: &StructType{Name: name}})
+		}
+	}
+}
+
 // analyzeStructBoc analyzes a boc literal as a struct type, returning the
 // struct type and the last-expression types (body return types).
 // It is used for both uppercase struct declarations and lowercase singleton
 // bocs that have inner structure (inner bocs or BocDecl methods).
 func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType, []Type) {
-	// Reuse the stub pre-registered by AnalyzeFile so that forward references
-	// (fields declared before their type is analyzed) capture a stable pointer
-	// that gets filled in here.
+	// Reuse the stub pre-registered by AnalyzeFile (true top-level types) or by
+	// preRegisterNestedTypes (types nested inside an enclosing boc body, e.g.
+	// every type in a real file once cmd/yzc wraps it — see that function's
+	// doc) so that forward references (fields declared before their type is
+	// analyzed) capture a stable pointer that gets filled in here. A chain
+	// lookup covers both: at true top level, currentScope's parent is
+	// fileScope itself; when nested, currentScope's parent is the enclosing
+	// body scope where preRegisterNestedTypes planted the stub.
 	st := &StructType{Name: name}
-	if sym := a.fileScope.LookupLocal(name); sym != nil {
+	if sym := a.currentScope.Lookup(name); sym != nil {
 		if stub, ok := sym.Type.(*StructType); ok {
 			st = stub
 		}
@@ -1370,6 +1399,12 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 	// same body resolves instead of erroring "undefined". Each stub is overwritten
 	// with its real, fully-analyzed type when the main loop below reaches it.
 	a.preRegisterSiblingMethods(b)
+
+	// Pre-scan (YZC-0109): register a stub for every uppercase type declared
+	// directly in this body, mirroring AnalyzeFile's true-top-level first pass,
+	// so self-referential and mutually-recursive nested types resolve. See
+	// preRegisterNestedTypes' doc.
+	a.preRegisterNestedTypes(b)
 
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {

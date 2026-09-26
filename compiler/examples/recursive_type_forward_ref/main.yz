@@ -1,0 +1,59 @@
+// YZC-0109: self-referential and mutually-recursive type declarations
+// (YZC-0077 / YZC-0057) resolve fine in golden conformance tests, because
+// that test driver calls sema.AnalyzeFile directly on unwrapped source. Every
+// real .yz file compiled through the CLI (cmd/yzc build.go's
+// compilePackageDir) is always wrapped in a synthetic boc literal named after
+// the file first (spec §9 invariant 1+2) — which buries these top-level type
+// declarations one level inside that wrapper, bypassing AnalyzeFile's
+// forward-reference stub pre-registration pass entirely. Golden tests have
+// zero coverage of this path (same reasoning as examples/sibling_calls and
+// examples/bare_variant_root for YZC-0102/0103), so this is an examples/-level
+// regression test instead.
+
+// Plain self-referential struct (YZC-0077's exact golden-83 shape). A
+// mandatory (non-Option) self-typed field can never be fully constructed —
+// every constructor call needs one more Node for `next` — so, like golden 83
+// itself, this only proves the type declaration and a function signature over
+// it resolve; it's the List variant below that proves actual construction and
+// traversal of a recursive type.
+Node: {
+    value Int
+    next Node
+}
+
+first_value #(n Node, Int) {
+    n.value
+}
+
+// Mutually-recursive types, forward order (YZC-0057's exact golden-66 shape).
+Wrapper: {
+    inner Inner
+}
+Inner: {
+    value Int
+}
+
+// Self-referential variant constructor field (untested combination: the
+// recursive field lives inside a VariantDef's param list, not a plain
+// TypedDecl — a different AST shape than Node above).
+List: {
+    Cons(head Int, tail List),
+    Nil(),
+}
+
+describe_head #(l List, String) {
+    match l
+        { Cons => "head: ${l.head}" },
+        { "empty" }
+}
+
+main: {
+    i : Inner(42)
+    w : Wrapper(i)
+    print("${w.inner.value}")
+
+    l : Cons(7, Cons(8, Nil()))
+    print(describe_head(l))
+    print(describe_head(Nil()))
+}
+main()
