@@ -1,5 +1,13 @@
 # update log  
 
+## 2026-09-27 (5)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0113; bumped golden-test count to 110, next available to YZC-0114.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0113: `Dict.each` is documented in spec §10.8 but had neither a sema `fieldType` case (fell through to the same "extensible" `Unknown` YZC-0104 already fixed for `at`/`has`/`set`/`length`) nor a runtime `Each` method at all, failing only at `go build`.
+- **Update**: `internal/sema/analyzer.go` -- Added `each` to `DictType`'s `fieldType` switch.
+- **Update**: `runtime/rt/collections.go` -- Added `Dict[K, V].Each`, iterating in ascending `StringifyRepr` key order (matching `Dict.String`'s existing sort) instead of Go's randomized map order, so output is reproducible run to run.
+- **Creation**: `116_dict_each` golden test + `.output` sidecar; verified deterministic across 5 repeated `TestRuntime` runs.
+- **Note**: `remove`/`keys`/`values` (spec §10.8's other missing Dict methods) deliberately left unimplemented -- `remove`'s mutate-vs-copy-on-write semantics need a decision this fix didn't make (see write-up).
+
 ## 2026-09-27 (4)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0111; filed YZC-0112 (found immediately after, via spec's own "Match with continue" example); bumped golden-test count to 109, next available to YZC-0113.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0111: `parseConditionalBoc` parsed a match arm's `{ multi; statement }` body block as one opaque `*ast.BocLiteral` element instead of flattening it, so it got lowered as an anonymous closure value and emitted as a dead, uncalled `func(){}` literal.

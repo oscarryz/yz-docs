@@ -1,0 +1,15 @@
+// YZC-0113: Dict.each is documented in spec/10-standard-library.md §10.8
+// (`each` | `#(f #(key K, val V))` | Iterate over entries) but had no sema
+// case (silently widened to Unknown, same "extensible" fallthrough as
+// YZC-0104 before it) and no runtime method at all — `d.each(...)` failed
+// only at `go build` with "d.Each undefined". Iterates in ascending
+// StringifyRepr key order (matching Dict.String's existing sort) instead of
+// Go's randomized map order, so output is reproducible run to run.
+
+main: {
+    d : ["a": 1, "b": 2, "c": 3]
+    d.each({ k String, v Int;
+        print("${k} = ${v}")
+    })
+}
+main()

@@ -168,6 +168,27 @@ func (d Dict[K, V]) Has(k K) Bool {
 // Length returns the number of key-value pairs.
 func (d Dict[K, V]) Length() Int { return Int{val: int64(len(d.m))} }
 
+// Each calls fn for every key-value pair in the dict, in ascending key order
+// (by StringifyRepr, matching String's sort) rather than Go's randomized map
+// iteration order — otherwise every run of the same Yz program would iterate
+// in a different order.
+func (d Dict[K, V]) Each(fn func(K, V) Unit) {
+	type kv struct {
+		key K
+		val V
+	}
+	pairs := make([]kv, 0, len(d.m))
+	for k, v := range d.m {
+		pairs = append(pairs, kv{k, v})
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return StringifyRepr(pairs[i].key) < StringifyRepr(pairs[j].key)
+	})
+	for _, p := range pairs {
+		fn(p.key, p.val)
+	}
+}
+
 // GoMap returns the underlying Go map (for interop / codegen helpers).
 func (d Dict[K, V]) GoMap() map[K]V { return d.m }
 
