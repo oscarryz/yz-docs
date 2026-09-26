@@ -1,0 +1,18 @@
+// YZC-0114: a generic struct's homoiconic (backtick) representation leaked
+// the full Go import path for a nested generic type argument, e.g.
+// "Box(Array[yz/runtime/rt.Int], value: ...)" instead of "Box(Array[Int], ...)".
+// reflect.Type.Name() correctly strips the outer type's own package qualifier,
+// but for a generic instantiation it synthesizes the name from the type
+// argument's fully package-qualified String() form, so a std collection type
+// argument (Array[T], Box[T], ...) still leaked "yz/runtime/rt." internally.
+
+Box: {
+    T
+    value T
+}
+
+main: {
+    b : Box(value: [1, 2, 3])
+    print("`b`")
+}
+main()

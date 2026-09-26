@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -421,6 +422,14 @@ func Stringify(v any) string {
 	}
 }
 
+// importPathPrefix matches a Go import-path-qualified prefix before an
+// identifier (e.g. "yz/runtime/rt." in "yz/runtime/rt.Int"). reflect.Type's
+// Name() strips the outer type's own package qualifier, but for a generic
+// instantiation (e.g. Array[Int]) it synthesizes the name from the type
+// arguments' fully package-qualified String() form, so a nested type
+// argument still leaks its full import path (YZC-0114).
+var importPathPrefix = regexp.MustCompile(`\b[A-Za-z0-9_]+(?:/[A-Za-z0-9_]+)*\.`)
+
 // YzTypeName returns the Yz type name for a value (used in homoiconic output).
 func YzTypeName(v any) string {
 	switch v.(type) {
@@ -440,7 +449,7 @@ func YzTypeName(v any) string {
 		if t.Kind() == reflect.Ptr {
 			t = t.Elem()
 		}
-		return t.Name()
+		return importPathPrefix.ReplaceAllString(t.Name(), "")
 	}
 }
 

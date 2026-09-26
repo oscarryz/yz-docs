@@ -1,5 +1,11 @@
 # update log  
 
+## 2026-09-27 (6)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0114; bumped golden-test count to 111, next available to YZC-0115.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0114: a generic struct's homoiconic `String()` calls `std.YzTypeName` on its type-param field, which fell back to `reflect.TypeOf(v).Name()` -- correct for an ordinary struct, but Go's reflect synthesizes a generic instantiation's `Name()` from its type arguments' fully package-qualified `String()` form, leaking e.g. `yz/runtime/rt.Int` for a std collection type argument.
+- **Update**: `runtime/rt/types.go` -- `YzTypeName` now strips any `path/to/pkg.`-shaped prefix from `t.Name()` via a regex (`importPathPrefix`).
+- **Creation**: `117_generic_homoiconic_type_arg` golden test + `.output` sidecar.
+
 ## 2026-09-27 (5)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0113; bumped golden-test count to 110, next available to YZC-0114.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0113: `Dict.each` is documented in spec §10.8 but had neither a sema `fieldType` case (fell through to the same "extensible" `Unknown` YZC-0104 already fixed for `at`/`has`/`set`/`length`) nor a runtime `Each` method at all, failing only at `go build`.
