@@ -1272,7 +1272,11 @@ func (g *generator) emitSwitchStmt(sw *ir.SwitchStmt) {
 	}
 	g.linef("switch %s.%s {", g.expr(sw.Subject), field)
 	for _, c := range sw.Cases {
-		g.linef("case %s:", c.ConstName)
+		if c.IsDefault {
+			g.line("default:")
+		} else {
+			g.linef("case %s:", c.ConstName)
+		}
 		g.level++
 		g.emitStmts(c.Body)
 		g.level--
@@ -1294,7 +1298,11 @@ func (g *generator) emitSwitchIIFE(sw *ir.SwitchExpr) string {
 	}
 	inner.linef("switch %s.%s {", inner.expr(sw.Subject), swField)
 	for _, c := range sw.Cases {
-		inner.linef("case %s:", c.ConstName)
+		if c.IsDefault {
+			inner.line("default:")
+		} else {
+			inner.linef("case %s:", c.ConstName)
+		}
 		inner.level++
 		inner.emitBodyStmts(c.Body, true)
 		inner.level--
