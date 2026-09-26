@@ -7,6 +7,55 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0113 — `Dict.each` documented in spec but never implemented (no sema case, no runtime method) ✓
+
+  Found while dogfooding dict iteration:
+
+  ```yz
+  d : ["a": 1, "b": 2, "c": 3]
+  d.each({ k String, v Int; print("${k} = ${v}") })
+  ```
+  failed only at `go build`: `d.Each undefined (type rt.Dict[rt.String, rt.Int]
+  has no field or method Each)`.
+
+  spec/10-standard-library.md §10.8 documents `each` as a required Dict method
+  (`#(f #(key K, val V))`, "Iterate over entries") alongside `at`/`set`/`has`/
+  `length` (all fixed for YZC-0104) and `remove`/`keys`/`values` (still
+  missing — not part of this fix, see below).
+
+  **Root cause:** `DictType`'s `fieldType` case in `internal/sema/analyzer.go`
+  (added for YZC-0104) covers `at`/`at_opt`/`has`/`length`/`set` but has no
+  `each` case, so it fell through to the same "extensible — no error for
+  unknown dict methods" `Unknown` default YZC-0104 fixed for the other
+  methods. Unlike YZC-0104 though, `runtime/rt/collections.go`'s `Dict[K, V]`
+  also had no `Each` method at all — closure argument type-checking still
+  worked (the closure's own explicit param types, `k String, v Int`, are what
+  lowering actually uses, matching how `Array.each` already works), so this
+  compiled clean through sema and only broke at the Go compile step.
+
+  **Fix:**
+  - `internal/sema/analyzer.go`: added an `each` case to `DictType`'s
+    `fieldType` switch (`Returns: []Type{TypUnit}`, matching `ArrayType`'s
+    own parameterless-`BocType` pattern for `each`).
+  - `runtime/rt/collections.go`: added `Dict[K, V].Each(fn func(K, V) Unit)`.
+    Iterates in ascending key order (sorted by `StringifyRepr`, reusing the
+    same comparison `Dict.String()` already sorts by) rather than Go's
+    randomized map iteration order — otherwise the same Yz program would
+    print entries in a different order on every run.
+
+  **Regression coverage:** `testdata/golden/116_dict_each` — verified
+  deterministic across 5 repeated `TestRuntime` runs.
+
+  **Deliberately out of scope:** `remove`, `keys`, `values` (spec §10.8's
+  other missing Dict methods) are not implemented here. `keys`/`values` are
+  likely equally straightforward, but `remove`'s semantics need a decision
+  this fix didn't make: `Dict.set` is copy-on-write (returns a new `Dict`;
+  only `d[k] = v` index-assignment sugar auto-reassigns the caller's
+  variable — a direct `d.set(k, v)` dot-call silently discards the update),
+  and it's unclear whether `remove` should follow that same copy-on-write
+  convention or actually mutate in place. Left as a follow-up rather than
+  guessed at.
+
 ### [x] YZC-0111 — Cond-match arm with a multi-statement body block emits an uncalled closure literal ✓
 
   Found while dogfooding the `continue` fallthrough example straight from

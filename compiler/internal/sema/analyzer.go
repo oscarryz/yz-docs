@@ -2386,6 +2386,12 @@ func (a *Analyzer) fieldType(objType Type, fieldName string, pos ast.Pos) Type {
 			return &BocType{Returns: []Type{TypInt}}
 		case "set":
 			return &BocType{Returns: []Type{ot}}
+		case "each":
+			// YZC-0113: spec §10.8 documents `each` as a required Dict method
+			// (`#(f #(key K, val V))`) but it had no sema case at all — same
+			// "extensible" Unknown fallthrough as YZC-0104 before it, except this
+			// one had no runtime method either, so it only failed at `go build`.
+			return &BocType{Returns: []Type{TypUnit}}
 		}
 		return Unknown // extensible — no error for unknown dict methods
 	case *PathDependentType:
