@@ -7,6 +7,37 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0114 — Generic struct's homoiconic repr leaks the full Go import path for a nested generic type argument ✓
+
+  Found while dogfooding the backtick (homoiconic) print form on a generic
+  struct instantiated with a std collection type:
+
+  ```yz
+  Box: { T; value T }
+  main: { b : Box(value: [1, 2, 3]); print("`b`") }
+  ```
+  printed `Box(Array[yz/runtime/rt.Int], value: [1, 2, 3])` instead of
+  `Box(Array[Int], value: [1, 2, 3])`.
+
+  **Root cause:** the generated `String()` method for a generic struct calls
+  `std.YzTypeName(self.<firstTypeParamField>)` (`internal/codegen/codegen.go`)
+  to render its type argument. `YzTypeName` (`runtime/rt/types.go`) falls back
+  to `reflect.TypeOf(v).Name()` for any non-scalar type. For an ordinary
+  user-defined struct, `Name()` correctly omits the package qualifier. But for
+  a *generic instantiation* (e.g. `rt.Array[rt.Int]`), Go's reflect package
+  synthesizes `Name()` from the type arguments' fully package-qualified
+  `String()` form, so a std collection type argument still leaks its full
+  import path even though the outer type's own name is unqualified — a known
+  quirk of Go's generics reflection support, not something under this
+  package's control.
+
+  **Fix (`runtime/rt/types.go`):** `YzTypeName` now strips any
+  `path/to/pkg.`-shaped prefix from `t.Name()`'s result via a regex
+  (`importPathPrefix`), covering nested type arguments that `Name()` can't
+  otherwise be told to qualify differently.
+
+  **Regression coverage:** `testdata/golden/117_generic_homoiconic_type_arg`.
+
 ### [x] YZC-0113 — `Dict.each` documented in spec but never implemented (no sema case, no runtime method) ✓
 
   Found while dogfooding dict iteration:
