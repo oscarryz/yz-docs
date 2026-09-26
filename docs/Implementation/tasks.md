@@ -8,7 +8,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **103 golden + 25 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **104 golden + 25 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`, macro wire codec: `compiler/runtime/macrowire/`
 
@@ -40,7 +40,7 @@ YZC-0009 -- Range iteration -- S -- needs YZC-0031
 YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
 YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
 YZC-0039 -- Operators audit -- L -- needs YZC-0031  
-YZC-0101 -- Sibling method call fails sema resolution when callee is declared after caller -- S -- confirmed via modified `counter` example  
+~~YZC-0101 -- Sibling method call fails sema resolution when callee is declared after caller~~
 ~~YZC-0100 -- Boc-typed field in a body-only singleton silently dropped as a param~~
 ~~YZC-0008 -- Same-cown reentrant scheduling deadlock~~
 ~~YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods~~

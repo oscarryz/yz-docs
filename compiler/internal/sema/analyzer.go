@@ -1234,6 +1234,97 @@ func (a *Analyzer) analyzeBranchBody(boc *ast.BocLiteral) *BocLiteralType {
 // Struct type analysis (uppercase boc)
 // ---------------------------------------------------------------------------
 
+// preRegisterSiblingMethods (YZC-0101) registers an approximate stub symbol in
+// a.currentScope for every method-shaped element of b: a lowercase ShortDecl
+// whose value is a BocLiteral (the `name: { ... }` method-shorthand), and a
+// lowercase BocDecl with a body (the `name #(sig) { ... }` form). Selection
+// criteria mirror the lowerer's collectMethodNames (internal/ir/lower.go).
+//
+// This only needs to make forward references resolvable; the main loop in
+// analyzeStructBoc overwrites each stub with the real, fully-analyzed symbol
+// when it reaches that element, exactly as already happens for a method's own
+// self-reference (see the pre-registration in analyzeBocDecl/analyzeBocDeclNode).
+func (a *Analyzer) preRegisterSiblingMethods(b *ast.BocLiteral) {
+	for _, elem := range b.Elements {
+		switch e := elem.(type) {
+		case *ast.ShortDecl:
+			if len(e.Names) != 1 || len(e.Values) != 1 {
+				continue
+			}
+			name := e.Names[0]
+			if isUppercaseName(name.Name) {
+				continue
+			}
+			bocLit, ok := e.Values[0].(*ast.BocLiteral)
+			if !ok {
+				continue
+			}
+			if a.currentScope.LookupLocal(name.Name) != nil {
+				continue
+			}
+			hasStructure := false
+			for _, inner := range bocLit.Elements {
+				switch ie := inner.(type) {
+				case *ast.BocDecl:
+					if ie.Body != nil {
+						hasStructure = true
+					}
+				case *ast.ShortDecl:
+					if len(ie.Values) == 1 {
+						if _, ok := ie.Values[0].(*ast.BocLiteral); ok {
+							hasStructure = true
+						}
+					}
+				}
+				if hasStructure {
+					break
+				}
+			}
+			var typ Type
+			if hasStructure {
+				typ = &StructType{Name: name.Name, IsSingleton: true, Returns: []Type{TypUnit}}
+			} else {
+				typ = &BocType{Params: a.collectParams(bocLit.Elements), Returns: []Type{TypUnit}}
+			}
+			a.currentScope.Define(&Symbol{Name: name.Name, Type: typ, Node: e})
+
+		case *ast.BocDecl:
+			if e.Body == nil {
+				continue
+			}
+			if e.Name.TokType == token.TYPE_IDENT || e.Name.TokType == token.GENERIC_IDENT {
+				continue
+			}
+			if a.currentScope.LookupLocal(e.Name.Name) != nil {
+				continue
+			}
+			// resolveBocSigParams may emit diagnostics for unresolved types; the
+			// main loop resolves the signature again for real, so drop any errors
+			// raised here to avoid reporting the same problem twice.
+			errMark := len(a.errors)
+			allParams := a.resolveBocSigParams(e.Sig, e.BodyOnly)
+			a.errors = a.errors[:errMark]
+			var inputParams []BocParam
+			var explicitReturns []Type
+			for _, p := range allParams {
+				if p.IsReturn {
+					explicitReturns = append(explicitReturns, p.Type)
+				} else {
+					inputParams = append(inputParams, p)
+				}
+			}
+			if len(explicitReturns) == 0 {
+				explicitReturns = []Type{TypUnit}
+			}
+			a.currentScope.Define(&Symbol{
+				Name: e.Name.Name,
+				Type: &BocType{Params: inputParams, Returns: explicitReturns},
+				Node: e,
+			})
+		}
+	}
+}
+
 // analyzeStructBoc analyzes a boc literal as a struct type, returning the
 // struct type and the last-expression types (body return types).
 // It is used for both uppercase struct declarations and lowercase singleton
@@ -1272,6 +1363,13 @@ func (a *Analyzer) analyzeStructBoc(name string, b *ast.BocLiteral) (*StructType
 	if isGeneric {
 		a.activeConstraints = make(map[string][]*GenericConstraint)
 	}
+
+	// Pre-scan (YZC-0101): register a stub symbol for every method-shaped sibling
+	// before analyzing any method body, mirroring the lowerer's collectMethodNames
+	// (internal/ir/lower.go), so that a call to a sibling declared later in the
+	// same body resolves instead of erroring "undefined". Each stub is overwritten
+	// with its real, fully-analyzed type when the main loop below reaches it.
+	a.preRegisterSiblingMethods(b)
 
 	for _, elem := range b.Elements {
 		switch e := elem.(type) {

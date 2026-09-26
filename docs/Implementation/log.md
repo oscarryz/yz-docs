@@ -1,5 +1,10 @@
 # update log  
 
+## 2026-09-26
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0101; bumped golden-test count to 104.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0101 writeup (now-empty Bugs section removed).
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0101 (sibling-method pre-scan in `analyzeStructBoc`).
+
 ## 2026-09-24
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0100 and YZC-0008; added and indexed YZC-0101.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the closed YZC-0100/YZC-0008 writeups; added YZC-0101.
