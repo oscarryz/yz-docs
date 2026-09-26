@@ -7,6 +7,63 @@ Open ticket details. See tasks.md for the index.
 
 ---
 
+## Bugs
+
+- [ ] **[YZC-0112] `continue` inside a cond-match arm is silently dropped instead of falling through to the next branch** -- *design*
+
+  Found immediately after fixing YZC-0111, using spec/07-control-flow.md's own
+  "Match with `continue`" example verbatim:
+
+  ```yz
+  main: {
+      x : 15
+      match {
+          x > 0 => {
+              print("positive")
+              continue    // Also check next condition
+          }
+      }, {
+          x > 10 => print("and greater than 10")
+      }, {
+          print("done")
+      }
+  }
+  main()
+  ```
+
+  Per spec, `continue` should fall through to the *next* branch after
+  executing the current one, so with `x = 15` both "positive" and "and greater
+  than 10" should print. It compiles clean and runs, but only prints
+  "positive" -- the `continue` has no effect at all.
+
+  **Root cause:** `continue` is parsed (`ast.ContinueStmt`) and sema treats it
+  as a no-op (`analyzer.go`'s `case *ast.BreakStmt, *ast.ContinueStmt:`), but
+  there is no lowering or codegen support anywhere for either statement --
+  `internal/ir/lower.go` and `internal/codegen/codegen.go` have zero handling
+  for `*ast.ContinueStmt`. In an arm's flat statement list
+  (`lowerElementStmts`/`lowerMatchArmBody`), a `ContinueStmt` element matches
+  no case in either function's type switch and is silently skipped, leaving
+  no trace in the generated Go at all.
+
+  **Why not a quick fix:** a cond-match lowers to a Go `if / else if / else`
+  chain (`tryLowerMatch`) or an IIFE built the same way (`lowerMatchExpr`).
+  Go's `if/else if` chain has no construct for "having entered this branch,
+  now also test the next condition" -- unlike a `switch` with `fallthrough`
+  (which unconditionally runs the next case, not conditionally on its own
+  test). Implementing real fallthrough-to-next-condition semantics needs a
+  different generated shape entirely (e.g. a labeled loop over the arms with
+  each condition re-tested and an explicit `continue <label>`, or restructuring
+  to nested `if`s so a later condition is reachable code after an earlier
+  branch's body). Also relevant: this is a different feature from open ticket
+  YZC-0019 ("break / continue / return in loops") -- that one is about
+  `continue`/`break` inside `while` loops; this is `match`'s own fallthrough
+  keyword, spec'd separately in §7.3 and never mentioned in YZC-0019.
+
+  Marked *design* because the fix requires picking the generated-code shape
+  for match first, not just wiring up an existing IR node.
+
+---
+
 ## Language Features
 
 - [ ] **[YZC-0009] Range iteration**

@@ -1,5 +1,12 @@
 # update log  
 
+## 2026-09-27 (4)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0111; filed YZC-0112 (found immediately after, via spec's own "Match with continue" example); bumped golden-test count to 109, next available to YZC-0113.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0111: `parseConditionalBoc` parsed a match arm's `{ multi; statement }` body block as one opaque `*ast.BocLiteral` element instead of flattening it, so it got lowered as an anonymous closure value and emitted as a dead, uncalled `func(){}` literal.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Added a Bugs entry for YZC-0112: `continue` inside a match arm has zero lowering/codegen support (only parsed + no-op'd in sema) and is silently dropped instead of falling through to the next branch, per spec §7.3. Marked *design* -- Go's if/else-if chain has no native construct for conditional fallthrough, so the fix needs a different generated shape for match, not just wiring up an IR node. Distinct from open YZC-0019 (loop break/continue).
+- **Update**: `internal/parser/parser.go` -- `parseConditionalBoc` now detects a `{` immediately after the optional `cond =>`, parses it as a nested boc literal via `parseBocLiteral`, and flattens its `.Elements` directly into `arm.Body` instead of leaving it as a single wrapping node.
+- **Creation**: `115_match_arm_body_block` golden test + `.output` sidecar.
+
 ## 2026-09-27 (3)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0110; bumped error-conformance-test count to 26, next available to YZC-0111.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0110: `analyzeStructBoc`'s `case *ast.Ident` (meant only for bare single-letter generic type params) matched on Go AST type instead of `TokType`, so any bare-Ident statement inside a closure/anonymous-boc body -- HOF closures, match arms -- was silently registered as a fabricated generic type instead of being resolved and validated.
