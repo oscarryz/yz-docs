@@ -23,12 +23,17 @@ func Print(v any) Unit {
 // Read
 // ---------------------------------------------------------------------------
 
+// stdinScanner is created once and reused across all Read calls. bufio.Scanner
+// reads ahead from the underlying stream, so a fresh scanner per call would
+// silently discard any input already buffered past the current line (e.g.
+// piped multi-line input available all at once).
+var stdinScanner = bufio.NewScanner(os.Stdin)
+
 // Read takes the user input from stdin.
 func Read(v String) String {
 	fmt.Print(v)
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	return NewString(scanner.Text())
+	stdinScanner.Scan()
+	return NewString(stdinScanner.Text())
 }
 
 // ---------------------------------------------------------------------------
