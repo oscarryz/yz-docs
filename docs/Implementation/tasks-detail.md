@@ -183,6 +183,89 @@ Open ticket details. See tasks.md for the index.
 
 ---
 
+- [ ] **[YZC-0121] A call to an unresolvable identifier compiles clean through yzc and only fails when the emitted Go is built, leaking a raw `go build` error (`undefined: While`) instead of a Yz-level diagnostic** -- S
+
+  Found dogfooding `yz-tutorial/src/main.yz`, which calls `while({...}, {...})`
+  assuming it's a language builtin (spec 10.8 documents it as a "core function").
+  `yzc build`/`run` reported nothing wrong; the failure only surfaced as:
+
+  ```
+  ./main.go:39:29: undefined: While
+  yzc run: go build: exit status 1
+  ```
+
+  **Root cause:** `while` is pre-seeded into sema's builtin scope
+  (`internal/sema/scope.go:217`) with a full `BocType` signature, so any call to
+  it type-checks exactly like a real builtin -- but it has no codegen backing:
+  it's missing from `builtinGoName` (`internal/ir/lower.go:2956`), and unlike
+  `print`/`read`/`info` there's no runtime `std.While`. The only way `while`
+  actually works today is if the user defines it themselves as an ordinary
+  recursive boc (as golden test `05_while.yz` does). When no such definition
+  exists, `lowerCall` falls through to the generic bare-Ident path and emits a
+  call to a Go identifier (`While`) that nothing ever declares -- `yzc`'s own
+  passes have no check that a lowered call site's target actually got emitted
+  somewhere, so the dangling reference reaches `go build` unnoticed and comes
+  back as a raw Go compiler error -- pointing at `main.go`, the generated file
+  the user never wrote or sees, with no reference back to `main.yz` or the
+  offending call site at all.
+
+  **Fix direction:** this is a general class of gap, not just a `while` bug --
+  add a post-lowering (or codegen) verification pass that every emitted bare
+  function call resolves to a known declaration (builtin, runtime, or
+  user-defined) and fails with a proper Yz diagnostic if not. Separately,
+  `while`'s builtin-scope entry is misleading either way: either give it real
+  codegen backing (see `tasks-done.md`'s macro-prelude follow-up, "runtime
+  backing for builtin `while`") or stop pre-seeding it as if resolvable and
+  require the recursive user-defined form the golden test already uses.
+
+---
+
+- [ ] **[YZC-0122] A same-named file-wrapper boc is unwrapped by sema but not by the lowerer when the inner boc uses the `name #(params) { }` signature form, so the declaring and calling sides disagree on its shape and only `go build` catches it** -- S
+
+  Found immediately after filing YZC-0121, while working around it by moving
+  `while`'s definition into its own `while.yz` (same signature form as golden
+  test `05_while.yz`). `yzc run` again reported nothing wrong; the failure
+  only surfaced as:
+
+  ```
+  ./main.go:23:24: too many arguments in call to While.Call
+          have (func() rt.Bool, func() rt.Unit)
+          want ()
+  ```
+
+  **Root cause:** every `.yz` file is auto-wrapped -- its top-level content
+  becomes the body of an implicit boc named after the file
+  (`cmd/yzc/build.go:357-365`). `while.yz` therefore declares two things named
+  `while`: the implicit file wrapper, and the user's own `while #(cond #(Bool),
+  body #()) { ... }` inside it. When a file wrapper's body contains a same-named
+  inner boc, the outer wrapper is meant to be a no-op and the inner boc used
+  directly instead (the same trick that makes `utils.yz` containing `utils: {}`
+  work) -- but this unwrap is implemented twice, once per compiler phase, and
+  only one recognizes the signature form:
+
+  - Sema (`internal/sema/analyzer.go:653-680`) matches the inner symbol via
+    `innerScope.LookupLocal(name.Name)`, which finds it regardless of AST shape
+    (`*ast.ShortDecl` or `*ast.BocDecl`). So `main.yz`'s call site type-checks
+    against the real 2-param boc and `main.go` correctly emits both arguments.
+  - The lowerer's equivalent check, `fileWrapperHasInnerBoc`
+    (`internal/ir/lower.go:253`), only matches a `*ast.ShortDecl` inner element
+    (`name: { ... }`). A `*ast.BocDecl` inner element (`name #(params) { ... }`)
+    doesn't match, so `while.yz` never unwraps at codegen time -- the empty
+    outer wrapper is emitted as `While` (a zero-arg singleton), with the real
+    `while` logic buried inside it as an unreachable private method.
+
+  The caller and the declaration end up built from two different assumptions
+  about `While`'s shape; `go build` is what finally notices, not `yzc`. This is
+  a second, more specific instance of the same underlying gap as YZC-0121 (no
+  verification that what a call site expects matches what was actually
+  generated) but with a distinct, fixable root cause.
+
+  **Fix direction:** extend `fileWrapperHasInnerBoc` to also match a same-named
+  `*ast.BocDecl` element (not just `*ast.ShortDecl`), so both compiler phases
+  agree on when a file wrapper unwraps.
+
+---
+
 ## Language Features
 
 - [ ] **[YZC-0009] Range iteration**
