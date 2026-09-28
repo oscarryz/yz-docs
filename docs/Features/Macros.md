@@ -187,6 +187,21 @@ See also: [Structural Reflection](Structural%20Reflection.md) for the full `Boc`
 
 ---
 
+## What Makes a Good Macro Candidate
+
+A macro only earns its keep when it mechanizes something that depends on the reflected `subject.fields` data *per type* — like `Debug`, which loops fields to build a format string shaped by that specific type. If the generated code would be identical regardless of which fields the subject has, a macro adds a subprocess round-trip for zero value over writing it once by hand.
+
+Case in point: a proposed "self-reference" macro (`person.self = person`) was rejected. Two independent reasons:
+
+1. Yz has no `self`/`this` keyword in source at all — `self` exists only as the hardcoded Go receiver name in the compiler's lowerer, so a macro can't emit an expression that means "the current instance."
+2. Even with a `self` keyword, the generated code would be the same one-liner for every type regardless of its fields — no per-type work to mechanize.
+
+Self-reference belongs in the language as a keyword feature, not a macro — see [`Self keyword`](../Questions/Self%20keyword.md), tracked as YZC-0060 (core) / YZC-0099 (native-builtins follow-up).
+
+Macros also can't see live instances or the parent scope: the wire format serializes only `{name, fields}` as a structural snapshot of the type *declaration*, taken pre-sema. There is no runtime object graph at macro-expansion time.
+
+---
+
 ## Ordering of Multiple Macros
 
 When multiple macros appear in an annotation they run in **top-to-bottom declaration order**. Each receives the result of the previous one — the progressively merged boc, not the original.

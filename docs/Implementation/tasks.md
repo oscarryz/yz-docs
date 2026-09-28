@@ -3,7 +3,7 @@ type: impl
 generated: { by: "oscarryz", at: 2026-05-27T22:35:53+02:00 }
 ---
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0118**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0119**.
 
 # Yz Compiler Implementation
 
@@ -47,6 +47,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 ~~YZC-0111 -- Cond-match arm with a multi-statement body block (`cond => { s1; s2 }`) parses as one opaque boc-literal element instead of flattening, emitting an uncalled closure literal~~  
 YZC-0112 -- `continue` inside a cond-match arm (spec §7.3 fallthrough) is parsed and no-op'd in sema but never lowered/codegen'd, so it silently does nothing instead of falling through to the next branch -- M -- *design*  
 YZC-0116 -- A non-leaf held-cown call nested inside a match arm, infix-match body, or HOF closure body (`.each`/`.filter`) deadlocks when forced -- same gap as YZC-0107, one level deeper than that fix reaches -- M -- *design*  
+YZC-0118 -- Macro run-output cache is keyed on name+payload only, not the macro's own source/binary hash, so editing a macro body reuses stale cached output until `target/` is cleared by hand -- S  
 ~~YZC-0117 -- Array.Each / Dict.Each are Go-void but sema types them as Unit-returning, so `.each(...)` as a boc method's tail statement generates `return <void call>`, failing at `go build`~~
 ~~YZC-0113 -- `Dict.each` documented in spec §10.8 but had no sema case and no runtime method at all, failing only at `go build`~~  
 ~~YZC-0114 -- Generic struct's homoiconic (backtick) repr leaks the full Go import path for a nested generic type argument (e.g. `Box(Array[yz/runtime/rt.Int], ...)`)~~  

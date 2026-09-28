@@ -1,5 +1,15 @@
 # update log  
 
+## 2026-09-28 (4)
+- **Update**: [concurrency-design.md](./concurrency-design.md) -- Added §8 "Implemented Mechanisms — Quick Reference": Go-backend mapping table, `ScheduleFlatten`/cown-suspension writeup (previously undocumented in this file), conformance-test list. Migrated from a session memory note, verified against current source.
+- **Update**: [boc_uniformity.md](./boc_uniformity.md) -- Added the four-boc-forms terminology table (signature/declaration/expanded-form/literal/short-declaration) as a named subsection.
+- **Update**: `docs/Features/Macros.md` -- Added "What Makes a Good Macro Candidate" section (per-type mechanization test; the rejected self-reference-macro case study; YZC-0060/YZC-0099 cross-references).
+- **Update**: [tasks.md](./tasks.md) -- Filed YZC-0118; next available bumped to YZC-0119.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Added Bugs entry for YZC-0118: macro run-output cache key omits the macro's own binary hash, so editing a macro body and rebuilding can silently serve stale cached output for an unchanged subject payload. Verified against current `cmd/yzc/macro.go` before filing.
+- **Update**: [conformance-golden-tests.md](./conformance-golden-tests.md) -- Added a second concrete case (YZC-0078) to the sidecar-trap discussion: `make test` alone missed `TestRuntime`/`TestExamples` failures that `make test-full` would have caught.
+- **Update**: `docs/Implementation/implementation_plan.md` -- Fixed stale `yz-docs-1` repo-name references (renamed to `yz-docs`); fixed a broken absolute `file://` link to `decisions.md`.
+- **Note**: this batch migrated durable content out of session memory (`~/.claude/.../memory/`) into the repo per user request -- `project_boc.md`, `boc_terminology.md`, and `boc_uniformity.md` (memory) are now deleted, fully superseded by the repo docs above.
+
 ## 2026-09-28 (3)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0117; bumped golden-test count to 114, next available to YZC-0118. Broadened YZC-0116's title to cover HOF closure bodies too.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Folded a closure-body repro into YZC-0116 (same root cause, same deferred design question -- confirmed while chasing this ticket). Removed nothing else; YZC-0117 goes straight from repro to tasks-done since it was fixed same-session.

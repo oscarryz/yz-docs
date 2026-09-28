@@ -160,6 +160,27 @@ Open ticket details. See tasks.md for the index.
   where a per-body-lowering-function hoist (or a single shared hoist run
   recursively over every nested body a boc method contains) should live.
 
+- [ ] **[YZC-0118] Macro run-output cache is keyed on `name + payload` only, not on the macro's own source/binary hash, so editing a macro body and rebuilding reuses stale generated output** -- S
+
+  Found while reviewing macro-system design notes from the YZC-0028 branch bake-off
+  (2026-08-31) -- reproduced identically on both competing implementations,
+  independent of which one won, so it's a shared design gap rather than a
+  branch-specific bug.
+
+  `invokeMacro` (`cmd/yzc/macro.go:662`) computes its cache key as
+  `sha256.Sum256([]byte(def.Name + "\x00" + payload))` and serves
+  `target/macros/<pkgKey>/runs/<key>` when present. The macro's own compiled
+  *binary* is separately cached on a source hash and correctly rebuilds when the
+  macro's source changes -- but the *run* cache doesn't know that happened: for a
+  subject boc whose payload is unchanged, the old cached output from the previous
+  binary version is served instead of invoking the freshly rebuilt macro. Symptom:
+  edit a macro's `run` body, rebuild the app that uses it, see the *old* generated
+  code until `target/` is cleared by hand.
+
+  **Fix direction:** fold the macro binary's own content hash (already computed for
+  the bootstrap-compile cache) into the run-cache key, e.g.
+  `sha256(def.Name + "\x00" + binaryHash + "\x00" + payload)`.
+
 ---
 
 ## Language Features

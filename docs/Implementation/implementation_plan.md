@@ -5,7 +5,7 @@ generated: { by: "oscarryz", at: 2026-04-03T16:30:02+02:00 }
 #impl 
 # Yz Compiler — Implementation Plan
 
-All pre-implementation decisions resolved in [decisions.md](file:///Users/oscar/code/github/oscarryz/yz-docs-1/Implementation/decisions.md).
+All pre-implementation decisions resolved in [decisions.md](./decisions.md).
 
 ---
 
@@ -30,10 +30,10 @@ flowchart LR
 
 ## Project Structure
 
-The compiler lives inside the existing `yz-docs-1` repository under the `compiler/` directory.
+The compiler lives inside the existing `yz-docs` repository under the `compiler/` directory.
 
 ```
-yz-docs-1/                    (existing repo)
+yz-docs/                      (existing repo)
 ├── README.md
 ├── spec/
 ├── Examples/
@@ -236,7 +236,7 @@ First milestone reached: `examples/milestone/` — concurrent HTTP fetches + cou
 All tests run from the `compiler/` directory:
 
 ```bash
-cd /Users/oscar/code/github/oscarryz/yz-docs-1/compiler
+cd /Users/oscar/code/github/oscarryz/yz-docs/compiler
 go test ./...
 ```
 
@@ -248,7 +248,7 @@ After Phase 5, compile and run a concurrent `.yz` program end-to-end. The first 
 program fetches two resources concurrently and implements a counter boc:
 
 ```bash
-cd /Users/oscar/code/github/oscarryz/yz-docs-1/compiler
+cd /Users/oscar/code/github/oscarryz/yz-docs/compiler
 go run ./cmd/yzc run examples/milestone
 ```
 

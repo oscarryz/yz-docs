@@ -37,6 +37,15 @@ When adding a golden test for any construct that has runtime-observable behavior
 
 A golden test with no `.output` is a text-diff fixture only. Treat it as a **weaker** test than one with an `.output` sidecar, not an equivalent one — it does not confirm the generated code compiles, let alone behaves correctly.
 
+## The same trap, one level up: skipping `make test-full` itself
+
+Even with `.output` sidecars in place, they only get checked by `TestRuntime` —
+which `make test` (`-short`) skips entirely. YZC-0078 was closed using only
+`make test`, which missed `TestRuntime`/`TestExamples` failures the full suite
+would have caught (wrong `String` quoting in tests 30/31/33 and three example
+files). Always run `make test-full` (or `go test ./...`) before closing a ticket,
+not just during iteration.
+
 ## The opposite failure mode
 
 `.output` sidecars aren't free either: they only work for deterministic output. YZC-0048 (see `tasks-done.md`) had to delete a `.output` sidecar for a test whose concurrent output ordering was legitimately non-deterministic — the source-diff `TestGolden` test was kept, but `TestRuntime` coverage for that case was dropped rather than made flaky. Before adding a `.output` file, make sure the construct under test has a single correct output ordering; if it doesn't, that's a real coverage gap to accept, not a reason to write a flaky expectation.

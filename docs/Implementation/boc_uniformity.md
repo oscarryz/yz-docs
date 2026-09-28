@@ -26,6 +26,18 @@ print(counter.value()) // 2
 
 `count`, `increment`, and `value` are all fields of `counter`. Calling `counter.increment()` runs the body `{ count = count + 1 }`. Calling `counter()` would run counter's own body top-to-bottom, reinitializing its fields.
 
+### The four forms, named
+
+Settled in commit `dbeb0d22847d5b76195ea104d13906d681b582b6`. Use these exact terms in docs, spec, and design discussions — never "BocWithSig", "function boc", or "stateless boc" (see "Where the Misunderstanding Crept In" below for why those framings are wrong).
+
+| Form | Syntax | Name |
+|---|---|---|
+| `#(..)` | signature only, no body | **boc signature** / **boc interface** |
+| `#(..) { }` | signature + body together | **boc declaration** |
+| `#(..) = { }` | signature + body separated by `=` | **boc expanded form** |
+| `{ }` | body only, no signature | **boc literal** |
+| `name : { }` | short decl with boc literal | **short boc declaration** (signature inferred from body, all fields public) |
+
 ### Calling a boc with arguments
 
 Positional args set fields in declaration order before running the body:

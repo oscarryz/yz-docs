@@ -344,3 +344,55 @@ Phase C is deferred until Phase A and Phase B are stable. It requires the boc un
 - **No deadlock**: single-cown acquisition cannot deadlock. Multi-cown (Phase B): canonical ordering prevents circular waiting.
 - **Structured lifetimes**: a parent boc's `BocGroup.Wait()` ensures all children complete before the parent exits, regardless of cown scheduling.
 - **Thunk transparency**: callers never observe the cown mechanism; they only see the resolved `*Thunk[T]` value.
+
+---
+
+## 8. Implemented Mechanisms — Quick Reference (added 2026-09-28)
+
+Sections 1–7 describe the original design proposal and its phase lettering (A/B/C).
+Implementation ended up going further than that plan in one respect not covered
+above. This section is a map from concept to source, not a new phase sequence.
+
+| Yz concept | Go implementation | File |
+|---|---|---|
+| Singleton cown | `std.Cown` embedded in every singleton struct | `runtime/rt/cown.go` |
+| Singleton method (behaviour) | `std.Schedule(&self.Cown, func() T { ... })` | codegen `emitThunk` |
+| Multi-cown behaviour | `std.ScheduleMulti([]*std.Cown{c1,c2,...}, func() T {...})` | codegen `emitThunk` |
+| Inline force of same-cown sub-boc | `std.ScheduleFlatten([]*std.Cown{...}, func() *Thunk[T] {...})` | codegen `emitScheduleFlatten` |
+| Cross-cown field write | `std.Schedule(&Target.Cown, func() std.Unit { Target.f = v; return std.TheUnit }).Force()` | lowerer `lowerAssignment` |
+| Lazy return value | `*std.Thunk[T]` — forced at IO boundary | `runtime/rt/thunk.go` |
+| Structured concurrency | `std.BocGroup` + `WaitGroup` | `runtime/rt/core.go` |
+| Cown scheduler | Lock-free atomic queue per cown (BOC paper §3 algorithm) | `runtime/rt/cown.go` |
+| Held-cown call hoisting (non-leaf, nested expr) | `hoistHeldCownCalls`/`isNonLeafHeldCownCall` | lowerer — see the YZC-0107 note above |
+
+### Cown suspension (`ScheduleFlatten`)
+
+A behaviour that holds a cown and inline-forces a sub-boc call needing that *same*
+cown deadlocks by default (the sub-boc queues behind the very behaviour that's
+blocked waiting on it). Fix: split the body at the `DeclStmt{IsThunk:true}` node
+into three phases:
+
+1. **Phase 1** runs inside `ScheduleFlatten`'s protected fn (cown held): registers
+   the sub-boc call, returns `*Thunk[*Thunk[T]]`.
+2. Cown released when phase 1 returns.
+3. Sub-boc acquires the cown and runs.
+4. **Phase 2** runs inside `NewThunk` → `loaded.Force()` → an inner `ScheduleMulti`
+   reacquires the cown for the continuation.
+
+`ScheduleFlatten[T]` (flattens `*Thunk[*Thunk[T]]` → `*Thunk[T]`) lives in
+`runtime/rt/cown.go`; `emitScheduleFlatten`/`stripThunkForce`/`thunkFindInlineThunkVar`
+in `internal/codegen/codegen.go` implement the split. Golden test:
+`46_inline_force_same_cown.yz`; traceable example: `examples/inline_force_cown/`
+(busy-waits + `trace.StartRegion` annotations confirm the 3-phase execution order).
+
+### Conformance coverage
+
+- `02_counter.yz` — singleton with cown, Schedule-based methods
+- `41_multi_cown_sync.yz` — `ScheduleMulti`, atomic multi-cown acquisition
+- `42_cross_cown_write.yz` — cross-cown field write wrapped in `Schedule`
+- `46_inline_force_same_cown.yz` — `ScheduleFlatten`, inline force of same-cown sub-boc
+- `119_reentrant_expr_position_force.yz` — held-cown call hoisted out of a nested expression (YZC-0107)
+
+Data races, deadlock, and concurrency-model correctness are only visible through the
+race detector — always run `go test -race -count=1 ./...` (`make test-race`) when
+touching concurrency, scheduler, or codegen.
