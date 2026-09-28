@@ -2955,6 +2955,7 @@ func (l *lowerer) lowerName(name string) Expr {
 // Builtins are emitted as direct calls (not goroutine-wrapped).
 var builtinGoName = map[string]string{
 	"print": "std.Print",
+	"read" : "std.Read",
 	"info":  "std.Info",
 }
 

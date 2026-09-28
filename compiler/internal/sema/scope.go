@@ -15,10 +15,10 @@ import (
 type Symbol struct {
 	Name           string
 	Type           Type
-	FQN            string     // fully-qualified name (empty for locals without a global FQN)
-	Node           ast.Node   // declaration site; nil for built-ins
-	ParentTypeName string     // non-empty for variant constructors (e.g. "Pet" for Cat/Dog)
-	Alternatives   []*Symbol  // non-nil when multiple variant types share this constructor name
+	FQN            string    // fully-qualified name (empty for locals without a global FQN)
+	Node           ast.Node  // declaration site; nil for built-ins
+	ParentTypeName string    // non-empty for variant constructors (e.g. "Pet" for Cat/Dog)
+	Alternatives   []*Symbol // non-nil when multiple variant types share this constructor name
 }
 
 // ---------------------------------------------------------------------------
@@ -68,17 +68,17 @@ func (s *Scope) LookupLocal(name string) *Symbol {
 // Non-word method names use the symbol-name convention (plus, qm, eqeq, etc.).
 var builtinMethods = map[string]map[string]Type{
 	"Int": {
-		"plus":      TypInt,   // +
-		"minus":     TypInt,   // -
-		"star":      TypInt,   // *
-		"slash":     TypInt,   // /
-		"percent":   TypInt,   // %
-		"lt":        TypBool,  // <
-		"gt":        TypBool,  // >
-		"lteq":      TypBool,  // <=
-		"gteq":      TypBool,  // >=
-		"eqeq":      TypBool,  // ==
-		"neq":       TypBool,  // !=
+		"plus":      TypInt,  // +
+		"minus":     TypInt,  // -
+		"star":      TypInt,  // *
+		"slash":     TypInt,  // /
+		"percent":   TypInt,  // %
+		"lt":        TypBool, // <
+		"gt":        TypBool, // >
+		"lteq":      TypBool, // <=
+		"gteq":      TypBool, // >=
+		"eqeq":      TypBool, // ==
+		"neq":       TypBool, // !=
 		"abs":       TypInt,
 		"to":        &StructType{Name: "Range"}, // 1.to(10) → Range
 		"to_str":    TypString,
@@ -104,10 +104,10 @@ var builtinMethods = map[string]map[string]Type{
 		"plus":       TypString, // + (concatenation)
 		"eqeq":       TypBool,
 		"neq":        TypBool,
-		"lt":         TypBool,   // <
-		"gt":         TypBool,   // >
-		"lteq":       TypBool,   // <=
-		"gteq":       TypBool,   // >=
+		"lt":         TypBool, // <
+		"gt":         TypBool, // >
+		"lteq":       TypBool, // <=
+		"gteq":       TypBool, // >=
 		"length":     TypInt,
 		"contains":   TypBool,
 		"has_prefix": TypBool,
@@ -119,9 +119,9 @@ var builtinMethods = map[string]map[string]Type{
 		"to_string":  TypString,
 	},
 	"Bool": {
-		"ampamp":    TypBool,  // &&
-		"pipepipe":  TypBool,  // ||
-		"qm":        Unknown,  // ? — return type depends on boc args; resolved later
+		"ampamp":    TypBool, // &&
+		"pipepipe":  TypBool, // ||
+		"qm":        Unknown, // ? — return type depends on boc args; resolved later
 		"eqeq":      TypBool,
 		"neq":       TypBool,
 		"to_str":    TypString,
@@ -131,25 +131,25 @@ var builtinMethods = map[string]map[string]Type{
 
 // nonWordToMethodName maps a non-word operator literal to its Go symbol name.
 var nonWordToMethodName = map[string]string{
-	"+":   "plus",
-	"-":   "minus",
-	"*":   "star",
-	"/":   "slash",
-	"%":   "percent",
-	"<":   "lt",
-	">":   "gt",
-	"<=":  "lteq",
-	">=":  "gteq",
-	"==":  "eqeq",
-	"!=":  "neq",
-	"&&":  "ampamp",
-	"||":  "pipepipe",
-	"?":   "qm",
-	"<<":  "ltlt",
-	">>":  "gtgt",
-	"!":   "bang",
-	"++":  "plusplus",
-	"--":  "minusminus",
+	"+":  "plus",
+	"-":  "minus",
+	"*":  "star",
+	"/":  "slash",
+	"%":  "percent",
+	"<":  "lt",
+	">":  "gt",
+	"<=": "lteq",
+	">=": "gteq",
+	"==": "eqeq",
+	"!=": "neq",
+	"&&": "ampamp",
+	"||": "pipepipe",
+	"?":  "qm",
+	"<<": "ltlt",
+	">>": "gtgt",
+	"!":  "bang",
+	"++": "plusplus",
+	"--": "minusminus",
 }
 
 // NonWordMethodName returns the Go-safe method name for a non-word operator.
@@ -205,6 +205,12 @@ func newBuiltinScope() *Scope {
 	s.Define(&Symbol{Name: "print", Type: &BocType{
 		Params:  []BocParam{{Label: "value", Type: TypString}},
 		Returns: []Type{TypUnit},
+	}})
+
+	// read — #(prompt String, String) — read user input
+	s.Define(&Symbol{Name: "read", Type: &BocType{
+		Params:  []BocParam{{Label: "prompt", Type: TypString}},
+		Returns: []Type{TypString},
 	}})
 
 	// while — #(cond #(Bool), body #()) — loop primitive

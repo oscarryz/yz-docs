@@ -1,0 +1,7 @@
+// YZC-0120: `yzc run` never wired the compiled binary's stdin, so `read`
+// hit instant EOF and returned "" instead of waiting for input.
+main: {
+    name: read("Name: ")
+    print("Hello, ${name}")
+}
+main()

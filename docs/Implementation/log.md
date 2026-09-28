@@ -1,5 +1,12 @@
 # update log  
 
+## 2026-09-28 (6)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0120; bumped golden-test count to 116, next available to YZC-0121.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0120: `cmdRun` (`cmd/yzc/build.go`) never set `cmd.Stdin` on the exec'd binary, so a nil `Stdin` fell back to Go's null device and the new `read` builtin's `bufio.Scanner` hit instant EOF. Found immediately after the user added `read #(prompt String, String)` (sema/lowerer/runtime wiring, all correct) and reported it not waiting for input.
+- **Update**: `cmd/yzc/build.go` -- Added `cmd.Stdin = os.Stdin`.
+- **Update**: `test/conformance/runtime_test.go` -- `TestRuntime` now pipes an optional `NNN_name.input` sidecar to the compiled binary's stdin when present; no change for existing tests (none have one yet besides the new 122).
+- **Creation**: `cmd/yzc/build_test.go` (`TestCmdRunConnectsStdin` -- confirmed to fail without the fix); `122_read_stdin` golden test + `.input` + `.output` sidecars.
+
 ## 2026-09-28 (5)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0119; bumped golden-test count to 115, next available to YZC-0120.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0119: `unquoteString` had no case for `` \` `` (the only way to write a literal backtick in a string, since a bare backtick starts homoiconic interpolation) or `\0`, and its six chained `strings.ReplaceAll` passes could reinterpret an already-resolved escape (`\\n` -> `\` + literal `n`, then wrongly re-caught by the later `\n` -> newline pass). Also confirmed, against the spec §1.10 grammar, that an unescaped `"` inside a `"`-string correctly ends the string -- not a bug, just needs `\"`.

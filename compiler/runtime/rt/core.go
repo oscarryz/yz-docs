@@ -1,6 +1,7 @@
 package rt
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,6 +17,18 @@ import (
 func Print(v any) Unit {
 	fmt.Fprintln(os.Stdout, Stringify(v))
 	return TheUnit
+}
+
+// ---------------------------------------------------------------------------
+// Read
+// ---------------------------------------------------------------------------
+
+// Read takes the user input from stdin.
+func Read(v String) String {
+	fmt.Print(v)
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	return NewString(scanner.Text())
 }
 
 // ---------------------------------------------------------------------------

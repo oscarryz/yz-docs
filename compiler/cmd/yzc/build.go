@@ -54,6 +54,7 @@ func cmdRun(projectDir string, extraRoots []string) error {
 		return err
 	}
 	cmd := exec.Command(absPath)
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

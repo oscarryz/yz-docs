@@ -7,6 +7,38 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0120 — `yzc run` never wired the compiled binary's stdin, so the new `read` builtin hit instant EOF and returned `""` instead of waiting for input ✓
+
+  Found immediately after adding `read #(prompt String, String)` (sema symbol in
+  `internal/sema/scope.go`'s `newBuiltinScope`, `builtinGoName["read"] = "std.Read"`
+  in `internal/ir/lower.go`, and a `Read` runtime function in `runtime/rt/core.go`
+  that prints the prompt and scans a line from `os.Stdin`) — the builtin's own
+  wiring was correct, but calling it through `yzc run` printed the prompt and
+  immediately returned an empty string instead of waiting for terminal input.
+
+  **Root cause:** `cmdRun` (`cmd/yzc/build.go`) execs the compiled binary with
+  `exec.Command(absPath)` and set `cmd.Stdout`/`cmd.Stderr` but never `cmd.Stdin`.
+  Go's `os/exec` connects a nil `Stdin` to the null device, so `bufio.Scanner`'s
+  first `Scan()` call hit EOF immediately, returning `false` with `Text() == ""` —
+  a straightforward CLI plumbing gap, not a concurrency/BOC issue (`read` lowers
+  to a direct forced call via `lowerBuiltinCall`, same as `print`, never wrapped
+  in `std.Schedule`).
+
+  **Fix:** added `cmd.Stdin = os.Stdin`.
+
+  **Tests:**
+  - `cmd/yzc/build_test.go` (new): `TestCmdRunConnectsStdin` calls `cmdRun`
+    directly with `os.Stdin`/`os.Stdout` temporarily swapped for pipes, writes a
+    scripted answer, and asserts it comes back through — confirmed to fail
+    without the fix (empty `got:`) and pass with it.
+  - Golden test `122_read_stdin` + new optional `.input` sidecar support in
+    `test/conformance/runtime_test.go`'s `TestRuntime` (piped to the compiled
+    binary's stdin when a `NNN_name.input` file exists; every other golden test
+    is unaffected — stdin stays unset, same as before). `.output` captured by
+    actually running the compiled binary with real piped input, not hand-written.
+
+  `make test-full` and `make test-race` both clean.
+
 ### [x] YZC-0119 — `unquoteString` didn't resolve `\`` (or `\0`), and chained the escape passes so `\\n` could be reinterpreted as `\n` by a later pass ✓
 
   Found while dogfooding a real ASCII-art program: `x: "...\`888...\`888...\`888'..."`

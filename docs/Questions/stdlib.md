@@ -194,7 +194,7 @@ An elegant syntax for terminal utilities makes scripting highly visual and fast 
 ```javascript
 cli #(
     print        #( msg String ),
-    prompt       #( msg String, String ),
+    read         #( msg String, String ),
     confirm      #( msg String, Bool ),
 
     // Style and arguments

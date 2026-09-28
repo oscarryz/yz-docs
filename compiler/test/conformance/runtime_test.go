@@ -1,6 +1,7 @@
 package conformance_test
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,6 +14,11 @@ import (
 // runs the generated binary in a temp directory, and asserts that stdout
 // matches the .output file. This catches runtime bugs (deadlocks, wrong
 // ordering, incorrect values) that the source-diff TestGolden cannot see.
+//
+// An optional NNN_name.input sidecar is piped to the binary's stdin — for
+// golden tests that exercise the `read` builtin. Without one, stdin is left
+// unset (nil), which Go connects to the null device, same as before .input
+// support existed.
 //
 // Skipped under `go test -short` — use that flag during development for a
 // faster feedback loop, and run without -short at the end of a ticket or in CI.
@@ -64,6 +70,9 @@ func TestRuntime(t *testing.T) {
 
 			cmd := exec.Command("go", "run", ".")
 			cmd.Dir = tmp
+			if inBytes, err := os.ReadFile(filepath.Join(dir, name+".input")); err == nil {
+				cmd.Stdin = bytes.NewReader(inBytes)
+			}
 			out, err := cmd.Output()
 			if err != nil {
 				t.Fatalf("go run failed: %v\noutput: %s", err, out)
