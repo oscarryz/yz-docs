@@ -12,6 +12,7 @@
 - [HOF iteration and cown happens-before.md](<./HOF iteration and cown happens-before.md>) — Design documentation regarding HOF Iteration  Cown Happens-Before Semantics.
 - [How and when include self.md](<./How and when include self.md>) — Documentation regarding How and when include self.
 - [How to cancel a running block.md](<./How to cancel a running block.md>) — Design documentation regarding How  cancel  running boc?.
+- [Immutability and the Concurrency Runtime.md](<./Immutability and the Concurrency Runtime.md>) — Reopens immutability: interfaces give access control, not mutability control, and immutable data could skip cown acquisition entirely.
 - [Macro Issues.md](<./Macro Issues.md>) — Design documentation regarding Package Isolation & Circular Dependencies.
 - [Memory Management.md](<./Memory Management.md>) — Documentation regarding Memory Management.
 - [Operators.md](./Operators.md) — Documentation regarding Operators.
