@@ -76,11 +76,14 @@ func (a Array[T]) Filter(fn func(T) Bool) Array[T] {
 	return Array[T]{elems: result}
 }
 
-// Each calls fn for every element in the array.
-func (a Array[T]) Each(fn func(T) Unit) {
+// Each calls fn for every element in the array. Returns Unit (rather than
+// nothing) so it matches every other Yz-Unit-returning runtime method and can
+// be used as a boc method's final, `return`-wrapped statement.
+func (a Array[T]) Each(fn func(T) Unit) Unit {
 	for _, v := range a.elems {
 		fn(v)
 	}
+	return TheUnit
 }
 
 // Any reports whether fn returns true for at least one element.
@@ -172,7 +175,7 @@ func (d Dict[K, V]) Length() Int { return Int{val: int64(len(d.m))} }
 // (by StringifyRepr, matching String's sort) rather than Go's randomized map
 // iteration order — otherwise every run of the same Yz program would iterate
 // in a different order.
-func (d Dict[K, V]) Each(fn func(K, V) Unit) {
+func (d Dict[K, V]) Each(fn func(K, V) Unit) Unit {
 	type kv struct {
 		key K
 		val V
@@ -187,6 +190,7 @@ func (d Dict[K, V]) Each(fn func(K, V) Unit) {
 	for _, p := range pairs {
 		fn(p.key, p.val)
 	}
+	return TheUnit
 }
 
 // GoMap returns the underlying Go map (for interop / codegen helpers).

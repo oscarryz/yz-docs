@@ -1,0 +1,20 @@
+// YZC-0117: Array.Each / Dict.Each are semantically Unit-returning (sema
+// types `.each` as TypUnit, same as every other side-effecting builtin), but
+// their Go implementations in runtime/rt/collections.go returned nothing at
+// all. That's fine when `.each(...)` is a mid-body statement, but when it's
+// the LAST statement of a Unit-returning boc method, the lowerer wraps it in
+// `return <expr>` like any other tail expression -- and `return <void call>`
+// doesn't compile in Go. Found while dogfooding: a method whose whole body is
+// "iterate and print" is a natural, spec-plausible shape, not a contrived one.
+Printer: {
+    print_all #(items [Int]) {
+        items.each({ v Int; print("${v}") })
+    }
+}
+main: {
+    p: Printer()
+    p.print_all([10, 20, 30])
+    d : ["a": 1, "b": 2]
+    d.each({ k String, v Int; print("${k}=${v}") })
+}
+main()

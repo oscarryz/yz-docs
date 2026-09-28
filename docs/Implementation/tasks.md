@@ -3,12 +3,12 @@ type: impl
 generated: { by: "oscarryz", at: 2026-05-27T22:35:53+02:00 }
 ---
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0116**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0118**.
 
 # Yz Compiler Implementation
 
 ## Status
-- **113 golden + 26 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **114 golden + 26 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Plus `examples/sibling_calls` (YZC-0102), `examples/bare_variant_root` (YZC-0103), and `examples/recursive_type_forward_ref` (YZC-0109): all have zero golden-test coverage since golden fixtures bypass the real CLI's mandatory root-file-wrap path entirely; these are `examples/`-level regression tests instead
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`, macro wire codec: `compiler/runtime/macrowire/`
@@ -46,6 +46,8 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 ~~YZC-0110 -- Bare identifier inside any closure/anonymous-boc body (HOF closures, match arms) is misdetected as a generic type param declaration, silently skipping undefined-symbol checking~~  
 ~~YZC-0111 -- Cond-match arm with a multi-statement body block (`cond => { s1; s2 }`) parses as one opaque boc-literal element instead of flattening, emitting an uncalled closure literal~~  
 YZC-0112 -- `continue` inside a cond-match arm (spec §7.3 fallthrough) is parsed and no-op'd in sema but never lowered/codegen'd, so it silently does nothing instead of falling through to the next branch -- M -- *design*  
+YZC-0116 -- A non-leaf held-cown call nested inside a match arm, infix-match body, or HOF closure body (`.each`/`.filter`) deadlocks when forced -- same gap as YZC-0107, one level deeper than that fix reaches -- M -- *design*  
+~~YZC-0117 -- Array.Each / Dict.Each are Go-void but sema types them as Unit-returning, so `.each(...)` as a boc method's tail statement generates `return <void call>`, failing at `go build`~~
 ~~YZC-0113 -- `Dict.each` documented in spec §10.8 but had no sema case and no runtime method at all, failing only at `go build`~~  
 ~~YZC-0114 -- Generic struct's homoiconic (backtick) repr leaks the full Go import path for a nested generic type argument (e.g. `Box(Array[yz/runtime/rt.Int], ...)`)~~  
 ~~YZC-0115 -- Zero-argument generic variant constructor (e.g. `Option.None()`) called from another generic context fails to compile with "cannot infer T"~~
