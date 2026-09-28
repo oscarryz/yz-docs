@@ -131,6 +131,11 @@ type lowerer struct {
 	// methods of a struct-outer nested type (YZC-0082). References to these names
 	// inside the inner type's methods are emitted as self._outer.fieldName.
 	outerFields map[string]bool
+
+	// hoistCounter names synthetic bindings created by hoistHeldCownCalls
+	// (YZC-0107). Monotonic across the whole lowering pass — uniqueness is all
+	// that matters, not per-body numbering.
+	hoistCounter int
 }
 
 // ---------------------------------------------------------------------------
@@ -1597,7 +1602,13 @@ func (l *lowerer) fixMethodMultiReturnBody(body []Stmt, nReturns int, structName
 // emitThunk (cown released before Wait), fixing cown-recursive deadlocks.
 func (l *lowerer) lowerBocBody(b *ast.BocLiteral, resultType, recvCown string) []Stmt {
 	var inner []Stmt
-	elems := b.Elements
+	// YZC-0107: hoist any non-leaf held-cown call buried inside a larger
+	// expression (e.g. `countdown(3) == 0`) into its own `name : call(...)`
+	// element first, so the rest of this function treats it exactly like a
+	// user-written binding — which it already knows how to run safely. Must
+	// run before bodyHasBocCallsInStmtPos below so the hoisted decl is
+	// counted correctly. See hoistHeldCownCalls' doc for scope/limits.
+	elems := l.hoistHeldCownCalls(b.Elements)
 
 	bgVar := ""
 	if l.bodyHasBocCallsInStmtPos(elems, resultType) {
@@ -3626,6 +3637,214 @@ func (l *lowerer) isBocMethodCall(e ast.Expr) bool {
 		}
 	}
 	return false
+}
+
+// isNonLeafHeldCownCall reports whether e is an unqualified sibling/self call
+// on the current receiver that must stay on the async path — genuinely
+// self-recursive, or with no guaranteed sync (leaf) body — per the identical
+// check in lowerCall/isBocMethodCall (see currentMethodName/
+// syncEligibleMethods' doc, lines ~3453 and ~3600 above).
+//
+// Forcing such a call's result synchronously while the receiver's cown is
+// still held — as an operand of a binary op, a call argument, a match
+// subject, etc. — is the YZC-0107 reentrant deadlock: the callee's own
+// recursive/sibling sub-calls need that same cown to finish, and it can't be
+// released until the force completes. hoistHeldCownCalls uses this to decide
+// which calls must be hoisted into their own spawn-then-wait declaration
+// first, rather than forced in place.
+func (l *lowerer) isNonLeafHeldCownCall(e ast.Expr) bool {
+	c, ok := e.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	id, ok := c.Callee.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	if !l.recvMethods[id.Name] || l.recvName == "" {
+		return false
+	}
+	return id.Name == l.currentMethodName || !l.syncEligibleMethods[id.Name]
+}
+
+// hoistHeldCownCalls rewrites a boc-body element list so that any non-leaf,
+// held-cown boc call (isNonLeafHeldCownCall) appearing *nested* inside a
+// larger expression — rather than being that element's own bare top-level
+// value — is replaced with a reference to a synthetic `name : call(...)`
+// declaration spliced in immediately before the element that needs it
+// (YZC-0107).
+//
+// This must run before bodyHasBocCallsInStmtPos and the main per-element loop
+// in lowerBocBody: the synthetic decl is a real *ast.TypedDecl,
+// indistinguishable from a user-written `r : countdown(3)` to the rest of
+// that function, which already knows how to run such a call inside the
+// receiver's Schedule and defer forcing it until after the cown is released
+// (see lowerBocBody's *ast.TypedDecl case). This reduces the inline
+// (deadlocking) case to the already-correct bound case instead of adding new
+// runtime machinery — confirmed by hand: `r : countdown(3); r == 0` already
+// runs correctly where `countdown(3) == 0` deadlocks. See
+// docs/Implementation/tasks-detail.md's YZC-0107 entry.
+//
+// Scope: only lowerBocBody (a boc method's own top-level body) calls this.
+// A held-cown call nested inside a match-arm or closure body one level
+// further in is not covered — those bodies' own ShortDecl handling
+// (lowerBodyShortDecl) doesn't yet give a boc-call RHS the same spawn/wait
+// treatment at all, so splicing a decl there wouldn't help. Left as a
+// follow-up if that shape is ever hit in practice.
+//
+// Also out of scope: a condition-match arm's own guard expression
+// (ConditionalBoc.Condition) is not hoisted, even though hoistInExprInPlace
+// walks into a MatchExpr's Subject. Each arm's guard is evaluated lazily,
+// only when control reaches that arm in the generated if/else-if chain; a
+// held-cown call there would need its spawn nested inside that specific
+// else-if branch, not lifted above the whole match. That's a codegen-shape
+// change, not a hoist, and is left for a follow-up if it's ever hit.
+//
+// Mutates the given elements' expression trees in place (via addressable
+// struct-field pointers) rather than building copies. Safe here because every
+// parsed AST node is lowered exactly once per compilation — nothing else
+// re-visits it afterward.
+func (l *lowerer) hoistHeldCownCalls(elems []ast.Node) []ast.Node {
+	out := make([]ast.Node, 0, len(elems))
+	for _, elem := range elems {
+		var pending []ast.Node
+		l.hoistInElement(elem, &pending)
+		out = append(out, pending...)
+		out = append(out, elem)
+	}
+	return out
+}
+
+// hoistInElement hoists held-cown calls nested inside elem's expression
+// field(s). Each field is walked as a "top-level" slot (see
+// hoistInExprInPlace): a call occupying the slot itself is left alone (that
+// exact shape — a bare call as a decl's value, a return value, or a whole
+// statement — is already handled correctly downstream); only calls reachable
+// *underneath* it, e.g. inside its own arguments, get hoisted.
+func (l *lowerer) hoistInElement(elem ast.Node, pending *[]ast.Node) {
+	switch e := elem.(type) {
+	case *ast.TypedDecl:
+		if e.Value != nil {
+			l.hoistInTopLevelExpr(&e.Value, pending)
+		}
+	case *ast.ShortDecl:
+		for i := range e.Values {
+			l.hoistInTopLevelExpr(&e.Values[i], pending)
+		}
+	case *ast.Assignment:
+		for i := range e.Values {
+			l.hoistInTopLevelExpr(&e.Values[i], pending)
+		}
+	case *ast.ReturnStmt:
+		if e.Value != nil {
+			l.hoistInTopLevelExpr(&e.Value, pending)
+		}
+	case ast.Expr:
+		l.hoistInTopLevelExpr(&e, pending)
+	}
+}
+
+// hoistInTopLevelExpr walks *slot for nested held-cown calls without
+// replacing *slot itself, even when the expression there matches
+// isNonLeafHeldCownCall — see hoistInElement's doc for why that exact slot is
+// exempt. Everything reachable underneath it still gets the full
+// hoistInExprInPlace treatment.
+func (l *lowerer) hoistInTopLevelExpr(slot *ast.Expr, pending *[]ast.Node) {
+	l.hoistInExprEx(slot, pending, true)
+}
+
+// hoistInExprInPlace hoists held-cown calls out of *slot, updating *slot in
+// place: if the expression at *slot itself is a non-leaf held-cown call, it
+// is replaced with a reference to a synthetic binding appended to *pending;
+// otherwise its children (the positions actually evaluated eagerly — see the
+// per-case notes below) are walked recursively for the same treatment.
+func (l *lowerer) hoistInExprInPlace(slot *ast.Expr, pending *[]ast.Node) {
+	l.hoistInExprEx(slot, pending, false)
+}
+
+// hoistInExprEx is the shared implementation of hoistInExprInPlace and
+// hoistInTopLevelExpr. topLevel suppresses replacing *slot itself even if it
+// matches isNonLeafHeldCownCall — used exactly once, for the outermost slot
+// of a decl/return/statement, whose bare-call shape is already handled
+// correctly without hoisting. Every recursive call below passes topLevel
+// false: a nested occurrence (an argument, an operand, ...) is never exempt.
+func (l *lowerer) hoistInExprEx(slot *ast.Expr, pending *[]ast.Node, topLevel bool) {
+	e := *slot
+	if e == nil {
+		return
+	}
+	if !topLevel && l.isNonLeafHeldCownCall(e) {
+		*slot = l.hoistCall(e, pending)
+		return
+	}
+	switch v := e.(type) {
+	case *ast.BinaryExpr:
+		l.hoistInExprInPlace(&v.Left, pending)
+		l.hoistInExprInPlace(&v.Right, pending)
+	case *ast.UnaryExpr:
+		l.hoistInExprInPlace(&v.Operand, pending)
+	case *ast.CallExpr:
+		for _, a := range v.Args {
+			l.hoistInExprInPlace(&a.Value, pending)
+		}
+		if mem, ok := v.Callee.(*ast.MemberExpr); ok {
+			l.hoistInExprInPlace(&mem.Object, pending)
+		}
+	case *ast.MemberExpr:
+		l.hoistInExprInPlace(&v.Object, pending)
+	case *ast.IndexExpr:
+		l.hoistInExprInPlace(&v.Object, pending)
+		l.hoistInExprInPlace(&v.Index, pending)
+	case *ast.GroupExpr:
+		l.hoistInExprInPlace(&v.Expr, pending)
+	case *ast.InterpolatedStringExpr:
+		// All parts are evaluated eagerly to build the string — no laziness.
+		for i := range v.Parts {
+			if v.Parts[i].IsExpr {
+				l.hoistInExprInPlace(&v.Parts[i].Expr, pending)
+			}
+		}
+	case *ast.ConditionalExpr:
+		// Only Cond is eager. TrueCase/FalseCase are lazy branch bodies (each
+		// a *ast.BocLiteral, which this switch doesn't match — left untouched
+		// here and hoisted independently, in their own scope, when
+		// lowerConditionalExpr/tryLowerConditional lower their Elements via
+		// lowerMatchArmBody/lowerBocAsStmts).
+		l.hoistInExprInPlace(&v.Cond, pending)
+	case *ast.MatchExpr:
+		// Only Subject is eager; each arm's body and guard are lazy — see this
+		// function's doc for why arm guards specifically are still unhandled.
+		l.hoistInExprInPlace(&v.Subject, pending)
+	case *ast.InfixMatchExpr:
+		// Only Subject is eager; Body/ElseBody are lazy branch bodies.
+		l.hoistInExprInPlace(&v.Subject, pending)
+	case *ast.ArrayLiteral:
+		for i := range v.Elements {
+			l.hoistInExprInPlace(&v.Elements[i], pending)
+		}
+	case *ast.DictLiteral:
+		for _, entry := range v.Entries {
+			l.hoistInExprInPlace(&entry.Key, pending)
+			l.hoistInExprInPlace(&entry.Value, pending)
+		}
+	}
+}
+
+// hoistCall splices a synthetic `name : call(...)` declaration for e
+// (verified by the caller to be a non-leaf held-cown call) onto *pending, and
+// returns a bare Ident referencing it, for the caller to substitute in e's
+// place. The name and decl exist only in this lowering pass — invisible in
+// source, never seen by sema (e is untouched, so every sema.ExprType lookup
+// keyed by its pointer identity keeps working regardless of which parent node
+// now references it).
+func (l *lowerer) hoistCall(e ast.Expr, pending *[]ast.Node) ast.Expr {
+	l.hoistCounter++
+	name := fmt.Sprintf("__yz_h%d", l.hoistCounter)
+	*pending = append(*pending, &ast.TypedDecl{
+		Name:  &ast.Ident{Name: name},
+		Value: e,
+	})
+	return &ast.Ident{Name: name}
 }
 
 // isScalarBocCallExpr reports whether e is a boc method call whose result type

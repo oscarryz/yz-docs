@@ -8,7 +8,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 # Yz Compiler Implementation
 
 ## Status
-- **112 golden + 26 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
+- **113 golden + 26 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
 - Plus `examples/sibling_calls` (YZC-0102), `examples/bare_variant_root` (YZC-0103), and `examples/recursive_type_forward_ref` (YZC-0109): all have zero golden-test coverage since golden fixtures bypass the real CLI's mandatory root-file-wrap path entirely; these are `examples/`-level regression tests instead
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`, macro wire codec: `compiler/runtime/macrowire/`
@@ -40,7 +40,7 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 ~~YZC-0104 -- Dict dot-call methods (`.at`, `.has`, ...) had no sema type-inference case at all and widened to `any`~~
 ~~YZC-0105 -- `?:` conditional as a boc's final return value was discarded; codegen emitted an if/else statement and fell through to `return Unit`~~
 ~~YZC-0106 -- Self-recursive `#(...)`-declared boc with non-Unit return type and a value-returning conditional/expression as its last statement produces a Schedule closure hardcoded to `func() std.Unit`, breaking the build~~
-YZC-0107 -- Sibling call to a non-leaf held-cown callee deadlocks when its result is forced in the same method -- L -- *design*
+~~YZC-0107 -- Sibling call to a non-leaf held-cown callee deadlocks when its result is forced in the same method~~
 ~~YZC-0108 -- Variant match with a trailing default arm (no `=>`) misdetected as a boolean-condition match, undefined variant-name globals at build~~
 ~~YZC-0109 -- Recursive/mutually-recursive type declarations (YZC-0057/0077) resolve in golden tests but fail with "undefined type" through the real CLI, which always wraps a file's top-level statements one level deeper than AnalyzeFile's forward-reference pre-registration pass scans~~  
 ~~YZC-0110 -- Bare identifier inside any closure/anonymous-boc body (HOF closures, match arms) is misdetected as a generic type param declaration, silently skipping undefined-symbol checking~~  

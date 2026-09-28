@@ -7,6 +7,75 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0107 — Sibling call to a non-leaf held-cown callee deadlocks when its result is forced in the same method ✓
+
+  ```yz
+  Counter: {
+      countdown #(x Int, Int) {
+          (x <= 0) ? { 0 }, { countdown(x - 1) }
+      }
+      check #(Bool) {
+          countdown(3) == 0
+      }
+  }
+  ```
+
+  Hung with `fatal error: all goroutines are asleep - deadlock!`. `check` runs
+  inside `Schedule(&self.Cown, ...)`; `countdown` correctly stays on the async
+  path (self-recursive, not sync-rewrite-eligible per YZC-0008's
+  `syncEligibleMethods`), but `lowerExpr`'s `*ast.BinaryExpr` case
+  unconditionally wraps a non-scalar boc-call operand in `ForceExpr` — forcing
+  `countdown(3)` right there, inside `check`'s own held cown. `countdown`'s
+  recursive self-call then needs that same cown to finish, and it can't be
+  released until the force completes it — reentrant self-deadlock.
+
+  **Diagnosed `==` was not the trigger** by rewriting the same call through a
+  hand-written `is #(n Int, Bool) { n == 0 }` method: `is_zero(countdown(3))`
+  deadlocked identically, one stack frame deeper, since the force just moved
+  to `is_zero`'s own body. Also verified the *fix* shape by hand before
+  automating it: `r : countdown(3); r == 0` (binding the call to a name first)
+  already ran correctly with zero compiler changes — the codegen for a
+  `TypedDecl` whose value is a boc call already runs it inside `Schedule`,
+  spawns it on the receiver's `BocGroup`, and defers the force via a `WaitStmt`
+  until *after* `Schedule(...).Force()` returns and the cown is released. The
+  inline form just never reached that already-correct path.
+
+  **Fix (`internal/ir/lower.go`):** `hoistHeldCownCalls`, run at the top of
+  `lowerBocBody` before `bodyHasBocCallsInStmtPos` and the main per-element
+  loop, rewrites each body element in place: any call matching the new
+  `isNonLeafHeldCownCall` predicate (the identical
+  `currentMethodName`/`syncEligibleMethods` check `lowerCall` already used to
+  decide a sibling call must stay async) that appears *nested* inside a larger
+  expression — a binary operand, a call argument, a `?`'s condition, a match
+  subject, a string interpolation part, ... — is spliced out into its own
+  synthetic `name : call(...)` element immediately before, and replaced in
+  place with a reference to that name. The element occupying the call's own
+  bare top-level slot (a decl's value, a return value, a whole statement) is
+  left untouched — that shape was already handled correctly.
+  `bodyHasBocCallsInStmtPos` then sees the spliced-in decl exactly as it would
+  a user-written one and sets up the receiver's shared `BocGroup` accordingly,
+  so no new runtime machinery was needed — reducing the inline (deadlocking)
+  case to the already-correct bound case was the whole fix.
+
+  Scope, deliberately not covered: a call nested inside a match-arm or closure
+  body one level further in (those bodies' own `lowerBodyShortDecl` doesn't
+  yet give a boc-call RHS the spawn/wait treatment at all — hoisting a decl
+  there wouldn't help); a condition-match arm's own guard expression, which is
+  evaluated lazily only when control reaches that arm in the generated
+  if/else-if chain and would need the hoisted spawn nested inside that
+  specific branch, not lifted above the whole match (a codegen-shape change,
+  not a hoist). Left for a follow-up if either is ever hit in practice.
+
+  **Regression coverage:** `testdata/golden/119_reentrant_expr_position_force`
+  — covers both the binary-operand shape (`countdown(3) == 0`) and the
+  call-argument shape (`is_zero(countdown(3))`); verified deterministic across
+  5 repeated `TestRuntime` runs. Also hand-verified against the ticket's
+  original two repros (the `Counter`/`countdown` shape above, and a `Waitlist`
+  struct boc with `has`/self-recursive `find_index`) and against combining two
+  independently-hoisted calls in one expression (`countdown(3) == countdown(5)`).
+
+---
+
 ### [x] YZC-0115 — Zero-argument generic variant constructor called from another generic context fails to compile with "cannot infer T" ✓
 
   Found while dogfooding a generic `find_first` helper returning a

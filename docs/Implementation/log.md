@@ -1,5 +1,13 @@
 # update log  
 
+## 2026-09-28 (1)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0107; bumped golden-test count to 113.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the YZC-0107 Bugs entry (moved to tasks-done.md).
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0107: `lowerExpr`'s `*ast.BinaryExpr` case unconditionally force-wrapped a non-scalar boc-call operand, deadlocking when the operand was a non-leaf, self-recursive sibling call whose cown the enclosing method already held (e.g. `check() { countdown(3) == 0 }`). Diagnosed via a user question challenging whether `==` itself was the cause -- disproved by rewriting the same call through a hand-written `is` method (deadlocked identically, confirming the trigger is positional -- inline vs. bound -- not operator-specific) and by hand-verifying the fix shape (`r : countdown(3); r == 0`) already worked with zero compiler changes before automating it.
+- **Update**: `internal/ir/lower.go` -- Added `hoistHeldCownCalls`/`isNonLeafHeldCownCall`, run at the top of `lowerBocBody`: splices any non-leaf held-cown call found nested inside a larger expression (binary operand, call argument, `?` condition, match subject, string interpolation part, array/dict literal element) out into its own synthetic `name : call(...)` element beforehand, reusing the already-correct bound-call Schedule/BocGroup/Wait lowering instead of adding new runtime machinery.
+- **Update**: [concurrency-design.md](./concurrency-design.md) -- Replaced the YZC-0107 "Known gap" note with a "Resolved gap" note describing the hoist mechanism.
+- **Creation**: `119_reentrant_expr_position_force` golden test + `.output` sidecar -- covers both the binary-operand and call-argument shapes; verified deterministic across 5 repeated `TestRuntime` runs. Also hand-verified against the ticket's original `Waitlist`/`find_index`/`has` repro and against two independently-hoisted calls combined in one expression (`countdown(3) == countdown(5)`).
+
 ## 2026-09-27 (7)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0115; bumped golden-test count to 112, next available to YZC-0116.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0115: `variantTypeArgs` only recognized a resolved `*sema.GenericInstType` for computing a qualified variant constructor's explicit Go type args; a zero-arg constructor (`Option.None()`) called from a boc generic over the same type param instead gets a bare, uninstantiated `*sema.StructType` from sema, which fell through to "no explicit args needed" -- and Go's own inference can't recover T for a zero-argument generic call from return-type context alone.
