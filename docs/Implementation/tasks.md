@@ -3,7 +3,7 @@ type: impl
 generated: { by: "oscarryz", at: 2026-05-27T22:35:53+02:00 }
 ---
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0123**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0124**.
 
 # Yz Compiler Implementation
 
@@ -49,7 +49,8 @@ YZC-0112 -- `continue` inside a cond-match arm (spec §7.3 fallthrough) is parse
 YZC-0116 -- A non-leaf held-cown call nested inside a match arm, infix-match body, or HOF closure body (`.each`/`.filter`) deadlocks when forced -- same gap as YZC-0107, one level deeper than that fix reaches -- M -- *design*  
 YZC-0118 -- Macro run-output cache is keyed on name+payload only, not the macro's own source/binary hash, so editing a macro body reuses stale cached output until `target/` is cleared by hand -- S
 YZC-0121 -- A call to an unresolvable identifier (e.g. builtin `while` with no codegen backing) compiles clean through yzc and only fails at `go build`, leaking a raw Go error pointing at generated `main.go` instead of a Yz-level diagnostic -- S
-YZC-0122 -- Same-named file-wrapper boc (e.g. `while.yz`) is unwrapped by sema but not by the lowerer when the inner boc uses the `name #(params) { }` signature form, so caller and declaration disagree on its shape and `go build` catches the mismatch instead of yzc -- S  
+YZC-0122 -- Same-named file-wrapper boc (e.g. `while.yz`) is unwrapped by sema but not by the lowerer when the inner boc uses the `name #(params) { }` signature form, so caller and declaration disagree on its shape and `go build` catches the mismatch instead of yzc -- S
+YZC-0123 -- Declare-only-then-assign-later (`name Type`, no initializer, used as a plain local) is misread by the lowerer as an already-collected boc parameter, silently dropped or folded into a wrong signature -- *design*  
 ~~YZC-0119 -- `unquoteString` didn't resolve `\`` (or `\0`), and chained ReplaceAll passes let `\\n` be reinterpreted as `\n` by a later pass~~
 ~~YZC-0120 -- `yzc run` never wired the compiled binary's stdin, so the `read` builtin hit instant EOF and returned "" instead of waiting for input~~
 ~~YZC-0117 -- Array.Each / Dict.Each are Go-void but sema types them as Unit-returning, so `.each(...)` as a boc method's tail statement generates `return <void call>`, failing at `go build`~~

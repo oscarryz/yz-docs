@@ -218,6 +218,21 @@ Open ticket details. See tasks.md for the index.
   backing for builtin `while`") or stop pre-seeding it as if resolvable and
   require the recursive user-defined form the golden test already uses.
 
+  **Related instance:** a one-armed ternary (`cond ? { body }`, no `, {}` false
+  case) used as the last element of a *value-producing* match arm (result type
+  other than `std.Unit`) hits the same class of gap. `lowerMatchArmBody`
+  (`internal/ir/lower.go`) has no false-case AST node to lower, so the generic
+  `BinaryExpr` path emits a one-argument `Qm(trueCase)` call against a runtime
+  method that requires two (`Bool.Qm`, `runtime/rt/types.go:357`) -- caught
+  only by `go build` ("not enough arguments in call to ... Qm"). Unlike the
+  `while`/file-wrapper cases, this one likely isn't fixable by routing around
+  it in the lowerer: there is no value to give the false branch, so it needs a
+  sema-level diagnostic ("this ternary must have an else branch here") before
+  codegen is ever reached. (The same-shaped ternary in a `std.Unit`-typed
+  position -- no value required -- was already fixed: it's routed through
+  `tryLowerConditional`'s else-less `IfStmt` instead of the generic path, in
+  both `lowerBocBody` (YZC-0105 precedent) and `lowerMatchArmBody`.)
+
 ---
 
 - [ ] **[YZC-0122] A same-named file-wrapper boc is unwrapped by sema but not by the lowerer when the inner boc uses the `name #(params) { }` signature form, so the declaring and calling sides disagree on its shape and only `go build` catches it** -- S
@@ -263,6 +278,55 @@ Open ticket details. See tasks.md for the index.
   **Fix direction:** extend `fileWrapperHasInnerBoc` to also match a same-named
   `*ast.BocDecl` element (not just `*ast.ShortDecl`), so both compiler phases
   agree on when a file wrapper unwraps.
+
+---
+
+- [ ] **[YZC-0123] Declare-only-then-assign-later (`name Type` with no initializer, used as a plain local) is silently mishandled by the lowerer -- compiles clean and only fails at `go build`, or worse, compiles to a wrong signature** -- *design*
+
+  Found dogfooding `yz-tutorial/src/main.yz`: `option String` at top level,
+  later assigned with `option = read(...)` and read inside a `while` closure.
+  `yzc run` reported nothing wrong; the failure only surfaced as a wall of Go
+  errors, one per later reference:
+
+  ```
+  ./main.go:82:12: undefined: option
+  ./main.go:84:5: undefined: option
+  ...
+  ```
+
+  **Root cause:** `name Type` with no initializer is exactly the shape a real
+  boc parameter has in the `name #(params) = { body }` expanded form, where
+  the body's leading `TypedDecl`s with nil `Value` re-declare the signature's
+  own params (see the "Matching for `= { body }`" rule this project's memory
+  already documents). The lowerer's shared `TypedDecl` handling assumes that
+  shape unconditionally: `if e.Value == nil { continue // param — already
+  collected }`. There's no signature here to make that assumption valid --
+  this is the file-wrapper's implicit body, which has no declared params at
+  all -- so a bare `name Type` used as a genuine "declare now, assign later"
+  statement is misread as a parameter no matter where it appears, with two
+  different broken outcomes depending on position (both reproduced in
+  isolation):
+
+  - As the *first* statement in a body: swept into the synthesized
+    `Call`/`call` method's own parameter list. The generated entry point
+    (`func main() { Main.Call().Force() }`) always invokes it with zero
+    arguments, so it fails to compile with an arity mismatch.
+  - Anywhere else (the tutorial's actual case): silently skipped -- no `var
+    option std.String` is ever emitted, so every later reference is
+    `undefined: option`.
+
+  This isn't new scope -- "declare-only then assign-later" was already noted
+  as deferred during earlier param-list-semantics design work, but that note
+  only ever lived in session memory, never as a tracked ticket here.
+
+  **Fix direction:** *design* -- disambiguate "this `TypedDecl` is a boc's own
+  declared parameter" from "this is a bare local declared without an
+  initializer" before the shared `TypedDecl` lowering path can safely handle
+  both. The signature-bearing `name #(params) = { body }` form has an actual
+  `BocTypeExpr` to check leading elements against; a plain body (file wrapper,
+  or `name: { body }` with no `#(...)` at all) never does, and any bare
+  `TypedDecl` there should lower to a real `var name Type` declaration instead
+  of being skipped.
 
 ---
 
