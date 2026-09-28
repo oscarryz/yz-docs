@@ -924,6 +924,19 @@ Deferred from YZC-0025. Once the macro system (YZC-0028) is defined, the compile
 - [ ] Remove all primitive-type special-casing from the compiler
 - [ ] `Bool.&&`/`||` — rewrite as lazy closure-taking boc methods
 
+**Watch for (YZC-0122):** each scalar type moving to its own `stdlib/` file
+(`int.yz`, `string.yz`, ...) hits the same same-named-file-wrapper shape that
+caused YZC-0122 — a file's top-level content is auto-wrapped in an implicit
+boc named after the file, and the sema/lowerer unwrap that lets the inner
+same-named boc win only agrees on the forms it explicitly checks for. That gap
+is fixed for `ShortDecl` and `BocDecl` inner forms (`fileWrapperHasInnerBoc`,
+`internal/ir/lower.go:253`, must stay in sync with `internal/sema/analyzer.go:653-680`'s
+`innerScope.LookupLocal`) — but if uppering introduces a *third* shape for a
+same-named top-level type declaration (e.g. a generic or structural form
+neither check currently matches), it will silently re-open the same
+caller/declaration mismatch, caught only by a leaked `go build` error, not
+by `yzc` itself.
+
 ### ~~YZC-0076 — Existential associated types: opaque-token / path-identity tracking~~ — CLOSED
 
 **Closed.** The original motivation was to support an array of heterogeneous macros, each carrying a different `Schema` shape, validated at compile time:

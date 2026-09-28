@@ -246,17 +246,26 @@ func (l *lowerer) addImport(importPath string) {
 }
 
 // fileWrapperHasInnerBoc reports whether the BocLiteral (body of the file
-// wrapper) contains a ShortDecl with the given name — meaning the user wrote
-// an explicit same-named boc inside the file (e.g., main: {} inside main.yz).
-// When true, the outer wrapper is a no-op container and the inner items should
-// be processed as package-level declarations.
+// wrapper) contains a same-named boc — meaning the user wrote an explicit
+// same-named boc inside the file, either as a ShortDecl (main: {} inside
+// main.yz) or as a BocDecl signature form (while #(cond #(Bool), body #()) {}
+// inside while.yz, YZC-0122). When true, the outer wrapper is a no-op
+// container and the inner items should be processed as package-level
+// declarations. This must stay in sync with the equivalent same-name check
+// in sema (analyzer.go's innerScope.LookupLocal in the file-wrapper handling),
+// which already recognizes both forms.
 func fileWrapperHasInnerBoc(bl *ast.BocLiteral, name string) bool {
 	for _, elem := range bl.Elements {
-		if sd, ok := elem.(*ast.ShortDecl); ok && len(sd.Names) == 1 && len(sd.Values) == 1 {
-			if sd.Names[0].Name == name {
-				if _, isBoc := sd.Values[0].(*ast.BocLiteral); isBoc {
+		switch e := elem.(type) {
+		case *ast.ShortDecl:
+			if len(e.Names) == 1 && len(e.Values) == 1 && e.Names[0].Name == name {
+				if _, isBoc := e.Values[0].(*ast.BocLiteral); isBoc {
 					return true
 				}
+			}
+		case *ast.BocDecl:
+			if e.Name.Name == name {
+				return true
 			}
 		}
 	}
