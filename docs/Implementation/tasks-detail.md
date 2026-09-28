@@ -62,6 +62,104 @@ Open ticket details. See tasks.md for the index.
   Marked *design* because the fix requires picking the generated-code shape
   for match first, not just wiring up an existing IR node.
 
+- [ ] **[YZC-0116] A non-leaf held-cown call nested inside a match arm, infix-match body, or HOF closure body deadlocks when forced, same as YZC-0107 but one level deeper than that fix reaches** -- *design*
+
+  Found while dogfooding the YZC-0107 fix's own documented scope limit
+  ("a call nested inside a match-arm/closure body one level further in").
+  `hoistHeldCownCalls` only walks a boc method's own top-level element list
+  (`b.Elements`); a match arm's body is a separate `[]ast.Node` list nested
+  inside that never gets hoisted. Repro, both in expression position (arm body
+  is the method's return value) and statement position (arm body just prints):
+
+  ```yz
+  Counter: {
+      countdown #(x Int, Int) {
+          (x <= 0) ? { 0 }, { countdown(x - 1) }
+      }
+      check_match #(Bool) {
+          match {
+              true => countdown(3) == 0
+          }, {
+              false
+          }
+      }
+  }
+  main: {
+      c: Counter()
+      print("${c.check_match()}")
+  }
+  main()
+  ```
+
+  Both variants build clean and deadlock identically at runtime
+  (`fatal error: all goroutines are asleep - deadlock!`), one frame deeper
+  than the YZC-0107 repro (`check_match` blocks forcing `countdown`'s result
+  inside its own held `&self.Cown`, exactly as `check` did before that fix,
+  just with a `match` arm sitting between the two).
+
+  **Root cause:** confirmed by reading, not just running. `lowerMatchExpr`
+  (expression-position match → IIFE) lowers each arm via `lowerMatchArmBody`;
+  `tryLowerMatch` (statement-position match → `if`/`else if` chain) and
+  `lowerInfixMatchStmt`/`lowerInfixMatchExpr` (YZC-0063) lower arm/branch
+  bodies via `lowerElementStmts`. Neither function is the boc-body-level
+  `lowerBocBody` that YZC-0107's fix targets, and neither has any of the
+  machinery that makes the fix work: `lowerBocBody`'s `*ast.TypedDecl` case
+  is what recognizes a held-cown call bound to a name and routes it through
+  `trySyncExpr`/the split-`BocGroup` spawn-then-deferred-`Wait()` pattern
+  (`internal/ir/lower.go`, `concurrency-design.md`'s "Resolved gap" note).
+  `lowerMatchArmBody` and `lowerElementStmts` have **no case for
+  `*ast.TypedDecl` at all** — so simply running `hoistHeldCownCalls` over an
+  arm's body (which is the same `[]ast.Node` shape as a boc body, and would
+  otherwise be a one-line change) would silently drop the hoisted binding:
+  it matches none of either switch's cases and vanishes, the same silent-loss
+  failure class as YZC-0110/YZC-0112, not a fix.
+
+  **Why not a quick fix:** hoisting the call is necessary but not sufficient
+  here — `lowerMatchArmBody`/`lowerElementStmts` would also need the
+  `TypedDecl`/`trySyncExpr`/spawn-registration handling that `lowerBocBody`
+  has, including a decision on which `BocGroup` a spawn inside a match arm
+  registers on (the enclosing method's `bgVar`, threaded down) and how/where
+  its deferred `Wait()` gets emitted relative to the arm's own control flow.
+  That's a design question about extending the split-`BocGroup` pattern
+  across a body-lowering boundary it doesn't currently cross, not an AST
+  rewrite. Same shape of deferral as YZC-0112: needs a decision before
+  implementation, not just wiring.
+
+  **Closure bodies reproduce the identical failure**, confirmed separately
+  while dogfooding YZC-0117 (`Array.Each`/`Dict.Each`, fixed below) — the
+  build-breaking bug there was masking this deadlock underneath it:
+
+  ```yz
+  Counter: {
+      countdown #(x Int, Int) {
+          (x <= 0) ? { 0 }, { countdown(x - 1) }
+      }
+      check_each #() {
+          a : [1, 2, 3]
+          a.each({ v Int; print("${countdown(v) == 0}") })
+      }
+  }
+  main: {
+      c: Counter()
+      c.check_each()
+  }
+  main()
+  ```
+
+  Same deadlock, same root cause one function over: `lowerClosureBody`
+  (`internal/ir/lower.go`) already has its own partial handling for a
+  held-cown call bound to a name (a `*ast.TypedDecl` case with a per-variable
+  `BocGroup`+immediate `Wait()`, plus a `trySyncExpr` attempt when the whole
+  closure's last statement IS the call) — but neither path covers a held-cown
+  call nested inside a *larger* expression in the closure body (here, inside
+  a `print("...")` argument), for the same reason `hoistHeldCownCalls` never
+  reaches match arms: it only runs once, at the top of `lowerBocBody`, before
+  either `lowerMatchArmBody`/`lowerElementStmts` or `lowerClosureBody` ever
+  see their respective element lists. Folded into this ticket rather than
+  filed separately since the fix is the same design question either way —
+  where a per-body-lowering-function hoist (or a single shared hoist run
+  recursively over every nested body a boc method contains) should live.
+
 ---
 
 ## Language Features

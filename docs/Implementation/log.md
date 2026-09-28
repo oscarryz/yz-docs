@@ -1,5 +1,18 @@
 # update log  
 
+## 2026-09-28 (3)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0117; bumped golden-test count to 114, next available to YZC-0118. Broadened YZC-0116's title to cover HOF closure bodies too.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Folded a closure-body repro into YZC-0116 (same root cause, same deferred design question -- confirmed while chasing this ticket). Removed nothing else; YZC-0117 goes straight from repro to tasks-done since it was fixed same-session.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0117: `Array.Each`/`Dict.Each` had no Go return value even though sema types `.each` as Unit-returning; harmless mid-body (statement position, return value never needed) but `return <void call>` doesn't compile when `.each(...)` is a boc method's tail statement. Every existing golden test's `.each` happened to be mid-body, so this had zero prior coverage.
+- **Update**: `runtime/rt/collections.go` -- `Array[T].Each`/`Dict[K,V].Each` now return `Unit` (`TheUnit`), matching every other Unit-returning runtime builtin.
+- **Creation**: `120_each_tail_return` golden test + `.output` sidecar.
+- **Note**: fixing YZC-0117 unblocked reproducing YZC-0116's closure-body variant (the build error was masking a deadlock underneath it) -- see YZC-0116's updated tasks-detail.md entry.
+
+## 2026-09-28 (2)
+- **Update**: [tasks.md](./tasks.md) -- Filed YZC-0116; next available bumped to YZC-0117.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Added Bugs entry for YZC-0116: a non-leaf held-cown call nested inside a match arm (or infix-match body) deadlocks when forced -- the same gap as YZC-0107, one level deeper than that fix reaches. `hoistHeldCownCalls` only walks a boc method's own top-level element list; a match arm's body is a separate list that never gets hoisted, and even hoisting it wouldn't be enough on its own -- `lowerMatchArmBody`/`lowerElementStmts` (unlike `lowerBocBody`) have no `*ast.TypedDecl` case at all, so a hoisted binding would silently vanish rather than run. Reproduced via `go run ./cmd/yzc run` (deadlock, not a golden/conformance test) in both expression- and statement-position match; no fix attempted -- needs a design decision on how a match arm's spawn registers on and waits against the enclosing method's `BocGroup`. Marked *design*, left open.
+- **Update**: [concurrency-design.md](./concurrency-design.md) -- Cross-referenced YZC-0116 from the YZC-0107 "Resolved gap" note's scope-limits sentence.
+
 ## 2026-09-28 (1)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0107; bumped golden-test count to 113.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the YZC-0107 Bugs entry (moved to tasks-done.md).

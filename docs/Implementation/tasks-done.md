@@ -7,6 +7,55 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0117 — Array.Each / Dict.Each are Go-void but sema types `.each` as Unit-returning, so a tail-position `.each(...)` generates `return <void call>` and fails at `go build` ✓
+
+  Found while dogfooding YZC-0116's closure-body variant: to reproduce a
+  held-cown call inside a closure passed to `.each`, the closure's enclosing
+  boc method needed to end with `items.each({ ... })` as its tail statement.
+  That failed before the deadlock even had a chance to show up:
+
+  ```yz
+  Printer: {
+      print_all #(items [Int]) {
+          items.each({ v Int; print("${v}") })
+      }
+  }
+  main: {
+      p: Printer()
+      p.print_all([10, 20, 30])
+  }
+  main()
+  ```
+
+  ```
+  ./main.go:19:9: a.Each(func(v std.Int) std.Unit {…}) (no value) used as value
+  ```
+
+  **Root cause:** sema types `.each` on both `ArrayType` and `DictType` as
+  returning `TypUnit` (`internal/sema/analyzer.go`'s `fieldType`), same as
+  every other side-effecting builtin (`print`, etc.). But
+  `runtime/rt/collections.go`'s `Array[T].Each`/`Dict[K,V].Each` were declared
+  with **no Go return value at all** — unlike `std.Print` and friends, which
+  really do return a `Unit` Go value so that wrapping them in `return` (the
+  lowerer's standard handling for a boc method's tail expression,
+  `lowerBocBody`'s `case ast.Expr:`, last-element branch) produces valid Go.
+  `.each` mid-body (not the tail statement) never hit this, because a
+  mid-body expression-statement doesn't get `return`-wrapped — every existing
+  golden test's `.each(...)` call happened to be in that position, so this
+  had zero prior coverage despite `.each` itself (YZC-0113) being tested.
+
+  **Fix:** `Array[T].Each` and `Dict[K,V].Each` now return `Unit` (`TheUnit`)
+  after their loop, matching the rest of the runtime's Unit-returning-builtin
+  convention. No lowerer/codegen change needed — every existing call site
+  already used `.each(...)` as a statement, so the added return value is
+  silently discarded there (still valid Go) and newly enables the tail-
+  position shape.
+
+  Regression coverage: `120_each_tail_return` golden + `.output` test
+  (`Array.Each` and `Dict.Each` both in tail position, in the same method and
+  as the whole `main` body respectively). `make test-full` and `make
+  test-race` both clean before and after.
+
 ### [x] YZC-0107 — Sibling call to a non-leaf held-cown callee deadlocks when its result is forced in the same method ✓
 
   ```yz

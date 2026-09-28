@@ -297,8 +297,8 @@ expression — a binary operand, a call argument, a `?`'s condition, a match sub
 out into its own synthetic `name : call(...)` element immediately before, with a bare reference to
 that name left in its place. The already-correct bound-call lowering does the rest. See
 `tasks-done.md`'s YZC-0107 entry for the code-level details and the two scope limits left as
-follow-ups (a call nested inside a match-arm/closure body one level further in; a condition-match
-arm's own lazily-evaluated guard expression).
+follow-ups (a call nested inside a match-arm/closure body one level further in — filed as
+YZC-0116; a condition-match arm's own lazily-evaluated guard expression).
 
 ### Phase C — Closures capturing cowns
 
