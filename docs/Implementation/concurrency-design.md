@@ -274,6 +274,32 @@ the recursive case to sync reintroduces the original deadlock: the inner call ne
 the outer (now-synchronous) call cannot yet release. See `tasks-done.md`'s YZC-0008 entry for the
 code-level details.
 
+**Resolved gap (YZC-0107, filed 2026-09-26, fixed 2026-09-28):** the paragraph above says the
+non-leaf callee "must stay on the async/deferred-`Wait()` path" — but the deferred-`Wait()` path
+only existed for a **statement**-position call (a boc call whose result is never used, just waited
+on). It didn't exist for a non-leaf call whose *result* the caller needs, e.g.
+`check() { countdown(3) == 0 }` where `countdown` is self-recursive. `countdown` correctly stayed
+async (sync-rewrite refused, per above), but `check`'s own body then forced that result inside
+`check`'s own `Schedule(&self.Cown, ...)` — the reentrant-force deadlock this whole section exists
+to avoid, just one level removed.
+
+The fix isn't a third scheduling primitive — it's noticing the split already exists, just for a
+narrower source shape than it needs to cover: a boc call *bound to a name* (`r : countdown(3)`)
+already runs inside `Schedule`, registers on the receiver's `BocGroup`, and defers its force via a
+`WaitStmt` emitted *after* `Schedule(...).Force()` returns and the cown is released — the same
+mechanism the `BocGroup.Wait()` deferral above uses, already generalized from "wait with no result"
+to "wait for a stored result." The inline form (`countdown(3) == 0`) just never reached that path,
+because it names nothing for the split to hang off of.
+
+`hoistHeldCownCalls` (`internal/ir/lower.go`) closes that gap by rewriting the AST, not the runtime:
+before a boc method body is lowered, any non-leaf held-cown call found nested inside a larger
+expression — a binary operand, a call argument, a `?`'s condition, a match subject, ... — is spliced
+out into its own synthetic `name : call(...)` element immediately before, with a bare reference to
+that name left in its place. The already-correct bound-call lowering does the rest. See
+`tasks-done.md`'s YZC-0107 entry for the code-level details and the two scope limits left as
+follow-ups (a call nested inside a match-arm/closure body one level further in; a condition-match
+arm's own lazily-evaluated guard expression).
+
 ### Phase C — Closures capturing cowns
 
 Nested bocs close over their enclosing boc's fields, which include potential cown references:

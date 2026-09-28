@@ -1,0 +1,33 @@
+// YZC-0107: a sibling call to a non-leaf (self-recursive) held-cown callee
+// deadlocked when its result was consumed inline inside a larger expression
+// — `countdown(3) == 0` — rather than bound to a name first. `check` runs
+// inside `Schedule(&self.Cown, ...)`; `countdown` correctly stays on the
+// async path (self-recursive, not sync-rewrite-eligible per YZC-0008), but
+// lowerExpr's BinaryExpr case unconditionally forced its operand right there,
+// reacquiring self's cown while check's own Schedule still held it.
+//
+// Fixed by hoisting any such non-leaf held-cown call, wherever it appears
+// nested inside an expression (a binary operand, a call argument, a `?`
+// condition, ...), into its own `name : call(...)` element first — reducing
+// the inline (deadlocking) form to the already-correct bound form. See
+// docs/Implementation/tasks-detail.md's YZC-0107 entry.
+Counter: {
+    countdown #(x Int, Int) {
+        (x <= 0) ? { 0 }, { countdown(x - 1) }
+    }
+    check #(Bool) {
+        countdown(3) == 0
+    }
+    check_arg #(Bool) {
+        is_zero(countdown(3))
+    }
+    is_zero #(n Int, Bool) {
+        n == 0
+    }
+}
+main: {
+    c: Counter()
+    print("${c.check()}")
+    print("${c.check_arg()}")
+}
+main()
