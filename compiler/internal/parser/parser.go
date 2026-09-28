@@ -664,7 +664,7 @@ func (p *Parser) parsePrimary() (ast.Expr, error) {
 		return p.parseGroup()
 
 	default:
-		return nil, p.errorf("unexpected token %v in expression", tok)
+		return nil, p.errorf("unexpected token %s in expression", tok.Describe())
 	}
 }
 
@@ -1009,7 +1009,7 @@ func (p *Parser) parseTypeExpr() (ast.TypeExpr, error) {
 		p.advance()
 		return p.parseBocTypeExpr()
 	default:
-		return nil, p.errorf("expected type expression, got %v", p.cur())
+		return nil, p.errorf("expected type expression, got %s", p.cur().Describe())
 	}
 }
 
@@ -1198,7 +1198,7 @@ func (p *Parser) parseBocParam() (*ast.BocParam, error) {
 		return &ast.BocParam{Pos: pos, Type: typ}, nil
 	}
 
-	return nil, p.errorf("expected boc parameter, got %v", p.cur())
+	return nil, p.errorf("expected boc parameter, got %s", p.cur().Describe())
 }
 
 // parseConstraintList consumes zero or more consecutive TYPE_IDENT tokens that

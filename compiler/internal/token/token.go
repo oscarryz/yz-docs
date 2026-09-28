@@ -120,3 +120,15 @@ func (t Token) String() string {
 	}
 	return fmt.Sprintf("%s(L%d:C%d)", t.Type, t.Line, t.Col)
 }
+
+// Describe formats the token for a user-facing error message: type and
+// literal, with no position. Callers that embed this in a diagnostic message
+// already report the position separately (e.g. the diagnostic package's
+// "--> file:line:col" line), so repeating it here — in String()'s different
+// "L%d:C%d" notation — would duplicate it inconsistently.
+func (t Token) Describe() string {
+	if t.Literal != "" {
+		return fmt.Sprintf("%s(%q)", t.Type, t.Literal)
+	}
+	return t.Type.String()
+}
