@@ -1,5 +1,11 @@
 # update log  
 
+## 2026-09-28 (5)
+- **Update**: [tasks.md](./tasks.md) -- Closed YZC-0119; bumped golden-test count to 115, next available to YZC-0120.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0119: `unquoteString` had no case for `` \` `` (the only way to write a literal backtick in a string, since a bare backtick starts homoiconic interpolation) or `\0`, and its six chained `strings.ReplaceAll` passes could reinterpret an already-resolved escape (`\\n` -> `\` + literal `n`, then wrongly re-caught by the later `\n` -> newline pass). Also confirmed, against the spec §1.10 grammar, that an unescaped `"` inside a `"`-string correctly ends the string -- not a bug, just needs `\"`.
+- **Update**: `internal/ir/lower.go` -- Rewrote `unquoteString` as a single left-to-right scan instead of chained `ReplaceAll` calls; added `` \` ``/`\0`.
+- **Creation**: `121_string_escape_backtick` golden test + `.output` sidecar.
+
 ## 2026-09-28 (4)
 - **Update**: [concurrency-design.md](./concurrency-design.md) -- Added §8 "Implemented Mechanisms — Quick Reference": Go-backend mapping table, `ScheduleFlatten`/cown-suspension writeup (previously undocumented in this file), conformance-test list. Migrated from a session memory note, verified against current source.
 - **Update**: [boc_uniformity.md](./boc_uniformity.md) -- Added the four-boc-forms terminology table (signature/declaration/expanded-form/literal/short-declaration) as a named subsection.

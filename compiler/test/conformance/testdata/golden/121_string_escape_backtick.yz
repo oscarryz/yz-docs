@@ -1,0 +1,15 @@
+// YZC-0119: unquoteString resolved \n \t \r \" \' \\ but not \` or \0, even
+// though a bare backtick in a string starts homoiconic interpolation
+// (spec 1.10), leaving no way to write a literal backtick without a stray
+// backslash surviving into the output. unquoteString also chained separate
+// strings.ReplaceAll passes, so an escaped backslash immediately followed by
+// a plain letter (e.g. \\n) could be reinterpreted by a later pass as if it
+// were that pass's own escape sequence (\\ then n -> \n -> real newline).
+// Rewritten as a single left-to-right scan; this covers both.
+main: {
+    print("back\`tick")
+    print("literal backslash-n: \\n")
+    print("tab\tend")
+    print("quote\" and apos\' and backslash\\")
+}
+main()

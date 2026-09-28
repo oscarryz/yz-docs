@@ -5626,8 +5626,8 @@ func (l *lowerer) pathDepStoreType(expr ast.Expr, typ string) string {
 }
 
 // unquoteString strips the surrounding quote characters from a raw string
-// literal value (e.g. `"hello"` → `hello`, `'world'` → `world`).
-// Escape sequences are preserved as-is for the codegen to re-emit.
+// literal value (e.g. `"hello"` → `hello`, `'world'` → `world`) and resolves
+// escape sequences to their actual characters.
 func unquoteString(raw string) string {
 	if len(raw) < 2 {
 		return raw
@@ -5636,14 +5636,47 @@ func unquoteString(raw string) string {
 	if (raw[0] == '"' && raw[len(raw)-1] == '"') ||
 		(raw[0] == '\'' && raw[len(raw)-1] == '\'') {
 		inner := raw[1 : len(raw)-1]
-		// Unescape basic sequences.
-		inner = strings.ReplaceAll(inner, `\"`, `"`)
-		inner = strings.ReplaceAll(inner, `\'`, `'`)
-		inner = strings.ReplaceAll(inner, `\\`, `\`)
-		inner = strings.ReplaceAll(inner, `\n`, "\n")
-		inner = strings.ReplaceAll(inner, `\t`, "\t")
-		inner = strings.ReplaceAll(inner, `\r`, "\r")
-		return inner
+		var b strings.Builder
+		b.Grow(len(inner))
+		// Single left-to-right pass — chained strings.ReplaceAll calls would
+		// reinterpret output of an earlier pass (e.g. `\\n` unescaping `\\` to
+		// `\` first left a bare `n` that the later `\n` pass would then wrongly
+		// turn into a newline).
+		for i := 0; i < len(inner); i++ {
+			ch := inner[i]
+			if ch == '\\' && i+1 < len(inner) {
+				i++
+				switch inner[i] {
+				case 'n':
+					b.WriteByte('\n')
+				case 't':
+					b.WriteByte('\t')
+				case 'r':
+					b.WriteByte('\r')
+				case '\\':
+					b.WriteByte('\\')
+				case '\'':
+					b.WriteByte('\'')
+				case '"':
+					b.WriteByte('"')
+				case '`':
+					// Not in the formal escape_sequence grammar (spec
+					// §1.10), but required in practice: a bare backtick in a
+					// string starts homoiconic interpolation (`` `expr` ``),
+					// so this is the only way to include a literal backtick.
+					b.WriteByte('`')
+				case '0':
+					b.WriteByte(0)
+				default:
+					// Not a recognized escape — keep both characters as-is.
+					b.WriteByte('\\')
+					b.WriteByte(inner[i])
+				}
+				continue
+			}
+			b.WriteByte(ch)
+		}
+		return b.String()
 	}
 	return raw
 }

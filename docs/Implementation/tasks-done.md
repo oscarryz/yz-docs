@@ -7,6 +7,57 @@ Completed tickets. Ticket numbers are permanent.
 
 ---
 
+### [x] YZC-0119 — `unquoteString` didn't resolve `\`` (or `\0`), and chained the escape passes so `\\n` could be reinterpreted as `\n` by a later pass ✓
+
+  Found while dogfooding a real ASCII-art program: `x: "...\`888...\`888...\`888'..."`
+  printed the ASCII art with the backslashes still attached (`` \`888 `` instead of
+  `` `888 ``) and then cut off entirely partway through, before the source's actual
+  closing quote.
+
+  **Two separate findings, only one a bug:**
+
+  1. **Real bug (this ticket).** `unquoteString` (`internal/ir/lower.go`) resolved
+     `\n \t \r \" \' \\` via six chained `strings.ReplaceAll` calls but had no case
+     for `` \` `` or `\0`. A bare backtick in a Yz string starts homoiconic
+     interpolation (`` `expr` ``, spec §1.10) — there is no other way to write a
+     literal backtick in a string — so `` \` `` needs to resolve to a literal
+     backtick the same way `\"` resolves to a literal quote. It didn't: the
+     backslash survived unresolved into the printed output. The lexer and parser
+     already special-cased `` \` `` correctly (consumed as an escape pair before
+     the bare-backtick-triggers-interpolation check ever saw it) — only the final
+     unescaping step was missing the case.
+
+     The chained-`ReplaceAll` approach was also independently unsound: `\\` was
+     resolved *after* `\"`/`\'` but *before* `\n`/`\t`/`\r`, so an escaped
+     backslash immediately followed by a plain letter (`\\n`, meaning "a literal
+     backslash, then the letter n") had its `\\` resolved to `\` first, producing
+     an intermediate `\n` that the next pass then wrongly turned into a real
+     newline.
+
+  2. **Not a bug — confirmed against spec, not filed.** The program's `"` string
+     also contained an unescaped `""` in the middle of the ASCII art (part of the
+     glyph's outline). Per the grammar in spec §1.10
+     (`double_quoted = '"' { string_char | "'" | interpolation } '"'`, where
+     `string_char` explicitly excludes the matching quote unless part of an
+     `escape_sequence`), an unescaped `"` inside a `"`-delimited string ends the
+     string — exactly what happened. The remainder of the source became a second,
+     unused string-literal expression statement that silently parsed and ran with
+     no error, ending exactly where it was reported. Rewriting the repro with the
+     embedded quotes properly escaped (`\"`) rendered the full ASCII art
+     correctly end to end, confirming the diagnosis. Verified needing no
+     compiler change.
+
+  **Fix:** rewrote `unquoteString` as a single left-to-right byte scan (matching
+  the lexer's own `\` + next-char consumption model) instead of six chained
+  `ReplaceAll` passes. Added `` \` `` → `` ` `` and `\0` → NUL; an unrecognized
+  `\X` now passes both characters through unchanged (previous behavior,
+  preserved) rather than being silently dropped.
+
+  Golden test: `121_string_escape_backtick` — covers `` \` ``, the `\\n`
+  reinterpretation-order regression, `\t`, and `\"`/`\'`/`\\`. `.output` captured
+  by actually running the compiled binary, not hand-written. `make test-full` and
+  `make test-race` both clean.
+
 ### [x] YZC-0117 — Array.Each / Dict.Each are Go-void but sema types `.each` as Unit-returning, so a tail-position `.each(...)` generates `return <void call>` and fails at `go build` ✓
 
   Found while dogfooding YZC-0116's closure-body variant: to reproduce a
