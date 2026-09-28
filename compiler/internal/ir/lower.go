@@ -4744,6 +4744,26 @@ func (l *lowerer) lowerMatchArmBody(elements []ast.Node, resultType string) []St
 			}
 			stmts = append(stmts, &ReturnStmt{Value: val})
 		case ast.Expr:
+			// A one-armed ternary (`cond ? { body }`, no `, {}` false case) has no
+			// value for its false branch, so it can't go through the general
+			// BinaryExpr lowering (which emits Qm(trueCase, falseCase) — with no
+			// false case AST node to lower, that path silently emits a one-arg
+			// Qm call, a mismatch only `go build` catches. Mirrors the same guard
+			// in lowerBocBody (YZC-0105): route it through tryLowerConditional's
+			// else-less IfStmt instead, whenever it isn't required to produce a
+			// value (not last, or the arm itself returns std.Unit).
+			isOneArmedTernary := false
+			if be, ok := e.(*ast.BinaryExpr); ok && be.Op == "?" {
+				isOneArmedTernary = true
+			}
+			if isOneArmedTernary && (!isLast || resultType == "std.Unit") {
+				is, _ := l.tryLowerConditional(e)
+				stmts = append(stmts, is)
+				if isLast {
+					stmts = append(stmts, &ReturnStmt{Value: &UnitLit{}})
+				}
+				continue
+			}
 			expr := l.lowerExprForced(e)
 			if isLast {
 				stmts = append(stmts, &ReturnStmt{Value: expr})
