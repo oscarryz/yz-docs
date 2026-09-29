@@ -1,6 +1,10 @@
 ---
 type: example
-generated: { by: "oscarryz", at: 2026-05-11T22:53:49+02:00 }
+generated:
+  by: oscarryz
+  at: 2026-05-11T22:53:49+02:00
+tags:
+  - need-update
 ---
 #example 
 

@@ -1,6 +1,10 @@
 ---
 type: feature
-generated: { by: "oscarryz", at: 2026-06-02T22:49:55+02:00 }
+generated:
+  by: oscarryz
+  at: 2026-06-02T22:49:55+02:00
+tags:
+  - need-update
 ---
 #feature
 # Test — Test Fragment Companion

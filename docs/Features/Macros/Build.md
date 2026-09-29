@@ -1,6 +1,15 @@
 ---
 type: feature
-generated: { by: "oscarryz", at: 2026-06-03T21:29:52+02:00 }
+generated:
+  by: oscarryz
+  at: 2026-06-03T21:29:52+02:00
+tags:
+  - need-update
+sources:
+  - id: docs/Features/Macros.md
+    resource: /docs/Features/Macros.md
+    title: Macros
+    last_modified: 2026-09-29T08:43:00+02:00
 ---
 #feature
 # Build — Conditional File Inclusion

@@ -1,6 +1,10 @@
 ---
 type: feature
-generated: { by: "oscarryz", at: 2026-06-02T22:49:55+02:00 }
+generated:
+  by: oscarryz
+  at: 2026-06-02T22:49:55+02:00
+tags:
+  - need-update
 ---
 #feature
 # Mix — Compile-Time Code Reuse
@@ -22,6 +26,11 @@ mix: Animal
 `
 Cat: {
     // Cat now has talk #(String) as if it were written here
+}
+// Needs to be update to something like
+`Mix: Animal`
+Cat: {
+   // .. 
 }
 ```
 
