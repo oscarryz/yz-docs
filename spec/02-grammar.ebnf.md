@@ -92,7 +92,7 @@ VariantConstructor = type_identifier "(" [ BocParamList ] ")" .
 
 ## 2.6 Expressions
 
-All non-word method invocations have **equal precedence** and are evaluated **left-to-right** (Smalltalk-style). The only special case is unary `-` (negation). Parentheses control evaluation order.
+All non-word method invocations have **equal precedence** and are evaluated **left-to-right** (Smalltalk-style), i.e. chains are left-associative: `a ++ b ++ c` is `(a ++ b) ++ c`. The only special case is unary `-` (negation). Parentheses control evaluation order.
 
 ```ebnf
 Expression     = UnaryExpr { non_word_identifier UnaryExpr } .

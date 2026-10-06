@@ -149,7 +149,7 @@ x == y       // → x.==(y)
 -n           // → n.-()  (unary negation)
 ```
 
-All non-word methods have **equal precedence** and are evaluated **left-to-right** (Smalltalk-style). Use parentheses to control grouping:
+All non-word methods have **equal precedence** and are evaluated **left-to-right** (Smalltalk-style), which makes chains **left-associative**: `a ++ b ++ c` is `a.++(b).++(c)`. Use parentheses to control grouping:
 
 ```yz
 1 + 2 * 3        // → (1.+(2)).*(3) = 9

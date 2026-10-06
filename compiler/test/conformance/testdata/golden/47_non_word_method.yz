@@ -4,8 +4,24 @@ Greeter: {
     ++ #(other String, String) { "${name} and ${other}" }
 }
 
+// Chains are left-associative: a ++ b ++ c is (a ++ b) ++ c, i.e. a.++(b).++(c).
+// The label records the grouping, so right-association would print (a (b c)).
+Tag: {
+    label String
+    ++ #(other Tag, Tag) { Tag("(${label} ${other.label})") }
+}
+
 main: {
-    a: Greeter("Ann")
-    c: a ++ "Taylor"
+    a: Greeter("Alice")
+    c: a ++ "Bob"
     print(c)
+
+    x: Tag("a")
+    y: Tag("b")
+    z: Tag("c")
+    left: x ++ y ++ z
+    print(left.label)
+    yz: y ++ z
+    right: x ++ yz
+    print(right.label)
 }

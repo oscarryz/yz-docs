@@ -315,6 +315,8 @@ All non-word method invocations have **equal precedence** and are evaluated **le
 
 The only exception is **unary `-`** (negation), which binds to the immediately following expression.
 
+Because all non-word invocations are sugar for `.` method calls, a chain is **left-associative**: `a ++ b ++ c` is `(a ++ b) ++ c`, i.e. `a.++(b).++(c)` — the result of each call is the receiver of the next. It is never grouped as `a ++ (b ++ c)`; use parentheses for that.
+
 ### Examples
 
 ```yz
