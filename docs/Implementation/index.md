@@ -14,3 +14,7 @@ Design documents, decisions, and implementation plans for the Go-based Yz compil
 - [tasks-done.md](./tasks-done.md) — Documentation of completed compiler development tasks.
 - [tasks.md](./tasks.md) — High-level documentation regarding Yz Compiler implementation planning.
 - [yzc-0066-plan.md](./yzc-0066-plan.md) — Design documentation regarding the ZYC-0066 Implementation Plan (Path-Dependent Types).
+
+## Directories
+
+- [tickets/](./tickets/index.md) — One file per ticket (`YZC-####.md`) with OKF front matter, starting at YZC-0124.

@@ -1,5 +1,10 @@
 # update log  
 
+## 2026-10-13
+- **Creation**: [tickets/](./tickets/index.md) -- Per-ticket files with OKF front matter; first ticket is [YZC-0124](./tickets/YZC-0124.md).
+- **Update**: [tasks.md](./tasks.md) -- Filed YZC-0124 as a link to its ticket file (no `tasks-detail.md` entry); next available bumped to YZC-0125.
+- **Update**: [index.md](./index.md) -- Added a Directories section listing `tickets/`.
+
 ## 2026-09-28 (6)
 - **Update**: [tasks.md](./tasks.md) -- Closed YZC-0120; bumped golden-test count to 116, next available to YZC-0121.
 - **Update**: [tasks-done.md](./tasks-done.md) -- Added completion write-up for YZC-0120: `cmdRun` (`cmd/yzc/build.go`) never set `cmd.Stdin` on the exec'd binary, so a nil `Stdin` fell back to Go's null device and the new `read` builtin's `bufio.Scanner` hit instant EOF. Found immediately after the user added `read #(prompt String, String)` (sema/lowerer/runtime wiring, all correct) and reported it not waiting for input.
