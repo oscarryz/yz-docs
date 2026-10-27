@@ -24,3 +24,8 @@ that have a file.
 | Id | Title | Implementation |
 |---|---|---|
 | [YZC-0124](YZC-0124.md) | Boc body is not atomic across inner calls | proposed |
+| [YZC-0125](YZC-0125.md) | Sibling boc calls run sequentially | proposed |
+| [YZC-0126](YZC-0126.md) | Constructor call at the start of a statement fails to parse in a type's methods | proposed |
+| [YZC-0127](YZC-0127.md) | Boc-typed fields of a type are dropped | proposed |
+| [YZC-0128](YZC-0128.md) | A type's methods are not visible on its instances inside its own methods | proposed |
+| [YZC-0129](YZC-0129.md) | A singleton and a type whose names differ only in case fail to build | proposed |

@@ -1,5 +1,9 @@
 # update log  
 
+## 2026-10-27
+- **Update**: [tasks.md](./tasks.md) -- Filed YZC-0125 to YZC-0129 as links to their ticket files; next available bumped to YZC-0130.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- YZC-0031: added a "Watch for (`while`)" note linking the stdlib proposal.
+
 ## 2026-10-13
 - **Creation**: [tickets/](./tickets/index.md) -- Per-ticket files with OKF front matter; first ticket is [YZC-0124](./tickets/YZC-0124.md).
 - **Update**: [tasks.md](./tasks.md) -- Filed YZC-0124 as a link to its ticket file (no `tasks-detail.md` entry); next available bumped to YZC-0125.

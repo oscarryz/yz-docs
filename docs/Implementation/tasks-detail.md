@@ -1001,6 +1001,12 @@ neither check currently matches), it will silently re-open the same
 caller/declaration mismatch, caught only by a leaked `go build` error, not
 by `yzc` itself.
 
+**Watch for (`while`):** `while` has to move into `stdlib/` in the decided thin-dispatcher form
+(lowercase `while` creating a fresh `While` per call). As a plain singleton boc, every loop in a
+program shares its one cown and runs one at a time. The dispatcher form does not compile yet:
+YZC-0126, YZC-0127, YZC-0128, YZC-0129 (see "Open: `while` must not own a resource" in
+[`stdlib.md`](../Questions/stdlib.md)).
+
 ### ~~YZC-0076 — Existential associated types: opaque-token / path-identity tracking~~ — CLOSED
 
 **Closed.** The original motivation was to support an array of heterogeneous macros, each carrying a different `Schema` shape, validated at compile time:

@@ -3,7 +3,7 @@ type: impl
 generated: { by: "oscarryz", at: 2026-05-27T22:35:53+02:00 }
 ---
 #impl
-Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0125**.
+Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZC-0130**.
 
 # Yz Compiler Implementation
 
@@ -52,6 +52,11 @@ YZC-0121 -- A call to an unresolvable identifier (e.g. builtin `while` with no c
 YZC-0122 -- Same-named file-wrapper boc (e.g. `while.yz`) is unwrapped by sema but not by the lowerer when the inner boc uses the `name #(params) { }` signature form, so caller and declaration disagree on its shape and `go build` catches the mismatch instead of yzc -- S
 YZC-0123 -- Declare-only-then-assign-later (`name Type`, no initializer, used as a plain local) is misread by the lowerer as an already-collected boc parameter, silently dropped or folded into a wrong signature -- *design*  
 YZC-0124 -- Boc body is not atomic across inner calls -- L -- *design* -- [ticket](tickets/YZC-0124.md)  
+YZC-0125 -- Sibling boc calls run sequentially -- S -- [ticket](tickets/YZC-0125.md)  
+YZC-0126 -- Constructor call at the start of a statement fails to parse in a type's methods -- S -- [ticket](tickets/YZC-0126.md)  
+YZC-0127 -- Boc-typed fields of a type are dropped -- S -- [ticket](tickets/YZC-0127.md)  
+YZC-0128 -- A type's methods are not visible on its instances inside its own methods -- S -- [ticket](tickets/YZC-0128.md)  
+YZC-0129 -- A singleton and a type whose names differ only in case fail to build -- M -- [ticket](tickets/YZC-0129.md)  
 ~~YZC-0119 -- `unquoteString` didn't resolve `\`` (or `\0`), and chained ReplaceAll passes let `\\n` be reinterpreted as `\n` by a later pass~~
 ~~YZC-0120 -- `yzc run` never wired the compiled binary's stdin, so the `read` builtin hit instant EOF and returned "" instead of waiting for input~~
 ~~YZC-0117 -- Array.Each / Dict.Each are Go-void but sema types them as Unit-returning, so `.each(...)` as a boc method's tail statement generates `return <void call>`, failing at `go build`~~

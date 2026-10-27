@@ -2,7 +2,9 @@
 type: spec
 generated: { by: "oscarryz", at: 2026-02-16T15:12:48+01:00 }
 ---
-#spec 
+
+#spec
+
 # 10. Standard Library
 
 This chapter defines the built-in types, their methods, and core functions provided by the Yz standard library.
@@ -23,23 +25,23 @@ Integer type with arbitrary precision.
 
 ### Methods
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `+` | `#(other Int, Int)` | Addition |
-| `-` | `#(other Int, Int)` | Subtraction (binary) |
-| `-` | `#(Int)` | Negation (unary) |
-| `*` | `#(other Int, Int)` | Multiplication |
-| `/` | `#(other Int, Int)` | Integer division |
-| `%` | `#(other Int, Int)` | Modulo |
-| `<` | `#(other Int, Bool)` | Less than |
-| `>` | `#(other Int, Bool)` | Greater than |
-| `<=` | `#(other Int, Bool)` | Less or equal |
-| `>=` | `#(other Int, Bool)` | Greater or equal |
-| `==` | `#(other Int, Bool)` | Equality |
-| `!=` | `#(other Int, Bool)` | Inequality |
-| `to` | `#(end Int, Range)` | Create range `[self, end)` |
-| `to_string` | `#(String)` | String representation |
-| `to_decimal` | `#(Decimal)` | Convert to Decimal |
+| Method       | Signature            | Description                |
+|--------------|----------------------|----------------------------|
+| `+`          | `#(other Int, Int)`  | Addition                   |
+| `-`          | `#(other Int, Int)`  | Subtraction (binary)       |
+| `-`          | `#(Int)`             | Negation (unary)           |
+| `*`          | `#(other Int, Int)`  | Multiplication             |
+| `/`          | `#(other Int, Int)`  | Integer division           |
+| `%`          | `#(other Int, Int)`  | Modulo                     |
+| `<`          | `#(other Int, Bool)` | Less than                  |
+| `>`          | `#(other Int, Bool)` | Greater than               |
+| `<=`         | `#(other Int, Bool)` | Less or equal              |
+| `>=`         | `#(other Int, Bool)` | Greater or equal           |
+| `==`         | `#(other Int, Bool)` | Equality                   |
+| `!=`         | `#(other Int, Bool)` | Inequality                 |
+| `to`         | `#(end Int, Range)`  | Create range `[self, end)` |
+| `to_string`  | `#(String)`          | String representation      |
+| `to_decimal` | `#(Decimal)`         | Convert to Decimal         |
 
 ## 10.3 Decimal
 
@@ -47,21 +49,21 @@ Decimal floating-point type.
 
 ### Methods
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `+` | `#(other Decimal, Decimal)` | Addition |
-| `-` | `#(other Decimal, Decimal)` | Subtraction |
-| `-` | `#(Decimal)` | Negation (unary) |
-| `*` | `#(other Decimal, Decimal)` | Multiplication |
-| `/` | `#(other Decimal, Decimal)` | Division |
-| `<` | `#(other Decimal, Bool)` | Less than |
-| `>` | `#(other Decimal, Bool)` | Greater than |
-| `<=` | `#(other Decimal, Bool)` | Less or equal |
-| `>=` | `#(other Decimal, Bool)` | Greater or equal |
-| `==` | `#(other Decimal, Bool)` | Equality |
-| `!=` | `#(other Decimal, Bool)` | Inequality |
-| `to_string` | `#(String)` | String representation |
-| `to_int` | `#(Int)` | Truncate to Int |
+| Method      | Signature                   | Description           |
+|-------------|-----------------------------|-----------------------|
+| `+`         | `#(other Decimal, Decimal)` | Addition              |
+| `-`         | `#(other Decimal, Decimal)` | Subtraction           |
+| `-`         | `#(Decimal)`                | Negation (unary)      |
+| `*`         | `#(other Decimal, Decimal)` | Multiplication        |
+| `/`         | `#(other Decimal, Decimal)` | Division              |
+| `<`         | `#(other Decimal, Bool)`    | Less than             |
+| `>`         | `#(other Decimal, Bool)`    | Greater than          |
+| `<=`        | `#(other Decimal, Bool)`    | Less or equal         |
+| `>=`        | `#(other Decimal, Bool)`    | Greater or equal      |
+| `==`        | `#(other Decimal, Bool)`    | Equality              |
+| `!=`        | `#(other Decimal, Bool)`    | Inequality            |
+| `to_string` | `#(String)`                 | String representation |
+| `to_int`    | `#(Int)`                    | Truncate to Int       |
 
 ## 10.4 String
 
@@ -69,23 +71,23 @@ UTF-8 encoded text. Strings support interpolation with backticks (see §1.10).
 
 ### Methods
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `+` | `#(other String, String)` | Concatenation |
-| `==` | `#(other String, Bool)` | Equality |
-| `!=` | `#(other String, Bool)` | Inequality |
-| `length` | `#(Int)` | Number of characters |
-| `at` | `#(index Int, String)` | Character at index |
-| `slice` | `#(start Int, end Int, String)` | Substring |
-| `contains` | `#(sub String, Bool)` | Contains substring |
-| `starts_with` | `#(prefix String, Bool)` | Starts with prefix |
-| `ends_with` | `#(suffix String, Bool)` | Ends with suffix |
-| `split` | `#(sep String, [String])` | Split by separator |
-| `trim` | `#(String)` | Remove leading/trailing whitespace |
-| `to_int` | `#(Option(Int))` | Parse as integer |
-| `to_decimal` | `#(Option(Decimal))` | Parse as decimal |
-| `to_upper` | `#(String)` | Uppercase |
-| `to_lower` | `#(String)` | Lowercase |
+| Method        | Signature                       | Description                        |
+|---------------|---------------------------------|------------------------------------|
+| `+`           | `#(other String, String)`       | Concatenation                      |
+| `==`          | `#(other String, Bool)`         | Equality                           |
+| `!=`          | `#(other String, Bool)`         | Inequality                         |
+| `length`      | `#(Int)`                        | Number of characters               |
+| `at`          | `#(index Int, String)`          | Character at index                 |
+| `slice`       | `#(start Int, end Int, String)` | Substring                          |
+| `contains`    | `#(sub String, Bool)`           | Contains substring                 |
+| `starts_with` | `#(prefix String, Bool)`        | Starts with prefix                 |
+| `ends_with`   | `#(suffix String, Bool)`        | Ends with suffix                   |
+| `split`       | `#(sep String, [String])`       | Split by separator                 |
+| `trim`        | `#(String)`                     | Remove leading/trailing whitespace |
+| `to_int`      | `#(Option(Int))`                | Parse as integer                   |
+| `to_decimal`  | `#(Option(Decimal))`            | Parse as decimal                   |
+| `to_upper`    | `#(String)`                     | Uppercase                          |
+| `to_lower`    | `#(String)`                     | Lowercase                          |
 
 ## 10.5 Bool
 
@@ -93,14 +95,14 @@ Boolean type. `true` and `false` are standard library constants, not keywords.
 
 ### Methods
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `&&` | `#(other Bool, Bool)` | Logical AND |
-| `\|\|` | `#(other Bool, Bool)` | Logical OR |
-| `?` | `#(then #(T), else #(T), T)` | Conditional — execute one of two bocs |
-| `==` | `#(other Bool, Bool)` | Equality |
-| `!=` | `#(other Bool, Bool)` | Inequality |
-| `to_string` | `#(String)` | `"true"` or `"false"` |
+| Method      | Signature                    | Description                           |
+|-------------|------------------------------|---------------------------------------|
+| `&&`        | `#(other Bool, Bool)`        | Logical AND                           |
+| `\|\|`      | `#(other Bool, Bool)`        | Logical OR                            |
+| `?`         | `#(then #(T), else #(T), T)` | Conditional — execute one of two bocs |
+| `==`        | `#(other Bool, Bool)`        | Equality                              |
+| `!=`        | `#(other Bool, Bool)`        | Inequality                            |
+| `to_string` | `#(String)`                  | `"true"` or `"false"`                 |
 
 ## 10.6 Unit (internal)
 
@@ -121,21 +123,21 @@ empty: [String]()        // Empty [String]
 
 ### Methods
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `length` | `#(Int)` | Number of elements |
-| `at` | `#(index Int, T)` | Element at index |
-| `<<` | `#(item T)` | Append element |
-| `each` | `#(f #(item T))` | Iterate over elements |
-| `each_with_index` | `#(f #(item T, idx Int))` | Iterate with index |
-| `map` | `#(f #(item T, U), [U])` | Transform elements |
-| `filter` | `#(pred #(item T, Bool), [T])` | Filter elements |
-| `reduce` | `#(init U, f #(acc U, item T, U), U)` | Fold/reduce |
-| `contains` | `#(item T, Bool)` | Contains element (uses `==`) |
-| `first` | `#(Option(T))` | First element |
-| `last` | `#(Option(T))` | Last element |
-| `slice` | `#(start Int, end Int, [T])` | Sub-array |
-| `==` | `#(other [T], Bool)` | Element-wise equality |
+| Method            | Signature                             | Description                  |
+|-------------------|---------------------------------------|------------------------------|
+| `length`          | `#(Int)`                              | Number of elements           |
+| `at`              | `#(index Int, T)`                     | Element at index             |
+| `<<`              | `#(item T)`                           | Append element               |
+| `each`            | `#(f #(item T))`                      | Iterate over elements        |
+| `each_with_index` | `#(f #(item T, idx Int))`             | Iterate with index           |
+| `map`             | `#(f #(item T, U), [U])`              | Transform elements           |
+| `filter`          | `#(pred #(item T, Bool), [T])`        | Filter elements              |
+| `reduce`          | `#(init U, f #(acc U, item T, U), U)` | Fold/reduce                  |
+| `contains`        | `#(item T, Bool)`                     | Contains element (uses `==`) |
+| `first`           | `#(Option(T))`                        | First element                |
+| `last`            | `#(Option(T))`                        | Last element                 |
+| `slice`           | `#(start Int, end Int, [T])`          | Sub-array                    |
+| `==`              | `#(other [T], Bool)`                  | Element-wise equality        |
 
 ## 10.8 Dictionary — `[K:V]`
 
@@ -150,17 +152,17 @@ empty: [String:Int]()              // Empty
 
 ### Methods
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `at` | `#(key K, Option(V))` | Get value for key |
-| `set` | `#(key K, value V)` | Set key-value pair |
-| `has` | `#(key K, Bool)` | Key exists |
-| `remove` | `#(key K, Option(V))` | Remove and return |
-| `keys` | `#([K])` | All keys |
-| `values` | `#([V])` | All values |
-| `each` | `#(f #(key K, val V))` | Iterate over entries |
-| `length` | `#(Int)` | Number of entries |
-| `==` | `#(other [K:V], Bool)` | Key-value equality |
+| Method   | Signature              | Description          |
+|----------|------------------------|----------------------|
+| `at`     | `#(key K, Option(V))`  | Get value for key    |
+| `set`    | `#(key K, value V)`    | Set key-value pair   |
+| `has`    | `#(key K, Bool)`       | Key exists           |
+| `remove` | `#(key K, Option(V))`  | Remove and return    |
+| `keys`   | `#([K])`               | All keys             |
+| `values` | `#([V])`               | All values           |
+| `each`   | `#(f #(key K, val V))` | Iterate over entries |
+| `length` | `#(Int)`               | Number of entries    |
+| `==`     | `#(other [K:V], Bool)` | Key-value equality   |
 
 ## 10.9 Range
 
@@ -168,13 +170,13 @@ Created by `Int.to()`. Represents a half-open interval `[start, end)`.
 
 ### Methods
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `each` | `#(f #(i Int))` | Iterate over range |
-| `contains` | `#(n Int, Bool)` | Check membership |
-| `to_array` | `#([Int])` | Convert to array |
+| Method     | Signature        | Description        |
+|------------|------------------|--------------------|
+| `each`     | `#(f #(i Int))`  | Iterate over range |
+| `contains` | `#(n Int, Bool)` | Check membership   |
+| `to_array` | `#([Int])`       | Convert to array   |
 
-## 10.10 Option(T)
+## 10.10 Option (T)
 
 Variant type for optional values.
 
@@ -202,7 +204,7 @@ find: {
 }
 ```
 
-## 10.11 Result(T, E)
+## 10.11 Result (T, E)
 
 Variant type for operations that may fail.
 
@@ -258,26 +260,26 @@ Retrieves the info string metadata attached to any element (see §1.14).
 
 ### `time`
 
-| Function | Description |
-|----------|-------------|
-| `time.now()` | Current timestamp (milliseconds) |
-| `time.sleep(ms Int)` | Sleep for duration |
+| Function             | Description                      |
+|----------------------|----------------------------------|
+| `time.now()`         | Current timestamp (milliseconds) |
+| `time.sleep(ms Int)` | Sleep for duration               |
 
 ### `io`
 
-| Function | Description |
-|----------|-------------|
-| `io.read_line()` | Read line from stdin |
-| `io.read_file(path String)` | Read file contents → `Result(String, Error)` |
-| `io.write_file(path String, content String)` | Write file → `Result(Int, Error)` |
+| Function                                     | Description                                  |
+|----------------------------------------------|----------------------------------------------|
+| `io.read_line()`                             | Read line from stdin                         |
+| `io.read_file(path String)`                  | Read file contents → `Result(String, Error)` |
+| `io.write_file(path String, content String)` | Write file → `Result(Int, Error)`            |
 
 ### `math`
 
-| Function | Description |
-|----------|-------------|
-| `math.abs(n Int)` | Absolute value |
-| `math.max(a Int, b Int)` | Maximum |
-| `math.min(a Int, b Int)` | Minimum |
+| Function                      | Description    |
+|-------------------------------|----------------|
+| `math.abs(n Int)`             | Absolute value |
+| `math.max(a Int, b Int)`      | Maximum        |
+| `math.min(a Int, b Int)`      | Minimum        |
 | `math.pow(base Int, exp Int)` | Exponentiation |
 
 > **Note:** The standard library will evolve. This chapter documents the **minimum viable** set for v0.1.

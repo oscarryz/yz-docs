@@ -7,12 +7,7 @@ generated: { by: "oscarryz", at: 2026-05-29T22:39:25+02:00 }
 > The following is a draft of what the stdlib could look like
 
 
-
-Yz combines the visual clarity of Haskell signatures with structural constraints and an all-in-one conceptual block (**boc**), giving the language a clean, expressive, and powerful foundation.
-
-Concurrency is completely transparent while explicit Rust-style sum types keep error paths visible: **business logic flows seamlessly, while failure paths remain completely visible.**
-
-Below is the standard library API design in native Yz syntax, covering daily server and CLI workflows.
+Below is the standard library API design in native Yz syntax, covering daily workflows.
 
 **1. fs (File System & Paths)**
 **2. os (Processes & Environment)**
@@ -33,33 +28,31 @@ Since a boc can act as an object, module, and function simultaneously, path obje
 
 ```javascript
 fs #(
+    FsErr #()
     // Factory to create a Path object/boc
-    Path #( path String, PathObj )
-)
-```
+    open #(path String, Result(Path, FsErr))
+    // The structural interface of a PathObj
+    Path #(
+        // Metadata & Checks
+        exists    #( Bool ),
+        is_dir    #( Bool ),
+        size      #( Int ),
 
-```javascript
-// The structural interface of a PathObj
-PathObj #(
-    // Metadata & Checks
-    exists    #( Bool ),
-    is_dir    #( Bool ),
-    size      #( Int ),
+        // Fluent manipulation
+        join      #( part String, Path),
+        parent    #( Option(Path) ),
+        extension #( Option(String) ),
 
-    // Fluent manipulation
-    join      #( part String, PathObj ),
-    parent    #( Option(PathObj) ),
-    ext       #( Option(String) ),
+        // High-level "Type Little, Do Much" I/O
+        read   #( Result(String, FsError) ),
+        read_bytes #( Result([Byte], FsError) ),
+        write      #( content String, Result(FsError) ),
+        append     #( content String, Result(FsError) ),
 
-    // High-level "Type Little, Do Much" I/O
-    read_str  #( Result(String, FsError) ),
-    read_bytes#( Result([Byte], FsError) ),
-    write     #( content String, Result(FsError) ),
-    append    #( content String, Result(FsError) ),
-
-    // Traversal and cleanup
-    walk      #( [PathObj] ), // Returns a lazily-evaluated array/stream
-    delete    #( Result(FsError) )
+        // Traversal and cleanup
+        walk      #([Path]), // Returns a lazily-evaluated array/stream
+        delete    #(Result(FsError))
+    )
 )
 ```
 
@@ -398,5 +391,50 @@ fs.Path("/var/log/weather.log")
 logger.info("done")
 ```
 
+---
 
+**Open: `while` must not own a resource**
 
+Decided: library control functions are thin dispatchers. A lowercase `while` does no work itself;
+each call creates a fresh `While` instance that runs the loop, so every loop has its own resource
+(see [How to use utility functions](solved/How%20to%20use%20utility%20functions.md) and Option E
+of [Instances for libraries](rejected/Instances%20for%20libraries.md)):
+
+```yz
+while #(cond #(Bool), body #()) {
+    While(cond, body).run()
+}
+
+While: {
+    cond #(Bool)
+    body #()
+    run: {
+        cond() ? { body(); While(cond, body).run() }, {}
+    }
+}
+```
+
+`while` is a core function (spec §10.12) with no codegen backing yet (YZC-0121), so programs
+currently supply it as a plain singleton instead:
+
+```yz
+while #(cond #(Bool), body #()) {
+    cond() ? { body(); while(cond, body) }, {}
+}
+```
+
+That version gives every loop in the program the same resource. The body runs inside `while`'s
+behaviour while holding it, so two loops in unrelated bocs take turns and never overlap. The
+recursion still yields between iterations (YZC-0036), so their output interleaves, which hides the
+problem. Observed (2026-10-27, `yzc v0.5.0-e08b58a`): two instances each calling `while`, one doing
+10 iterations of a 1s sleep and the other 5 of a 3s sleep, took 25.2s, the sum of both, instead of
+about 15s.
+
+The dispatcher form does not compile with `yzc v0.5.0-e08b58a` yet:
+
+- `While(cond, body).run()` at the start of a statement in `run` is a parse error (YZC-0126).
+- Boc-typed fields in an uppercase boc are dropped: `While` is emitted with no `cond` or `body`
+  fields and a zero-argument `NewWhile()` (YZC-0127).
+- `run` calling `.run()` on a new `While` fails with "type While has no field run" (YZC-0128).
+- `while` and `While` both become `While` in the generated Go, which is a "redeclared" error
+  (YZC-0129).
