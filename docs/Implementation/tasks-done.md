@@ -403,7 +403,7 @@ Completed tickets. Ticket numbers are permanent.
   multi-statement cond-match arm now compiles and runs correctly.
 
   **Follow-on finding:** fixing this exposed a second, separate bug — filed as
-  [YZC-0112] in tasks-detail.md: `continue` inside a match arm (spec §7.3's
+  [YZC-0112](tickets/YZC-0112.md): `continue` inside a match arm (spec §7.3's
   fallthrough-to-next-branch keyword) is completely unimplemented and silently
   a no-op, rather than actually falling through.
 

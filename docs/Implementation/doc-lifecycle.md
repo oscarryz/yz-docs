@@ -26,8 +26,8 @@ the permanent record of the ticket.
 - **Delete** it once the ticket is implemented, verified, and closed into `tasks-done.md`. The
   code, the tests, and the `tasks-done.md` entry are what future readers should trust — a plan doc
   left in place next to them only invites drift (it will describe intent, not what shipped).
-- **If implementation can't fully close the ticket**: file a new ticket in `tasks.md` /
-  `tasks-detail.md` for the remaining gap, and either trim the plan doc down to the outstanding
+- **If implementation can't fully close the ticket**: file a new ticket in `tickets/` for the
+  remaining gap, and either trim the plan doc down to the outstanding
   work or delete it and let the new ticket's own entry carry the gap forward. Never leave a plan
   doc that describes work already done — trim it to what's still open, or remove it.
 - **If a durable design insight surfaces while implementing** (true regardless of the ticket, not

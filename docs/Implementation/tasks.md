@@ -45,12 +45,12 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 ~~YZC-0109 -- Recursive/mutually-recursive type declarations (YZC-0057/0077) resolve in golden tests but fail with "undefined type" through the real CLI, which always wraps a file's top-level statements one level deeper than AnalyzeFile's forward-reference pre-registration pass scans~~  
 ~~YZC-0110 -- Bare identifier inside any closure/anonymous-boc body (HOF closures, match arms) is misdetected as a generic type param declaration, silently skipping undefined-symbol checking~~  
 ~~YZC-0111 -- Cond-match arm with a multi-statement body block (`cond => { s1; s2 }`) parses as one opaque boc-literal element instead of flattening, emitting an uncalled closure literal~~  
-YZC-0112 -- `continue` inside a cond-match arm (spec §7.3 fallthrough) is parsed and no-op'd in sema but never lowered/codegen'd, so it silently does nothing instead of falling through to the next branch -- M -- *design*  
-YZC-0116 -- A non-leaf held-cown call nested inside a match arm, infix-match body, or HOF closure body (`.each`/`.filter`) deadlocks when forced -- same gap as YZC-0107, one level deeper than that fix reaches -- M -- *design*  
-YZC-0118 -- Macro run-output cache is keyed on name+payload only, not the macro's own source/binary hash, so editing a macro body reuses stale cached output until `target/` is cleared by hand -- S
-YZC-0121 -- A call to an unresolvable identifier (e.g. builtin `while` with no codegen backing) compiles clean through yzc and only fails at `go build`, leaking a raw Go error pointing at generated `main.go` instead of a Yz-level diagnostic -- S
-YZC-0122 -- Same-named file-wrapper boc (e.g. `while.yz`) is unwrapped by sema but not by the lowerer when the inner boc uses the `name #(params) { }` signature form, so caller and declaration disagree on its shape and `go build` catches the mismatch instead of yzc -- S
-YZC-0123 -- Declare-only-then-assign-later (`name Type`, no initializer, used as a plain local) is misread by the lowerer as an already-collected boc parameter, silently dropped or folded into a wrong signature -- *design*  
+YZC-0112 -- `continue` in a cond-match arm does not fall through -- M -- *design* -- [ticket](tickets/YZC-0112.md)  
+YZC-0116 -- A non-leaf held-cown call inside a match arm or closure body deadlocks -- M -- *design* -- [ticket](tickets/YZC-0116.md)  
+YZC-0118 -- Macro run-output cache serves stale output after a macro edit -- S -- [ticket](tickets/YZC-0118.md)  
+YZC-0121 -- A call to an unresolvable identifier fails only at `go build` -- S -- [ticket](tickets/YZC-0121.md)  
+YZC-0122 -- Same-named file-wrapper boc in signature form fails at `go build` -- S -- fixed in `06b46e0`, not closed -- [ticket](tickets/YZC-0122.md)  
+YZC-0123 -- A local declared without an initializer is dropped -- *design* -- [ticket](tickets/YZC-0123.md)  
 YZC-0124 -- Boc body is not atomic across inner calls -- L -- *design* -- [ticket](tickets/YZC-0124.md)  
 YZC-0125 -- Sibling boc calls run sequentially -- S -- [ticket](tickets/YZC-0125.md)  
 YZC-0126 -- Constructor call at the start of a statement fails to parse in a type's methods -- S -- [ticket](tickets/YZC-0126.md)  
@@ -63,31 +63,31 @@ YZC-0129 -- A singleton and a type whose names differ only in case fail to build
 ~~YZC-0113 -- `Dict.each` documented in spec §10.8 but had no sema case and no runtime method at all, failing only at `go build`~~  
 ~~YZC-0114 -- Generic struct's homoiconic (backtick) repr leaks the full Go import path for a nested generic type argument (e.g. `Box(Array[yz/runtime/rt.Int], ...)`)~~  
 ~~YZC-0115 -- Zero-argument generic variant constructor (e.g. `Option.None()`) called from another generic context fails to compile with "cannot infer T"~~
-YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031  
-YZC-0013 -- Array `<<` append -- S -- needs YZC-0031  
-YZC-0009 -- Range iteration -- S -- needs YZC-0031  
-YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031  
-YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031  
-YZC-0039 -- Operators audit -- L -- needs YZC-0031  
+YZC-0016 -- String `++` concatenation -- S -- needs YZC-0031 -- [ticket](tickets/YZC-0016.md)  
+YZC-0013 -- Array `<<` append -- S -- needs YZC-0031 -- [ticket](tickets/YZC-0013.md)  
+YZC-0009 -- Range iteration -- S -- needs YZC-0031 -- [ticket](tickets/YZC-0009.md)  
+YZC-0019 -- `break`/`continue`/`return` in loops -- M -- needs YZC-0031 -- [ticket](tickets/YZC-0019.md)  
+YZC-0014 -- Option/Result method chaining -- M -- needs YZC-0031 -- [ticket](tickets/YZC-0014.md)  
+YZC-0039 -- Operators audit -- L -- needs YZC-0031 -- [ticket](tickets/YZC-0039.md)  
 ~~YZC-0101 -- Sibling method call fails sema resolution when callee is declared after caller~~
 ~~YZC-0100 -- Boc-typed field in a body-only singleton silently dropped as a param~~
 ~~YZC-0008 -- Same-cown reentrant scheduling deadlock~~
 ~~YZC-0091 -- Nested singleton codegen: sub-singleton struct with own methods~~
-YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031  
-YZC-0023 -- Cancellation / non-local return -- L  
-YZC-0058 -- GoSource: Go-backed type implementations -- L -- needs ~~YZC-0025~~, ~~YZC-0059~~  
-YZC-0060 -- Implement `self` as a lexically-resolved compiler built-in -- L -- needs ~~YZC-0059~~ (YZC-0058 only for the Go-backed-method sub-case)  
-YZC-0099 -- `self` / native-builtins: confirm go_source calling convention covers built-in operators -- S -- needs YZC-0058, YZC-0060, YZC-0031  
+YZC-0044 -- Producer-consumer example and golden test -- M -- needs YZC-0031 -- [ticket](tickets/YZC-0044.md)  
+YZC-0023 -- Cancellation / non-local return -- L -- [ticket](tickets/YZC-0023.md)  
+YZC-0058 -- GoSource: Go-backed type implementations -- L -- needs ~~YZC-0025~~, ~~YZC-0059~~ -- [ticket](tickets/YZC-0058.md)  
+YZC-0060 -- Implement `self` as a lexically-resolved compiler built-in -- L -- needs ~~YZC-0059~~ (YZC-0058 only for the Go-backed-method sub-case) -- [ticket](tickets/YZC-0060.md)  
+YZC-0099 -- `self` / native-builtins: confirm go_source calling convention covers built-in operators -- S -- needs YZC-0058, YZC-0060, YZC-0031 -- [ticket](tickets/YZC-0099.md)  
 ~~YZC-0041 -- `Deps` macro: compile-time dependency validation -- cancelled, superseded by YZC-0097~~
-YZC-0096 -- `yz fetch`: dependency fetcher -- M -- needs ~~YZC-0097~~, ~~YZC-0022~~
-YZC-0042 -- `yz` tool: run, new, add, init (wraps yzc + yz fetch) -- L -- needs ~~YZC-0041~~, YZC-0096, ~~YZC-0097~~  
-YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023  
-YZC-0088 -- Codegen: attach compiled annotation boc to declaration metadata -- M -- needs ~~YZC-0028~~  
+YZC-0096 -- `yz fetch`: dependency fetcher -- M -- needs ~~YZC-0097~~, ~~YZC-0022~~ -- [ticket](tickets/YZC-0096.md)  
+YZC-0042 -- `yz` tool: run, new, add, init (wraps yzc + yz fetch) -- L -- needs ~~YZC-0041~~, YZC-0096, ~~YZC-0097~~ -- [ticket](tickets/YZC-0042.md)  
+YZC-0024 -- `return`, `break`, `continue` (major) -- L -- needs YZC-0019, YZC-0023 -- [ticket](tickets/YZC-0024.md)  
+YZC-0088 -- Codegen: attach compiled annotation boc to declaration metadata -- M -- needs ~~YZC-0028~~ -- [ticket](tickets/YZC-0088.md)  
 ~~YZC-0098 -- Self-scope associated type resolution + structural bound codegen~~
 ~~YZC-0028 -- Macros (`Macro` interface) -- first slice complete; follow-ups listed in tasks-done~~
-YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs ~~YZC-0025~~, ~~YZC-0028~~, ~~YZC-0002~~, ~~YZC-0022~~ 
+YZC-0031 -- Scalar Types in Yz Source (uppering) -- XL -- needs ~~YZC-0025~~, ~~YZC-0028~~, ~~YZC-0002~~, ~~YZC-0022~~ -- [ticket](tickets/YZC-0031.md)  
 
 ---
 
-Details: [open](tasks-detail.md) · [done](tasks-done.md) · [per-ticket files](tickets/index.md)
+Details: [open](tickets/index.md) · [done](tasks-done.md) · [legacy](tasks-detail.md)
 

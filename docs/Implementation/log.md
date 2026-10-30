@@ -1,5 +1,13 @@
 # update log  
 
+## 2026-10-30
+- **Update**: [tickets/](./tickets/index.md) -- Moved the 22 open tickets that had no file into per-ticket files.
+- **Update**: [tasks.md](./tasks.md) -- Every open ticket links to its file; long bug titles shortened.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the moved entries; only legacy entries remain.
+- **Update**: [tasks-done.md](./tasks-done.md) -- YZC-0111's follow-on now links to the YZC-0112 ticket file.
+- **Update**: [doc-lifecycle.md](./doc-lifecycle.md) -- New tickets go in `tickets/`.
+- **Update**: [index.md](./index.md) -- Updated the `tasks-detail.md` and `tickets/` descriptions.
+
 ## 2026-10-27
 - **Update**: [tasks.md](./tasks.md) -- Filed YZC-0125 to YZC-0129 as links to their ticket files; next available bumped to YZC-0130.
 - **Update**: [tasks-detail.md](./tasks-detail.md) -- YZC-0031: added a "Watch for (`while`)" note linking the stdlib proposal.
