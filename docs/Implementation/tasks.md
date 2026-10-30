@@ -9,7 +9,7 @@ Ticket numbers are permanent. `[x]` = closed, `[ ]` = open. Next available: **YZ
 
 ## Status
 - **116 golden + 26 error conformance tests passing** (+ macro driver suite: debug_merge + 4 error cases; multi_root + subdir_coexist + macro_debug examples) — `go test -race ./...` passes (test 51 has pre-existing timing flakiness)
-- Plus `examples/sibling_calls` (YZC-0102), `examples/bare_variant_root` (YZC-0103), and `examples/recursive_type_forward_ref` (YZC-0109): all have zero golden-test coverage since golden fixtures bypass the real CLI's mandatory root-file-wrap path entirely; these are `examples/`-level regression tests instead
+- Plus `examples/sibling_calls` (YZC-0102), `examples/bare_variant_root` (YZC-0103), `examples/recursive_type_forward_ref` (YZC-0109), and `examples/file_wrapper_sig_form` (YZC-0122): all have zero golden-test coverage since golden fixtures bypass the real CLI's mandatory root-file-wrap path entirely; these are `examples/`-level regression tests instead
 - Compiler: `compiler/` directory, Go module `module yz`
 - Runtime: `compiler/runtime/rt/`, macro wire codec: `compiler/runtime/macrowire/`
 
@@ -45,11 +45,12 @@ Sorted by effort and independence. S = small, M = medium, L = large, XL = epic. 
 ~~YZC-0109 -- Recursive/mutually-recursive type declarations (YZC-0057/0077) resolve in golden tests but fail with "undefined type" through the real CLI, which always wraps a file's top-level statements one level deeper than AnalyzeFile's forward-reference pre-registration pass scans~~  
 ~~YZC-0110 -- Bare identifier inside any closure/anonymous-boc body (HOF closures, match arms) is misdetected as a generic type param declaration, silently skipping undefined-symbol checking~~  
 ~~YZC-0111 -- Cond-match arm with a multi-statement body block (`cond => { s1; s2 }`) parses as one opaque boc-literal element instead of flattening, emitting an uncalled closure literal~~  
+YZC-0082 -- `Foo.Bar()` static access is not rejected by yzc -- S -- [ticket](tickets/YZC-0082.md)  
 YZC-0112 -- `continue` in a cond-match arm does not fall through -- M -- *design* -- [ticket](tickets/YZC-0112.md)  
 YZC-0116 -- A non-leaf held-cown call inside a match arm or closure body deadlocks -- M -- *design* -- [ticket](tickets/YZC-0116.md)  
 YZC-0118 -- Macro run-output cache serves stale output after a macro edit -- S -- [ticket](tickets/YZC-0118.md)  
 YZC-0121 -- A call to an unresolvable identifier fails only at `go build` -- S -- [ticket](tickets/YZC-0121.md)  
-YZC-0122 -- Same-named file-wrapper boc in signature form fails at `go build` -- S -- fixed in `06b46e0`, not closed -- [ticket](tickets/YZC-0122.md)  
+~~YZC-0122 -- Same-named file-wrapper boc in signature form fails at `go build`~~ -- [ticket](tickets/YZC-0122.md)  
 YZC-0123 -- A local declared without an initializer is dropped -- *design* -- [ticket](tickets/YZC-0123.md)  
 YZC-0124 -- Boc body is not atomic across inner calls -- L -- *design* -- [ticket](tickets/YZC-0124.md)  
 YZC-0125 -- Sibling boc calls run sequentially -- S -- [ticket](tickets/YZC-0125.md)  

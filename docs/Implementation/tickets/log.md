@@ -46,7 +46,11 @@
 
 **Creation** — [`YZC-0123`](YZC-0123.md): a local declared without an initializer is dropped. Moved from `tasks-detail.md`.
 
-**Update** — [`index.md`](index.md): every open ticket now has a file; added the 22 moved tickets.
+**Creation** — [`YZC-0082`](YZC-0082.md): `Foo.Bar()` static access is not rejected by yzc. Moved from `tasks-detail.md` and narrowed to what is left.
+
+**Update** — [`YZC-0122`](YZC-0122.md): closed; cites the `file_wrapper_sig_form` regression test.
+
+**Update** — [`index.md`](index.md): every open ticket now has a file; added the moved tickets.
 
 ## 2026-10-27
 

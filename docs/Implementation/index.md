@@ -10,11 +10,11 @@ Design documents, decisions, and implementation plans for the Go-based Yz compil
 - [decisions.md](./decisions.md) — Design documentation regarding Yz Compiler Implementation Decisions.
 - [doc-lifecycle.md](./doc-lifecycle.md) — Rules for plan docs, `index.md`, and `log.md` in this directory.
 - [implementation_plan.md](./implementation_plan.md) — Design documentation regarding the Yz Compiler Implementation Plan.
-- [tasks-detail.md](./tasks-detail.md) — Legacy ticket detail entries that are not in the open index.
+- [tasks-detail.md](./tasks-detail.md) — Legacy detail entries for closed tickets.
 - [tasks-done.md](./tasks-done.md) — Documentation of completed compiler development tasks.
 - [tasks.md](./tasks.md) — High-level documentation regarding Yz Compiler implementation planning.
 - [yzc-0066-plan.md](./yzc-0066-plan.md) — Design documentation regarding the ZYC-0066 Implementation Plan (Path-Dependent Types).
 
 ## Directories
 
-- [tickets/](./tickets/index.md) — One file per open ticket (`YZC-####.md`) with OKF front matter.
+- [tickets/](./tickets/index.md) — One file per ticket (`YZC-####.md`) with OKF front matter.

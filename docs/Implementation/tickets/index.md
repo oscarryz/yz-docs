@@ -3,10 +3,10 @@
 One file per ticket, named by its permanent `YZC-####` id. The file is the ticket's full
 description: the problem, what was observed, and what is still undecided.
 
-Every open ticket has a file here, and [`../tasks.md`](../tasks.md) remains the open index that
+Every open ticket has a file here, as does any ticket closed since the move, and [`../tasks.md`](../tasks.md) remains the open index that
 links to them. Tickets closed before this format have their detail in
 [`../tasks-done.md`](../tasks-done.md). [`../tasks-detail.md`](../tasks-detail.md) holds only legacy
-entries that are not in the open index.
+entries for closed tickets.
 
 ## Minting a new id
 
@@ -36,6 +36,7 @@ entries that are not in the open index.
 | [YZC-0044](YZC-0044.md) | Producer-consumer example and golden test | proposed |
 | [YZC-0058](YZC-0058.md) | GoSource: Go-backed type implementations | proposed |
 | [YZC-0060](YZC-0060.md) | Implement `self` as a lexically-resolved compiler built-in | proposed |
+| [YZC-0082](YZC-0082.md) | `Foo.Bar()` static access is not rejected by yzc | proposed |
 | [YZC-0088](YZC-0088.md) | Codegen: attach compiled annotation boc to declaration metadata | proposed |
 | [YZC-0096](YZC-0096.md) | `yz fetch`: dependency fetcher | proposed |
 | [YZC-0099](YZC-0099.md) | `self` / native-builtins: confirm go_source calling convention covers built-in operators | proposed |

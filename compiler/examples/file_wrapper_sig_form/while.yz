@@ -1,0 +1,6 @@
+while #(cond #(Bool), body #()) {
+    cond() ? {
+        body()
+        while(cond, body)
+    }, {}
+}

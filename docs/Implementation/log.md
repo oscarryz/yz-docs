@@ -2,11 +2,12 @@
 
 ## 2026-10-30
 - **Update**: [tickets/](./tickets/index.md) -- Moved the 22 open tickets that had no file into per-ticket files.
-- **Update**: [tasks.md](./tasks.md) -- Every open ticket links to its file; long bug titles shortened.
-- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the moved entries; only legacy entries remain.
-- **Update**: [tasks-done.md](./tasks-done.md) -- YZC-0111's follow-on now links to the YZC-0112 ticket file.
+- **Update**: [tasks.md](./tasks.md) -- Every open ticket links to its file; long bug titles shortened; closed YZC-0122; added YZC-0082.
+- **Update**: [tasks-detail.md](./tasks-detail.md) -- Removed the moved entries, YZC-0082 and the closed YZC-0022, YZC-0084, YZC-0094 and YZC-0095; only closed legacy entries remain.
+- **Update**: [tasks-done.md](./tasks-done.md) -- Closed YZC-0084, YZC-0094, YZC-0095 and YZC-0122; YZC-0111's follow-on now links to the YZC-0112 ticket file.
 - **Update**: [doc-lifecycle.md](./doc-lifecycle.md) -- New tickets go in `tickets/`.
 - **Update**: [index.md](./index.md) -- Updated the `tasks-detail.md` and `tickets/` descriptions.
+- **Creation**: `compiler/examples/file_wrapper_sig_form` -- Regression test for YZC-0122.
 
 ## 2026-10-27
 - **Update**: [tasks.md](./tasks.md) -- Filed YZC-0125 to YZC-0129 as links to their ticket files; next available bumped to YZC-0130.

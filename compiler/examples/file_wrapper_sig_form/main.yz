@@ -1,0 +1,10 @@
+// YZC-0122: a file wrapper holding a same-named boc in signature form
+// (while.yz containing `while #(params) { }`) must unwrap in the lowerer as it
+// does in sema. Conformance golden tests bypass the root-file auto-wrap, so
+// this lives as an example. The `, {}` in while.yz is deliberate.
+main: {
+    i : 0
+    while({ i < 2 }, { i = i + 1 })
+    print("done")
+}
+main()
