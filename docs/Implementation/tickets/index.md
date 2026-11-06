@@ -52,3 +52,4 @@ entries for closed tickets.
 | [YZC-0127](YZC-0127.md) | Boc-typed fields of a type are dropped | proposed |
 | [YZC-0128](YZC-0128.md) | A type's methods are not visible on its instances inside its own methods | proposed |
 | [YZC-0129](YZC-0129.md) | A singleton and a type whose names differ only in case fail to build | proposed |
+| [YZC-0130](YZC-0130.md) | Docs are not checked by okf-check | proposed |
