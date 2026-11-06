@@ -1,5 +1,9 @@
 # Implementation/tickets/ — update log
 
+## 2026-11-06
+
+**Creation** — [`YZC-0130`](YZC-0130.md): what adopting okf-check, the standalone OKF checker, requires in these docs before its Stage 1 gate.
+
 ## 2026-10-30
 
 **Creation** — [`YZC-0009`](YZC-0009.md): range iteration. Moved from `tasks-detail.md`.
