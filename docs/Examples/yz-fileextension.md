@@ -11,7 +11,7 @@ get_extension #(filename String, Option(String)) {
    filename.length.down_to(1).each({ 
       i Int
       filename.at(i - 1) == "." ? {
-         extension = Some(filename.substring(i -1)) 
+         extension = Some(filename.substring(i - 1)) 
       }
    })
    extension
